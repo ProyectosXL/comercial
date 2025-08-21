@@ -1,0 +1,246 @@
+
+        body {
+            background-color: #f0f2f5;
+        }
+        .fixed-header {
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background-color: #f0f2f5;
+            margin-bottom:10px;
+        }
+        .navbar {
+            background-color: #dc3545;
+            color: white;
+        }
+        .card {
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        .card-title {
+            font-size: 15px;
+            color: white;
+        }
+        .form-label {
+            font-size: 13px;
+        }
+        .form-control, .form-select, .btn {
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+        .btn-buscar {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-guardar {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        .vertical-line {
+            border-left-width: 5px;
+            border-left-style: solid;
+            padding-left: 15px;
+        }
+        .search-container, .filters-container {
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .semana-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .semana-row label {
+            font-size: 13px;
+            white-space: nowrap;
+            margin-right: 10px;
+            margin-bottom: 0;
+        }
+        .semana-row select {
+            font-size: 13px;
+            flex-grow: 1;
+            margin-right: 10px;
+            width: 20px;
+        }
+        .input-group-text {
+        background-color: #e9ecef;
+        border: 1px solid #ced4da;
+        border-radius: 4px 0 0 4px;
+        font-size: 0.875rem;
+        }
+        .importe-input {
+            border-left: none;
+        }
+        .search-container {
+            position: relative;
+        }
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+        .clear-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            cursor: pointer;
+            display: none;
+        }
+        #searchInput {
+            padding-left: 30px;
+            padding-right: 30px;
+        }
+        .btn-outline-primary{
+            background-color: white important!;
+        }
+   
+       
+        .carousel-item img {
+            max-height: 70vh;
+            object-fit: contain;
+        }
+        .medium-zoom-overlay {
+            z-index: 1060;
+        }
+        .medium-zoom-image--opened {
+            z-index: 1070;
+        }
+        .carousel-control-prev,
+        .carousel-control-next {
+            background-color: rgba(0,0,0,0.5);
+            width: 10%;
+        }
+        .carousel-control-prev-icon,
+        .carousel-control-next-icon {
+            background-color: rgba(0,0,0,0.5);
+            border-radius: 50%;
+            padding: 5px;
+        }
+        #imageCounter {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .estado-badge {
+            font-size: 0.8em;
+            padding: 0.6em 0.6em;
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            z-index: 10;
+        }
+        
+        .swal-large-modal {
+            width: 90vw !important;
+            height: 90vh !important;
+        }
+        
+        .swal-large-modal .swal2-html-container {
+            height: calc(100% - 50px);
+            overflow-y: auto;
+        }
+        
+        .swal-large-modal #imageCarousel {
+            height: calc(100% - 40px);
+        }
+        
+        .swal-large-modal .carousel-inner,
+        .swal-large-modal .carousel-item {
+            height: 100%;
+        }
+        
+        .swal-large-modal .carousel-item img {
+            object-fit: contain;
+            height: 100%;
+            width: 100%;
+        }
+
+        .badge-container {
+            z-index: 1;
+        }
+        
+        .badge {
+            font-size: 0.8rem;
+            padding: 0.3em 0.6em;
+        }
+
+
+        .card-total {
+            background-color: #fff;
+            border-radius: 10px;
+            border: none;
+            position: relative;
+            margin-bottom: 30px;
+            box-shadow: 0 0.46875rem 2.1875rem rgba(90,97,105,0.1), 0 0.9375rem 1.40625rem rgba(90,97,105,0.1), 0 0.25rem 0.53125rem rgba(90,97,105,0.12), 0 0.125rem 0.1875rem rgba(90,97,105,0.1);
+        }
+
+        .l-bg-cherry {
+            background: linear-gradient(to right, #493240, #f09) !important;
+            color: #fff;
+        }
+        
+        .l-bg-blue-dark {
+            background: linear-gradient(to right, #373b44, #4286f4) !important;
+            color: #fff;
+        }
+        
+        .l-bg-green-dark {
+            background: linear-gradient(to right, #0a504a, #38ef7d) !important;
+            color: #fff;
+        }
+        
+        .l-bg-orange-dark {
+            background: linear-gradient(to right, #a86008, #ffba56) !important;
+            color: #fff;
+        }
+        
+        .l-bg-red-dark {
+            background: linear-gradient(to right, #7c0d0d, #ff4b5c ) !important;
+            color: #fff;
+        }
+
+        
+        .card .card-statistic-3 .card-icon-large .fas, .card .card-statistic-3 .card-icon-large .far, .card .card-statistic-3 .card-icon-large .fab, .card .card-statistic-3 .card-icon-large .fal {
+            font-size: 110px;
+        }
+        
+        .card .card-statistic-3 .card-icon {
+            text-align: center;
+            line-height: 50px;
+            margin-left: 15px;
+            color: #000;
+            position: absolute;
+            right: 1px;
+            top: 20px;
+            opacity: 0.1;
+        }
+        
+        .l-bg-cyan {
+            background: linear-gradient(135deg, #289cf5, #84c0ec) !important;
+            color: #fff;
+        }
+        
+        .l-bg-green {
+            background: linear-gradient(135deg, #23bdb8 0%, #43e794 100%) !important;
+            color: #fff;
+        }
+        
+        .l-bg-orange {
+            background: linear-gradient(to right, #f9900e, #ffba56) !important;
+            color: #fff;
+        }
+        
+        .l-bg-cyan {
+            background: linear-gradient(135deg, #289cf5, #84c0ec) !important;
+            color: #fff;
+        }

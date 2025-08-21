@@ -1,0 +1,86 @@
+
+        .variacion-positiva { color: #28a745; font-weight: bold;}
+        .variacion-negativa { color: #dc3545; font-weight: bold;}
+        .back-icon {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3), 0 6px 6px rgba(0, 0, 0, 0.23);
+            margin-bottom: 15px;
+            background-color: #f8f9fa;
+            position: relative;
+            z-index: 1;
+        }
+        .card-header{
+            background-color: #6610f2;
+            color: white;
+            position: relative;
+        }
+        .search-container { 
+            background-color: #f8f9fa; 
+            padding: 1rem; 
+            margin-bottom: 1rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .sort-buttons { margin-bottom: 1rem; }
+        .ranking-number {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #6f42c1;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+        .card-title {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        .venta-actual {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom:0.3rem;
+        }
+        .objetivo-fecha, .objetivo-mes {
+            font-size: 1rem;
+            color: #666;
+        }
+        #quickSearch {
+            border-radius: 10px;
+            padding-left: 40px;
+        }
+        .search-icon {
+            position: absolute;
+            left: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .clear-icon {
+            position: absolute;
+            right: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .porc-total{
+            margin-left:7rem;
+        }
+        .var-obj{
+            margin-left: 7rem;
+        }
+
+        
+
+        

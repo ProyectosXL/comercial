@@ -1,0 +1,61 @@
+.table{
+    width: 85%;
+}
+
+/*Fijar encabezado de tabla*/ 
+
+thead tr th { 
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table-responsive { 
+    height:745px;
+}
+
+.table .thead-dark th {
+    color: white;
+    background-color: #343a40;
+}
+
+.table-responsive { 
+    height:570px;
+    margin-left: 3%;
+}
+
+.form
+{
+    margin-left: 3%;
+}
+
+#contenedorTitle
+{
+    margin-left: 3%;
+}
+
+.contenedor
+{
+    margin-left: 3%;
+}
+
+#busqRapida
+{
+    margin-left: 20%;
+}
+
+#btnExport
+{
+    margin-left: 20%;
+}
+
+.loading {
+    position: fixed;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    background: url('g0R9.gif') 50% 50% no-repeat rgb(0, 0, 0);
+    opacity: .8;
+  }

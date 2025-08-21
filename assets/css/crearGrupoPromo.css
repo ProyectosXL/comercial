@@ -1,0 +1,35 @@
+.select2-selection {
+
+    height: 140px;
+    margin-left: 20px;
+    margin-right: 20px;
+    overflow: auto;
+    
+}
+
+.marcadoAgregar{
+    background-color: rgba(163, 163, 163, 0.671);
+}
+.marcadoQuitar{
+    background-color: rgba(163, 163, 163, 0.671);
+}
+.table-wrapper {
+
+    height: 580px; 
+    overflow: auto;
+
+
+}
+
+.table-wrapper table thead {
+
+    position: -webkit-sticky; 
+    position: sticky;
+    top: 0;
+    left: 0;
+
+}
+
+.paginate_button.page-item.next {
+    margin-right:30%;
+}

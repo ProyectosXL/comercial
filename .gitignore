@@ -1,0 +1,6 @@
+.env
+imagenes
+recepcion/fotos
+
+# Configuración de desarrollo - Franquicias
+franquicias/config_dev.php

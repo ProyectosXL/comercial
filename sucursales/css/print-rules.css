@@ -1,0 +1,67 @@
+
+/* Reglas de impresión mejoradas */
+@media print {
+    /* Ocultar elementos de UI al imprimir */
+    .tabs,
+    .input-form,
+    .message-container,
+    .small-tag-alert,
+    .buttons,
+    header,
+    footer,
+    .navbar,
+    nav {
+        display: none !important;
+    }
+
+    /* Ocultar el código y el botón de eliminar en las etiquetas pequeñas al imprimir */
+    .small-tag-header {
+        display: none !important;
+    }
+
+    /* Ocultar el nombre del producto en etiquetas pequeñas */
+    .small-tag .small-tag-name {
+        display: none !important;
+    }
+
+    /* Ajustar espaciado después de eliminar esos elementos */
+    .small-tag {
+        padding-top: 0.5cm !important;
+    }
+    
+    /* Configuraciones generales de página */
+    @page {
+        size: auto;
+        margin: 0;
+    }
+    
+    /* Eliminar márgenes y fondos innecesarios */
+    body, html {
+        background-color: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .container {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: none !important;
+    }
+    
+    /* Eliminar sombras y elementos decorativos */
+    .price-tag, .small-tag {
+        box-shadow: none !important;
+    }
+    
+    .small-tags-grid {
+        box-shadow: none !important;
+        background-color: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    /* Asegurar que el contenido de pestañas no activas no se imprima */
+    .tab-content:not(.active) {
+        display: none !important;
+    }
+}

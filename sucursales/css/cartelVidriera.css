@@ -1,0 +1,171 @@
+
+/* Estilos específicos para el cartel de vidriera */
+
+/* Dimensiones y estructura básica del cartel */
+.price-tag {
+    width: 13.8cm;
+    min-height: 19cm;
+    border: 1px dashed #999;
+    padding: 1.2cm; /* Reducido de 1.5cm a 1.2cm */
+    padding-top: 1.2cm; /* Reducido de 1.5cm a 1.2cm */
+    padding-bottom: 3cm; /* Mantenido para espacio del logo */
+    position: relative;
+    box-sizing: border-box;
+    page-break-after: always;
+    margin-bottom: 20px;
+    margin-left: 20px;
+    margin-top: 20px;
+    background-color: white;
+    box-shadow: var(--box-shadow);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Contenedor para los productos del cartel */
+.price-tag-products {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+/* Estilos para cada ítem de producto */
+.price-tag .price-item {
+    position: relative;
+    padding-bottom: 0.4cm; /* Reducido de 0.5cm a 0.4cm */
+    margin-bottom: 0.2cm; /* Reducido de 0.3cm a 0.2cm */
+}
+
+.price-tag .price-item::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-bottom: 1px dotted #ccc;
+}
+
+/* Nombre del producto */
+.price-tag .product-name {
+    font-size: 16px; /* Reducido de 18px a 16px */
+    font-weight: bold;
+    margin-bottom: 4px; /* Reducido de 6px a 4px */
+    width: 75%;
+}
+
+.price-tag .product-name input {
+    font-size: 16px; /* Reducido de 18px a 16px */
+    font-weight: bold;
+    width: 100%;
+    border: none;
+    background-color: transparent;
+    padding: 0;
+    margin: 0;
+    cursor: text;
+}
+
+.price-tag .product-name input:focus {
+    outline: none;
+    border-bottom: 1px dashed #3498db;
+}
+
+.price-tag .product-name input:hover {
+    background-color: rgba(52, 152, 219, 0.05);
+}
+
+/* Precio sin impuestos */
+.price-tag .price-without-tax {
+    font-size: 12px; /* Reducido de 14px a 12px */
+    margin-bottom: 3px; /* Reducido de 4px a 3px */
+    color: #555;
+}
+
+/* Precio final */
+.price-tag .final-price {
+    font-size: 20px; /* Reducido de 22px a 20px */
+    font-weight: bold;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+/* Logo en el pie de página */
+.brand-footer {
+    position: absolute;
+    bottom: 0.5cm;
+    left: 0;
+    right: 0;
+    text-align: center;
+}
+
+.brand-footer img {
+    max-width: 4.5cm; /* Reducido de 5cm a 4.5cm */
+    max-height: 2.2cm; /* Reducido de 2.5cm a 2.2cm */
+}
+
+/* Mensaje cuando no hay datos */
+.no-data-message {
+    text-align: center;
+    margin-top: 3cm;
+    color: #e74c3c;
+    font-size: 16px; /* Reducido de 18px a 16px */
+    font-weight: bold;
+}
+
+/* Reglas de impresión específicas para el cartel */
+@media print {
+    /* Asegurar que el cartel se imprima con las dimensiones correctas */
+    .price-tag {
+        border: 1px dashed #999;
+        box-shadow: none !important;
+        margin: 2cm auto !important; /* Margen superior real y centrado horizontal */
+        padding: 1.2cm;
+        padding-top: 1.2cm;
+        padding-bottom: 3cm;
+        page-break-before: auto;
+        page-break-after: avoid;
+        page-break-inside: avoid;
+        width: 13.8cm !important;
+        min-height: 19cm !important;
+    }
+
+    body, html {
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start; /* Permite margen superior */
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+
+    .container {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        margin: 0 !important;
+        padding-top: 0 !important; /* Lo manejamos con el margin de .price-tag */
+    }
+
+    #priceTagContainer {
+        display: flex;
+        justify-content: center;
+    }
+
+    /* Evitar páginas en blanco */
+    @page {
+        size: 13.8cm 19cm;
+        margin: 2cm 0 0 0; /* Margen superior de 2cm */
+    }
+
+    /* Asegurar que el logo se imprima correctamente */
+    .brand-footer {
+        position: absolute;
+        bottom: 0.5cm !important;
+    }
+
+    /* Optimizar para que no haya cortes */
+    .price-item {
+        page-break-inside: avoid !important;
+    }
+}

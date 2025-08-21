@@ -1,0 +1,25 @@
+.select2-selection {
+
+    height: 90px;
+    margin-left: 20px;
+    margin-right: 20px;
+    overflow: auto;
+    
+}
+
+.table-wrapper {
+
+    height: 750px; 
+    overflow: auto;
+    overflow-x:hidden;
+
+}
+
+.table-wrapper table thead {
+
+    position: -webkit-sticky; 
+    position: sticky;
+    top: 0;
+    left: 0;
+
+}

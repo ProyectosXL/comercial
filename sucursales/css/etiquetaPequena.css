@@ -1,0 +1,339 @@
+
+/* Estilos para etiquetas pequeñas */
+.small-tags-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2cm;
+    padding: 1cm;
+    background-color: white;
+    box-shadow: var(--box-shadow);
+    border-radius: var(--border-radius);
+    margin-bottom: 30px;
+    min-height: 10cm;
+}
+
+.small-tag {
+    width: 4cm;
+    height: 5.2cm;
+    border: 1px dashed #999;
+    padding: 0.3cm;
+    position: relative;
+    box-sizing: border-box;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    page-break-inside: avoid;
+}
+
+.small-tag-header {
+    position: absolute;
+    top: 0.2cm;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 0.2cm;
+}
+
+.small-tag-code {
+    font-size: 11px;
+    color: #666;
+    background-color: #f5f5f5;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+.remove-tag {
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.remove-tag:hover {
+    opacity: 1;
+}
+
+.small-tag .small-tag-name {
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 0.2cm;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.small-tag .final-price {
+    font-size: 24px;
+    font-weight: bold;
+    color: #000;
+    margin-bottom: 0.3cm;
+    text-align: center;
+}
+
+.small-tag .price-without-tax {
+    font-size: 16px;
+    color: #555;
+    text-align: center;
+    width: 100%;
+}
+
+.small-tag .price-without-tax .amount {
+    font-weight: bold;
+    font-size: 16px !important; /* Aumentado de 14px a 16px */
+}
+
+.small-tag .price-without-tax .text {
+    display: block;
+    text-align: center;
+    font-size: 10px;
+}
+
+/* Estilos para pestañas */
+.tabs {
+    display: flex;
+    border-bottom: 2px solid var(--primary-color);
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    background-color: #f5f7fa;
+    border: none;
+    border-top-left-radius: var(--border-radius);
+    border-top-right-radius: var(--border-radius);
+    margin-right: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tab-btn:hover {
+    background-color: #e2e8f0;
+}
+
+.tab-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Ajustes para el formulario de etiquetas pequeñas */
+.form-row {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+    margin-bottom: 15px;
+}
+
+.flex-grow {
+    flex-grow: 1;
+}
+
+.button-container {
+    display: flex;
+    gap: 10px;
+    align-self: flex-end; /* Alinea los botones con la parte inferior del contenedor */
+}
+
+/* Ajuste para el label y el input */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* Asegurar que el input tenga suficiente espacio */
+#smallTagCode {
+    min-width: 300px;
+    width: 100%;
+}
+
+/* Estilos para alertas modernas en etiqueta pequeña */
+.small-tag-alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    max-width: 350px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    z-index: 9999;
+    animation: slideIn 0.3s ease-out forwards;
+}
+
+.small-tag-alert.error {
+    border-left: 4px solid #e74c3c;
+}
+
+.small-tag-alert.success {
+    border-left: 4px solid #2ecc71;
+}
+
+.small-tag-alert.warning {
+    border-left: 4px solid #f39c12;
+}
+
+.small-tag-alert .alert-content {
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+}
+
+.small-tag-alert .alert-icon {
+    margin-right: 15px;
+    font-size: 20px;
+}
+
+.small-tag-alert.error .alert-icon {
+    color: #e74c3c;
+}
+
+.small-tag-alert.success .alert-icon {
+    color: #2ecc71;
+}
+
+.small-tag-alert.warning .alert-icon {
+    color: #f39c12;
+}
+
+.small-tag-alert .alert-text {
+    flex: 1;
+}
+
+.small-tag-alert .alert-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.small-tag-alert .alert-message {
+    color: #555;
+    font-size: 14px;
+}
+
+.small-tag-alert .alert-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: #999;
+    transition: color 0.2s;
+}
+
+.small-tag-alert .alert-close:hover {
+    color: #333;
+}
+
+.small-tag-alert .alert-progress {
+    height: 3px;
+    background-color: #e0e0e0;
+    position: relative;
+}
+
+.small-tag-alert .alert-progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    animation: progressShrink 5s linear forwards;
+}
+
+.small-tag-alert.error .alert-progress-bar {
+    background-color: #e74c3c;
+}
+
+.small-tag-alert.success .alert-progress-bar {
+    background-color: #2ecc71;
+}
+
+.small-tag-alert.warning .alert-progress-bar {
+    background-color: #f39c12;
+}
+
+@keyframes progressShrink {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+.small-tag-alert.closing {
+    animation: slideOut 0.3s ease-in forwards;
+}
+
+/* Clase para elementos que no deben imprimirse */
+.no-print {
+    display: block; /* Visible en pantalla */
+}
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .tab-content:not(.active) {
+        display: none !important;
+    }
+
+    .small-tags-grid {
+        box-shadow: none;
+        padding: 0;
+        gap: 0;
+        /* Ajustado para dar más espacio en los márgenes */
+        margin: 1cm;
+        /* Centrar contenido */
+        display: flex;
+        justify-content: center;
+    }
+
+    .small-tag {
+        border: 1px dashed #000; /* más fuerte por si el gris no se ve bien */
+        margin: 0.3cm;  /* Aumentado el margen entre etiquetas */
+        padding: 0.4cm;
+    }
+
+    @page {
+        size: auto;
+        /* Aumentar márgenes para impresión */
+        margin: 2cm 1cm 1cm 3cm; /* top, right, bottom, left */
+    }
+
+    body, html {
+        /* Aumentar margen izquierdo y superior */
+        padding: 1.5cm 1cm 1cm 3cm !important; /* top, right, bottom, left */
+        margin: 0 !important;
+        background: white !important;
+    }
+
+    .small-tag-header,
+    .small-tag-alert {
+        display: none !important;
+    }
+}

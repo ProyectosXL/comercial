@@ -1,0 +1,95 @@
+
+.card {
+    border-radius: 15px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+}
+.form-select, .btn {
+    border-radius: 8px;
+}
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+.dataTables_wrapper {
+    padding: 20px 0;
+}
+
+/* Estilos para la tabla */
+.table tbody td {
+    font-size: 0.8rem;
+    padding: 0.5rem;
+}
+
+/* Estilos para el encabezado fijo */
+.table thead th {
+    font-size: 0.9rem;
+    padding: 0.5rem;
+    font-weight: 600;
+    background-color: #f8f9fa;  /* Color de fondo gris claro */
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 2px solid #dee2e6;
+}
+
+/* Añadir sombra al encabezado para mejor visualización */
+.table thead th::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table td, .table th {
+    line-height: 1.2;
+    vertical-align: middle;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table-striped tbody tr {
+    height: auto;
+}
+
+/* Asegurar que el contenedor tenga scroll */
+.table-responsive {
+    max-height: calc(100vh - 300px); /* Ajusta este valor según necesites */
+    overflow-y: auto;
+}
+
+/* Estilo para el título */
+.card-title .fas {
+    color: #0d6efd; /* Color primario de Bootstrap */
+    font-size: 1.5rem; /* Tamaño más grande para el icono */
+}
+
+ /* Ajustes para Select2 */
+ .select2-container--bootstrap-5 .select2-selection {
+    min-height: 38px;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__rendered {
+    padding: 0 6px;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__choice {
+    background-color: #ffc107;
+    border: none;
+    font-size: 12px !important;
+}
+
+.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__rendered .select2-selection__choice .select2-selection__choice__remove {
+    color: white;
+}
