@@ -1,4 +1,3 @@
-
 <?php
 
 // Controller/CategoriaController.php
@@ -20,6 +19,10 @@ switch ($accion) {
         
     case 'obtenerSiglasDisponibles':
         obtenerSiglasDisponibles();
+        break;
+
+    case 'actualizarEstado':
+        actualizarEstado();
         break;
 
     default:
@@ -77,6 +80,21 @@ function obtenerSiglasDisponibles() {
     $siglas = $categoria->obtenerSiglasDisponibles();
     
     echo json_encode($siglas);
+}
+
+// NUEVA FUNCIÓN: Actualizar estado de categoría
+function actualizarEstado() {
+    require_once __DIR__.'/../Class/Categoria.php';
+    
+    $categoria = new Categoria();
+    
+    $siglaRubro = $_POST['siglaRubro'];
+    $codCategoria = $_POST['codCategoria'];
+    $nuevoEstado = $_POST['nuevoEstado']; // 1 para activo, 0 para inactivo
+    
+    $result = $categoria->actualizarEstadoCategoria($siglaRubro, $codCategoria, $nuevoEstado);
+    
+    echo $result ? 1 : 0;
 }
 
 ?>

@@ -1,4 +1,3 @@
-
 <?php
     require_once "Class/categoria.php";
 
@@ -116,6 +115,24 @@
                     </div>
                 </div>
 
+                <!-- Estado Filter Section -->
+                <div class="mb-6">
+                    <div class="flex flex-wrap gap-3 justify-center">
+                        <button onclick="filtrarPorEstado('todos')" class="estado-filter active" id="filter-todos">
+                            <i class="fas fa-list"></i>
+                            Todas las categorías
+                        </button>
+                        <button onclick="filtrarPorEstado('activos')" class="estado-filter" id="filter-activos">
+                            <i class="fas fa-check-circle text-green-600"></i>
+                            Solo activas
+                        </button>
+                        <button onclick="filtrarPorEstado('inactivos')" class="estado-filter" id="filter-inactivos">
+                            <i class="fas fa-times-circle text-red-600"></i>
+                            Solo inactivas
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Categories Table -->
                 <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
                     <div class="p-6 border-b border-gray-200">
@@ -146,18 +163,31 @@
                                         <th class="px-6 py-4 text-gray-700 font-medium">
                                             <i class="fas fa-folder mr-2"></i>Desc. Categoría Padre
                                         </th>
+                                        <th class="px-6 py-4 text-gray-700 font-medium text-center">
+                                            <i class="fas fa-power-off mr-2"></i>Estado
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody id="tableBody" class="divide-y divide-gray-200">
                                     <?php 
                                         foreach ($data as $key => $value) {
+                                            $estado = isset($value['ESTADO_ACTIVO']) ? $value['ESTADO_ACTIVO'] : 1;
+                                            $esActivo = $estado == 1;
+                                            $rowClass = $esActivo ? 'table-row-active' : 'table-row-inactive';
                                     ?>
-                                        <tr class="hover:bg-gray-50 transition-colors">
+                                        <tr class="hover:bg-gray-50 transition-colors <?= $rowClass ?>" data-estado="<?= $esActivo ? 'activo' : 'inactivo' ?>">
                                             <td class="px-6 py-4 text-gray-800"><?= $value['RUBRO'] ?></td>
                                             <td class="px-6 py-4 text-gray-600"><?= $value['DESC_RUBRO'] ?></td>
                                             <td class="px-6 py-4 text-gray-800 font-mono"><?= $value['CATEGORIA'] ?></td>
                                             <td class="px-6 py-4 text-gray-600"><?= $value['DESC_CATEGORIA'] ?></td>
                                             <td class="px-6 py-4 text-gray-600"><?= $value['DESC_CATEGORIA_PADRE'] ?? '' ?></td>
+                                            <td class="px-6 py-4 text-center estado-cell">
+                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium <?= $esActivo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' ?> estado-tooltip"
+                                                      data-estado-info="Categoría <?= $esActivo ? 'activa y disponible' : 'inactiva y no disponible' ?>">
+                                                    <i class="fas <?= $esActivo ? 'fa-check-circle' : 'fa-times-circle' ?> mr-1 estado-icon"></i>
+                                                    <?= $esActivo ? 'Activo' : 'Inactivo' ?>
+                                                </span>
+                                            </td>
                                         </tr>
                                     <?php    
                                         }
@@ -169,16 +199,22 @@
                 </div>
 
                 <!-- Stats Footer -->
-                <div class="mt-8 grid md:grid-cols-3 gap-6">
-                    <div class="bg-white rounded-xl p-6 border text-center shadow-sm">
+                <div class="mt-8 grid md:grid-cols-4 gap-6">
+                    <div class="bg-white rounded-xl p-6 border text-center shadow-sm stats-card stats-card-total">
                         <div class="text-3xl font-bold text-blue-600 mb-2" id="totalCategorias"><?= count($data) ?></div>
                         <div class="text-gray-600">Total Categorías</div>
                     </div>
-                    <div class="bg-white rounded-xl p-6 border text-center shadow-sm">
-                        <div class="text-3xl font-bold text-green-600 mb-2" id="ultimoCodigo"><?= str_pad($ultimoCodigo, 2, '0', STR_PAD_LEFT) ?></div>
+                    <div class="bg-white rounded-xl p-6 border text-center shadow-sm stats-card stats-card-activas">
+                        <div class="text-3xl font-bold text-green-600 mb-2" id="categoriasActivas">
+                            <?= count(array_filter($data, function($item) { return (!isset($item['ESTADO_ACTIVO']) || $item['ESTADO_ACTIVO'] == 1); })) ?>
+                        </div>
+                        <div class="text-gray-600">Categorías Activas</div>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 border text-center shadow-sm stats-card stats-card-ultimo">
+                        <div class="text-3xl font-bold text-orange-600 mb-2" id="ultimoCodigo"><?= str_pad($ultimoCodigo, 2, '0', STR_PAD_LEFT) ?></div>
                         <div class="text-gray-600">Último Código</div>
                     </div>
-                    <div class="bg-white rounded-xl p-6 border text-center shadow-sm">
+                    <div class="bg-white rounded-xl p-6 border text-center shadow-sm stats-card stats-card-rubro">
                         <div class="text-3xl font-bold text-purple-600 mb-2" id="rubroActivo"><?= $siglaRubro ?></div>
                         <div class="text-gray-600">Rubro Activo</div>
                     </div>
@@ -218,6 +254,10 @@
                     {
                         "targets": [1, 3, 4], // Descriptions
                         "className": "text-left",
+                    },
+                    {
+                        "targets": [5], // Estado
+                        "className": "text-center",
                     }
                 ],
                 "oLanguage": {
@@ -244,6 +284,9 @@
 
             // Add custom styling to DataTables
             addDataTableStyles();
+            
+            // Initialize tooltips
+            initializeTooltips();
         });
 
         // Add custom styles to DataTables
@@ -293,23 +336,77 @@
             document.head.appendChild(style);
         }
 
-        // Export data function - Updated to include DESC_CATEGORIA_PADRE
+        // Initialize tooltips
+        function initializeTooltips() {
+            // Simple tooltip implementation
+            document.querySelectorAll('.estado-tooltip').forEach(element => {
+                element.addEventListener('mouseenter', function() {
+                    this.style.position = 'relative';
+                });
+            });
+        }
+
+        // Filter by estado functionality
+        function filtrarPorEstado(tipo) {
+            const table = $('#tableData').DataTable();
+            
+            // Remove active class from all filters
+            document.querySelectorAll('.estado-filter').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Add active class to clicked filter
+            document.getElementById('filter-' + tipo).classList.add('active');
+            
+            // Apply filter
+            if (tipo === 'todos') {
+                table.search('').columns().search('').draw();
+            } else if (tipo === 'activos') {
+                table.column(5).search('Activo').draw();
+            } else if (tipo === 'inactivos') {
+                table.column(5).search('Inactivo').draw();
+            }
+            
+            // Update stats after filtering
+            updateStatsAfterFilter();
+        }
+
+        // Update stats after filtering
+        function updateStatsAfterFilter() {
+            const table = $('#tableData').DataTable();
+            const visibleRows = table.rows({ filter: 'applied' }).nodes();
+            
+            let activasCount = 0;
+            let totalCount = visibleRows.length;
+            
+            $(visibleRows).each(function() {
+                const estadoCell = $(this).find('td:eq(5)');
+                if (estadoCell.text().includes('Activo')) {
+                    activasCount++;
+                }
+            });
+            
+            // Update display (optional - could show filtered counts)
+            console.log(`Mostrando: ${totalCount} total, ${activasCount} activas`);
+        }
+
+        // Export data function - Updated to include Estado
         function exportarDatos() {
             const table = $('#tableData').DataTable();
-            const data = table.rows().data();
+            const data = table.rows({ filter: 'applied' }).data();
             
-            let csvContent = "Rubro,Descripción Rubro,Categoría,Descripción Categoría,Descripción Categoría Padre\n";
+            let csvContent = "Rubro,Descripción Rubro,Categoría,Descripción Categoría,Descripción Categoría Padre,Estado\n";
             
             for (let i = 0; i < data.length; i++) {
                 const row = data[i];
-                csvContent += `"${row[0]}","${row[1]}","${row[2]}","${row[3]}","${row[4] || ''}"\n`;
+                csvContent += `"${row[0]}","${row[1]}","${row[2]}","${row[3]}","${row[4] || ''}","${row[5]}"\n`;
             }
             
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
             link.setAttribute("href", url);
-            link.setAttribute("download", `categorias_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute("download", `categorias_con_estado_${new Date().toISOString().split('T')[0]}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
@@ -331,6 +428,8 @@
                         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
                         th { background-color: #f5f5f5; font-weight: bold; }
                         .header { text-align: center; margin-bottom: 20px; }
+                        .estado-activo { background-color: #dcfce7; color: #166534; padding: 4px 8px; border-radius: 12px; }
+                        .estado-inactivo { background-color: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 12px; }
                         @media print { body { margin: 0; } }
                     </style>
                 </head>
@@ -338,6 +437,7 @@
                     <div class="header">
                         <h2>Consulta de Categorías</h2>
                         <p>Fecha: ${new Date().toLocaleDateString()}</p>
+                        <p>Rubro: <?= $descRubro ?></p>
                     </div>
                     ${tableHTML}
                 </body>
@@ -347,6 +447,39 @@
             printWindow.document.close();
             printWindow.print();
         }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl + E para exportar
+            if (e.ctrlKey && e.key === 'e') {
+                e.preventDefault();
+                exportarDatos();
+            }
+            
+            // Ctrl + P para imprimir
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                imprimirTabla();
+            }
+            
+            // Filtros rápidos con números
+            if (e.altKey) {
+                switch(e.key) {
+                    case '1':
+                        e.preventDefault();
+                        filtrarPorEstado('todos');
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        filtrarPorEstado('activos');
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        filtrarPorEstado('inactivos');
+                        break;
+                }
+            }
+        });
     </script>
 
 </body>

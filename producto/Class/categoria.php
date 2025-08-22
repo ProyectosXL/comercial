@@ -1,4 +1,3 @@
-
 <?php
 
 class Categoria
@@ -6,9 +5,15 @@ class Categoria
     private $cid_central;
 
     function __construct(){
-        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
+        // Usar SOLO la conexión local
+        require_once __DIR__ . '/Conexion.php';
+        
         $cid = new Conexion();
         $this->cid_central = $cid->conectar('central');
+        
+        if (!$this->cid_central) {
+            throw new Exception("No se pudo establecer conexión con la base de datos");
+        }
     } 
 
     public function traerRubros() {
@@ -32,7 +37,11 @@ class Categoria
     }
 
     public function traerVistaRubroCategoriaCodificacion($sigla) {
-        $sql = "SELECT * FROM RO_V_RUBROS_CATEGORIAS_CODIFICACION WHERE RUBRO = ? ORDER BY CATEGORIA ASC";
+        // Modificado para incluir el campo ACTIVO
+        $sql = "SELECT *, CASE WHEN ACTIVO = 1 OR ACTIVO IS NULL THEN 1 ELSE 0 END AS ESTADO_ACTIVO 
+                FROM RO_V_RUBROS_CATEGORIAS_CODIFICACION 
+                WHERE RUBRO = ? 
+                ORDER BY CATEGORIA ASC";
 
         $stmt = sqlsrv_prepare($this->cid_central, $sql, array($sigla));
         
@@ -85,8 +94,8 @@ class Categoria
                 return false; // Ya existe
             }
 
-            // Insertar nueva categoría
-            $insertSql = "INSERT INTO SJ_CATEGORIAS (CATEGORIA, DESC_CATEGORIA, DESC_CATEGORIA_PADRE, RUBRO) VALUES (?, ?, ?, ?)";
+            // Insertar nueva categoría - ACTIVO por defecto en 1 (activo)
+            $insertSql = "INSERT INTO SJ_CATEGORIAS (CATEGORIA, DESC_CATEGORIA, DESC_CATEGORIA_PADRE, RUBRO, ACTIVO) VALUES (?, ?, ?, ?, 1)";
             $insertParams = array($codCategoria, $descCategoria, $descCategoriaPadre, $siglaRubro);
                             
             $stmt = sqlsrv_prepare($this->cid_central, $insertSql, $insertParams);
@@ -130,6 +139,32 @@ class Categoria
 
         } catch (\Throwable $th) {
             error_log("Error en actualizarDescripcionCategoria: " . print_r($th, true));
+            return false;
+        }     
+    }
+
+    // NUEVO MÉTODO: Actualizar estado de categoría
+    public function actualizarEstadoCategoria($siglaRubro, $codCategoria, $nuevoEstado) {
+        $sql = "UPDATE SJ_CATEGORIAS SET ACTIVO = ? WHERE CATEGORIA = ? AND RUBRO = ?";
+        $params = array($nuevoEstado, $codCategoria, $siglaRubro);
+
+        try {
+            $stmt = sqlsrv_prepare($this->cid_central, $sql, $params);
+            
+            if (!$stmt) {
+                throw new Exception("Error al preparar actualización de estado: " . print_r(sqlsrv_errors(), true));
+            }
+            
+            $result = sqlsrv_execute($stmt);
+            
+            if (!$result) {
+                throw new Exception("Error al ejecutar actualización de estado: " . print_r(sqlsrv_errors(), true));
+            }
+            
+            return true;
+
+        } catch (\Throwable $th) {
+            error_log("Error en actualizarEstadoCategoria: " . print_r($th, true));
             return false;
         }     
     }

@@ -250,12 +250,87 @@ const agregar = (siglaRubro) => {
     })
 }
 
+// NUEVA FUNCIÓN: Cambiar estado de categoría
+function cambiarEstado(button, siglaRubro, codCategoria, nuevoEstado) {
+    const estadoTexto = nuevoEstado == 1 ? 'activar' : 'desactivar';
+    const estadoColor = nuevoEstado == 1 ? 'success' : 'warning';
+    
+    Swal.fire({
+        title: '¿Confirmar cambio?',
+        text: `¿Está seguro que desea ${estadoTexto} esta categoría?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: nuevoEstado == 1 ? '#10b981' : '#f59e0b',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: `Sí, ${estadoTexto}`,
+        cancelButtonText: 'Cancelar',
+        background: '#fff',
+        color: '#374151'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostrar loading en el botón
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            button.disabled = true;
+            
+            $.ajax({
+                url: 'Controller/CategoriaController.php?accion=actualizarEstado',
+                method: 'POST',
+                data: {
+                    siglaRubro: siglaRubro,
+                    codCategoria: codCategoria,
+                    nuevoEstado: nuevoEstado
+                },
+                success: function(data) {
+                    if (data == 1) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Estado actualizado',
+                            text: `Categoría ${estadoTexto}da correctamente`,
+                            background: '#fff',
+                            color: '#374151',
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        button.innerHTML = originalHTML;
+                        button.disabled = false;
+                        
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'No se pudo actualizar el estado de la categoría',
+                            background: '#fff',
+                            color: '#374151'
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    button.innerHTML = originalHTML;
+                    button.disabled = false;
+                    
+                    console.error('AJAX Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error de conexión al actualizar el estado',
+                        background: '#fff',
+                        color: '#374151'
+                    });
+                }
+            });
+        }
+    });
+}
+
 // Updated function - Edit category with both DESC_CATEGORIA and DESC_CATEGORIA_PADRE
 const editar = (div) => {
-    let allTd = div.parentElement.parentElement.querySelectorAll("td");
+    let allTd = div.parentElement.parentElement.parentElement.querySelectorAll("td");
     let descCategoriaElement = allTd[3];
     let descCategoriaPadreElement = allTd[4];
-    let actionElement = allTd[5];
+    let actionElement = allTd[6]; // Actualizado: ahora las acciones están en la columna 6
     
     let originalDescCategoria = descCategoriaElement.textContent.trim();
     let originalDescCategoriaPadre = descCategoriaPadreElement.textContent.trim();
@@ -272,16 +347,18 @@ const editar = (div) => {
                class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded text-gray-800 focus:ring-2 focus:ring-blue-500" 
                placeholder="Descripción categoría padre">`;
     
-    // Change button to save/cancel
+    // Change buttons to save/cancel
     actionElement.innerHTML = `
-        <button onclick="guardarEdicion(this)" class="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all duration-200 mr-2"
-                data-bs-toggle="tooltip" data-bs-placement="top" title="Guardar cambios">
-            <i class="fas fa-save"></i>
-        </button>
-        <button onclick="cancelarEdicion(this, '${originalDescCategoria.replace(/'/g, "\\'")}', '${originalDescCategoriaPadre.replace(/'/g, "\\'")}'" class="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-200"
-                data-bs-toggle="tooltip" data-bs-placement="top" title="Cancelar">
-            <i class="fas fa-times"></i>
-        </button>`;
+        <div class="flex justify-center gap-2">
+            <button onclick="guardarEdicion(this)" class="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all duration-200"
+                    data-bs-toggle="tooltip" data-bs-placement="top" title="Guardar cambios">
+                <i class="fas fa-save"></i>
+            </button>
+            <button onclick="cancelarEdicion(this, '${originalDescCategoria.replace(/'/g, "\\'")}', '${originalDescCategoriaPadre.replace(/'/g, "\\'")}'" class="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all duration-200"
+                    data-bs-toggle="tooltip" data-bs-placement="top" title="Cancelar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>`;
     
     // Focus and select the first input
     document.getElementById('descCategoriaEdit').focus();
@@ -303,7 +380,7 @@ const editar = (div) => {
 
 // Updated function - Save edition with both fields
 function guardarEdicion(button) {
-    let allTd = button.parentElement.parentElement.querySelectorAll("td");
+    let allTd = button.parentElement.parentElement.parentElement.querySelectorAll("td");
     let rubro = allTd[0].textContent;
     let categoria = allTd[2].textContent;
     
@@ -337,7 +414,7 @@ function guardarEdicion(button) {
     }
 
     // Show loading on the row
-    const row = button.parentElement.parentElement;
+    const row = button.parentElement.parentElement.parentElement;
     row.classList.add('loading');
 
     $.ajax({
@@ -357,13 +434,25 @@ function guardarEdicion(button) {
                 allTd[3].innerHTML = nuevoValor;
                 allTd[4].innerHTML = nuevoValorPadre;
                 
-                // Reset button to edit mode
-                allTd[5].innerHTML = `
-                    <button onclick="editar(this)" 
-                            class="px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-200 hover-lift"
-                            data-bs-toggle="tooltip" data-bs-placement="top" title="Editar categoría">
-                        <i class="fas fa-edit"></i>
-                    </button>`;
+                // Get current estado to restore correct buttons
+                const estadoSpan = allTd[5].querySelector('span');
+                const esActivo = estadoSpan.textContent.trim() === 'Activo';
+                
+                // Reset buttons to edit mode
+                allTd[6].innerHTML = `
+                    <div class="flex justify-center gap-2">
+                        <button onclick="editar(this)" 
+                                class="px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-200 hover-lift"
+                                data-bs-toggle="tooltip" data-bs-placement="top" title="Editar categoría">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        
+                        <button onclick="cambiarEstado(this, '${rubro}', '${categoria}', ${esActivo ? '0' : '1'})" 
+                                class="px-3 py-2 ${esActivo ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white rounded-lg transition-all duration-200 hover-lift"
+                                data-bs-toggle="tooltip" data-bs-placement="top" title="${esActivo ? 'Desactivar' : 'Activar'} categoría">
+                            <i class="fas ${esActivo ? 'fa-toggle-off' : 'fa-toggle-on'}"></i>
+                        </button>
+                    </div>`;
                 
                 // Show success toast
                 Swal.fire({
@@ -406,19 +495,33 @@ function guardarEdicion(button) {
 
 // Updated function - Cancel edition with both fields
 function cancelarEdicion(button, originalDescCategoria, originalDescCategoriaPadre) {
-    let allTd = button.parentElement.parentElement.querySelectorAll("td");
+    let allTd = button.parentElement.parentElement.parentElement.querySelectorAll("td");
+    let rubro = allTd[0].textContent;
+    let categoria = allTd[2].textContent;
     
     // Restore original values
     allTd[3].innerHTML = originalDescCategoria;
     allTd[4].innerHTML = originalDescCategoriaPadre;
     
-    // Reset button to edit mode
-    allTd[5].innerHTML = `
-        <button onclick="editar(this)" 
-                class="px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-200 hover-lift"
-                data-bs-toggle="tooltip" data-bs-placement="top" title="Editar categoría">
-            <i class="fas fa-edit"></i>
-        </button>`;
+    // Get current estado to restore correct buttons
+    const estadoSpan = allTd[5].querySelector('span');
+    const esActivo = estadoSpan.textContent.trim() === 'Activo';
+    
+    // Reset buttons to edit mode
+    allTd[6].innerHTML = `
+        <div class="flex justify-center gap-2">
+            <button onclick="editar(this)" 
+                    class="px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-200 hover-lift"
+                    data-bs-toggle="tooltip" data-bs-placement="top" title="Editar categoría">
+                <i class="fas fa-edit"></i>
+            </button>
+            
+            <button onclick="cambiarEstado(this, '${rubro}', '${categoria}', ${esActivo ? '0' : '1'})" 
+                    class="px-3 py-2 ${esActivo ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white rounded-lg transition-all duration-200 hover-lift"
+                    data-bs-toggle="tooltip" data-bs-placement="top" title="${esActivo ? 'Desactivar' : 'Activar'} categoría">
+                <i class="fas ${esActivo ? 'fa-toggle-off' : 'fa-toggle-on'}"></i>
+            </button>
+        </div>`;
 }
 
 // Original function kept for backward compatibility - Update category description
@@ -488,6 +591,15 @@ function updateStats() {
     const rows = document.querySelectorAll('#tableBody tr');
     const totalCategorias = rows.length;
     
+    // Count active categories
+    let categoriasActivas = 0;
+    rows.forEach(row => {
+        const estadoSpan = row.querySelector('td:nth-child(6) span');
+        if (estadoSpan && estadoSpan.textContent.trim() === 'Activo') {
+            categoriasActivas++;
+        }
+    });
+    
     // Find highest category code
     let ultimoCodigo = 0;
     rows.forEach(row => {
@@ -498,9 +610,11 @@ function updateStats() {
     });
     
     const totalElement = document.getElementById('totalCategorias');
+    const activasElement = document.getElementById('categoriasActivas');
     const ultimoElement = document.getElementById('ultimoCodigo');
     
     if (totalElement) totalElement.textContent = totalCategorias;
+    if (activasElement) activasElement.textContent = categoriasActivas;
     if (ultimoElement) ultimoElement.textContent = String(ultimoCodigo).padStart(2, '0');
 }
 

@@ -172,6 +172,9 @@
                                             <i class="fas fa-folder mr-2"></i>Desc. Categoría Padre
                                         </th>
                                         <th class="px-6 py-4 text-gray-700 font-medium text-center">
+                                            <i class="fas fa-power-off mr-2"></i>Estado
+                                        </th>
+                                        <th class="px-6 py-4 text-gray-700 font-medium text-center">
                                             <i class="fas fa-cog mr-2"></i>Acciones
                                         </th>
                                     </tr>
@@ -179,6 +182,8 @@
                                 <tbody id="tableBody" class="divide-y divide-gray-200">
                                     <?php 
                                         foreach ($data as $key => $value) {
+                                            $estado = isset($value['ESTADO_ACTIVO']) ? $value['ESTADO_ACTIVO'] : 1;
+                                            $esActivo = $estado == 1;
                                     ?>
                                         <tr class="hover:bg-gray-50 transition-colors">
                                             <td class="px-6 py-4 text-gray-800"><?= $value['RUBRO'] ?></td>
@@ -187,11 +192,25 @@
                                             <td class="px-6 py-4 text-gray-600 editable-cell"><?= $value['DESC_CATEGORIA'] ?></td>
                                             <td class="px-6 py-4 text-gray-600 editable-cell"><?= $value['DESC_CATEGORIA_PADRE'] ?? '' ?></td>
                                             <td class="px-6 py-4 text-center">
-                                                <button onclick="editar(this)" 
-                                                        class="px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-200 hover-lift"
-                                                        data-bs-toggle="tooltip" data-bs-placement="top" title="Editar categoría">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
+                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium <?= $esActivo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' ?>">
+                                                    <i class="fas <?= $esActivo ? 'fa-check-circle' : 'fa-times-circle' ?> mr-1"></i>
+                                                    <?= $esActivo ? 'Activo' : 'Inactivo' ?>
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4 text-center">
+                                                <div class="flex justify-center gap-2">
+                                                    <button onclick="editar(this)" 
+                                                            class="px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-200 hover-lift"
+                                                            data-bs-toggle="tooltip" data-bs-placement="top" title="Editar categoría">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    
+                                                    <button onclick="cambiarEstado(this, '<?= $value['RUBRO'] ?>', '<?= $value['CATEGORIA'] ?>', <?= $esActivo ? '0' : '1' ?>)" 
+                                                            class="px-3 py-2 <?= $esActivo ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600' ?> text-white rounded-lg transition-all duration-200 hover-lift"
+                                                            data-bs-toggle="tooltip" data-bs-placement="top" title="<?= $esActivo ? 'Desactivar' : 'Activar' ?> categoría">
+                                                        <i class="fas <?= $esActivo ? 'fa-toggle-off' : 'fa-toggle-on' ?>"></i>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     <?php    
@@ -204,13 +223,19 @@
                 </div>
 
                 <!-- Stats Footer -->
-                <div class="mt-8 grid md:grid-cols-3 gap-6">
+                <div class="mt-8 grid md:grid-cols-4 gap-6">
                     <div class="bg-white rounded-xl p-6 border text-center shadow-sm stats-card">
                         <div class="text-3xl font-bold text-blue-600 mb-2" id="totalCategorias"><?= count($data) ?></div>
                         <div class="text-gray-600">Total Categorías</div>
                     </div>
                     <div class="bg-white rounded-xl p-6 border text-center shadow-sm stats-card">
-                        <div class="text-3xl font-bold text-green-600 mb-2" id="ultimoCodigo"><?= str_pad($ultimoCodigo, 2, '0', STR_PAD_LEFT) ?></div>
+                        <div class="text-3xl font-bold text-green-600 mb-2" id="categoriasActivas">
+                            <?= count(array_filter($data, function($item) { return (!isset($item['ESTADO_ACTIVO']) || $item['ESTADO_ACTIVO'] == 1); })) ?>
+                        </div>
+                        <div class="text-gray-600">Categorías Activas</div>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 border text-center shadow-sm stats-card">
+                        <div class="text-3xl font-bold text-orange-600 mb-2" id="ultimoCodigo"><?= str_pad($ultimoCodigo, 2, '0', STR_PAD_LEFT) ?></div>
                         <div class="text-gray-600">Último Código</div>
                     </div>
                     <div class="bg-white rounded-xl p-6 border text-center shadow-sm stats-card">
@@ -367,7 +392,7 @@
                         "className": "text-left",
                     },
                     {
-                        "targets": [5], // Actions
+                        "targets": [5, 6], // Estado y Actions
                         "className": "text-center",
                         "orderable": false
                     }
