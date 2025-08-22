@@ -2,34 +2,57 @@
 
 class Conexion{
     
-    // ======================================
-    // CONFIGURACIÓN - ELIGE UNA DE ESTAS OPCIONES:
-    // ======================================
-    
-    // OPCIÓN 1: SQL Server Express (más común en desarrollo)
-    //private $host_central = 'localhost\\SQLEXPRESS';
-    
-    // OPCIÓN 2: SQL Server estándar
-    private $host_central = 'SERVIDOR';
-    
-    // OPCIÓN 3: SQL Server con IP
-    // private $host_central = '127.0.0.1';
-    
-    // OPCIÓN 4: SQL Server con alias
-    // private $host_central = '(local)';
-    
-    // ======================================
-    
-    private $database_central = 'LAKER_SA';      // CAMBIA: Nombre de tu base de datos
-    private $user = 'sa';                            // CAMBIA: Tu usuario
-    private $pass = 'Axoft1988';                              // CAMBIA: Tu contraseña
-    private $character = 'UTF-8';
-    private $env = 'DEV';
+    // ============================================
+    // CONFIGURACIÓN LOCAL PARA DESARROLLO
+    // MODIFICA ESTOS VALORES SEGÚN TU ENTORNO
+    // ============================================
+    private $config_local = [
+        'HOST_CENTRAL' => 'SERVIDOR',  // Tu servidor SQL Server local
+        'DATABASE_CENTRAL' => 'LAKER_SA',      // Tu base de datos
+        'USER' => 'sa',                            // Tu usuario
+        'PASS' => 'Axoft1988',                              // Tu contraseña
+        'CHARACTER' => 'UTF-8',
+        'ENV' => 'DEV'
+    ];
 
     function __construct(){
-        // Configuración directa para desarrollo local
+        // Detectar si estamos en local o servidor
+        $isLocal = $this->isLocalEnvironment();
         
-        // Configurar todas las bases usando la configuración central para local
+        if ($isLocal) {
+            // Usar configuración local directa
+            $this->loadLocalConfig();
+        } else {
+            // Usar configuración del servidor con .env
+            $this->loadServerConfig();
+        }
+    }
+    
+    private function isLocalEnvironment() {
+        $serverName = $_SERVER['SERVER_NAME'] ?? '';
+        $httpHost = $_SERVER['HTTP_HOST'] ?? '';
+        $documentRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+        
+        // Detectar entorno local
+        return (
+            stripos($serverName, 'localhost') !== false ||
+            stripos($httpHost, 'localhost') !== false ||
+            stripos($httpHost, '127.0.0.1') !== false ||
+            stripos($documentRoot, 'xampp') !== false ||
+            stripos($documentRoot, 'htdocs') !== false
+        );
+    }
+    
+    private function loadLocalConfig() {
+        // Configuración local sin .env
+        $this->host_central = $this->config_local['HOST_CENTRAL'];
+        $this->database_central = $this->config_local['DATABASE_CENTRAL'];
+        $this->user = $this->config_local['USER'];
+        $this->pass = $this->config_local['PASS'];
+        $this->character = $this->config_local['CHARACTER'];
+        $this->env = $this->config_local['ENV'];
+        
+        // Configurar el resto usando los mismos valores
         $this->database_uy = $this->database_central;
         $this->database_tangobis = $this->database_central;
         $this->database_suc_uy = $this->database_central;
@@ -39,6 +62,37 @@ class Conexion{
         $this->database_locales = $this->database_central;
         $this->pass_locales = $this->pass;
         $this->prefix = ($this->env == 'DEV') ? '[LAKERBIS].locales_lakers.dbo.' : '';
+    }
+    
+    private function loadServerConfig() {
+        try {
+            // Intentar cargar configuración del servidor
+            require_once(__DIR__.'/../../abastecimiento/Class/classEnv.php');
+
+            $vars = new DotEnv(__DIR__ . '/../../.env');
+            $this->envVars = $vars->listVars();
+            
+            $this->host_central = $this->envVars['HOST_CENTRAL'];
+            $this->database_central = $this->envVars['DATABASE_CENTRAL'];
+            $this->database_uy = $this->envVars['DATABASE_UY'];
+            $this->database_tangobis = $this->envVars['DATABASE_TANGOBIS'];
+            $this->database_suc_uy = $this->envVars['DATABASE_SUC_UY'];
+            $this->host_apps = $this->envVars['HOST_APPS'];
+            $this->database_apps = $this->envVars['DATABASE_APPS'];
+            $this->host_locales = $this->envVars['HOST_LOCALES'];
+            $this->database_locales = $this->envVars['DATABASE_LOCALES'];
+            $this->user = $this->envVars['USER'];
+            $this->pass = $this->envVars['PASS'];
+            $this->pass_locales = $this->envVars['PASS_LOCALES'];
+            $this->character = $this->envVars['CHARACTER'];
+            $this->env = $this->envVars['ENV'];
+            $this->prefix = ($this->env == 'DEV') ? '[LAKERBIS].locales_lakers.dbo.' : '';
+            
+        } catch (Exception $e) {
+            // Si falla el servidor, usar configuración local como fallback
+            error_log("Error cargando configuración del servidor, usando local: " . $e->getMessage());
+            $this->loadLocalConfig();
+        }
     }
 
     private function servidor($nameServer) {
@@ -79,45 +133,57 @@ class Conexion{
                 "UID" => $this->user, 
                 "PWD" => $pass, 
                 "CharacterSet" => $this->character,
-                "ConnectionPooling" => false,        // Evitar problemas de pool
-                "ConnectRetryCount" => 0,           // Sin reintentos automáticos
-                "LoginTimeout" => 10                // Timeout más largo
+                "ConnectionPooling" => false,
+                "ConnectRetryCount" => 0,
+                "LoginTimeout" => 10
             );
 
             $cid = sqlsrv_connect($serverDB[0], $params);
 
             if(!$cid) {
-                // Mostrar errores detallados para debugging
                 $errors = sqlsrv_errors();
-                $errorMsg = "Errores de conexión SQL Server:\n";
-                foreach($errors as $error) {
-                    $errorMsg .= "- " . $error['message'] . "\n";
+                $errorMsg = "Error de conexión SQL Server:\n";
+                $errorMsg .= "Servidor: " . $serverDB[0] . "\n";
+                $errorMsg .= "Database: " . $serverDB[1] . "\n";
+                $errorMsg .= "Usuario: " . $this->user . "\n";
+                
+                if ($errors) {
+                    foreach($errors as $error) {
+                        $errorMsg .= "Error: " . $error['message'] . "\n";
+                    }
                 }
+                
                 error_log($errorMsg);
                 
-                // Mostrar solo el primer error en pantalla
-                echo "<div style='background: #f8d7da; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
-                echo "<h4>Error de conexión SQL Server:</h4>";
-                echo "<p><strong>Servidor:</strong> " . htmlspecialchars($serverDB[0]) . "</p>";
-                echo "<p><strong>Base de datos:</strong> " . htmlspecialchars($serverDB[1]) . "</p>";
-                echo "<p><strong>Usuario:</strong> " . htmlspecialchars($this->user) . "</p>";
-                echo "<p><strong>Error:</strong> " . htmlspecialchars($errors[0]['message']) . "</p>";
-                echo "<p><em>Verifica que SQL Server esté ejecutándose y que los datos de conexión sean correctos.</em></p>";
-                echo "</div>";
+                // Solo mostrar en pantalla si es desarrollo local
+                if ($this->isLocalEnvironment()) {
+                    echo "<div style='background: #f8d7da; padding: 15px; border-radius: 5px; margin: 10px 0;'>";
+                    echo "<h4>Error de conexión SQL Server (Desarrollo Local):</h4>";
+                    echo "<p><strong>Servidor:</strong> " . htmlspecialchars($serverDB[0]) . "</p>";
+                    echo "<p><strong>Base de datos:</strong> " . htmlspecialchars($serverDB[1]) . "</p>";
+                    echo "<p><strong>Usuario:</strong> " . htmlspecialchars($this->user) . "</p>";
+                    if ($errors) {
+                        echo "<p><strong>Error:</strong> " . htmlspecialchars($errors[0]['message']) . "</p>";
+                    }
+                    echo "<p><em>Configura tus datos en producto/Class/Conexion.php líneas 8-13</em></p>";
+                    echo "</div>";
+                }
                 
                 return false;
             }
 
-            // Conexión exitosa
+            // este cid va a cambiar mil veces
             if (session_status() == PHP_SESSION_NONE) {
                 session_start();
             }
             $_SESSION['cid'] = $cid;
             return $cid;
             
+        } catch (PDOException $e) {
+            error_log("PDO Exception: " . $e->getMessage());
+            return false;
         } catch (Exception $e) {
-            error_log("Exception en conexión: " . $e->getMessage());
-            echo "<p style='color: red;'>Error: " . htmlspecialchars($e->getMessage()) . "</p>";
+            error_log("Exception: " . $e->getMessage());
             return false;
         }
     }

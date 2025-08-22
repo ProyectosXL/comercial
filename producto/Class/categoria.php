@@ -5,15 +5,17 @@ class Categoria
     private $cid_central;
 
     function __construct(){
-        // Usar SOLO la conexión local
-        require_once __DIR__ . '/Conexion.php';
+        // Intentar usar conexión local primero, luego la del servidor
+        if (file_exists(__DIR__ . '/Conexion.php')) {
+            // Usar conexión local (sin .env)
+            require_once __DIR__ . '/Conexion.php';
+        } else {
+            // Usar conexión del servidor (con .env)
+            require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
+        }
         
         $cid = new Conexion();
         $this->cid_central = $cid->conectar('central');
-        
-        if (!$this->cid_central) {
-            throw new Exception("No se pudo establecer conexión con la base de datos");
-        }
     } 
 
     public function traerRubros() {
