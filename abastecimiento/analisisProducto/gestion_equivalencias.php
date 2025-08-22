@@ -1,3 +1,7 @@
+<?php
+// Incluir funciones de ayuda
+require_once 'includes/help-functions.php';
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -13,7 +17,11 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     <link href="css/gestion_equivalencias.css" rel="stylesheet">
-    <link href="css/help-button.css" rel="stylesheet">
+    
+    <?php 
+    // Incluir archivos CSS y JS del botón de ayuda
+    incluir_archivos_ayuda(); 
+    ?>
 </head>
 
 <body class="bg-light">
@@ -275,8 +283,12 @@
     <!-- Script principal -->
     <script src="js/gestion_equivalencias.js"></script>
 
-    <!-- Script del botón de ayuda -->
-    <script src="js/help-button.js"></script>
+    <?php
+    // Solo mostrar el botón de ayuda si el usuario tiene permisos
+    if (usuario_puede_ver_ayuda()) {
+        echo "<!-- El botón de ayuda se carga automáticamente via JavaScript -->\n";
+    }
+    ?>
 
 </body>
 </html>
