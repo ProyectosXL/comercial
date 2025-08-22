@@ -7,10 +7,10 @@ class Conexion{
     // MODIFICA ESTOS VALORES SEGÚN TU ENTORNO
     // ============================================
     private $config_local = [
-        'HOST_CENTRAL' => 'SERVIDOR',  // Tu servidor SQL Server local
-        'DATABASE_CENTRAL' => 'LAKER_SA',      // Tu base de datos
+        'HOST_CENTRAL' => 'localhost\\SQLEXPRESS',  // Tu servidor SQL Server local
+        'DATABASE_CENTRAL' => 'tu_base_datos',      // Tu base de datos
         'USER' => 'sa',                            // Tu usuario
-        'PASS' => 'Axoft1988',                              // Tu contraseña
+        'PASS' => '',                              // Tu contraseña
         'CHARACTER' => 'UTF-8',
         'ENV' => 'DEV'
     ];
@@ -33,14 +33,31 @@ class Conexion{
         $httpHost = $_SERVER['HTTP_HOST'] ?? '';
         $documentRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
         
-        // Detectar entorno local
-        return (
-            stripos($serverName, 'localhost') !== false ||
-            stripos($httpHost, 'localhost') !== false ||
-            stripos($httpHost, '127.0.0.1') !== false ||
-            stripos($documentRoot, 'xampp') !== false ||
-            stripos($documentRoot, 'htdocs') !== false
-        );
+        // Detectar entorno local de forma más precisa
+        $localIndicators = [
+            'localhost',
+            '127.0.0.1',
+            '::1',
+            '.local'
+        ];
+        
+        // Verificar indicadores de local
+        foreach ($localIndicators as $indicator) {
+            if (stripos($serverName, $indicator) !== false || 
+                stripos($httpHost, $indicator) !== false) {
+                return true;
+            }
+        }
+        
+        // Verificar XAMPP/WAMP específicamente
+        if (stripos($documentRoot, 'xampp') !== false || 
+            stripos($documentRoot, 'wamp') !== false ||
+            stripos($documentRoot, 'htdocs') !== false) {
+            return true;
+        }
+        
+        // Si no detecta ningún indicador local, asumir servidor
+        return false;
     }
     
     private function loadLocalConfig() {
@@ -66,10 +83,46 @@ class Conexion{
     
     private function loadServerConfig() {
         try {
-            // Intentar cargar configuración del servidor
-            require_once(__DIR__.'/../../abastecimiento/Class/classEnv.php');
+            // Buscar la clase classEnv en diferentes ubicaciones
+            $classEnvPaths = [
+                __DIR__ . '/../../abastecimiento/Class/classEnv.php',
+                $_SERVER['DOCUMENT_ROOT'] . '/comercial/abastecimiento/Class/classEnv.php',
+                __DIR__ . '/../../../abastecimiento/Class/classEnv.php'
+            ];
+            
+            $classEnvFound = false;
+            foreach ($classEnvPaths as $path) {
+                if (file_exists($path)) {
+                    require_once $path;
+                    $classEnvFound = true;
+                    break;
+                }
+            }
+            
+            if (!$classEnvFound) {
+                throw new Exception("No se encontró classEnv.php");
+            }
 
-            $vars = new DotEnv(__DIR__ . '/../../.env');
+            // Buscar el archivo .env en diferentes ubicaciones
+            $envPaths = [
+                __DIR__ . '/../../.env',
+                $_SERVER['DOCUMENT_ROOT'] . '/comercial/.env',
+                __DIR__ . '/../../../.env'
+            ];
+            
+            $envPath = null;
+            foreach ($envPaths as $path) {
+                if (file_exists($path)) {
+                    $envPath = $path;
+                    break;
+                }
+            }
+            
+            if (!$envPath) {
+                throw new Exception("No se encontró archivo .env");
+            }
+
+            $vars = new DotEnv($envPath);
             $this->envVars = $vars->listVars();
             
             $this->host_central = $this->envVars['HOST_CENTRAL'];

@@ -37,7 +37,7 @@ function insertarNuevo() {
 
     $codCategoria = $_POST['codCategoria'];
     $descCategoria = $_POST['descCategoria'];
-    $descCategoriaPadre = $_POST['descCategoriaPadre'] ?? '';
+    $descCategoriaPadre = $_POST['descCategoriaPadre'] ?? ''; // Nuevo campo
     $siglaRubro = $_POST['siglaRubro'];
 
     $result = $categoria->insertarNuevaCategoria($codCategoria, $descCategoria, $descCategoriaPadre, $siglaRubro);
@@ -50,7 +50,7 @@ function actualizarDescCategoria() {
     $categoria = new Categoria();
 
     $nuevoValor = $_POST['nuevoValor'];
-    $nuevoValorPadre = $_POST['nuevoValorPadre'] ?? '';
+    $nuevoValorPadre = $_POST['nuevoValorPadre'] ?? ''; // Nuevo campo
     $rubro = $_POST['rubro'];
     $Categoria = $_POST['Categoria'];
 
