@@ -1,11 +1,20 @@
 <?php
-require_once '../class/Conexion.php';
-
 class PanelComercialController {
-    private $conexion;
+    private $pdo;
     
     public function __construct() {
-        $this->conexion = new Conexion();
+        $this->initDatabase();
+    }
+    
+    private function initDatabase() {
+        try {
+            $db_path = __DIR__ . '/../data/stock.db';
+            $this->pdo = new PDO("sqlite:$db_path");
+            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } catch (PDOException $e) {
+            error_log("Error al conectar base de datos: " . $e->getMessage());
+            throw new Exception("Error al conectar base de datos");
+        }
     }
     
     /**
@@ -30,7 +39,7 @@ class PanelComercialController {
                      GROUP BY f.id, f.nombre, f.ciudad
                      ORDER BY f.nombre";
             
-            $stmt = $this->conexion->prepare($query);
+            $stmt = $this->pdo->prepare($query);
             $stmt->bindParam(':periodo', $periodo, PDO::PARAM_STR);
             $stmt->execute();
             
@@ -56,7 +65,7 @@ class PanelComercialController {
                                                     AND fs.periodo = :periodo
                      WHERE f.activa = 1";
             
-            $stmt = $this->conexion->prepare($query);
+            $stmt = $this->pdo->prepare($query);
             $stmt->bindParam(':periodo', $periodo, PDO::PARAM_STR);
             $stmt->execute();
             
@@ -85,7 +94,7 @@ class PanelComercialController {
                      GROUP BY rubro, categoria
                      ORDER BY rubro, categoria";
             
-            $stmt = $this->conexion->prepare($query);
+            $stmt = $this->pdo->prepare($query);
             $stmt->bindParam(':periodo', $periodo, PDO::PARAM_STR);
             $stmt->execute();
             
@@ -110,7 +119,7 @@ class PanelComercialController {
                      AND fs.periodo = :periodo
                      ORDER BY fs.rubro, fs.categoria";
             
-            $stmt = $this->conexion->prepare($query);
+            $stmt = $this->pdo->prepare($query);
             $stmt->bindParam(':franquicia_id', $franquicia_id, PDO::PARAM_INT);
             $stmt->bindParam(':periodo', $periodo, PDO::PARAM_STR);
             $stmt->execute();
@@ -184,7 +193,7 @@ class PanelComercialController {
                      ORDER BY periodo DESC 
                      LIMIT 12";
             
-            $stmt = $this->conexion->prepare($query);
+            $stmt = $this->pdo->prepare($query);
             $stmt->execute();
             
             return $stmt->fetchAll(PDO::FETCH_COLUMN);

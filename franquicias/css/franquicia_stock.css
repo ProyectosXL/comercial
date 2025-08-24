@@ -378,3 +378,84 @@
     white-space: nowrap;
     z-index: 1000;
 }
+
+/* Estilos específicos para historial - Fix de visibilidad de texto */
+.card .card-body {
+    background-color: #ffffff;
+    color: #1f2937;
+}
+
+.card .card-body .text-muted {
+    color: #6b7280 !important;
+}
+
+.card .card-body .form-label {
+    color: #374151 !important;
+    font-weight: 500;
+}
+
+.card .card-body .form-select {
+    color: #1f2937 !important;
+    background-color: #ffffff !important;
+}
+
+/* Específicos para la vista de historial */
+#resumen-historico .stat-item {
+    color: #1f2937;
+}
+
+#resumen-historico .stat-item h3 {
+    font-weight: 600;
+}
+
+#resumen-historico .stat-item small {
+    color: #6b7280 !important;
+    font-weight: 500;
+}
+
+/* Mejorar contraste en filtros */
+.card-header.bg-primary h6,
+.card-header.bg-info h6 {
+    color: #ffffff !important;
+    font-weight: 600;
+}
+
+/* Asegurar que el texto de las alertas sea visible */
+.alert {
+    color: #1f2937 !important;
+}
+
+.alert.alert-info {
+    background-color: #dbeafe !important;
+    border-color: #93c5fd !important;
+    color: #1e40af !important;
+}
+
+/* Bootstrap text utility overrides para mejor visibilidad */
+.text-muted {
+    color: #6b7280 !important;
+}
+
+.text-dark {
+    color: #1f2937 !important;
+}
+
+/* Tabla de historial - mejorar legibilidad */
+.table {
+    color: #1f2937 !important;
+    background-color: #ffffff;
+}
+
+.table th {
+    color: #ffffff;
+    background-color: #374151;
+}
+
+.table td {
+    color: #1f2937;
+    background-color: #ffffff;
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > td {
+    background-color: #f9fafb;
+}

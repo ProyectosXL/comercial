@@ -105,7 +105,7 @@
                                 Seleccionar Rubro
                             </label>
                             <div class="rubro-selector-container">
-                                <select class="form-select" id="selector-rubro">
+                                <select class="form-select" id="selector-rubro" name="selector-rubro" aria-label="Seleccionar rubro">
                                     <option value="">-- Seleccione un rubro --</option>
                                 </select>
                             </div>

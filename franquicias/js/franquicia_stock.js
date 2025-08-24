@@ -75,11 +75,11 @@ class FranquiciaStockManager {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: 'action=obtener_rubros'
+                body: 'accion=obtener_rubros'
             });
             
             if (data.success) {
-                this.llenarSelectorRubros(data.data);
+                this.llenarSelectorRubros(data.rubros);
             } else {
                 this.mostrarAlerta(data.message || 'Error al cargar rubros', 'danger');
             }
@@ -126,11 +126,11 @@ class FranquiciaStockManager {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `action=obtener_categorias&rubro=${encodeURIComponent(rubro)}`
+                body: `accion=obtener_categorias&rubro=${encodeURIComponent(rubro)}`
             });
             
             if (data.success) {
-                this.categoriasData = data.data;
+                this.categoriasData = data.categorias;
                 this.mostrarCategorias();
                 await this.cargarStockExistente(rubro);
             } else {
@@ -153,9 +153,16 @@ class FranquiciaStockManager {
         // Limpiar tabla
         tabla.innerHTML = '';
         
+        // Verificar que categoriasData existe y es un array
+        if (!this.categoriasData || !Array.isArray(this.categoriasData)) {
+            console.warn('categoriasData no es válido:', this.categoriasData);
+            this.mostrarAlerta('No se encontraron categorías', 'warning');
+            return;
+        }
+        
         // Agregar filas de categorías
         this.categoriasData.forEach((categoria, index) => {
-            const fila = this.crearFilaCategoria(categoria.CATEGORIA_PADRE, index);
+            const fila = this.crearFilaCategoria(categoria.nombre, index);
             tabla.appendChild(fila);
         });
         
@@ -182,6 +189,8 @@ class FranquiciaStockManager {
             <td>
                 <div class="input-group">
                     <input type="number" 
+                           id="stock-${categoria.replace(/[^a-zA-Z0-9]/g, '_')}-${index}"
+                           name="stock[${categoria}]"
                            class="form-control cantidad-input" 
                            data-categoria="${categoria}"
                            data-index="${index}"
@@ -189,6 +198,7 @@ class FranquiciaStockManager {
                            min="0" 
                            step="1"
                            autocomplete="off"
+                           aria-label="Cantidad en stock para ${categoria}"
                            value="${this.stockData[categoria] || ''}">
                     <span class="input-group-text">
                         <i class="bi bi-box me-1"></i>unidades
@@ -226,12 +236,12 @@ class FranquiciaStockManager {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `action=obtener_stock&periodo=${this.periodoActual}`
+                body: `accion=obtener_resumen_stock&periodo=${this.periodoActual}`
             });
             
             if (data.success) {
                 // Filtrar stock por rubro actual
-                const stockRubro = data.data.filter(item => item.rubro === rubro);
+                const stockRubro = data.stock.filter(item => item.rubro === rubro);
                 
                 // Actualizar inputs con datos existentes
                 stockRubro.forEach(item => {
@@ -275,17 +285,24 @@ class FranquiciaStockManager {
     }
     
     /**
-     * Limpiar todo el rubro
+     * Limpiar todo el rubro (con confirmación)
      */
     limpiarRubro() {
         if (confirm('¿Está seguro de que desea limpiar todas las cantidades del rubro actual?')) {
-            document.querySelectorAll('.cantidad-input').forEach(input => {
-                input.value = '';
-            });
-            this.stockData = {};
-            this.actualizarContadores();
-            this.deshabilitarBotonGuardar();
+            this.limpiarRubroSinConfirmacion();
         }
+    }
+    
+    /**
+     * Limpiar rubro sin confirmación (para uso interno después de guardar)
+     */
+    limpiarRubroSinConfirmacion() {
+        document.querySelectorAll('.cantidad-input').forEach(input => {
+            input.value = '';
+        });
+        this.stockData = {};
+        this.actualizarContadores();
+        this.deshabilitarBotonGuardar();
     }
     
     /**
@@ -331,6 +348,8 @@ class FranquiciaStockManager {
      * Guardar stock
      */
     async guardarStock() {
+        console.log('DEBUG: Iniciando guardarStock');
+        
         if (!this.rubroActual || Object.keys(this.stockData).length === 0) {
             this.mostrarAlerta('Debe seleccionar un rubro y cargar al menos una cantidad', 'warning');
             return;
@@ -343,6 +362,8 @@ class FranquiciaStockManager {
             cantidad: cantidad
         }));
         
+        console.log('DEBUG: Datos a enviar:', stockArray);
+        
         try {
             this.mostrarLoading('Guardando stock...');
             
@@ -351,26 +372,33 @@ class FranquiciaStockManager {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `action=guardar_stock&periodo=${this.periodoActual}&stock_data=${encodeURIComponent(JSON.stringify(stockArray))}`
+                body: `accion=registrar_movimiento&periodo=${this.periodoActual}&stock_data=${encodeURIComponent(JSON.stringify(stockArray))}`
             });
             
+            console.log('DEBUG: Respuesta del servidor:', data);
             this.ocultarLoading();
             
             if (data.success) {
+                console.log('DEBUG: Guardado exitoso, limpiando formulario');
                 this.mostrarAlerta('Stock guardado correctamente', 'success');
-                this.verificarEstadoCarga();
-                this.cargarResumenStock();
                 
-                // Limpiar formulario
-                this.limpiarRubro();
+                // Actualizar estados
+                await this.verificarEstadoCarga();
+                await this.cargarResumenStock();
+                
+                // Limpiar formulario automáticamente después de guardar exitosamente
+                this.limpiarRubroSinConfirmacion();
                 document.getElementById('selector-rubro').value = '';
                 this.ocultarCategorias();
+                
+                console.log('DEBUG: Formulario limpiado exitosamente');
             } else {
+                console.error('DEBUG: Error en respuesta del servidor:', data.message);
                 this.mostrarAlerta(data.message || 'Error al guardar el stock', 'danger');
             }
         } catch (error) {
             this.ocultarLoading();
-            console.error('Error:', error);
+            console.error('DEBUG: Error en guardarStock:', error);
             this.mostrarAlerta('Error de conexión', 'danger');
         }
     }
@@ -385,11 +413,11 @@ class FranquiciaStockManager {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `action=obtener_stock&periodo=${this.periodoActual}`
+                body: `accion=obtener_resumen_stock`
             });
             
             if (data.success) {
-                const tieneStock = data.data.length > 0;
+                const tieneStock = data.stock && data.stock.length > 0;
                 this.actualizarEstadoCarga(tieneStock);
             } else {
                 console.warn('Error al verificar estado:', data.message);
@@ -445,11 +473,11 @@ class FranquiciaStockManager {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `action=obtener_stock&periodo=${this.periodoActual}`
+                body: `accion=obtener_resumen_stock&periodo=${this.periodoActual}`
             });
             
-            if (data.success && data.data.length > 0) {
-                this.mostrarResumenStock(data.data);
+            if (data.success && data.stock.length > 0) {
+                this.mostrarResumenStock(data.stock);
             } else {
                 this.ocultarResumenStock();
             }
@@ -681,7 +709,7 @@ async function cargarHistorial() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: 'action=obtener_historial'
+            body: 'accion=obtener_historial'
         });
         
         if (data.success) {
