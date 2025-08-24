@@ -80,6 +80,82 @@
         </div>
     </div>
 
+    <!-- Búsqueda de Artículos -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <h5 class="mb-0">
+                            <i class="bi bi-search me-2"></i>
+                            Consultar Artículo
+                        </h5>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="limpiarBusquedaArticulo()">
+                            <i class="bi bi-arrow-clockwise me-1"></i>
+                            Limpiar
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-8 mb-3">
+                            <label for="buscar-articulo" class="form-label fw-bold">
+                                <i class="bi bi-box me-1"></i>
+                                Buscar por Código o Descripción
+                            </label>
+                            <select id="buscar-articulo" class="form-select" name="buscar-articulo" style="width: 100%;">
+                                <option value="">Escriba para buscar artículos...</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Ingrese al menos 2 caracteres para comenzar la búsqueda
+                            </small>
+                        </div>
+                        <div class="col-lg-4 mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-lightbulb me-1"></i>
+                                ¿Para qué sirve?
+                            </label>
+                            <div class="dashboard-alert alert-info">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="bi bi-question-circle text-info me-2"></i>
+                                    </div>
+                                    <div class="small">
+                                        <strong>Consulta de ubicación:</strong><br>
+                                        Si no sabe a qué rubro pertenece un artículo, búsquelo aquí y el sistema le mostrará su ubicación.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resultado de la búsqueda -->
+                    <div id="resultado-busqueda-articulo" style="display: none;">
+                        <hr class="my-3">
+                        <div class="row">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Información del Artículo
+                                </h6>
+                                <div class="row" id="info-articulo">
+                                    <!-- Se llena dinámicamente -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mensaje sin resultados -->
+                    <div id="sin-resultados-articulo" class="text-center py-4" style="display: none;">
+                        <i class="bi bi-search text-muted" style="font-size: 2.5rem; opacity: 0.5;"></i>
+                        <h6 class="text-muted mt-2">No se encontraron artículos</h6>
+                        <p class="text-muted small">Intente con otros términos de búsqueda</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Formulario de Carga de Stock -->
     <div class="row">
         <div class="col-12">

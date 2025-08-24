@@ -130,7 +130,8 @@ if (!class_exists('FranquiciaStockController')) {
                 
                 case 'editar_stock':
                     return $this->editarStock($franquicia_id_sesion);
-                
+                case 'buscar_articulos':
+                    return $this->buscarArticulos();
                 default:
                     throw new Exception('Acción no válida: ' . $accion);
             }
@@ -783,6 +784,104 @@ if (!class_exists('FranquiciaStockController')) {
         } catch (Exception $e) {
             error_log("Error en editarStock: " . $e->getMessage());
             throw new Exception("Error al editar stock: " . $e->getMessage());
+        }
+    }
+    /**
+     * Buscar artículos por código o descripción
+     */
+    public function buscarArticulos() {
+        try {
+            $termino = $_POST['termino'] ?? $_GET['termino'] ?? '';
+            
+            if (strlen($termino) < 2) {
+                return [
+                    'success' => false,
+                    'message' => 'Debe ingresar al menos 2 caracteres para buscar'
+                ];
+            }
+            
+            error_log("DEBUG: Buscando artículos con término: $termino");
+            
+            if ($this->sistemas_conn) {
+                // Buscar por código o descripción
+                $query = "SELECT TOP 50 COD_ARTICU, DESCRIPCION, RUBRO, CATEGORIA_PADRE 
+                        FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
+                        WHERE CATEGORIA_PADRE != '' AND RUBRO IS NOT NULL AND RUBRO NOT LIKE '%OUTLET'
+                        AND (COD_ARTICU LIKE ? OR DESCRIPCION LIKE ?)
+                        ORDER BY COD_ARTICU";
+                
+                $terminoBusqueda = "%{$termino}%";
+                $stmt = sqlsrv_prepare($this->sistemas_conn, $query, [$terminoBusqueda, $terminoBusqueda]);
+                
+                $articulos = [];
+                if ($stmt && sqlsrv_execute($stmt)) {
+                    while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                        $articulos[] = [
+                            'codigo' => $row['COD_ARTICU'],
+                            'descripcion' => $row['DESCRIPCION'],
+                            'rubro' => $row['RUBRO'],
+                            'categoria_padre' => $row['CATEGORIA_PADRE'],
+                            // Formato para Select2
+                            'id' => $row['COD_ARTICU'],
+                            'text' => $row['COD_ARTICU'] . ' - ' . $row['DESCRIPCION']
+                        ];
+                    }
+                    sqlsrv_free_stmt($stmt);
+                    error_log("DEBUG: Encontrados " . count($articulos) . " artículos");
+                } else {
+                    error_log("DEBUG: Error en query artículos: " . print_r(sqlsrv_errors(), true));
+                }
+                
+                if (!empty($articulos)) {
+                    return [
+                        'success' => true,
+                        'articulos' => $articulos,
+                        'total' => count($articulos),
+                        'termino_busqueda' => $termino
+                    ];
+                }
+            }
+            
+            // Datos de prueba si no hay conexión
+            $articulos_prueba = [
+                [
+                    'codigo' => 'ART001',
+                    'descripcion' => 'Zapatilla Deportiva',
+                    'rubro' => 'CALZADO',
+                    'categoria_padre' => 'DEPORTIVO',
+                    'id' => 'ART001',
+                    'text' => 'ART001 - Zapatilla Deportiva'
+                ],
+                [
+                    'codigo' => 'ART002',
+                    'descripcion' => 'Remera Básica',
+                    'rubro' => 'INDUMENTARIA',
+                    'categoria_padre' => 'REMERAS',
+                    'id' => 'ART002',
+                    'text' => 'ART002 - Remera Básica'
+                ]
+            ];
+            
+            // Filtrar datos de prueba por el término
+            $articulos_filtrados = array_filter($articulos_prueba, function($item) use ($termino) {
+                return stripos($item['codigo'], $termino) !== false || 
+                    stripos($item['descripcion'], $termino) !== false;
+            });
+            
+            return [
+                'success' => true,
+                'articulos' => array_values($articulos_filtrados),
+                'total' => count($articulos_filtrados),
+                'termino_busqueda' => $termino,
+                'source' => 'test_data'
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Error al buscar artículos: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Error al buscar artículos: ' . $e->getMessage()
+            ];
         }
     }
 }

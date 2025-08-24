@@ -46,7 +46,7 @@
             
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <button class="btn btn-outline-light btn-sm me-2" type="button" data-bs-toggle="modal" data-bs-target="#modalAyuda">
+                    <button class="btn btn-outline-light me-2" type="button" data-bs-toggle="modal" data-bs-target="#modalAyuda">
                         <i class="bi bi-question-circle me-1"></i>
                         Ayuda
                     </button>

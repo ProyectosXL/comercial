@@ -11,7 +11,7 @@ class DatabaseSQLServer {
     private static $instance = null;
     
     // Configuración directa de conexión
-    private const SERVER = "XL-APPS";
+    private const SERVER = "192.168.0.143";
     private const DATABASE = "sistemas";
     private const USER = "sa";
     private const PASSWORD = "Axoft1988";
