@@ -251,9 +251,9 @@ const agregar = (siglaRubro) => {
 }
 
 // NUEVA FUNCIÓN: Cambiar estado de categoría
+
 function cambiarEstado(button, siglaRubro, codCategoria, nuevoEstado) {
     const estadoTexto = nuevoEstado == 1 ? 'activar' : 'desactivar';
-    const estadoColor = nuevoEstado == 1 ? 'success' : 'warning';
     
     Swal.fire({
         title: '¿Confirmar cambio?',
@@ -273,6 +273,13 @@ function cambiarEstado(button, siglaRubro, codCategoria, nuevoEstado) {
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             button.disabled = true;
             
+            // Debug: mostrar valores que se envían
+            console.log('Enviando:', {
+                siglaRubro: siglaRubro,
+                codCategoria: codCategoria,
+                nuevoEstado: nuevoEstado
+            });
+            
             $.ajax({
                 url: 'Controller/CategoriaController.php?accion=actualizarEstado',
                 method: 'POST',
@@ -282,40 +289,97 @@ function cambiarEstado(button, siglaRubro, codCategoria, nuevoEstado) {
                     nuevoEstado: nuevoEstado
                 },
                 success: function(data) {
+                    console.log('Respuesta del servidor:', data);
+                    
                     if (data == 1) {
+                        // Actualizar toda la fila para asegurar consistencia
+                        const row = button.closest('tr');
+                        const estadoCell = row.querySelector('td:nth-child(6)');
+                        const accionesCell = row.querySelector('td:nth-child(7)');
+                        const esActivo = nuevoEstado == 1;
+                        
+                        // Actualizar badge de estado
+                        estadoCell.innerHTML = `
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${esActivo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                <i class="fas ${esActivo ? 'fa-check-circle' : 'fa-times-circle'} mr-1"></i>
+                                ${esActivo ? 'Activo' : 'Inactivo'}
+                            </span>
+                        `;
+                        
+                        // Recrear completamente los botones de acción
+                        const rubro = row.children[0].textContent;
+                        const categoria = row.children[2].textContent;
+                        
+                        accionesCell.innerHTML = `
+                            <div class="flex justify-center gap-2">
+                                <button onclick="editar(this)" 
+                                        class="px-3 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-200 hover-lift"
+                                        data-bs-toggle="tooltip" data-bs-placement="top" title="Editar categoría">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                
+                                <button onclick="cambiarEstado(this, '${rubro}', '${categoria}', ${esActivo ? 0 : 1})" 
+                                        class="px-3 py-2 ${esActivo ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white rounded-lg transition-all duration-200 hover-lift"
+                                        data-bs-toggle="tooltip" data-bs-placement="top" title="${esActivo ? 'Desactivar' : 'Activar'} categoría">
+                                    <i class="fas ${esActivo ? 'fa-toggle-off' : 'fa-toggle-on'}"></i>
+                                </button>
+                            </div>
+                        `;
+                        
+                        // Reinicializar tooltips para los nuevos botones
+                        const tooltips = accionesCell.querySelectorAll('[data-bs-toggle="tooltip"]');
+                        tooltips.forEach(el => {
+                            new bootstrap.Tooltip(el);
+                        });
+                        
+                        // Actualizar estadísticas
+                        updateStats();
+                        
+                        // Mostrar éxito
                         Swal.fire({
                             icon: 'success',
                             title: 'Estado actualizado',
                             text: `Categoría ${estadoTexto}da correctamente`,
                             background: '#fff',
                             color: '#374151',
-                            timer: 1500,
-                            showConfirmButton: false
-                        }).then(() => {
-                            location.reload();
+                            timer: 2000,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
                         });
+                        
+                        // Efecto visual en la fila
+                        row.classList.add('estado-success-fade');
+                        setTimeout(() => {
+                            row.classList.remove('estado-success-fade');
+                        }, 2000);
+                        
                     } else {
+                        // Restaurar botón en caso de error
                         button.innerHTML = originalHTML;
                         button.disabled = false;
                         
                         Swal.fire({
                             icon: 'error',
                             title: 'Error',
-                            text: 'No se pudo actualizar el estado de la categoría',
+                            text: 'No se pudo actualizar el estado de la categoría. Respuesta: ' + data,
                             background: '#fff',
                             color: '#374151'
                         });
                     }
                 },
                 error: function(xhr, status, error) {
+                    // Restaurar botón en caso de error
                     button.innerHTML = originalHTML;
                     button.disabled = false;
                     
                     console.error('AJAX Error:', error);
+                    console.error('Response:', xhr.responseText);
+                    
                     Swal.fire({
                         icon: 'error',
-                        title: 'Error',
-                        text: 'Error de conexión al actualizar el estado',
+                        title: 'Error de conexión',
+                        text: 'No se pudo conectar con el servidor: ' + error,
                         background: '#fff',
                         color: '#374151'
                     });
