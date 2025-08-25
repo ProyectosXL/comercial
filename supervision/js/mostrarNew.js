@@ -4,13 +4,21 @@ function actualizarEstadoInputs(gastos = {}) {
     let esActual = $opcionSeleccionada.data('es-actual') === 1;
     let hayGastosCargados = Object.keys(gastos).length > 0;
 
-    $('.importe-input, textarea, #importeAdelanto').prop('disabled', !esActual || hayGastosCargados);
-    $('.camara-btn').toggle(esActual && !hayGastosCargados);
-    $('#guardarTodoBtn').toggle(esActual && !hayGastosCargados);
+    // CAMBIO: Permitir edición si no hay gastos cargados, independientemente de si es semana actual
+    let puedeEditar = !hayGastosCargados;
 
-    let mensaje = esActual 
-        ? (hayGastosCargados ? " Semana actual con gastos cargados. No se pueden modificar." : " Semana actual seleccionada. Puede cargar gastos.")
-        : " Semana pasada seleccionada. Los gastos no se pueden modificar.";
+    $('.importe-input, textarea, #importeAdelanto').prop('disabled', !puedeEditar);
+    $('.camara-btn').toggle(puedeEditar);
+    $('#guardarTodoBtn').toggle(puedeEditar);
+
+    let mensaje = "";
+    if (hayGastosCargados) {
+        mensaje = " Gastos ya cargados para esta semana. No se pueden modificar.";
+    } else if (esActual) {
+        mensaje = " Semana actual seleccionada. Puede cargar gastos.";
+    } else {
+        mensaje = " Semana seleccionada. Puede cargar gastos.";
+    }
     $('#semanaInfo').text(mensaje);
 }
 
