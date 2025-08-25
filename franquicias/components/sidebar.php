@@ -1,7 +1,7 @@
 <div class="sidebar">
     <div class="sidebar-content">
         <!-- Información del Usuario -->
-        <div class="user-info-card card">
+        <div class="user-info-card">
             <div class="card-body">
                 <div class="d-flex align-items-center">
                     <div class="avatar-circle me-3">

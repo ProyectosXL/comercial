@@ -1,31 +1,54 @@
 <?php
-session_start();
-require_once '../class/Conexion.php';
+// Incluir configuración de sesiones ANTES que cualquier otra cosa
+require_once 'config_sesiones_fixed.php';
 
-// Cargar configuración de desarrollo si existe
-if (file_exists('config_dev.php')) {
-    require_once 'config_dev.php';
-    
-    // Si estamos en modo desarrollo y no hay sesión activa, simular login
-    if (es_modo_desarrollo() && !isset($_SESSION['usuario_id'])) {
-        simular_login_desarrollo();
-    }
-}
+// Cargar la nueva clase de autenticación
+require_once 'class/AuthFranquicia.php';
 
-// Verificar autenticación (integración con XL Gestión)
-if (!isset($_SESSION['usuario_id'])) {
-    header('Location: ../login.php');
+// Verificar autenticación de franquicia
+if (!AuthFranquicia::verificarSesion()) {
+    header('Location: login.php');
     exit;
 }
 
-$usuario = $_SESSION['usuario'] ?? '';
-$franquicia = $_SESSION['franquicia'] ?? '';
-$rol = $_SESSION['rol'] ?? '';
+// Obtener datos de la sesión
+$usuario = $_SESSION['usuario_franquicia'] ?? '';
+$franquicia_id = $_SESSION['franquicia_id'] ?? 0;
+$rol = 'franquicia'; // Por ahora todos son franquicias
 
-// Determinar vista según el rol
-$vista = 'franquicia'; // Por defecto vista franquicia
-if ($rol === 'comercial' || $rol === 'admin') {
-    $vista = isset($_GET['vista']) ? $_GET['vista'] : 'panel';
+// Variable que esperan los componentes
+$franquicia = $usuario; // Para compatibilidad con componentes
+
+// Funciones que pueden faltar
+if (!function_exists('fecha_espanol')) {
+    function fecha_espanol($formato = 'F Y') {
+        $meses = [
+            'January' => 'Enero', 'February' => 'Febrero', 'March' => 'Marzo',
+            'April' => 'Abril', 'May' => 'Mayo', 'June' => 'Junio',
+            'July' => 'Julio', 'August' => 'Agosto', 'September' => 'Septiembre',
+            'October' => 'Octubre', 'November' => 'Noviembre', 'December' => 'Diciembre'
+        ];
+        
+        $fecha = date($formato);
+        return str_replace(array_keys($meses), array_values($meses), $fecha);
+    }
+}
+
+if (!function_exists('es_modo_desarrollo')) {
+    function es_modo_desarrollo() {
+        return true; // Para desarrollo
+    }
+}
+
+// Determinar vista según el parámetro GET
+$vista = $_GET['vista'] ?? 'franquicia'; // Por defecto vista franquicia
+
+// Para franquicias solo permitir vista de franquicia
+$vistas_permitidas = ['franquicia', 'historial'];
+
+// Si la vista no está permitida, ir a la vista franquicia
+if (!in_array($vista, $vistas_permitidas)) {
+    $vista = 'franquicia';
 }
 ?>
 <!DOCTYPE html>
@@ -38,6 +61,10 @@ if ($rol === 'comercial' || $rol === 'admin') {
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     
     <!-- CSS Personalizados -->
     <link href="css/main.css" rel="stylesheet">
@@ -90,12 +117,21 @@ if ($rol === 'comercial' || $rol === 'admin') {
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- jQuery (requerido para Select2) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
+    <!-- Scripts principales -->
     <script src="js/main.js"></script>
+    <script src="js/estado_global.js"></script>
     
     <?php if ($vista === 'franquicia'): ?>
         <script src="js/franquicia_stock.js"></script>
     <?php elseif ($vista === 'panel'): ?>
-        <script src="js/panel_comercial.js"></script>
+        <script src="js/panel_comercial_simple.js"></script>
     <?php endif; ?>
 </body>
 </html>

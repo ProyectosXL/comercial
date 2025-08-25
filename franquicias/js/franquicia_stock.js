@@ -1,5 +1,5 @@
 /**
- * Gestión de Stock - Funcionalidades para Franquicias
+ * Gestión de Stock - Funcionalidades para Franquicias (VERSIÓN ACTUALIZADA)
  */
 
 class FranquiciaStockManager {
@@ -39,6 +39,18 @@ class FranquiciaStockManager {
     }
     
     init() {
+        // Esperar a que el DOM esté completamente cargado
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.inicializar();
+            });
+        } else {
+            this.inicializar();
+        }
+    }
+    
+    inicializar() {
+        this.inicializarBusquedaArticulos();
         this.cargarRubros();
         this.configurarEventos();
         this.verificarEstadoCarga();
@@ -46,23 +58,322 @@ class FranquiciaStockManager {
     }
     
     /**
+     * Inicializar Select2 para búsqueda de artículos
+     */
+    inicializarBusquedaArticulos() {
+        // Verificar que jQuery y Select2 estén cargados
+        if (typeof $ === 'undefined') {
+            console.warn('jQuery no está cargado, esperando...');
+            setTimeout(() => this.inicializarBusquedaArticulos(), 500);
+            return;
+        }
+        
+        if (!$.fn.select2) {
+            console.warn('Select2 no está cargado, inicializando búsqueda simple');
+            this.inicializarBusquedaSimple();
+            return;
+        }
+
+        const selector = $('#buscar-articulo');
+        
+        // Verificar que el elemento existe
+        if (selector.length === 0) {
+            console.warn('Elemento buscar-articulo no encontrado');
+            return;
+        }
+        
+        selector.select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Escriba para buscar artículos...',
+            allowClear: true,
+            minimumInputLength: 2,
+            language: {
+                inputTooShort: function() {
+                    return 'Ingrese al menos 2 caracteres';
+                },
+                searching: function() {
+                    return 'Buscando...';
+                },
+                noResults: function() {
+                    return 'No se encontraron artículos';
+                },
+                errorLoading: function() {
+                    return 'Error al cargar resultados';
+                }
+            },
+            ajax: {
+                url: 'controller/franquicia_stock_controller.php',
+                type: 'POST',
+                dataType: 'json',
+                delay: 300,
+                data: function(params) {
+                    return {
+                        accion: 'buscar_articulos',
+                        termino: params.term
+                    };
+                },
+                processResults: function(data) {
+                    console.log('Datos recibidos:', data);
+                    
+                    if (data.success && data.articulos) {
+                        return {
+                            results: data.articulos.map(articulo => ({
+                                id: articulo.codigo,
+                                text: `${articulo.codigo} - ${articulo.descripcion}`,
+                                articulo: articulo
+                            }))
+                        };
+                    } else {
+                        console.warn('Sin resultados o error:', data.message);
+                        return {
+                            results: []
+                        };
+                    }
+                },
+                cache: true
+            },
+            templateResult: function(option) {
+                if (option.loading) return option.text;
+                if (!option.articulo) return $('<span>' + option.text + '</span>');
+                
+                return $(`
+                    <div class="select2-articulo-result">
+                        <div class="fw-bold">${option.articulo.codigo}</div>
+                        <div class="text-muted small">${option.articulo.descripcion}</div>
+                        <div class="small">
+                            <span class="badge bg-primary">${option.articulo.rubro}</span>
+                            <span class="badge bg-secondary">${option.articulo.categoria_padre}</span>
+                        </div>
+                    </div>
+                `);
+            },
+            templateSelection: function(option) {
+                return option.articulo ? 
+                       `${option.articulo.codigo} - ${option.articulo.descripcion}` : 
+                       option.text;
+            }
+        });
+
+        // Evento cuando se selecciona un artículo
+        selector.on('select2:select', (e) => {
+            const data = e.params.data;
+            if (data.articulo) {
+                this.mostrarInfoArticulo(data.articulo);
+            }
+        });
+
+        // Evento cuando se limpia la selección
+        selector.on('select2:clear', () => {
+            this.ocultarInfoArticulo();
+        });
+        
+        console.log('Select2 inicializado correctamente');
+    }
+
+    /**
+     * Inicializar búsqueda simple sin Select2 (fallback)
+     */
+    inicializarBusquedaSimple() {
+        const selector = document.getElementById('buscar-articulo');
+        if (!selector) return;
+        
+        // Convertir select a input
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'buscar-articulo';
+        input.className = 'form-control';
+        input.placeholder = 'Escriba código o descripción del artículo...';
+        
+        selector.parentNode.replaceChild(input, selector);
+        
+        // Agregar evento de búsqueda con debounce
+        let timeoutId;
+        input.addEventListener('input', (e) => {
+            clearTimeout(timeoutId);
+            const termino = e.target.value.trim();
+            
+            if (termino.length < 2) {
+                this.ocultarInfoArticulo();
+                return;
+            }
+            
+            timeoutId = setTimeout(() => {
+                this.buscarArticulosSimple(termino);
+            }, 500);
+        });
+        
+        console.log('Búsqueda simple inicializada');
+    }
+
+    /**
+     * Búsqueda simple de artículos (sin Select2)
+     */
+    async buscarArticulosSimple(termino) {
+        try {
+            const data = await this.fetchWithErrorHandling('controller/franquicia_stock_controller.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `accion=buscar_articulos&termino=${encodeURIComponent(termino)}`
+            });
+            
+            if (data.success && data.articulos.length > 0) {
+                // Mostrar el primer resultado
+                this.mostrarInfoArticulo(data.articulos[0]);
+                
+                // Si hay múltiples resultados, mostrar mensaje
+                if (data.articulos.length > 1) {
+                    this.mostrarAlerta(`Se encontraron ${data.articulos.length} artículos. Mostrando el primero.`, 'info');
+                }
+            } else {
+                this.mostrarSinResultados();
+            }
+        } catch (error) {
+            console.error('Error en búsqueda simple:', error);
+            this.mostrarAlerta('Error al buscar artículos', 'danger');
+        }
+    }
+
+    /**
+     * Mostrar información del artículo seleccionado
+     */
+    mostrarInfoArticulo(articulo) {
+        const contenedor = document.getElementById('info-articulo');
+        const resultado = document.getElementById('resultado-busqueda-articulo');
+        const sinResultados = document.getElementById('sin-resultados-articulo');
+        
+        if (!contenedor || !resultado) {
+            console.warn('Elementos de resultado no encontrados');
+            return;
+        }
+        
+        contenedor.innerHTML = `
+            <div class="col-md-6">
+                <div class="card border-primary info-articulo-card">
+                    <div class="card-body py-3">
+                        <h6 class="card-title mb-2 text-primary">
+                            <i class="bi bi-upc-scan me-1"></i>
+                            Código de Artículo
+                        </h6>
+                        <p class="card-text mb-0">
+                            <strong class="fs-5">${articulo.codigo}</strong>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card border-info info-articulo-card">
+                    <div class="card-body py-3">
+                        <h6 class="card-title mb-2 text-info">
+                            <i class="bi bi-card-text me-1"></i>
+                            Descripción
+                        </h6>
+                        <p class="card-text mb-0">
+                            <strong>${articulo.descripcion}</strong>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mt-3">
+                <div class="card border-warning info-articulo-card">
+                    <div class="card-body py-3">
+                        <h6 class="card-title mb-2 text-warning">
+                            <i class="bi bi-tags me-1"></i>
+                            Rubro
+                        </h6>
+                        <p class="card-text mb-0">
+                            <span class="badge bg-warning text-dark fs-6">${articulo.rubro}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mt-3">
+                <div class="card border-success info-articulo-card">
+                    <div class="card-body py-3">
+                        <h6 class="card-title mb-2 text-success">
+                            <i class="bi bi-bookmark me-1"></i>
+                            Categoría
+                        </h6>
+                        <p class="card-text mb-0">
+                            <span class="badge bg-success fs-6">${articulo.categoria_padre}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 mt-3">
+                <div class="alert alert-success d-flex align-items-start" role="alert">
+                    <i class="bi bi-lightbulb me-2 mt-1"></i>
+                    <div>
+                        <strong>💡 Información encontrada:</strong><br>
+                        Para cargar stock de este artículo, seleccione el rubro <strong>"${articulo.rubro}"</strong> 
+                        y luego la categoría <strong>"${articulo.categoria_padre}"</strong> en el formulario de carga de stock.
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        resultado.style.display = 'block';
+        if (sinResultados) {
+            sinResultados.style.display = 'none';
+        }
+        
+        // Scroll suave al resultado
+        resultado.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'nearest' 
+        });
+    }
+
+    /**
+     * Mostrar mensaje sin resultados
+     */
+    mostrarSinResultados() {
+        const resultado = document.getElementById('resultado-busqueda-articulo');
+        const sinResultados = document.getElementById('sin-resultados-articulo');
+        
+        if (resultado) resultado.style.display = 'none';
+        if (sinResultados) sinResultados.style.display = 'block';
+    }
+
+    /**
+     * Ocultar información del artículo
+     */
+    ocultarInfoArticulo() {
+        const resultado = document.getElementById('resultado-busqueda-articulo');
+        const sinResultados = document.getElementById('sin-resultados-articulo');
+        
+        if (resultado) resultado.style.display = 'none';
+        if (sinResultados) sinResultados.style.display = 'none';
+    }
+    
+    /**
      * Configurar eventos del DOM
      */
     configurarEventos() {
         // Selector de rubro
-        document.getElementById('selector-rubro').addEventListener('change', (e) => {
-            this.seleccionarRubro(e.target.value);
-        });
+        const selectorRubro = document.getElementById('selector-rubro');
+        if (selectorRubro) {
+            selectorRubro.addEventListener('change', (e) => {
+                this.seleccionarRubro(e.target.value);
+            });
+        }
         
         // Botón guardar stock
-        document.getElementById('btn-guardar-stock').addEventListener('click', () => {
-            this.guardarStock();
-        });
+        const btnGuardar = document.getElementById('btn-guardar-stock');
+        if (btnGuardar) {
+            btnGuardar.addEventListener('click', () => {
+                this.guardarStock();
+            });
+        }
         
         // Botón limpiar rubro
-        document.getElementById('btn-limpiar-rubro').addEventListener('click', () => {
-            this.limpiarRubro();
-        });
+        const btnLimpiar = document.getElementById('btn-limpiar-rubro');
+        if (btnLimpiar) {
+            btnLimpiar.addEventListener('click', () => {
+                this.limpiarRubro();
+            });
+        }
     }
     
     /**
@@ -75,11 +386,11 @@ class FranquiciaStockManager {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: 'action=obtener_rubros'
+                body: 'accion=obtener_rubros'
             });
             
             if (data.success) {
-                this.llenarSelectorRubros(data.data);
+                this.llenarSelectorRubros(data.rubros);
             } else {
                 this.mostrarAlerta(data.message || 'Error al cargar rubros', 'danger');
             }
@@ -94,6 +405,7 @@ class FranquiciaStockManager {
      */
     llenarSelectorRubros(rubros) {
         const selector = document.getElementById('selector-rubro');
+        if (!selector) return;
         
         // Limpiar opciones existentes excepto la primera
         while (selector.children.length > 1) {
@@ -126,11 +438,11 @@ class FranquiciaStockManager {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `action=obtener_categorias&rubro=${encodeURIComponent(rubro)}`
+                body: `accion=obtener_categorias&rubro=${encodeURIComponent(rubro)}`
             });
             
             if (data.success) {
-                this.categoriasData = data.data;
+                this.categoriasData = data.categorias;
                 this.mostrarCategorias();
                 await this.cargarStockExistente(rubro);
             } else {
@@ -150,12 +462,21 @@ class FranquiciaStockManager {
         const tabla = document.getElementById('tabla-categorias');
         const mensaje = document.getElementById('mensaje-sin-rubro');
         
+        if (!contenedor || !tabla || !mensaje) return;
+        
         // Limpiar tabla
         tabla.innerHTML = '';
         
+        // Verificar que categoriasData existe y es un array
+        if (!this.categoriasData || !Array.isArray(this.categoriasData)) {
+            console.warn('categoriasData no es válido:', this.categoriasData);
+            this.mostrarAlerta('No se encontraron categorías', 'warning');
+            return;
+        }
+        
         // Agregar filas de categorías
         this.categoriasData.forEach((categoria, index) => {
-            const fila = this.crearFilaCategoria(categoria.CATEGORIA_PADRE, index);
+            const fila = this.crearFilaCategoria(categoria.nombre, index);
             tabla.appendChild(fila);
         });
         
@@ -182,6 +503,8 @@ class FranquiciaStockManager {
             <td>
                 <div class="input-group">
                     <input type="number" 
+                           id="stock-${categoria.replace(/[^a-zA-Z0-9]/g, '_')}-${index}"
+                           name="stock[${categoria}]"
                            class="form-control cantidad-input" 
                            data-categoria="${categoria}"
                            data-index="${index}"
@@ -189,6 +512,7 @@ class FranquiciaStockManager {
                            min="0" 
                            step="1"
                            autocomplete="off"
+                           aria-label="Cantidad en stock para ${categoria}"
                            value="${this.stockData[categoria] || ''}">
                     <span class="input-group-text">
                         <i class="bi bi-box me-1"></i>unidades
@@ -226,12 +550,12 @@ class FranquiciaStockManager {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `action=obtener_stock&periodo=${this.periodoActual}`
+                body: `accion=obtener_resumen_stock&periodo=${this.periodoActual}`
             });
             
             if (data.success) {
                 // Filtrar stock por rubro actual
-                const stockRubro = data.data.filter(item => item.rubro === rubro);
+                const stockRubro = data.stock.filter(item => item.rubro === rubro);
                 
                 // Actualizar inputs con datos existentes
                 stockRubro.forEach(item => {
@@ -275,17 +599,24 @@ class FranquiciaStockManager {
     }
     
     /**
-     * Limpiar todo el rubro
+     * Limpiar todo el rubro (con confirmación)
      */
     limpiarRubro() {
         if (confirm('¿Está seguro de que desea limpiar todas las cantidades del rubro actual?')) {
-            document.querySelectorAll('.cantidad-input').forEach(input => {
-                input.value = '';
-            });
-            this.stockData = {};
-            this.actualizarContadores();
-            this.deshabilitarBotonGuardar();
+            this.limpiarRubroSinConfirmacion();
         }
+    }
+    
+    /**
+     * Limpiar rubro sin confirmación (para uso interno después de guardar)
+     */
+    limpiarRubroSinConfirmacion() {
+        document.querySelectorAll('.cantidad-input').forEach(input => {
+            input.value = '';
+        });
+        this.stockData = {};
+        this.actualizarContadores();
+        this.deshabilitarBotonGuardar();
     }
     
     /**
@@ -295,8 +626,11 @@ class FranquiciaStockManager {
         const totalCategorias = this.categoriasData.length;
         const completadas = Object.keys(this.stockData).length;
         
-        document.getElementById('total-categorias').textContent = totalCategorias;
-        document.getElementById('categorias-completadas').textContent = completadas;
+        const totalElement = document.getElementById('total-categorias');
+        const completadasElement = document.getElementById('categorias-completadas');
+        
+        if (totalElement) totalElement.textContent = totalCategorias;
+        if (completadasElement) completadasElement.textContent = completadas;
     }
     
     /**
@@ -304,6 +638,8 @@ class FranquiciaStockManager {
      */
     habilitarBotonGuardar() {
         const boton = document.getElementById('btn-guardar-stock');
+        if (!boton) return;
+        
         const tieneStock = Object.keys(this.stockData).length > 0;
         
         boton.disabled = !tieneStock;
@@ -322,6 +658,8 @@ class FranquiciaStockManager {
      */
     deshabilitarBotonGuardar() {
         const boton = document.getElementById('btn-guardar-stock');
+        if (!boton) return;
+        
         boton.disabled = true;
         boton.classList.remove('btn-success');
         boton.classList.add('btn-secondary');
@@ -331,6 +669,8 @@ class FranquiciaStockManager {
      * Guardar stock
      */
     async guardarStock() {
+        console.log('DEBUG: Iniciando guardarStock');
+        
         if (!this.rubroActual || Object.keys(this.stockData).length === 0) {
             this.mostrarAlerta('Debe seleccionar un rubro y cargar al menos una cantidad', 'warning');
             return;
@@ -343,6 +683,8 @@ class FranquiciaStockManager {
             cantidad: cantidad
         }));
         
+        console.log('DEBUG: Datos a enviar:', stockArray);
+        
         try {
             this.mostrarLoading('Guardando stock...');
             
@@ -351,26 +693,34 @@ class FranquiciaStockManager {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `action=guardar_stock&periodo=${this.periodoActual}&stock_data=${encodeURIComponent(JSON.stringify(stockArray))}`
+                body: `accion=registrar_movimiento&periodo=${this.periodoActual}&stock_data=${encodeURIComponent(JSON.stringify(stockArray))}`
             });
             
+            console.log('DEBUG: Respuesta del servidor:', data);
             this.ocultarLoading();
             
             if (data.success) {
+                console.log('DEBUG: Guardado exitoso, limpiando formulario');
                 this.mostrarAlerta('Stock guardado correctamente', 'success');
-                this.verificarEstadoCarga();
-                this.cargarResumenStock();
                 
-                // Limpiar formulario
-                this.limpiarRubro();
-                document.getElementById('selector-rubro').value = '';
+                // Actualizar estados
+                await this.verificarEstadoCarga();
+                await this.cargarResumenStock();
+                
+                // Limpiar formulario automáticamente después de guardar exitosamente
+                this.limpiarRubroSinConfirmacion();
+                const selectorRubro = document.getElementById('selector-rubro');
+                if (selectorRubro) selectorRubro.value = '';
                 this.ocultarCategorias();
+                
+                console.log('DEBUG: Formulario limpiado exitosamente');
             } else {
+                console.error('DEBUG: Error en respuesta del servidor:', data.message);
                 this.mostrarAlerta(data.message || 'Error al guardar el stock', 'danger');
             }
         } catch (error) {
             this.ocultarLoading();
-            console.error('Error:', error);
+            console.error('DEBUG: Error en guardarStock:', error);
             this.mostrarAlerta('Error de conexión', 'danger');
         }
     }
@@ -385,11 +735,11 @@ class FranquiciaStockManager {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `action=obtener_stock&periodo=${this.periodoActual}`
+                body: `accion=obtener_resumen_stock`
             });
             
             if (data.success) {
-                const tieneStock = data.data.length > 0;
+                const tieneStock = data.stock && data.stock.length > 0;
                 this.actualizarEstadoCarga(tieneStock);
             } else {
                 console.warn('Error al verificar estado:', data.message);
@@ -445,11 +795,11 @@ class FranquiciaStockManager {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `action=obtener_stock&periodo=${this.periodoActual}`
+                body: `accion=obtener_resumen_stock&periodo=${this.periodoActual}`
             });
             
-            if (data.success && data.data.length > 0) {
-                this.mostrarResumenStock(data.data);
+            if (data.success && data.stock.length > 0) {
+                this.mostrarResumenStock(data.stock);
             } else {
                 this.ocultarResumenStock();
             }
@@ -464,6 +814,8 @@ class FranquiciaStockManager {
     mostrarResumenStock(stockData) {
         const seccion = document.getElementById('seccion-resumen');
         const contenido = document.getElementById('contenido-resumen');
+        
+        if (!seccion || !contenido) return;
         
         // Agrupar por rubro
         const stockPorRubro = {};
@@ -546,7 +898,7 @@ class FranquiciaStockManager {
      */
     ocultarResumenStock() {
         const seccion = document.getElementById('seccion-resumen');
-        seccion.style.display = 'none';
+        if (seccion) seccion.style.display = 'none';
     }
     
     /**
@@ -556,8 +908,8 @@ class FranquiciaStockManager {
         const contenedor = document.getElementById('contenedor-categorias');
         const mensaje = document.getElementById('mensaje-sin-rubro');
         
-        contenedor.style.display = 'none';
-        mensaje.style.display = 'block';
+        if (contenedor) contenedor.style.display = 'none';
+        if (mensaje) mensaje.style.display = 'block';
         
         this.rubroActual = null;
         this.categoriasData = [];
@@ -580,6 +932,8 @@ class FranquiciaStockManager {
      */
     mostrarAlerta(mensaje, tipo = 'info') {
         const container = document.getElementById('alertas-container');
+        if (!container) return;
+        
         const alertId = `alert-${Date.now()}`;
         
         // Mapear tipos comunes
@@ -648,18 +1002,26 @@ class FranquiciaStockManager {
      * Mostrar loading
      */
     mostrarLoading(mensaje = 'Procesando...') {
-        document.getElementById('mensaje-loading').textContent = mensaje;
-        const modal = new bootstrap.Modal(document.getElementById('modalLoading'));
-        modal.show();
+        const mensajeElement = document.getElementById('mensaje-loading');
+        if (mensajeElement) mensajeElement.textContent = mensaje;
+        
+        const modalElement = document.getElementById('modalLoading');
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        }
     }
     
     /**
      * Ocultar loading
      */
     ocultarLoading() {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('modalLoading'));
-        if (modal) {
-            modal.hide();
+        const modalElement = document.getElementById('modalLoading');
+        if (modalElement) {
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
         }
     }
 }
@@ -671,6 +1033,26 @@ document.addEventListener('DOMContentLoaded', function() {
     franquiciaStock = new FranquiciaStockManager();
 });
 
+// Funciones globales para uso en HTML
+function limpiarBusquedaArticulo() {
+    // Limpiar Select2 si está inicializado
+    if (typeof $ !== 'undefined' && $('#buscar-articulo').length) {
+        const selector = $('#buscar-articulo');
+        if (selector.hasClass('select2-hidden-accessible')) {
+            selector.val(null).trigger('change');
+        } else {
+            // Limpiar input simple
+            const input = document.getElementById('buscar-articulo');
+            if (input) input.value = '';
+        }
+    }
+    
+    // Ocultar resultados
+    if (franquiciaStock) {
+        franquiciaStock.ocultarInfoArticulo();
+    }
+}
+
 /**
  * Cargar historial de stock
  */
@@ -681,7 +1063,7 @@ async function cargarHistorial() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: 'action=obtener_historial'
+            body: 'accion=obtener_historial'
         });
         
         if (data.success) {
