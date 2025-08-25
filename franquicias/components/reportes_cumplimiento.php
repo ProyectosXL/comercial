@@ -134,8 +134,8 @@
                 <table class="table table-bordered table-hover mb-0" id="tabla-cumplimiento-rubros">
                     <thead class="table-dark">
                         <tr id="header-rubros">
-                            <th class="sticky-column">Franquicia</th>
-                            <th class="text-center">Estado General</th>
+                            <th>Franquicia</th>
+                            <th class="text-center estado-general">Estado General</th>
                             <!-- Los rubros se agregarán dinámicamente -->
                         </tr>
                     </thead>
@@ -152,11 +152,13 @@
 <div class="row mt-3">
     <div class="col-12">
         <div class="card border-light">
-            <div class="card-body">
-                <h6 class="card-title mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">
                     <i class="bi bi-info-circle me-2"></i>
                     Leyenda del Reporte
                 </h6>
+            </div>
+            <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
                         <div class="d-flex align-items-center mb-2">
@@ -179,6 +181,15 @@
                         </div>
                     </div>
                 </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <i class="bi bi-lightbulb me-2"></i>
+                            <strong>Nota:</strong> La tabla muestra TODAS las franquicias y TODOS los rubros disponibles en el sistema, 
+                            permitiendo una visión completa del cumplimiento de reportes de stock.
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -186,146 +197,405 @@
 
 <!-- CSS específico para la tabla de reportes -->
 <style>
-.sticky-column {
-    position: sticky;
-    left: 0;
-    background-color: #343a40 !important;
-    z-index: 10;
-    min-width: 200px;
+/* Variables mejoradas */
+:root {
+    --texto-principal: #1f2937;
+    --texto-secundario: #6b7280;
+    --fondo-claro: #ffffff;
+    --fondo-tabla: #f9fafb;
+    --borde-tabla: #e5e7eb;
+    --verde-exito: #10b981;
+    --rojo-error: #ef4444;
 }
 
+/* Contenedor de la tabla con scroll mejorado */
 .table-responsive {
-    max-height: 600px;
+    max-height: 70vh;
     overflow-x: auto;
     overflow-y: auto;
+    border: 2px solid var(--borde-tabla);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    background: var(--fondo-claro);
 }
 
-.table-bordered th, 
-.table-bordered td {
-    border: 1px solid #dee2e6;
+/* Tabla principal */
+.table-bordered {
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.75rem; /* Fuente más pequeña para que quepa más contenido */
+    background: var(--fondo-claro);
+}
+
+/* Headers de la tabla */
+.table-bordered th {
+    background: linear-gradient(135deg, #374151 0%, #1f2937 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid #4b5563 !important;
     text-align: center;
     vertical-align: middle;
-    padding: 8px;
-    font-size: 0.9rem;
-}
-
-.table-bordered .sticky-column {
-    text-align: left;
+    padding: 8px 4px;
+    font-size: 0.7rem;
     font-weight: 600;
-    border-right: 2px solid #495057;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
-.cumplimiento-cell {
-    width: 80px;
-    min-width: 80px;
-}
-
-.cumplimiento-si {
-    background-color: #d4edda !important;
-    color: #155724;
-}
-
-.cumplimiento-no {
-    background-color: #f8d7da !important;
-    color: #721c24;
-}
-
-.estado-general {
-    min-width: 120px;
+/* Columna sticky de franquicia */
+.sticky-column {
+    position: sticky !important;
+    left: 0 !important;
+    background: linear-gradient(135deg, #374151 0%, #1f2937 100%) !important;
+    color: #ffffff !important;
+    z-index: 20 !important;
+    min-width: 160px;
+    max-width: 180px;
+    text-align: left !important;
     font-weight: 600;
+    border-right: 2px solid #4b5563 !important;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 }
 
+/* Celdas del cuerpo de la tabla */
+.table-bordered td {
+    border: 1px solid var(--borde-tabla) !important;
+    text-align: center;
+    vertical-align: middle;
+    padding: 6px 4px;
+    font-size: 0.7rem;
+    background: var(--fondo-claro) !important;
+    color: var(--texto-principal) !important;
+    font-weight: 500;
+}
+
+/* Celda sticky de franquicia en el cuerpo */
+.table-bordered tbody .sticky-column {
+    background: var(--fondo-claro) !important;
+    color: var(--texto-principal) !important;
+    border-right: 2px solid var(--borde-tabla) !important;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+/* Headers de rubro con texto rotado */
 .rubro-header {
     writing-mode: vertical-rl;
     text-orientation: mixed;
-    min-width: 80px;
-    height: 120px;
-    padding: 8px 4px;
-    font-size: 0.85rem;
+    min-width: 50px;
+    max-width: 60px;
+    height: 100px;
+    padding: 4px 2px !important;
+    font-size: 0.65rem !important;
     font-weight: 600;
+    line-height: 1.2;
+    word-break: break-word;
 }
 
-@media (max-width: 768px) {
-    .sticky-column {
-        min-width: 150px;
-    }
-    
-    .rubro-header {
-        min-width: 60px;
-        font-size: 0.75rem;
-    }
-    
-    .table-bordered th, 
-    .table-bordered td {
-        font-size: 0.8rem;
-        padding: 6px 4px;
-    }
+/* Celdas de cumplimiento */
+.cumplimiento-cell {
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+    padding: 4px 2px !important;
 }
 
-/* Mejorar scroll horizontal en móviles */
-.table-responsive::-webkit-scrollbar {
-    height: 8px;
+/* Estados de cumplimiento */
+.cumplimiento-si {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+    color: #065f46 !important;
+    border-color: var(--verde-exito) !important;
 }
 
-.table-responsive::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
+.cumplimiento-no {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+    color: #991b1b !important;
+    border-color: var(--rojo-error) !important;
 }
 
-.table-responsive::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 10px;
+/* Estado general */
+.estado-general {
+    min-width: 90px;
+    max-width: 100px;
+    font-weight: 600 !important;
+    background: var(--fondo-claro) !important;
+    color: var(--texto-principal) !important;
+    font-size: 0.75rem;
 }
 
-.table-responsive::-webkit-scrollbar-thumb:hover {
-    background: #555;
+/* Badges en la tabla */
+.badge {
+    font-size: 0.65rem !important;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    min-width: 60px;
+}
+
+.badge.bg-success {
+    background: var(--verde-exito) !important;
+    color: #ffffff !important;
+}
+
+.badge.bg-danger {
+    background: var(--rojo-error) !important;
+    color: #ffffff !important;
 }
 
 /* Hover effects */
 .table-hover tbody tr:hover {
-    background-color: rgba(0, 123, 255, 0.075);
+    background: rgba(59, 130, 246, 0.05) !important;
+}
+
+.table-hover tbody tr:hover td {
+    background: rgba(59, 130, 246, 0.05) !important;
+    color: var(--texto-principal) !important;
 }
 
 .table-hover tbody tr:hover .sticky-column {
-    background-color: #495057 !important;
-    color: white;
+    background: rgba(59, 130, 246, 0.1) !important;
+    color: var(--texto-principal) !important;
 }
 
-/* Loading animation */
-#loading-reporte .spinner-border {
-    width: 3rem;
-    height: 3rem;
+/* Cards de información */
+.card {
+    background: var(--fondo-claro) !important;
+    border: 1px solid var(--borde-tabla);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Stats cards */
+.card-body {
+    background: var(--fondo-claro) !important;
+    color: var(--texto-principal) !important;
+}
+
+.card-header {
+    background: linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%) !important;
+    color: var(--texto-principal) !important;
+    border-bottom: 1px solid var(--borde-tabla);
+    font-weight: 600;
+}
+
+.card-header.bg-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+    color: #ffffff !important;
+    border-bottom: none;
+}
+
+.card-header.bg-info {
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+    color: #ffffff !important;
+    border-bottom: none;
+}
+
+/* Estadísticas */
 .stat-item h3 {
-    font-size: 2.2rem;
+    font-size: 2rem;
     font-weight: 700;
-    line-height: 1;
+    color: var(--texto-principal) !important;
+    margin-bottom: 0.5rem;
 }
 
 .stat-item small {
-    font-size: 0.85rem;
+    color: var(--texto-secundario) !important;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-/* Badges in table */
-.badge {
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
-/* Card improvements */
-.card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+/* Alertas */
+.alert {
+    color: var(--texto-principal) !important;
     border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.card-header {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+.alert-info {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+    border-left: 4px solid #3b82f6;
+    color: #1e40af !important;
+}
+
+/* Leyenda */
+.card.border-light {
+    background: var(--fondo-tabla) !important;
+    border: 1px solid var(--borde-tabla) !important;
+}
+
+.card.border-light .card-body {
+    background: var(--fondo-tabla) !important;
+    color: var(--texto-principal) !important;
+}
+
+.card.border-light .card-body span {
+    color: var(--texto-principal) !important;
+}
+
+/* Texto en elementos secundarios */
+.text-muted {
+    color: var(--texto-secundario) !important;
+}
+
+.text-primary {
+    color: #3b82f6 !important;
+}
+
+.text-success {
+    color: var(--verde-exito) !important;
+}
+
+.text-danger {
+    color: var(--rojo-error) !important;
+}
+
+.text-warning {
+    color: #f59e0b !important;
+}
+
+/* Botones */
+.btn-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    border: none;
+    color: #ffffff;
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    border: none;
+    color: #ffffff;
+}
+
+/* Formularios */
+.form-control, .form-select {
+    border: 1px solid var(--borde-tabla);
+    background: var(--fondo-claro) !important;
+    color: var(--texto-principal) !important;
+}
+
+.form-control:focus, .form-select:focus {
+    background: var(--fondo-claro) !important;
+    color: var(--texto-principal) !important;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25);
+}
+
+.form-label {
+    color: var(--texto-principal) !important;
     font-weight: 600;
+}
+
+/* Loading states */
+#loading-reporte {
+    background: var(--fondo-claro) !important;
+    color: var(--texto-principal) !important;
+}
+
+#reporte-vacio {
+    background: var(--fondo-tabla) !important;
+    color: var(--texto-principal) !important;
+}
+
+#reporte-vacio h5 {
+    color: var(--texto-principal) !important;
+}
+
+#reporte-vacio p {
+    color: var(--texto-secundario) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sticky-column {
+        min-width: 120px !important;
+        max-width: 140px !important;
+        font-size: 0.7rem;
+    }
+    
+    .rubro-header {
+        min-width: 40px !important;
+        max-width: 45px !important;
+        font-size: 0.6rem !important;
+        height: 80px;
+    }
+    
+    .table-bordered th,
+    .table-bordered td {
+        font-size: 0.65rem;
+        padding: 4px 2px;
+    }
+    
+    .badge {
+        font-size: 0.6rem !important;
+        padding: 3px 6px;
+        min-width: 50px;
+    }
+    
+    .cumplimiento-cell {
+        width: 40px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+    }
+    
+    .estado-general {
+        min-width: 80px;
+        max-width: 85px;
+    }
+}
+
+@media (max-width: 576px) {
+    .table-responsive {
+        font-size: 0.6rem;
+        max-height: 60vh;
+    }
+    
+    .sticky-column {
+        min-width: 100px !important;
+        max-width: 110px !important;
+        font-size: 0.65rem;
+    }
+    
+    .rubro-header {
+        min-width: 35px !important;
+        max-width: 40px !important;
+        font-size: 0.55rem !important;
+        height: 70px;
+    }
+    
+    .badge {
+        font-size: 0.55rem !important;
+        min-width: 45px;
+    }
+}
+
+/* Mejoras en el scroll */
+.table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: var(--fondo-tabla);
+    border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: var(--borde-tabla);
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+.table-responsive::-webkit-scrollbar-corner {
+    background: var(--fondo-tabla);
 }
 </style>
 
@@ -499,8 +769,8 @@ class ReportesCumplimientoManager {
             tdFranquicia.className = 'sticky-column';
             tdFranquicia.innerHTML = `
                 <div class="d-flex flex-column">
-                    <strong>${franquicia.nombre}</strong>
-                    <small class="text-muted">${franquicia.codigo}</small>
+                    <strong style="font-size: 0.75rem;">${franquicia.nombre}</strong>
+                    <small class="text-muted" style="font-size: 0.65rem;">${franquicia.codigo}</small>
                 </div>
             `;
             fila.appendChild(tdFranquicia);

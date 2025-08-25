@@ -1,6 +1,6 @@
 <?php
 /**
- * Controlador para Reportes de Cumplimiento
+ * Controlador para Reportes de Cumplimiento - Versión Corregida
  * Archivo: franquicias/controller/reportes_cumplimiento_controller.php
  */
 
@@ -84,11 +84,11 @@ class ReportesCumplimientoController {
             
             error_log("DEBUG REPORTES: Generando reporte para período: " . $periodo);
             
-            // Obtener todas las franquicias
+            // Obtener TODAS las franquicias activas
             $franquicias = $this->obtenerTodasLasFranquicias();
             
-            // Obtener todos los rubros que se han informado
-            $rubros = $this->obtenerRubrosInformados($periodo);
+            // Obtener TODOS los rubros posibles (no solo los informados)
+            $rubros = $this->obtenerTodosLosRubros();
             
             // Obtener datos de stock por franquicia y rubro
             $stockData = $this->obtenerStockPorFranquiciaYRubro($periodo);
@@ -115,7 +115,7 @@ class ReportesCumplimientoController {
     }
     
     /**
-     * Obtener todas las franquicias del sistema
+     * Obtener TODAS las franquicias del sistema (activas e inactivas)
      */
     private function obtenerTodasLasFranquicias() {
         try {
@@ -139,7 +139,7 @@ class ReportesCumplimientoController {
                 error_log("Error SQL obtener franquicias: " . print_r(sqlsrv_errors(), true));
             }
             
-            error_log("DEBUG REPORTES: Obtenidas " . count($franquicias) . " franquicias");
+            error_log("DEBUG REPORTES: Obtenidas " . count($franquicias) . " franquicias totales");
             return $franquicias;
             
         } catch (Exception $e) {
@@ -149,47 +149,35 @@ class ReportesCumplimientoController {
     }
     
     /**
-     * Obtener todos los rubros que se han informado en el período
+     * Obtener TODOS los rubros posibles de la tabla maestra (no solo los informados)
      */
-    private function obtenerRubrosInformados($periodo) {
+    private function obtenerTodosLosRubros() {
         try {
-            // Convertir período MM-YYYY a formato de fecha para SQL
-            list($mes, $año) = explode('-', $periodo);
-            $fechaInicio = "$año-$mes-01";
-            $fechaFin = date('Y-m-t', strtotime($fechaInicio)); // Último día del mes
+            // Obtener todos los rubros de la tabla maestra de artículos
+            $sql = "SELECT DISTINCT RUBRO as nombre
+                    FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
+                    WHERE CATEGORIA_PADRE != '' 
+                    AND RUBRO IS NOT NULL 
+                    AND RUBRO NOT LIKE '%OUTLET'
+                    ORDER BY RUBRO";
             
-            $sql = "SELECT DISTINCT 
-                        CASE 
-                            WHEN CHARINDEX('_', codigo_articulo) > 0 
-                            THEN LEFT(codigo_articulo, CHARINDEX('_', codigo_articulo) - 1)
-                            ELSE 'SIN RUBRO'
-                        END as nombre
-                    FROM franquicia_historial_stock 
-                    WHERE fecha_movimiento BETWEEN ? AND ?
-                    AND CASE 
-                        WHEN CHARINDEX('_', codigo_articulo) > 0 
-                        THEN LEFT(codigo_articulo, CHARINDEX('_', codigo_articulo) - 1)
-                        ELSE 'SIN RUBRO'
-                    END != 'SIN RUBRO'
-                    ORDER BY nombre";
-            
-            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$fechaInicio, $fechaFin]);
+            $stmt = sqlsrv_query($this->sistemas_conn, $sql);
             
             $rubros = [];
-            if ($stmt && sqlsrv_execute($stmt)) {
+            if ($stmt) {
                 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                     $rubros[] = $row;
                 }
                 sqlsrv_free_stmt($stmt);
             } else {
-                error_log("Error SQL obtener rubros: " . print_r(sqlsrv_errors(), true));
+                error_log("Error SQL obtener todos los rubros: " . print_r(sqlsrv_errors(), true));
             }
             
-            error_log("DEBUG REPORTES: Obtenidos " . count($rubros) . " rubros para período $periodo");
+            error_log("DEBUG REPORTES: Obtenidos " . count($rubros) . " rubros totales de la tabla maestra");
             return $rubros;
             
         } catch (Exception $e) {
-            error_log("Error obtener rubros informados: " . $e->getMessage());
+            error_log("Error obtener todos los rubros: " . $e->getMessage());
             return [];
         }
     }
