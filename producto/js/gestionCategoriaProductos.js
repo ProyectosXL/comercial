@@ -250,7 +250,7 @@ const agregar = (siglaRubro) => {
     })
 }
 
-// NUEVA FUNCIÓN: Cambiar estado de categoría
+// FUNCIÓN 3: Cambiar estado de categoría (JavaScript)
 function cambiarEstado(button, siglaRubro, codCategoria, nuevoEstado) {
     const estadoTexto = nuevoEstado == 1 ? 'activar' : 'desactivar';
     const estadoColor = nuevoEstado == 1 ? 'success' : 'warning';
@@ -283,18 +283,52 @@ function cambiarEstado(button, siglaRubro, codCategoria, nuevoEstado) {
                 },
                 success: function(data) {
                     if (data == 1) {
+                        // Actualizar interfaz inmediatamente
+                        const row = button.closest('tr');
+                        const estadoCell = row.querySelector('td:nth-child(6)');
+                        const esActivo = nuevoEstado == 1;
+                        
+                        // Actualizar badge de estado
+                        estadoCell.innerHTML = `
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${esActivo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                <i class="fas ${esActivo ? 'fa-check-circle' : 'fa-times-circle'} mr-1"></i>
+                                ${esActivo ? 'Activo' : 'Inactivo'}
+                            </span>
+                        `;
+                        
+                        // Actualizar botón de estado
+                        button.className = `px-3 py-2 ${esActivo ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white rounded-lg transition-all duration-200 hover-lift`;
+                        button.onclick = function() { 
+                            cambiarEstado(this, siglaRubro, codCategoria, esActivo ? 0 : 1); 
+                        };
+                        button.innerHTML = `<i class="fas ${esActivo ? 'fa-toggle-off' : 'fa-toggle-on'}"></i>`;
+                        button.disabled = false;
+                        button.setAttribute('data-bs-original-title', `${esActivo ? 'Desactivar' : 'Activar'} categoría`);
+                        
+                        // Actualizar estadísticas
+                        updateStats();
+                        
+                        // Mostrar éxito
                         Swal.fire({
                             icon: 'success',
                             title: 'Estado actualizado',
                             text: `Categoría ${estadoTexto}da correctamente`,
                             background: '#fff',
                             color: '#374151',
-                            timer: 1500,
-                            showConfirmButton: false
-                        }).then(() => {
-                            location.reload();
+                            timer: 2000,
+                            showConfirmButton: false,
+                            toast: true,
+                            position: 'top-end'
                         });
+                        
+                        // Efecto visual en la fila
+                        row.classList.add('estado-success-fade');
+                        setTimeout(() => {
+                            row.classList.remove('estado-success-fade');
+                        }, 2000);
+                        
                     } else {
+                        // Restaurar botón en caso de error
                         button.innerHTML = originalHTML;
                         button.disabled = false;
                         
@@ -308,14 +342,15 @@ function cambiarEstado(button, siglaRubro, codCategoria, nuevoEstado) {
                     }
                 },
                 error: function(xhr, status, error) {
+                    // Restaurar botón en caso de error
                     button.innerHTML = originalHTML;
                     button.disabled = false;
                     
                     console.error('AJAX Error:', error);
                     Swal.fire({
                         icon: 'error',
-                        title: 'Error',
-                        text: 'Error de conexión al actualizar el estado',
+                        title: 'Error de conexión',
+                        text: 'No se pudo conectar con el servidor para actualizar el estado',
                         background: '#fff',
                         color: '#374151'
                     });
@@ -323,6 +358,28 @@ function cambiarEstado(button, siglaRubro, codCategoria, nuevoEstado) {
             });
         }
     });
+}
+
+// FUNCIÓN AUXILIAR: Actualizar estadísticas después del cambio de estado
+function updateStats() {
+    const rows = document.querySelectorAll('#tableBody tr');
+    const totalCategorias = rows.length;
+    
+    // Contar categorías activas
+    let categoriasActivas = 0;
+    rows.forEach(row => {
+        const estadoSpan = row.querySelector('td:nth-child(6) span');
+        if (estadoSpan && estadoSpan.textContent.trim() === 'Activo') {
+            categoriasActivas++;
+        }
+    });
+    
+    // Actualizar display
+    const totalElement = document.getElementById('totalCategorias');
+    const activasElement = document.getElementById('categoriasActivas');
+    
+    if (totalElement) totalElement.textContent = totalCategorias;
+    if (activasElement) activasElement.textContent = categoriasActivas;
 }
 
 // Updated function - Edit category with both DESC_CATEGORIA and DESC_CATEGORIA_PADRE
