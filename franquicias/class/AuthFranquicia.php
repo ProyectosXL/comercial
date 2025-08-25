@@ -1,7 +1,7 @@
 <?php
 /**
  * Clase para manejar la autenticación de usuarios de franquicia
- * desde la base de datos LAKER_SA
+ * desde la base de datos LAKER_SA - VERSIÓN CORREGIDA
  */
 class AuthFranquicia {
     private $conexion_laker;
@@ -20,7 +20,9 @@ class AuthFranquicia {
                 "Axoft1988"
             );
             $this->conexion_laker->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            error_log("DEBUG AUTH: Conexión a LAKER_SA exitosa");
         } catch (Exception $e) {
+            error_log("ERROR AUTH: No se pudo conectar a LAKER_SA: " . $e->getMessage());
             throw new Exception("Error conectando a LAKER_SA: " . $e->getMessage());
         }
     }
@@ -28,13 +30,32 @@ class AuthFranquicia {
     private function conectarSistemas() {
         try {
             $this->conexion_sistemas = new PDO(
-                "sqlsrv:server=XL-APPS;Database=sistemas", 
+                "sqlsrv:server=192.168.0.143;Database=sistemas", 
                 "sa", 
                 "Axoft1988"
             );
             $this->conexion_sistemas->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            error_log("DEBUG AUTH: Conexión a sistemas exitosa");
         } catch (Exception $e) {
+            error_log("ERROR AUTH: No se pudo conectar a sistemas: " . $e->getMessage());
             throw new Exception("Error conectando a sistemas: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Obtener todos los usuarios de franquicia disponibles
+     */
+    public function obtenerUsuariosFranquicia() {
+        try {
+            $stmt = $this->conexion_laker->query(
+                "SELECT NOMBRE, PASS FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' ORDER BY NOMBRE"
+            );
+            $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            error_log("DEBUG AUTH: Obtenidos " . count($usuarios) . " usuarios de franquicia");
+            return $usuarios;
+        } catch (Exception $e) {
+            error_log("Error obteniendo usuarios: " . $e->getMessage());
+            return [];
         }
     }
     
@@ -49,8 +70,18 @@ class AuthFranquicia {
             $stmt->execute([$usuario]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            if ($user && $user['PASS'] === $password) {
-                return true;
+            error_log("DEBUG AUTH: Validando credenciales para usuario: $usuario");
+            
+            if ($user) {
+                error_log("DEBUG AUTH: Usuario encontrado, verificando contraseña");
+                if ($user['PASS'] === $password) {
+                    error_log("DEBUG AUTH: Credenciales válidas para: $usuario");
+                    return true;
+                } else {
+                    error_log("DEBUG AUTH: Contraseña incorrecta para: $usuario");
+                }
+            } else {
+                error_log("DEBUG AUTH: Usuario no encontrado: $usuario");
             }
             
             return false;
@@ -73,6 +104,7 @@ class AuthFranquicia {
             $franquicia = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($franquicia) {
+                error_log("DEBUG AUTH: Franquicia existente encontrada para $nombreUsuario, ID: " . $franquicia['id']);
                 return $franquicia['id'];
             }
             
@@ -85,7 +117,16 @@ class AuthFranquicia {
             );
             $stmt->execute([$nombreFranquicia, $nombreUsuario]);
             
-            return $this->conexion_sistemas->lastInsertId();
+            // Obtener el ID recién insertado
+            $stmt = $this->conexion_sistemas->prepare(
+                "SELECT SCOPE_IDENTITY() as new_id"
+            );
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            $newId = $result['new_id'];
+            
+            error_log("DEBUG AUTH: Nueva franquicia creada para $nombreUsuario, ID: $newId");
+            return $newId;
             
         } catch (Exception $e) {
             error_log("Error obteniendo/creando franquicia: " . $e->getMessage());
@@ -97,7 +138,7 @@ class AuthFranquicia {
      * Genera un nombre amigable para la franquicia basado en el código de usuario
      */
     private function generarNombreFranquicia($codigoUsuario) {
-        // Mapeo de algunos códigos conocidos a nombres más amigables
+        // Mapeo completo de códigos conocidos a nombres más amigables
         $mapeoNombres = [
             'xlcentro' => 'XL Centro',
             'xlbahia' => 'XL Bahía Blanca',
@@ -191,6 +232,7 @@ class AuthFranquicia {
      */
     public function iniciarSesion($usuario, $password) {
         if (!$this->validarCredenciales($usuario, $password)) {
+            error_log("DEBUG AUTH: Credenciales inválidas para: $usuario");
             return false;
         }
         
@@ -206,10 +248,7 @@ class AuthFranquicia {
             $_SESSION['timestamp_login'] = time();
             
             // Log del login exitoso
-            log_session_event('login_success', [
-                'usuario' => $usuario,
-                'franquicia_id' => $franquiciaId
-            ]);
+            error_log("DEBUG AUTH: Login exitoso para $usuario, franquicia_id: $franquiciaId");
             
             return [
                 'success' => true,
@@ -234,12 +273,6 @@ class AuthFranquicia {
                $_SESSION['autenticado'] === true && 
                isset($_SESSION['franquicia_id']);
                
-        // Log de verificación
-        log_session_event('session_verify', [
-            'valida' => $valida,
-            'session_data' => $_SESSION
-        ]);
-        
         return $valida;
     }
     
@@ -251,21 +284,6 @@ class AuthFranquicia {
         require_once __DIR__ . '/../config_sesiones_fixed.php';
         
         return isset($_SESSION['franquicia_id']) ? $_SESSION['franquicia_id'] : null;
-    }
-    
-    /**
-     * Obtiene todos los usuarios de franquicia disponibles
-     */
-    public function obtenerUsuariosFranquicia() {
-        try {
-            $stmt = $this->conexion_laker->query(
-                "SELECT NOMBRE, PASS FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' ORDER BY NOMBRE"
-            );
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log("Error obteniendo usuarios: " . $e->getMessage());
-            return [];
-        }
     }
     
     /**

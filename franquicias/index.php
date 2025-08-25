@@ -43,8 +43,8 @@ if (!function_exists('es_modo_desarrollo')) {
 // Determinar vista según el parámetro GET
 $vista = $_GET['vista'] ?? 'franquicia'; // Por defecto vista franquicia
 
-// Para franquicias solo permitir vista de franquicia
-$vistas_permitidas = ['franquicia', 'historial'];
+// Vistas permitidas para franquicias
+$vistas_permitidas = ['franquicia', 'historial', 'reportes'];
 
 // Si la vista no está permitida, ir a la vista franquicia
 if (!in_array($vista, $vistas_permitidas)) {
@@ -73,6 +73,8 @@ if (!in_array($vista, $vistas_permitidas)) {
         <link href="css/franquicia_dashboard.css" rel="stylesheet">
     <?php elseif ($vista === 'panel'): ?>
         <link href="css/panel_comercial.css" rel="stylesheet">
+    <?php elseif ($vista === 'reportes'): ?>
+        <link href="css/panel_comercial.css" rel="stylesheet">
     <?php endif; ?>
 </head>
 <body>
@@ -98,7 +100,7 @@ if (!in_array($vista, $vistas_permitidas)) {
                     include 'components/panel_comercial.php';
                     break;
                 case 'reportes':
-                    include 'components/reportes.php';
+                    include 'components/reportes_cumplimiento.php';
                     break;
                 case 'historial':
                     include 'components/historial.php';
@@ -132,6 +134,8 @@ if (!in_array($vista, $vistas_permitidas)) {
         <script src="js/franquicia_stock.js"></script>
     <?php elseif ($vista === 'panel'): ?>
         <script src="js/panel_comercial_simple.js"></script>
+    <?php elseif ($vista === 'reportes'): ?>
+        <!-- El JavaScript está incluido en reportes_cumplimiento.php -->
     <?php endif; ?>
 </body>
 </html>

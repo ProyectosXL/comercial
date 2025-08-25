@@ -34,6 +34,12 @@
                         Historial
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="?vista=reportes" class="nav-link <?= $vista === 'reportes' ? 'active' : '' ?>">
+                        <i class="bi bi-table"></i>
+                        Reportes
+                    </a>
+                </li>
             </ul>
 
             <!-- Información del Período Actual -->
@@ -132,6 +138,14 @@
                     Imprimir Página
                 </a>
             </li>
+            <?php if ($vista === 'reportes'): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="exportarReporte()">
+                        <i class="bi bi-download"></i>
+                        Exportar Reporte
+                    </a>
+                </li>
+            <?php endif; ?>
         </ul>
     </div>
 </div>
