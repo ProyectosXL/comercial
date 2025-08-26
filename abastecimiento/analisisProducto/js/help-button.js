@@ -37,8 +37,20 @@ const HelpButton = {
                         <button class="help-tab" data-tab="consejos">💡 Consejos y FAQ</button>
                     </div>
                     <div class="help-modal-body">
-                        ${this.getTabContent('uso')}
-                        ${this.getTabContent('consejos')}
+                        <div class="help-tab-content active" data-content="uso">
+                            ${this.createCollapsibleSection('buscar', '🔍 Buscar y Filtrar Grupos', this.getBuscarContent())}
+                            ${this.createCollapsibleSection('crear', '➕ Crear un Nuevo Grupo', this.getCrearContent())}
+                            ${this.createCollapsibleSection('editar', '✏️ Editar un Grupo Existente', this.getEditarContent())}
+                            ${this.createCollapsibleSection('eliminar', '🗑️ Eliminar un Grupo', this.getEliminarContent())}
+                            ${this.createCollapsibleSection('tabla', '📊 Entender la Tabla Principal', this.getTablaContent())}
+                            ${this.createCollapsibleSection('buscador', '🔧 Funciones del Buscador de Artículos', this.getBuscadorContent())}
+                            ${this.createCollapsibleSection('validaciones', '⚠️ Mensajes y Validaciones', this.getValidacionesContent())}
+                        </div>
+                        <div class="help-tab-content" data-content="consejos">
+                            ${this.createCollapsibleSection('consejos', '💡 Consejos de Uso', this.getConsejosContent())}
+                            ${this.createCollapsibleSection('flujo', '🚀 Flujo de Trabajo Recomendado', this.getFlujoContent())}
+                            ${this.createCollapsibleSection('faq', '❓ Preguntas Frecuentes de Uso', this.getFaqContent())}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -47,30 +59,8 @@ const HelpButton = {
         document.body.insertAdjacentHTML('beforeend', modalHTML);
     },
     
-    // Obtener contenido de pestañas
-    getTabContent: function(tab) {
-        if (tab === 'uso') {
-            return `
-                <div class="help-tab-content active" data-content="uso">
-                    ${this.createCollapsibleSection('buscar', '🔍 Buscar y Filtrar Grupos', this.getBuscarContent())}
-                    ${this.createCollapsibleSection('crear', '➕ Crear un Nuevo Grupo', this.getCrearContent())}
-                    ${this.createCollapsibleSection('editar', '✏️ Editar un Grupo Existente', this.getEditarContent())}
-                    ${this.createCollapsibleSection('eliminar', '🗑️ Eliminar un Grupo', this.getEliminarContent())}
-                    ${this.createCollapsibleSection('tabla', '📊 Entender la Tabla Principal', this.getTablaContent())}
-                    ${this.createCollapsibleSection('buscador', '🔧 Funciones del Buscador de Artículos', this.getBuscadorContent())}
-                    ${this.createCollapsibleSection('validaciones', '⚠️ Mensajes y Validaciones', this.getValidacionesContent())}
-                </div>
-            `;
-        } else {
-            return `
-                <div class="help-tab-content" data-content="consejos">
-                    ${this.createCollapsibleSection('consejos', '💡 Consejos de Uso', this.getConsejosContent())}
-                    ${this.createCollapsibleSection('flujo', '🚀 Flujo de Trabajo Recomendado', this.getFlujoContent())}
-                    ${this.createCollapsibleSection('faq', '❓ Preguntas Frecuentes de Uso', this.getFaqContent())}
-                </div>
-            `;
-        }
-    },
+    // Eliminar funciones innecesarias y mantener solo las que se usan
+    // getTabContent: function() ya no se usa
     
     // Crear sección desplegable
     createCollapsibleSection: function(id, title, content) {

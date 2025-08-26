@@ -36,8 +36,25 @@ function renderizar_modal_ayuda() {
                 <h2>Manual de Usuario - Gestión de Equivalencias</h2>
                 <button class="help-close" id="helpClose">&times;</button>
             </div>
+            <div class="help-tabs">
+                <button class="help-tab active" data-tab="uso">📖 Guía de Uso</button>
+                <button class="help-tab" data-tab="consejos">💡 Consejos y FAQ</button>
+            </div>
             <div class="help-modal-body">
-                <?php echo obtener_contenido_ayuda(); ?>
+                <div class="help-tab-content active" data-content="uso">
+                    <?php echo crear_seccion_desplegable('buscar', '🔍 Buscar y Filtrar Grupos', obtener_contenido_buscar()); ?>
+                    <?php echo crear_seccion_desplegable('crear', '➕ Crear un Nuevo Grupo', obtener_contenido_crear()); ?>
+                    <?php echo crear_seccion_desplegable('editar', '✏️ Editar un Grupo Existente', obtener_contenido_editar()); ?>
+                    <?php echo crear_seccion_desplegable('eliminar', '🗑️ Eliminar un Grupo', obtener_contenido_eliminar()); ?>
+                    <?php echo crear_seccion_desplegable('tabla', '📊 Entender la Tabla Principal', obtener_contenido_tabla()); ?>
+                    <?php echo crear_seccion_desplegable('buscador', '🔧 Funciones del Buscador de Artículos', obtener_contenido_buscador()); ?>
+                    <?php echo crear_seccion_desplegable('validaciones', '⚠️ Mensajes y Validaciones', obtener_contenido_validaciones()); ?>
+                </div>
+                <div class="help-tab-content" data-content="consejos">
+                    <?php echo crear_seccion_desplegable('consejos', '💡 Consejos de Uso', obtener_contenido_consejos()); ?>
+                    <?php echo crear_seccion_desplegable('flujo', '🚀 Flujo de Trabajo Recomendado', obtener_contenido_flujo()); ?>
+                    <?php echo crear_seccion_desplegable('faq', '❓ Preguntas Frecuentes de Uso', obtener_contenido_faq()); ?>
+                </div>
             </div>
         </div>
     </div>
