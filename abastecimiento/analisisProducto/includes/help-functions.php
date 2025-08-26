@@ -1,6 +1,6 @@
 <?php
 /* ==============================================
-   FUNCIONES PHP PARA EL BOTÓN DE AYUDA
+   FUNCIONES PHP MEJORADAS PARA EL BOTÓN DE AYUDA
    ============================================== */
 
 /**
@@ -18,42 +18,46 @@ function incluir_archivos_ayuda() {
  */
 function renderizar_boton_ayuda() {
     ?>
-    <button id="helpButton" class="help-button" title="Manual de Usuario">
+    <button id="helpButton" class="help-button" title="Manual de Usuario - F1 o Click">
         ?
     </button>
     <?php
 }
 
 /**
- * Renderizar el modal de ayuda completo
- * Útil para generar el HTML desde PHP si se prefiere
+ * Renderizar el modal de ayuda completo desde PHP
+ * Útil para generar el HTML desde el servidor
  */
-function renderizar_modal_ayuda() {
+function renderizar_modal_ayuda_completo() {
+    $contenido_primera_solapa = obtener_contenido_primera_solapa();
+    $contenido_segunda_solapa = obtener_contenido_segunda_solapa();
+    
     ?>
-    <div id="helpModal" class="help-modal">
+    <div id="helpModal" class="help-modal" role="dialog" aria-labelledby="helpModalTitle" aria-hidden="true">
         <div class="help-modal-content">
             <div class="help-modal-header">
-                <h2>Manual de Usuario - Gestión de Equivalencias</h2>
-                <button class="help-close" id="helpClose">&times;</button>
+                <h2 id="helpModalTitle">📚 Manual de Usuario - Gestión de Equivalencias</h2>
+                <button class="help-close" id="helpClose" aria-label="Cerrar manual">&times;</button>
             </div>
-            <div class="help-tabs">
-                <button class="help-tab active" data-tab="uso">📖 Guía de Uso</button>
-                <button class="help-tab" data-tab="consejos">💡 Consejos y FAQ</button>
+            
+            <div class="help-tabs" role="tablist">
+                <button class="help-tab active" data-tab="uso" role="tab" aria-selected="true" aria-controls="tab-uso">
+                    📖 Guía de Uso
+                </button>
+                <button class="help-tab" data-tab="consejos" role="tab" aria-selected="false" aria-controls="tab-consejos">
+                    💡 Consejos y FAQ
+                </button>
             </div>
+            
             <div class="help-modal-body">
-                <div class="help-tab-content active" data-content="uso">
-                    <?php echo crear_seccion_desplegable('buscar', '🔍 Buscar y Filtrar Grupos', obtener_contenido_buscar()); ?>
-                    <?php echo crear_seccion_desplegable('crear', '➕ Crear un Nuevo Grupo', obtener_contenido_crear()); ?>
-                    <?php echo crear_seccion_desplegable('editar', '✏️ Editar un Grupo Existente', obtener_contenido_editar()); ?>
-                    <?php echo crear_seccion_desplegable('eliminar', '🗑️ Eliminar un Grupo', obtener_contenido_eliminar()); ?>
-                    <?php echo crear_seccion_desplegable('tabla', '📊 Entender la Tabla Principal', obtener_contenido_tabla()); ?>
-                    <?php echo crear_seccion_desplegable('buscador', '🔧 Funciones del Buscador de Artículos', obtener_contenido_buscador()); ?>
-                    <?php echo crear_seccion_desplegable('validaciones', '⚠️ Mensajes y Validaciones', obtener_contenido_validaciones()); ?>
+                <!-- Primera solapa: Guía de Uso -->
+                <div class="help-tab-content active" data-content="uso" id="tab-uso" role="tabpanel">
+                    <?php echo $contenido_primera_solapa; ?>
                 </div>
-                <div class="help-tab-content" data-content="consejos">
-                    <?php echo crear_seccion_desplegable('consejos', '💡 Consejos de Uso', obtener_contenido_consejos()); ?>
-                    <?php echo crear_seccion_desplegable('flujo', '🚀 Flujo de Trabajo Recomendado', obtener_contenido_flujo()); ?>
-                    <?php echo crear_seccion_desplegable('faq', '❓ Preguntas Frecuentes de Uso', obtener_contenido_faq()); ?>
+                
+                <!-- Segunda solapa: Consejos y FAQ -->
+                <div class="help-tab-content" data-content="consejos" id="tab-consejos" role="tabpanel">
+                    <?php echo $contenido_segunda_solapa; ?>
                 </div>
             </div>
         </div>
@@ -62,32 +66,43 @@ function renderizar_modal_ayuda() {
 }
 
 /**
- * Obtener el contenido HTML del manual de ayuda
- * @return string HTML del contenido de ayuda
+ * Obtener contenido de la primera solapa (Guía de Uso)
  */
-function obtener_contenido_ayuda() {
-    return '
-        <div class="help-tabs">
-            <button class="help-tab active" data-tab="uso">📖 Guía de Uso</button>
-            <button class="help-tab" data-tab="consejos">💡 Consejos y FAQ</button>
-        </div>
-        <div class="help-modal-body">
-            <div class="help-tab-content active" data-content="uso">
-                ' . crear_seccion_desplegable('buscar', '🔍 Buscar y Filtrar Grupos', obtener_contenido_buscar()) . '
-                ' . crear_seccion_desplegable('crear', '➕ Crear un Nuevo Grupo', obtener_contenido_crear()) . '
-                ' . crear_seccion_desplegable('editar', '✏️ Editar un Grupo Existente', obtener_contenido_editar()) . '
-                ' . crear_seccion_desplegable('eliminar', '🗑️ Eliminar un Grupo', obtener_contenido_eliminar()) . '
-                ' . crear_seccion_desplegable('tabla', '📊 Entender la Tabla Principal', obtener_contenido_tabla()) . '
-                ' . crear_seccion_desplegable('buscador', '🔧 Funciones del Buscador de Artículos', obtener_contenido_buscador()) . '
-                ' . crear_seccion_desplegable('validaciones', '⚠️ Mensajes y Validaciones', obtener_contenido_validaciones()) . '
-            </div>
-            <div class="help-tab-content" data-content="consejos">
-                ' . crear_seccion_desplegable('consejos', '💡 Consejos de Uso', obtener_contenido_consejos()) . '
-                ' . crear_seccion_desplegable('flujo', '🚀 Flujo de Trabajo Recomendado', obtener_contenido_flujo()) . '
-                ' . crear_seccion_desplegable('faq', '❓ Preguntas Frecuentes de Uso', obtener_contenido_faq()) . '
-            </div>
-        </div>
-    ';
+function obtener_contenido_primera_solapa() {
+    $secciones = [
+        'buscar' => ['🔍 Buscar y Filtrar Grupos', obtener_contenido_buscar()],
+        'crear' => ['➕ Crear un Nuevo Grupo', obtener_contenido_crear()],
+        'editar' => ['✏️ Editar un Grupo Existente', obtener_contenido_editar()],
+        'eliminar' => ['🗑️ Eliminar un Grupo', obtener_contenido_eliminar()],
+        'tabla' => ['📊 Entender la Tabla Principal', obtener_contenido_tabla()],
+        'buscador' => ['🔧 Funciones del Buscador de Artículos', obtener_contenido_buscador()],
+        'validaciones' => ['⚠️ Mensajes y Validaciones', obtener_contenido_validaciones()]
+    ];
+    
+    $html = '';
+    foreach ($secciones as $id => $data) {
+        $html .= crear_seccion_desplegable($id, $data[0], $data[1]);
+    }
+    
+    return $html;
+}
+
+/**
+ * Obtener contenido de la segunda solapa (Consejos y FAQ)
+ */
+function obtener_contenido_segunda_solapa() {
+    $secciones = [
+        'consejos' => ['💡 Consejos de Uso', obtener_contenido_consejos()],
+        'flujo' => ['🚀 Flujo de Trabajo Recomendado', obtener_contenido_flujo()],
+        'faq' => ['❓ Preguntas Frecuentes de Uso', obtener_contenido_faq()]
+    ];
+    
+    $html = '';
+    foreach ($secciones as $id => $data) {
+        $html .= crear_seccion_desplegable($id, $data[0], $data[1]);
+    }
+    
+    return $html;
 }
 
 /**
@@ -96,11 +111,11 @@ function obtener_contenido_ayuda() {
 function crear_seccion_desplegable($id, $titulo, $contenido) {
     return '
         <div class="help-section" data-section="' . $id . '">
-            <div class="help-section-header">
+            <div class="help-section-header" role="button" aria-expanded="false" aria-controls="section-' . $id . '">
                 <h3>' . $titulo . '</h3>
-                <span class="help-section-toggle">▶</span>
+                <span class="help-section-toggle" aria-hidden="true">▶</span>
             </div>
-            <div class="help-section-content">
+            <div class="help-section-content" id="section-' . $id . '" role="region">
                 ' . $contenido . '
             </div>
         </div>
@@ -108,7 +123,7 @@ function crear_seccion_desplegable($id, $titulo, $contenido) {
 }
 
 /**
- * Contenido de cada sección
+ * Contenido de cada sección - Primera solapa
  */
 function obtener_contenido_buscar() {
     return '
@@ -240,6 +255,9 @@ function obtener_contenido_validaciones() {
     ';
 }
 
+/**
+ * Contenido de cada sección - Segunda solapa
+ */
 function obtener_contenido_consejos() {
     return '
         <ul>
@@ -267,23 +285,37 @@ function obtener_contenido_flujo() {
 
 function obtener_contenido_faq() {
     return '
-        <p><strong>¿Cómo sé si un artículo ya está en un grupo?</strong><br>
-        Usa "Buscar por artículo" en los filtros superiores. Si aparece algún resultado, ya está asociado.</p>
-        
-        <p><strong>¿Puedo cambiar un artículo de grupo?</strong><br>
-        Sí. Primero elimínalo del grupo actual (editando el grupo y usando la papelera roja), luego agrégalo al nuevo grupo.</p>
-        
-        <p><strong>¿Qué pasa si cierro sin guardar?</strong><br>
-        Se pierden todos los cambios. Siempre haz clic en "Guardar" antes de cerrar o salir.</p>
-        
-        <p><strong>¿Puedo deshacer una eliminación?</strong><br>
-        Si eliminaste un grupo, puedes reactivarlo editándolo y cambiando el estado a "Activo".</p>
-        
-        <p><strong>¿Por qué no aparecen algunos artículos en la búsqueda?</strong><br>
-        Solo aparecen artículos que no están ya asociados a otros grupos para evitar duplicados.</p>
-        
-        <p><strong>¿Cómo borro un artículo de un grupo?</strong><br>
-        Edita el grupo, busca el artículo en la tabla y haz clic en el ícono de papelera roja junto a él.</p>
+        <div style="display: grid; gap: 15px;">
+            <details style="border: 1px solid #dee2e6; border-radius: 8px; padding: 10px;">
+                <summary style="font-weight: bold; cursor: pointer; color: #007bff;">¿Cómo sé si un artículo ya está en un grupo?</summary>
+                <p style="margin-top: 10px;">Usa "Buscar por artículo" en los filtros superiores. Si aparece algún resultado, ya está asociado.</p>
+            </details>
+            
+            <details style="border: 1px solid #dee2e6; border-radius: 8px; padding: 10px;">
+                <summary style="font-weight: bold; cursor: pointer; color: #007bff;">¿Puedo cambiar un artículo de grupo?</summary>
+                <p style="margin-top: 10px;">Sí. Primero elimínalo del grupo actual (editando el grupo y usando la papelera roja), luego agrégalo al nuevo grupo.</p>
+            </details>
+            
+            <details style="border: 1px solid #dee2e6; border-radius: 8px; padding: 10px;">
+                <summary style="font-weight: bold; cursor: pointer; color: #007bff;">¿Qué pasa si cierro sin guardar?</summary>
+                <p style="margin-top: 10px;">Se pierden todos los cambios. Siempre haz clic en "Guardar" antes de cerrar o salir.</p>
+            </details>
+            
+            <details style="border: 1px solid #dee2e6; border-radius: 8px; padding: 10px;">
+                <summary style="font-weight: bold; cursor: pointer; color: #007bff;">¿Puedo deshacer una eliminación?</summary>
+                <p style="margin-top: 10px;">Si eliminaste un grupo, puedes reactivarlo editándolo y cambiando el estado a "Activo".</p>
+            </details>
+            
+            <details style="border: 1px solid #dee2e6; border-radius: 8px; padding: 10px;">
+                <summary style="font-weight: bold; cursor: pointer; color: #007bff;">¿Por qué no aparecen algunos artículos en la búsqueda?</summary>
+                <p style="margin-top: 10px;">Solo aparecen artículos que no están ya asociados a otros grupos para evitar duplicados.</p>
+            </details>
+            
+            <details style="border: 1px solid #dee2e6; border-radius: 8px; padding: 10px;">
+                <summary style="font-weight: bold; cursor: pointer; color: #007bff;">¿Cómo borro un artículo de un grupo?</summary>
+                <p style="margin-top: 10px;">Edita el grupo, busca el artículo en la tabla y haz clic en el ícono de papelera roja junto a él.</p>
+            </details>
+        </div>
     ';
 }
 
@@ -292,9 +324,24 @@ function obtener_contenido_faq() {
  * @return bool True si puede ver la ayuda, False si no
  */
 function usuario_puede_ver_ayuda() {
-    // Por ahora retorna true para todos los usuarios autenticados
-    // Puedes agregar tu lógica de permisos aquí
-    return true;
+    // Puedes personalizar esta función según tus necesidades de permisos
+    // Por ejemplo, verificar roles, permisos específicos, etc.
+    
+    // Verificar si hay sesión activa
+    if (session_status() === PHP_SESSION_NONE) {
+        return false;
+    }
+    
+    // Verificar rol del usuario (ejemplo)
+    /*
+    if (isset($_SESSION['user_role'])) {
+        $rolesConAcceso = ['admin', 'supervisor', 'usuario'];
+        return in_array($_SESSION['user_role'], $rolesConAcceso);
+    }
+    */
+    
+    // Por defecto, permitir acceso a usuarios autenticados
+    return isset($_SESSION['user_id']) || isset($_SESSION['usuario']);
 }
 
 /**
@@ -302,25 +349,136 @@ function usuario_puede_ver_ayuda() {
  * @param int $usuario_id ID del usuario que abrió la ayuda
  * @param string $pagina Página desde donde se abrió la ayuda
  */
-function registrar_uso_ayuda($usuario_id, $pagina = 'gestion_equivalencias') {
+function registrar_uso_ayuda($usuario_id = null, $pagina = 'gestion_equivalencias') {
     try {
+        // Si no se proporciona usuario_id, intentar obtenerlo de la sesión
+        if ($usuario_id === null) {
+            $usuario_id = $_SESSION['user_id'] ?? $_SESSION['usuario_id'] ?? 'anonimo';
+        }
+        
         // Aquí puedes agregar código para registrar en base de datos
-        // Por ejemplo:
+        // Ejemplo usando PDO:
         /*
         $conn = obtener_conexion_bd();
-        $stmt = $conn->prepare("INSERT INTO logs_ayuda (usuario_id, pagina, fecha_acceso) VALUES (?, ?, NOW())");
-        $stmt->bind_param("is", $usuario_id, $pagina);
-        $stmt->execute();
+        $stmt = $conn->prepare("
+            INSERT INTO logs_ayuda (usuario_id, pagina, fecha_acceso, ip_address, user_agent) 
+            VALUES (?, ?, NOW(), ?, ?)
+        ");
+        $stmt->execute([
+            $usuario_id, 
+            $pagina, 
+            $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255)
+        ]);
         */
         
-        // Por ahora solo registra en un log de archivos si la carpeta existe
-        if (is_dir('logs')) {
-            $log_entry = date('Y-m-d H:i:s') . " - Usuario ID: $usuario_id abrió ayuda en página: $pagina\n";
-            file_put_contents('logs/ayuda_usage.log', $log_entry, FILE_APPEND | LOCK_EX);
+        // Registro en archivo de log si la carpeta existe
+        $log_dir = __DIR__ . '/../../logs';
+        if (is_dir($log_dir) && is_writable($log_dir)) {
+            $log_entry = date('Y-m-d H:i:s') . " - Usuario: $usuario_id - Página: $pagina - IP: " . 
+                        ($_SERVER['REMOTE_ADDR'] ?? 'unknown') . "\n";
+            file_put_contents($log_dir . '/ayuda_usage.log', $log_entry, FILE_APPEND | LOCK_EX);
         }
+        
+        return true;
+        
     } catch (Exception $e) {
         // Silenciosamente falla para no interrumpir la funcionalidad principal
         error_log("Error registrando uso de ayuda: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Obtener estadísticas de uso de la ayuda
+ * @param int $dias_atras Número de días hacia atrás para las estadísticas
+ * @return array Estadísticas de uso
+ */
+function obtener_estadisticas_ayuda($dias_atras = 30) {
+    try {
+        $estadisticas = [
+            'total_aperturas' => 0,
+            'usuarios_unicos' => 0,
+            'paginas_mas_consultadas' => [],
+            'horarios_pico' => [],
+            'periodo' => $dias_atras . ' días'
+        ];
+        
+        // Ejemplo usando base de datos:
+        /*
+        $conn = obtener_conexion_bd();
+        
+        // Total de aperturas
+        $stmt = $conn->prepare("
+            SELECT COUNT(*) as total 
+            FROM logs_ayuda 
+            WHERE fecha_acceso >= DATE_SUB(NOW(), INTERVAL ? DAY)
+        ");
+        $stmt->execute([$dias_atras]);
+        $estadisticas['total_aperturas'] = $stmt->fetchColumn();
+        
+        // Usuarios únicos
+        $stmt = $conn->prepare("
+            SELECT COUNT(DISTINCT usuario_id) as unicos 
+            FROM logs_ayuda 
+            WHERE fecha_acceso >= DATE_SUB(NOW(), INTERVAL ? DAY)
+        ");
+        $stmt->execute([$dias_atras]);
+        $estadisticas['usuarios_unicos'] = $stmt->fetchColumn();
+        
+        // Páginas más consultadas
+        $stmt = $conn->prepare("
+            SELECT pagina, COUNT(*) as total 
+            FROM logs_ayuda 
+            WHERE fecha_acceso >= DATE_SUB(NOW(), INTERVAL ? DAY)
+            GROUP BY pagina 
+            ORDER BY total DESC 
+            LIMIT 10
+        ");
+        $stmt->execute([$dias_atras]);
+        $estadisticas['paginas_mas_consultadas'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        */
+        
+        // Alternativa usando archivo de log
+        $log_file = __DIR__ . '/../../logs/ayuda_usage.log';
+        if (file_exists($log_file)) {
+            $lines = file($log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            $fecha_limite = date('Y-m-d', strtotime("-$dias_atras days"));
+            
+            $usuarios = [];
+            $paginas = [];
+            
+            foreach ($lines as $line) {
+                if (strpos($line, $fecha_limite) !== false || strpos($line, date('Y-m-d')) !== false) {
+                    $estadisticas['total_aperturas']++;
+                    
+                    // Extraer usuario y página del log
+                    if (preg_match('/Usuario: ([^-]+)/', $line, $matches)) {
+                        $usuarios[] = trim($matches[1]);
+                    }
+                    if (preg_match('/Página: ([^-]+)/', $line, $matches)) {
+                        $pagina = trim($matches[1]);
+                        $paginas[$pagina] = ($paginas[$pagina] ?? 0) + 1;
+                    }
+                }
+            }
+            
+            $estadisticas['usuarios_unicos'] = count(array_unique($usuarios));
+            arsort($paginas);
+            $estadisticas['paginas_mas_consultadas'] = array_slice($paginas, 0, 10, true);
+        }
+        
+        return $estadisticas;
+        
+    } catch (Exception $e) {
+        error_log("Error obteniendo estadísticas de ayuda: " . $e->getMessage());
+        return [
+            'error' => 'No se pudieron obtener las estadísticas',
+            'total_aperturas' => 0,
+            'usuarios_unicos' => 0,
+            'paginas_mas_consultadas' => [],
+            'periodo' => $dias_atras . ' días'
+        ];
     }
 }
 
@@ -330,12 +488,17 @@ function registrar_uso_ayuda($usuario_id, $pagina = 'gestion_equivalencias') {
  */
 function obtener_config_ayuda() {
     return [
-        'mostrar_botón' => true,
-        'posicion' => 'top-right', // top-right, top-left, bottom-right, bottom-left
+        'mostrar_boton' => usuario_puede_ver_ayuda(),
+        'posicion' => 'bottom-right', // top-right, top-left, bottom-right, bottom-left
         'color_primario' => '#007bff',
         'mostrar_animaciones' => true,
+        'recordar_ultima_pestana' => true,
+        'expandir_primera_seccion' => true,
+        'navegacion_teclado' => true,
         'idioma' => 'es',
-        'version_ayuda' => '1.0'
+        'version_ayuda' => '2.0',
+        'debug_mode' => defined('WP_DEBUG') && WP_DEBUG, // Para WordPress
+        'analytics_enabled' => true
     ];
 }
 
@@ -345,6 +508,236 @@ function obtener_config_ayuda() {
  */
 function generar_config_js_ayuda() {
     $config = obtener_config_ayuda();
-    return '<script>window.helpConfig = ' . json_encode($config) . ';</script>';
+    ob_start();
+    ?>
+    <script type="text/javascript">
+    // Configuración del sistema de ayuda
+    window.helpConfig = <?php echo json_encode($config, JSON_UNESCAPED_UNICODE); ?>;
+    
+    // Aplicar configuración al sistema de ayuda cuando esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.HelpButton && window.helpConfig) {
+            // Aplicar configuración
+            Object.assign(window.HelpButton.config, {
+                autoExpandFirstSection: window.helpConfig.expandir_primera_seccion,
+                rememberLastTab: window.helpConfig.recordar_ultima_pestana,
+                enableKeyboardNavigation: window.helpConfig.navegacion_teclado
+            });
+            
+            // Aplicar estilos personalizados si es necesario
+            if (window.helpConfig.color_primario !== '#007bff') {
+                const style = document.createElement('style');
+                style.textContent = `
+                    .help-button { 
+                        background: linear-gradient(135deg, ${window.helpConfig.color_primario}, ${adjustColor(window.helpConfig.color_primario, -20)}) !important; 
+                    }
+                    .help-modal-header { 
+                        background: linear-gradient(135deg, ${window.helpConfig.color_primario}, ${adjustColor(window.helpConfig.color_primario, -20)}) !important; 
+                    }
+                    .help-tab.active { 
+                        color: ${window.helpConfig.color_primario} !important; 
+                        border-bottom-color: ${window.helpConfig.color_primario} !important; 
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            console.log('Configuración de ayuda aplicada:', window.helpConfig);
+        }
+    });
+    
+    // Función auxiliar para ajustar colores
+    function adjustColor(color, percent) {
+        const num = parseInt(color.replace("#",""), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) + amt;
+        const G = (num >> 8 & 0x00FF) + amt;
+        const B = (num & 0x0000FF) + amt;
+        return "#" + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 +
+            (G<255?G<1?0:G:255)*0x100 + (B<255?B<1?0:B:255))
+            .toString(16).slice(1);
+    }
+    </script>
+    <?php
+    return ob_get_clean();
 }
+
+/**
+ * Función para obtener conexión a base de datos (ejemplo)
+ * Debes implementar esta función según tu sistema
+ */
+function obtener_conexion_bd() {
+    // Ejemplo usando PDO
+    /*
+    try {
+        $host = $_ENV['DB_HOST'] ?? 'localhost';
+        $dbname = $_ENV['DB_NAME'] ?? 'tu_base_datos';
+        $username = $_ENV['DB_USER'] ?? 'usuario';
+        $password = $_ENV['DB_PASS'] ?? 'contraseña';
+        
+        $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        
+        return $pdo;
+    } catch (PDOException $e) {
+        error_log("Error de conexión a BD: " . $e->getMessage());
+        throw new Exception("Error de conexión a la base de datos");
+    }
+    */
+    
+    // Si usas el sistema de conexión existente del proyecto
+    require_once __DIR__ . '/../Class/Conexion.php';
+    $conexion = new Conexion();
+    return $conexion->conectar('central');
+}
+
+/**
+ * Crear tabla de logs de ayuda si no existe
+ */
+function crear_tabla_logs_ayuda() {
+    try {
+        $conn = obtener_conexion_bd();
+        
+        $sql = "
+        CREATE TABLE IF NOT EXISTS logs_ayuda (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            usuario_id VARCHAR(50) NOT NULL,
+            pagina VARCHAR(100) NOT NULL,
+            fecha_acceso TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            ip_address VARCHAR(45),
+            user_agent TEXT,
+            sesion_id VARCHAR(100),
+            INDEX idx_usuario (usuario_id),
+            INDEX idx_pagina (pagina),
+            INDEX idx_fecha (fecha_acceso)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ";
+        
+        $conn->exec($sql);
+        return true;
+        
+    } catch (Exception $e) {
+        error_log("Error creando tabla logs_ayuda: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Función de utilidad para mostrar información de debug
+ */
+function debug_sistema_ayuda() {
+    if (!obtener_config_ayuda()['debug_mode']) {
+        return '';
+    }
+    
+    ob_start();
+    ?>
+    <script>
+    console.log('=== DEBUG SISTEMA DE AYUDA ===');
+    console.log('Config:', window.helpConfig);
+    console.log('Usuario puede ver ayuda:', <?php echo json_encode(usuario_puede_ver_ayuda()); ?>);
+    console.log('Sesión activa:', <?php echo json_encode(session_status() === PHP_SESSION_ACTIVE); ?>);
+    
+    // Mostrar diagnósticos cuando el sistema esté listo
+    setTimeout(() => {
+        if (window.HelpSystem) {
+            console.log('Diagnósticos del sistema:', window.HelpSystem.diagnostics());
+        }
+    }, 1000);
+    </script>
+    <?php
+    return ob_get_clean();
+}
+
+/**
+ * Función principal para incluir todo lo necesario de la ayuda
+ * Esta es la función más fácil de usar - incluye todo automáticamente
+ */
+function incluir_sistema_ayuda_completo($mostrar_debug = false) {
+    // Solo incluir si el usuario tiene permisos
+    if (!usuario_puede_ver_ayuda()) {
+        return;
+    }
+    
+    // Incluir archivos CSS y JS
+    incluir_archivos_ayuda();
+    
+    // Incluir configuración JavaScript
+    echo generar_config_js_ayuda();
+    
+    // Incluir debug si está activado
+    if ($mostrar_debug) {
+        echo debug_sistema_ayuda();
+    }
+    
+    // Registrar que se cargó la ayuda (opcional)
+    if (obtener_config_ayuda()['analytics_enabled']) {
+        // Este registro se puede hacer de forma asíncrona
+        register_shutdown_function(function() {
+            $usuario_id = $_SESSION['user_id'] ?? $_SESSION['usuario_id'] ?? null;
+            $pagina = basename($_SERVER['PHP_SELF'], '.php');
+            registrar_uso_ayuda($usuario_id, 'carga_' . $pagina);
+        });
+    }
+}
+
+/**
+ * Shortcode para mostrar estadísticas de ayuda (si usas WordPress)
+ */
+function shortcode_estadisticas_ayuda($atts) {
+    $atts = shortcode_atts([
+        'dias' => 30,
+        'formato' => 'tabla'
+    ], $atts);
+    
+    if (!current_user_can('manage_options')) {
+        return '<p>No tienes permisos para ver estas estadísticas.</p>';
+    }
+    
+    $stats = obtener_estadisticas_ayuda($atts['dias']);
+    
+    ob_start();
+    ?>
+    <div class="estadisticas-ayuda">
+        <h3>Estadísticas de Uso de Ayuda - Últimos <?php echo $atts['dias']; ?> días</h3>
+        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
+            <div class="stat-box" style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+                <h4 style="margin: 0 0 10px 0; color: #007bff;">Total de Aperturas</h4>
+                <p style="font-size: 24px; font-weight: bold; margin: 0;"><?php echo number_format($stats['total_aperturas']); ?></p>
+            </div>
+            <div class="stat-box" style="background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center;">
+                <h4 style="margin: 0 0 10px 0; color: #28a745;">Usuarios Únicos</h4>
+                <p style="font-size: 24px; font-weight: bold; margin: 0;"><?php echo number_format($stats['usuarios_unicos']); ?></p>
+            </div>
+        </div>
+        
+        <?php if (!empty($stats['paginas_mas_consultadas'])): ?>
+        <h4>Páginas Más Consultadas</h4>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f8f9fa;">
+                    <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Página</th>
+                    <th style="padding: 10px; text-align: right; border: 1px solid #dee2e6;">Consultas</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($stats['paginas_mas_consultadas'] as $pagina => $total): ?>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #dee2e6;"><?php echo htmlspecialchars($pagina); ?></td>
+                    <td style="padding: 10px; text-align: right; border: 1px solid #dee2e6;"><?php echo number_format($total); ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php endif; ?>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+// Registrar shortcode si WordPress está disponible
+if (function_exists('add_shortcode')) {
+    add_shortcode('estadisticas_ayuda', 'shortcode_estadisticas_ayuda');
+}
+
 ?>
