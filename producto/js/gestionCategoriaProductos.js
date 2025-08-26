@@ -389,6 +389,28 @@ function cambiarEstado(button, siglaRubro, codCategoria, nuevoEstado) {
     });
 }
 
+// FUNCIÓN AUXILIAR: Actualizar estadísticas después del cambio de estado
+function updateStats() {
+    const rows = document.querySelectorAll('#tableBody tr');
+    const totalCategorias = rows.length;
+    
+    // Contar categorías activas
+    let categoriasActivas = 0;
+    rows.forEach(row => {
+        const estadoSpan = row.querySelector('td:nth-child(6) span');
+        if (estadoSpan && estadoSpan.textContent.trim() === 'Activo') {
+            categoriasActivas++;
+        }
+    });
+    
+    // Actualizar display
+    const totalElement = document.getElementById('totalCategorias');
+    const activasElement = document.getElementById('categoriasActivas');
+    
+    if (totalElement) totalElement.textContent = totalCategorias;
+    if (activasElement) activasElement.textContent = categoriasActivas;
+}
+
 // Updated function - Edit category with both DESC_CATEGORIA and DESC_CATEGORIA_PADRE
 const editar = (div) => {
     let allTd = div.parentElement.parentElement.parentElement.querySelectorAll("td");

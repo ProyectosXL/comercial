@@ -20,10 +20,10 @@ switch ($accion) {
     case 'obtenerSiglasDisponibles':
         obtenerSiglasDisponibles();
         break;
-
+    
     case 'actualizarEstado':
-        actualizarEstado();
-        break;
+    actualizarEstado();
+    break;
 
     default:
         echo json_encode(['error' => 'Acción no válida']);
@@ -81,7 +81,6 @@ function obtenerSiglasDisponibles() {
     
     echo json_encode($siglas);
 }
-
 // NUEVA FUNCIÓN: Actualizar estado de categoría
 function actualizarEstado() {
     require_once __DIR__.'/../Class/Categoria.php';
@@ -96,5 +95,4 @@ function actualizarEstado() {
     
     echo $result ? 1 : 0;
 }
-
 ?>

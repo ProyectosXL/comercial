@@ -1,8 +1,8 @@
 <div class="sidebar">
     <div class="sidebar-content">
         <!-- Información del Usuario -->
-        <div class="user-info-card card">
-            <div class="card-body">
+        <div class="user-info-card">
+            <div class="card-body" style="background-color: #000000ff !important;">
                 <div class="d-flex align-items-center">
                     <div class="avatar-circle me-3">
                         <?= substr($usuario, 0, 1) ?>
@@ -32,6 +32,12 @@
                     <a href="?vista=historial" class="nav-link <?= $vista === 'historial' ? 'active' : '' ?>">
                         <i class="bi bi-clock-history"></i>
                         Historial
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="?vista=reportes" class="nav-link <?= $vista === 'reportes' ? 'active' : '' ?>">
+                        <i class="bi bi-table"></i>
+                        Reportes
                     </a>
                 </li>
             </ul>
@@ -132,6 +138,14 @@
                     Imprimir Página
                 </a>
             </li>
+            <?php if ($vista === 'reportes'): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="exportarReporte()">
+                        <i class="bi bi-download"></i>
+                        Exportar Reporte
+                    </a>
+                </li>
+            <?php endif; ?>
         </ul>
     </div>
 </div>

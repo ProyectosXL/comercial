@@ -5,7 +5,6 @@ class Categoria
     private $cid_central;
 
     function __construct(){
-        // SIEMPRE usar la conexión del servidor (abastecimiento)
         require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
         $cid = new Conexion();
         $this->cid_central = $cid->conectar('central');
@@ -96,8 +95,8 @@ class Categoria
                 return false; // Ya existe
             }
 
-            // Insertar nueva categoría - ACTIVO por defecto en 1 (activo)
-            $insertSql = "INSERT INTO SJ_CATEGORIAS (CATEGORIA, DESC_CATEGORIA, DESC_CATEGORIA_PADRE, RUBRO, ACTIVO) VALUES (?, ?, ?, ?, 1)";
+            // Insertar nueva categoría
+            $insertSql = "INSERT INTO SJ_CATEGORIAS (CATEGORIA, DESC_CATEGORIA, DESC_CATEGORIA_PADRE, RUBRO) VALUES (?, ?, ?, ?)";
             $insertParams = array($codCategoria, $descCategoria, $descCategoriaPadre, $siglaRubro);
                             
             $stmt = sqlsrv_prepare($this->cid_central, $insertSql, $insertParams);
@@ -144,7 +143,6 @@ class Categoria
             return false;
         }     
     }
-
     // MÉTODO ACTUALIZADO: Actualizar estado de categoría con mejor manejo
     public function actualizarEstadoCategoria($siglaRubro, $codCategoria, $nuevoEstado) {
         // Primero verificar que el registro existe
@@ -328,5 +326,6 @@ class Categoria
         }
     }
 }
+
 
 ?>

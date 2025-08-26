@@ -26,6 +26,12 @@
                             Historial
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= $vista === 'reportes' ? 'active' : '' ?>" href="?vista=reportes">
+                            <i class="bi bi-table me-1"></i>
+                            Reportes
+                        </a>
+                    </li>
                 <?php endif; ?>
                 
                 <?php if (in_array($rol, ['comercial', 'admin'])): ?>
@@ -46,7 +52,7 @@
             
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <button class="btn btn-outline-light btn-sm me-2" type="button" data-bs-toggle="modal" data-bs-target="#modalAyuda">
+                    <button class="btn btn-outline-light me-2" type="button" data-bs-toggle="modal" data-bs-target="#modalAyuda">
                         <i class="bi bi-question-circle me-1"></i>
                         Ayuda
                     </button>
@@ -70,7 +76,7 @@
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
-                            <a class="dropdown-item" href="../logout.php">
+                            <a class="dropdown-item" href="logout.php">
                                 <i class="bi bi-box-arrow-right me-2"></i>
                                 Cerrar Sesión
                             </a>
@@ -101,7 +107,7 @@
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <a class="dropdown-item" href="../logout.php">
+                        <a class="dropdown-item" href="logout.php">
                             <i class="bi bi-box-arrow-right me-2"></i>
                             Cerrar Sesión
                         </a>

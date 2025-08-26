@@ -14,10 +14,10 @@ try {
         throw new Exception("Datos incompletos para obtener presupuestos.");
     }
 
-    // CAMBIO PRINCIPAL: Usar mes actual del sistema, no mes de la semana
-    $mesActual = date('n'); // Mes actual sin ceros iniciales
-    $anioActual = date('Y'); // Año actual
-    $periodo = $anioActual . '-' . str_pad($mesActual, 2, '0', STR_PAD_LEFT);
+    // CAMBIO PRINCIPAL: Usar el mes de la semana proporcionada, no el mes actual del sistema
+    $fechaSemana = obtenerFechaDeSemana($semana, $anio);
+    $mesDelaSemana = date('n', strtotime($fechaSemana)); // Mes de la semana seleccionada
+    $periodo = $anio . '-' . str_pad($mesDelaSemana, 2, '0', STR_PAD_LEFT);
 
     $presupuesto = new Presupuesto();
     
@@ -36,12 +36,12 @@ try {
     
     if ($idSupervisora) {
         try {
-            // Obtener presupuestos del período actual
+            // Obtener presupuestos del período correspondiente a la semana
             $presupuestos = $presupuesto->obtenerPresupuestos($periodo);
             
             if (isset($presupuestos[$idSupervisora])) {
-                // Obtener gastos acumulados del mes actual para esta supervisora
-                $gastosAcumulados = obtenerGastosAcumuladosMesActual($mesActual, $anioActual, $supervisora);
+                // Obtener gastos acumulados del mes de la semana seleccionada para esta supervisora
+                $gastosAcumulados = obtenerGastosAcumuladosMes($mesDelaSemana, $anio, $supervisora);
                 
                 // Calcular presupuesto disponible para cada concepto
                 foreach ($presupuestos[$idSupervisora] as $idConcepto => $montoPresupuesto) {
@@ -69,8 +69,8 @@ try {
             'anio' => $anio,
             'supervisora' => $supervisora,
             'id_supervisora' => $idSupervisora,
-            'mes_actual_sistema' => $mesActual,
-            'anio_actual_sistema' => $anioActual,
+            'mes_de_la_semana' => $mesDelaSemana,
+            'fecha_de_semana' => $fechaSemana,
             'periodo_usado' => $periodo,
             'supervisoras_disponibles' => array_column($supervisoras, 'NOMBRE')
         ]
@@ -90,14 +90,23 @@ try {
 }
 
 /**
- * Obtiene los gastos acumulados del mes actual por concepto para una supervisora
+ * Obtiene la fecha del lunes de una semana específica
  */
-function obtenerGastosAcumuladosMesActual($mes, $anio, $supervisora) {
+function obtenerFechaDeSemana($semana, $anio) {
+    $fecha = new DateTime();
+    $fecha->setISODate($anio, $semana, 1);
+    return $fecha->format('Y-m-d');
+}
+
+/**
+ * Obtiene los gastos acumulados del mes correspondiente a la semana por concepto para una supervisora
+ */
+function obtenerGastosAcumuladosMes($mes, $anio, $supervisora) {
     require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
     $cid = new Conexion();
     $cid_central = $cid->conectar('central');
     
-    // Consulta directa por mes/año actual usando FECHA_MODIF
+    // Consulta directa por mes/año de la semana usando FECHA_MODIF
     $sql = "SELECT ID_CONC, SUM(ISNULL(IMPORTE, 0) + ISNULL(IMPORTE_TARJETA, 0)) as TOTAL_GASTO
             FROM RO_T_GASTOS_SUPERVISION
             WHERE SUPERVISORA = ? 
@@ -110,7 +119,7 @@ function obtenerGastosAcumuladosMesActual($mes, $anio, $supervisora) {
     $stmt = sqlsrv_query($cid_central, $sql, $params);
     
     if ($stmt === false) {
-        error_log("Error al obtener gastos acumulados del mes actual: " . print_r(sqlsrv_errors(), true));
+        error_log("Error al obtener gastos acumulados del mes: " . print_r(sqlsrv_errors(), true));
         return [];
     }
     
