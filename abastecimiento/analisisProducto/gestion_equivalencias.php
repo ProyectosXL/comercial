@@ -1,5 +1,5 @@
 <?php
-// Incluir funciones de ayuda mejoradas
+// Incluir funciones de ayuda
 require_once 'includes/help-functions.php';
 ?>
 <!DOCTYPE html>
@@ -19,8 +19,8 @@ require_once 'includes/help-functions.php';
     <link href="css/gestion_equivalencias.css" rel="stylesheet">
     
     <?php 
-    // NUEVO: Incluir sistema de ayuda completo con configuración personalizada
-    incluir_sistema_ayuda_completo(true); // true para mostrar debug en desarrollo
+    // Incluir archivos CSS y JS del botón de ayuda
+    incluir_archivos_ayuda(); 
     ?>
 </head>
 
@@ -33,7 +33,7 @@ require_once 'includes/help-functions.php';
     </div>
 
     <div class="container-fluid py-4">
-        <!-- Header con información mejorada -->
+        <!-- Header -->
         <div class="row mb-4">
             <div class="col">
                 <div class="card border-0 shadow-sm">
@@ -44,20 +44,11 @@ require_once 'includes/help-functions.php';
                                     <i class="fas fa-link text-primary me-2"></i>
                                     Gestión de Artículos Equivalentes
                                 </h4>
-                                <p class="text-muted mb-0">
-                                    Administra grupos de artículos equivalentes 
-                                    <small class="badge bg-info ms-2">
-                                        <i class="fas fa-question-circle me-1"></i>
-                                        Presiona F1 o el botón ? para obtener ayuda
-                                    </small>
-                                </p>
+                                <p class="text-muted mb-0">Administra grupos de artículos equivalentes</p>
                             </div>
-                            <div class="btn-group">
+                            <div>
                                 <button type="button" class="btn btn-success" id="btnNuevoGrupo">
                                     <i class="fas fa-plus me-2"></i>Nuevo Grupo
-                                </button>
-                                <button type="button" class="btn btn-info" onclick="window.HelpSystem?.open()" title="Abrir ayuda (F1)">
-                                    <i class="fas fa-question-circle me-2"></i>Ayuda
                                 </button>
                                 <a href="listado.php" class="btn btn-outline-secondary">
                                     <i class="fas fa-arrow-left me-2"></i>Volver
@@ -69,38 +60,20 @@ require_once 'includes/help-functions.php';
             </div>
         </div>
 
-        <!-- Filtros y Búsqueda con ayuda contextual -->
+        <!-- Filtros y Búsqueda -->
         <div class="row mb-4">
             <div class="col">
                 <div class="card">
-                    <div class="card-header bg-white">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0">
-                                <i class="fas fa-filter me-2"></i>Filtros de Búsqueda
-                            </h6>
-                            <button type="button" class="btn btn-sm btn-outline-info" onclick="window.HelpSystem?.switchTab('uso')" title="Ver ayuda sobre filtros">
-                                <i class="fas fa-info-circle me-1"></i>¿Cómo filtrar?
-                            </button>
-                        </div>
-                    </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-3">
-                                <label class="form-label">
-                                    Buscar por artículo 
-                                    <i class="fas fa-info-circle text-info ms-1" 
-                                       title="Escribe el código de un artículo para ver en qué grupo está"></i>
-                                </label>
+                                <label class="form-label">Buscar por artículo</label>
                                 <select class="form-select" id="buscarArticulo">
                                     <option value="">Seleccionar artículo...</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">
-                                    Buscar por grupo
-                                    <i class="fas fa-info-circle text-info ms-1" 
-                                       title="Ingresa directamente el código de equivalencia"></i>
-                                </label>
+                                <label class="form-label">Buscar por grupo</label>
                                 <input type="number" class="form-control" id="buscarGrupo" placeholder="Código de equivalencia">
                             </div>
                             <div class="col-md-2">
@@ -129,23 +102,13 @@ require_once 'includes/help-functions.php';
             </div>
         </div>
 
-        <!-- Tabla de Grupos con ayuda integrada -->
+        <!-- Tabla de Grupos -->
         <div class="card">
             <div class="card-header bg-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-table me-2"></i>
-                        Grupos de Equivalencias
-                    </h5>
-                    <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn btn-outline-success" onclick="window.HelpSystem?.expandAll()" title="Expandir todas las secciones de ayuda">
-                            <i class="fas fa-expand-alt me-1"></i>Expandir Ayuda
-                        </button>
-                        <button type="button" class="btn btn-outline-info" onclick="mostrarEstadisticasTabla()" title="Ver estadísticas de la tabla">
-                            <i class="fas fa-chart-bar me-1"></i>Estadísticas
-                        </button>
-                    </div>
-                </div>
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2"></i>
+                    Grupos de Equivalencias
+                </h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -167,27 +130,11 @@ require_once 'includes/help-functions.php';
                         </tbody>
                     </table>
                 </div>
-                
-                <!-- Información adicional debajo de la tabla -->
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <small class="text-muted">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Usa los filtros superiores para encontrar grupos específicos. 
-                            <a href="#" onclick="window.HelpSystem?.switchTab('uso'); return false;" class="text-decoration-none">
-                                Ver guía completa →
-                            </a>
-                        </small>
-                    </div>
-                    <div class="col-md-6 text-end">
-                        <span id="contadorGrupos" class="badge bg-secondary fs-6">0 grupos mostrados</span>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal para Agregar/Editar Grupo con ayuda contextual -->
+    <!-- Modal para Agregar/Editar Grupo -->
     <div class="modal fade" id="modalGrupo" tabindex="-1" aria-labelledby="modalGrupoLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
@@ -196,53 +143,27 @@ require_once 'includes/help-functions.php';
                         <i class="fas fa-plus me-2"></i>
                         <span id="tituloModal">Nuevo Grupo de Equivalencias</span>
                     </h5>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-outline-info" onclick="window.HelpSystem?.switchTab('uso')" title="Ver ayuda sobre creación de grupos">
-                            <i class="fas fa-question-circle"></i>
-                        </button>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Alerta informativa -->
-                    <div class="alert alert-info alert-dismissible fade show" role="alert">
-                        <i class="fas fa-lightbulb me-2"></i>
-                        <strong>Tip:</strong> Asegúrate de revisar la lista de artículos antes de guardar. 
-                        <a href="#" onclick="window.HelpSystem?.switchTab('consejos'); return false;" class="alert-link">Ver más consejos</a>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                    
                     <form id="formGrupo">
                         <input type="hidden" id="codEquivalencia" name="codEquivalencia">
                         <input type="hidden" id="accionForm" name="accion" value="crear">
                         
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="form-label">
-                                    Descripción del Grupo *
-                                    <i class="fas fa-info-circle text-info ms-1" 
-                                       title="Usa un nombre descriptivo que identifique claramente la familia de productos"></i>
-                                </label>
-                                <input type="text" class="form-control" id="descripcionGrupo" name="descripcionGrupo" 
-                                       placeholder="Ej: Camisetas Básicas Algodón" required>
+                                <label class="form-label">Descripción del Grupo *</label>
+                                <input type="text" class="form-control" id="descripcionGrupo" name="descripcionGrupo" required>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">
-                                    Rubro *
-                                    <i class="fas fa-info-circle text-info ms-1" 
-                                       title="Selecciona la categoría principal del grupo"></i>
-                                </label>
+                                <label class="form-label">Rubro *</label>
                                 <select class="form-select" id="rubroGrupo" name="rubroGrupo" required>
                                     <option value="">Seleccionar rubro...</option>
                                     <!-- Se carga dinámicamente -->
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">
-                                    Estado
-                                    <i class="fas fa-info-circle text-info ms-1" 
-                                       title="Activo: funcionando normalmente. Inactivo: temporalmente deshabilitado"></i>
-                                </label>
+                                <label class="form-label">Estado</label>
                                 <select class="form-select" id="estadoGrupo" name="estadoGrupo">
                                     <option value="1">Activo</option>
                                     <option value="0">Inactivo</option>
@@ -256,18 +177,10 @@ require_once 'includes/help-functions.php';
                             <h6 class="mb-0">
                                 <i class="fas fa-list me-2"></i>
                                 Artículos del Grupo
-                                <span class="badge bg-primary ms-2" id="contadorArticulos">0</span>
                             </h6>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-outline-primary btn-sm" id="btnAgregarArticulo">
-                                    <i class="fas fa-plus me-2"></i>Agregar Artículo
-                                </button>
-                                <button type="button" class="btn btn-outline-info btn-sm" 
-                                        onclick="window.HelpSystem?.search('agregar artículo')" 
-                                        title="Ver ayuda sobre cómo agregar artículos">
-                                    <i class="fas fa-question-circle"></i>
-                                </button>
-                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="btnAgregarArticulo">
+                                <i class="fas fa-plus me-2"></i>Agregar Artículo
+                            </button>
                         </div>
 
                         <div class="mb-3">
@@ -278,12 +191,12 @@ require_once 'includes/help-functions.php';
                                     </select>
                                 </div>
                                 <div class="col-md-2">
-                                    <button type="button" class="btn btn-success btn-sm w-100" id="btnConfirmarArticulo" title="Confirmar agregación">
+                                    <button type="button" class="btn btn-success btn-sm w-100" id="btnConfirmarArticulo">
                                         <i class="fas fa-check"></i>
                                     </button>
                                 </div>
                                 <div class="col-md-2">
-                                    <button type="button" class="btn btn-secondary btn-sm w-100" id="btnCancelarArticulo" title="Cancelar">
+                                    <button type="button" class="btn btn-secondary btn-sm w-100" id="btnCancelarArticulo">
                                         <i class="fas fa-times"></i>
                                     </button>
                                 </div>
@@ -310,6 +223,144 @@ require_once 'includes/help-functions.php';
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnGuardarGrupo">
+                        <i class="fas fa-save me-2"></i>Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación -->
+    <div class="modal fade" id="modalConfirmacion" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Acción</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="mensajeConfirmacion">¿Está seguro de realizar esta acción?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmarAccion">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para mostrar imagen completa -->
+    <div class="modal fade modal-imagen" id="modalImagenCompleta" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-image me-2"></i>
+                        <span id="tituloImagenCompleta">Imagen del Producto</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <img id="imagenCompleta" src="" alt="Imagen del producto" class="img-fluid">
+                    <div class="mt-3">
+                        <p class="mb-1"><strong>Artículo:</strong> <span id="articuloImagen">-</span></p>
+                        <p class="mb-0"><strong>Descripción:</strong> <span id="descripcionImagen">-</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- Script principal -->
+    <script src="js/gestion_equivalencias.js"></script>
+
+    <?php
+    // Solo mostrar el botón de ayuda si el usuario tiene permisos
+    if (usuario_puede_ver_ayuda()) {
+        echo "<!-- El botón de ayuda se carga automáticamente via JavaScript -->\n";
+    }
+    ?>
+
+</body>
+</html> fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnGuardarGrupo">
+                        <i class="fas fa-save me-2"></i>Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación -->
+    <div class="modal fade" id="modalConfirmacion" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Acción</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="mensajeConfirmacion">¿Está seguro de realizar esta acción?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="btnConfirmarAccion">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para mostrar imagen completa -->
+    <div class="modal fade modal-imagen" id="modalImagenCompleta" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-image me-2"></i>
+                        <span id="tituloImagenCompleta">Imagen del Producto</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <img id="imagenCompleta" src="" alt="Imagen del producto" class="img-fluid">
+                    <div class="mt-3">
+                        <p class="mb-1"><strong>Artículo:</strong> <span id="articuloImagen">-</span></p>
+                        <p class="mb-0"><strong>Descripción:</strong> <span id="descripcionImagen">-</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- Script principal -->
+    <script src="js/gestion_equivalencias.js"></script>
+
+    <?php
+    // Solo mostrar el botón de ayuda si el usuario tiene permisos
+    if (usuario_puede_ver_ayuda()) {
+        echo "<!-- El botón de ayuda se carga automáticamente via JavaScript -->\n";
+    }
+    ?>
+
+</body>
+</html> fa-times me-2"></i>Cancelar
                     </button>
                     <button type="button" class="btn btn-primary" id="btnGuardarGrupo">
                         <i class="fas fa-save me-2"></i>Guardar
