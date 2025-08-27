@@ -291,15 +291,6 @@ require_once 'includes/help-functions.php';
     ?>
 
 </body>
-</html> fa-times me-2"></i>Cancelar
-                    </button>
-                    <button type="button" class="btn btn-primary" id="btnGuardarGrupo">
-                        <i class="fas fa-save me-2"></i>Guardar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Modal de Confirmación -->
     <div class="modal fade" id="modalConfirmacion" tabindex="-1">
@@ -360,15 +351,7 @@ require_once 'includes/help-functions.php';
     ?>
 
 </body>
-</html> fa-times me-2"></i>Cancelar
-                    </button>
-                    <button type="button" class="btn btn-primary" id="btnGuardarGrupo">
-                        <i class="fas fa-save me-2"></i>Guardar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Modal de Confirmación -->
     <div class="modal fade" id="modalConfirmacion" tabindex="-1">

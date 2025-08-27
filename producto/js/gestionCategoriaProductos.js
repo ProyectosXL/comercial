@@ -786,4 +786,49 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
 });
+
+// Función para filtrar por estado
+function filtrarPorEstado(tipo) {
+    const table = $('#tableData').DataTable();
+    
+    // Remover clase active de todos los filtros
+    document.querySelectorAll('.estado-filter').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Agregar clase active al filtro clickeado
+    document.getElementById('filter-' + tipo).classList.add('active');
+    
+    // Aplicar filtro según el tipo
+    if (tipo === 'todos') {
+        table.search('').columns().search('').draw();
+    } else if (tipo === 'activos') {
+        table.column(5).search('Activo').draw(); // Columna 5 es el Estado
+    } else if (tipo === 'inactivos') {
+        table.column(5).search('Inactivo').draw(); // Columna 5 es el Estado
+    }
+    
+    // Actualizar estadísticas después del filtrado
+    updateStatsAfterFilter();
+}
+
+// Función para actualizar estadísticas después del filtrado
+function updateStatsAfterFilter() {
+    const table = $('#tableData').DataTable();
+    const visibleRows = table.rows({ filter: 'applied' }).nodes();
+    
+    let activasCount = 0;
+    let totalCount = visibleRows.length;
+    
+    $(visibleRows).each(function() {
+        const estadoCell = $(this).find('td:eq(5)'); // Columna 5 es el Estado
+        if (estadoCell.text().includes('Activo')) {
+            activasCount++;
+        }
+    });
+    
+    // Opcional: Mostrar información de filtrado en consola
+    console.log(`Filtro aplicado - Mostrando: ${totalCount} total, ${activasCount} activas`);
+}

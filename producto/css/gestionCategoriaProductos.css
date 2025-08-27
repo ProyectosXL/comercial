@@ -475,28 +475,40 @@ button:disabled:hover {
     }
 }
 
-/* Filtros por estado */
+/* Filtros por estado - VERSIÓN CORREGIDA */
 .estado-filter {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
     border: 1px solid #d1d5db;
     background: #f9fafb;
     font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
     transition: all 0.2s ease;
+    cursor: pointer;
+    white-space: nowrap;
 }
 
 .estado-filter:hover {
     background: #f3f4f6;
     border-color: #9ca3af;
+    text-decoration: none;
 }
 
 .estado-filter.active {
     background: #3b82f6;
     color: white;
     border-color: #3b82f6;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.estado-filter.active:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: white;
 }
 
 /* Indicadores de estado en la tabla */

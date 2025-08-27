@@ -143,12 +143,31 @@
 
                 <!-- Categories Table -->
                 <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
-                    <div class="p-6 border-b border-gray-200">
-                        <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                            <i class="fas fa-table text-purple-600"></i>
-                            Categorías Existentes - Rubro: <span id="rubroActual" class="text-blue-600"><?= $descRubro ?></span>
-                        </h3>
-                    </div>
+                <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-table text-purple-600"></i>
+                        Categorías Existentes - Rubro: <span id="rubroActual" class="text-blue-600"><?= $descRubro ?></span>
+                    </h3>
+        
+<!-- Filtros de estado - LADO DERECHO -->
+                <div class="flex gap-2 items-center">
+                    <button onclick="filtrarPorEstado('todos')" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm border hover:bg-gray-200 transition-all active" id="filter-todos">
+                        <i class="fas fa-list"></i>
+                        Todas
+                    </button>
+                    <button onclick="filtrarPorEstado('activos')" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm border hover:bg-gray-200 transition-all" id="filter-activos">
+                        <i class="fas fa-check-circle text-green-600"></i>
+                        Activas
+                    </button>
+                    <button onclick="filtrarPorEstado('inactivos')" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm border hover:bg-gray-200 transition-all" id="filter-inactivos">
+                    <i class="fas fa-times-circle text-red-600"></i>
+                        Inactivas
+                    </button>
+                </div>
+                </div>
+    
+
+
                     
                     <div class="p-6">
                         <!-- Table Container -->

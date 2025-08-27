@@ -40,7 +40,7 @@ class Categoria
                     c.DESC_CATEGORIA_PADRE,
                     ISNULL(c.ACTIVO, 1) AS ESTADO_ACTIVO
                 FROM RO_T_RUBROS_CODIFICACION r
-                INNER JOIN SJ_CATEGORIAS c ON r.SIGLA = c.RUBRO
+                INNER JOIN SJ_CATEGORIAS c ON r.SIGLA = c.RUBRO COLLATE Modern_Spanish_CI_AI
                 WHERE r.SIGLA = ?
                 ORDER BY c.CATEGORIA ASC";
 

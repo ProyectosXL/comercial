@@ -5,15 +5,15 @@
 /* Botón flotante de ayuda */
 .help-button {
     position: fixed;
-    bottom: 20px;
+    top: 20px; /* Esquina superior derecha */
     right: 20px;
     width: 50px;
     height: 50px;
-    background: linear-gradient(135deg, #007bff, #0056b3);
+    background: linear-gradient(135deg, #007bff, #4b5a69);
     color: white;
     border: none;
     border-radius: 50%;
-    cursor: pointer;
+    cursor: move; /* Indica que es arrastrable */
     font-size: 20px;
     font-weight: bold;
     box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
@@ -22,6 +22,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    user-select: none; /* Evita selección de texto al arrastrar */
 }
 
 .help-button:hover {
