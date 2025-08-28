@@ -156,13 +156,13 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
                                 <th>Categoría</th>
                                 <th>Temporada</th>
                                 <th>Destino</th>
+                                <th>Liquidacion</th>
                                 <th>Fecha Ingreso</th>
                                 <th>Cód. Equiv.</th>
                                 <th>Artículo</th>
                                 <th>Descripción</th>
                                 <th>Color</th>
                                 <th>Precio</th>
-                                <th>Liquidacion</th>
                                 <th>Stock Locales</th>
                                 <th>Stock Central</th>
                                 <th>Stock Total</th>
@@ -245,7 +245,10 @@ $(document).ready(function() {
 
     function initDataTable() {
         dataTable = $('#productosTable').DataTable({
+            scrollY: '70vh',
+            // scrollCollapse: true,
             pageLength: 100,
+            // paging: false,
             language: {
                 url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json',
                 emptyTable: 'Seleccione los filtros y presione buscar'
@@ -268,6 +271,7 @@ $(document).ready(function() {
                 { data: 'CATEGORIA' },
                 { data: 'TEMPORADA' },
                 { data: 'DESTINO' },
+                { data: 'LIQUIDACION' },
                 { data: 'FECHA_INGRESO_SUC' },
                 {
                     data: 'COD_EQUIVALENCIA',
@@ -284,7 +288,6 @@ $(document).ready(function() {
                         return data ? '$ ' + Number(data).toLocaleString('es-AR') : '';
                     }
                 },
-                { data: 'LIQUIDACION' },
                 { 
                     data: 'STOCK_LOCALES',
                     render: function(data) {
