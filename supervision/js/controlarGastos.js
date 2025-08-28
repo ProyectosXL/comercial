@@ -266,92 +266,43 @@ $(document).ready(function() {
 
     // Función para mostrar imágenes
     function mostrarImagenes(id_conc, type) {
-        let semanaCompleta = $('#semanaRetail').val();
-        let supervisora = $('#supervisoraSelect').val();
-    
+        const semanaCompleta = $('#semanaRetail').val();
+        const supervisora    = $('#supervisoraSelect').val();
+
         if (!semanaCompleta || !supervisora) {
-            Swal.fire('Error', 'Por favor, seleccione una semana y una supervisora antes de ver las imágenes', 'error');
+            Swal.fire('Error', 'Por favor, seleccione una semana y una supervisora', 'error');
             return;
         }
-    
-        let [semana, anio] = semanaCompleta.split('|');
-    
-        console.log("Buscando imágenes para:", { id_conc, semana, anio, supervisora, type });
-    
-        Swal.fire({
-            title: 'Cargando imágenes...',
-            text: 'Por favor, espere...',
-            allowOutsideClick: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-    
+        const [semana, anio] = semanaCompleta.split('|');
+
+        // Usamos POST exactamente como antes, pero sin Swal
         $.ajax({
             url: 'Controller/obtenerImagenesSup.php',
             method: 'POST',
-            data: JSON.stringify({
-                id_conc: id_conc,
-                semana: semana,
-                anio: anio,
-                supervisora: supervisora,
-                type: type
-            }),
+            data: JSON.stringify({ id_conc, semana, anio, supervisora, type }),
             contentType: 'application/json',
             dataType: 'json',
-        })
-        .done(function(response) {
-            console.log("Respuesta de obtenerImagenes:", response);
-            if (response.success && response.imagenes && response.imagenes.length > 0) {
-                let carouselItems = response.imagenes.map((img, index) => `
-                    <div class="carousel-item ${index === 0 ? 'active' : ''}">
-                        <img src="${img}" class="d-block w-100 zoomable" alt="Imagen ${index + 1}">
-                        <div class="carousel-caption">
-                            <h5>Imagen ${index + 1} de ${response.imagenes.length}</h5>
-                        </div>
-                    </div>
-                `).join('');
-                
-                let carouselHtml = `
-                    <div id="imageCarousel" class="carousel slide" data-bs-ride="carousel">
-                        <div class="carousel-inner">
-                            ${carouselItems}
-                        </div>
-                        <button class="carousel-control-prev" type="button" data-bs-target="#imageCarousel" data-bs-slide="prev">
-                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                            <span class="visually-hidden">Anterior</span>
-                        </button>
-                        <button class="carousel-control-next" type="button" data-bs-target="#imageCarousel" data-bs-slide="next">
-                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                            <span class="visually-hidden">Siguiente</span>
-                        </button>
-                    </div>
-                `;
-                
-                Swal.fire({
-                    html: carouselHtml,
-                    width: '45%',
-                    padding: '0',
-                    background: '#fff',
-                    showCloseButton: true,
-                    showConfirmButton: false,
-                    customClass: {
-                        container: 'image-modal-container',
-                        closeButton: 'image-modal-close-button'
-                    },
-                    didOpen: (modalElement) => {
-                        new bootstrap.Carousel(modalElement.querySelector('#imageCarousel'));
-                    }
-                });
-            } else {
-                console.log("Debug info:", response.debug);
-                Swal.fire('Sin imágenes', 'No se encontraron imágenes. Revisa la consola para más detalles.', 'info');
+            beforeSend: () => {
+                // Fancybox mostrará su propio indicador
             }
         })
-        .fail(function(xhr, status, error) {
-            console.error('Error al obtener la lista de imágenes:', error);
-            console.log("Respuesta del servidor:", xhr.responseText);
-            Swal.fire('Error', 'No se pudieron cargar las imágenes. Por favor, intente de nuevo.', 'error');
+        .done(function (response) {
+            if (response.success && response.imagenes && response.imagenes.length) {
+                const fancyboxImages = response.imagenes.map((src, i) => ({
+                    src: src,
+                    caption: `Imagen ${i + 1} de ${response.imagenes.length}`
+                }));
+                Fancybox.show(fancyboxImages, {
+                    loop: false,
+                    buttons: ['zoom', 'close'],
+                    slideShow: { autoStart: false }
+                });
+            } else {
+                Swal.fire('Sin imágenes', response.message || 'No se encontraron imágenes', 'info');
+            }
+        })
+        .fail(function (xhr) {
+            Swal.fire('Error', 'No se pudieron cargar las imágenes', 'error');
         });
     }
     
