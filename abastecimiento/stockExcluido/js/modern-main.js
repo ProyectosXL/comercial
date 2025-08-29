@@ -330,3 +330,86 @@ function procesarEvento() {
 function redireccionar() {
     location.href = 'index.php';
 }
+
+// Function to download Excel template
+function descargarPlantilla() {
+    // Show loading
+    Swal.fire({
+        title: 'Generando plantilla...',
+        text: 'Por favor espere',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        timer: 1500,
+        willOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    setTimeout(() => {
+        // Create workbook
+        const wb = XLSX.utils.book_new();
+        
+        // Template data with headers and examples
+        const templateData = [
+            ['ARTICULO', 'CANTIDAD', 'OBSERVACIONES'], // Encabezados
+            ['XC5SLZ03C0301', 69, 'CARTERA CUERO VER 25-26'],
+            ['XC5SLZ02C1701', 60, 'CARTERA CUERO VER 25-26'],
+            ['XC5SLZ02C1709', 60, 'CARTERA CUERO VER 25-26'],
+            ['XC5SLZ01C0124', 50, 'CARTERA CUERO VER 25-26'],
+            ['XC5SLZ01C0209', 40, 'CARTERA CUERO VER 25-26'],
+            ['XC5SLZ01C1701', 60, 'CARTERA CUERO VER 25-26']
+        ];
+        
+        // Create worksheet
+        const ws = XLSX.utils.aoa_to_sheet(templateData);
+        
+        // Set column widths
+        ws['!cols'] = [
+            { width: 18 },  // Código Artículo
+            { width: 12 },  // Cantidad
+            { width: 35 }   // Observaciones
+        ];
+        
+        // Style the header row
+        const headerCells = ['A1', 'B1', 'C1'];
+        headerCells.forEach(cell => {
+            if (ws[cell]) {
+                ws[cell].s = {
+                    font: { bold: true, color: { rgb: "FFFFFF" } },
+                    fill: { fgColor: { rgb: "2C3E50" } },
+                    alignment: { horizontal: "center" }
+                };
+            }
+        });
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Artículos Excluidos');
+        
+        // Generate Excel file
+        XLSX.writeFile(wb, 'Plantilla_Articulos_Excluidos.xlsx');
+        
+        // Show success message
+        Swal.fire({
+            icon: 'success',
+            title: 'Plantilla descargada',
+            html: `
+                <div class="text-start">
+                    <p><strong>Archivo:</strong> Plantilla_Articulos_Excluidos.xlsx</p>
+                    <hr>
+                    <small class="text-muted">
+                        <strong>Instrucciones:</strong><br>
+                        • La primera fila contiene los <strong>encabezados</strong> (no eliminar)<br>
+                        • <strong>Columna A:</strong> Código del artículo (ej: XC5SLZ03C0301)<br>
+                        • <strong>Columna B:</strong> Cantidad a excluir (número entero)<br>
+                        • <strong>Columna C:</strong> Observaciones o motivo<br><br>
+                        <em class="text-primary">Puede modificar los ejemplos por sus datos reales.<br>
+                        Los códigos de ejemplo son reales y se validarán contra el maestro.</em>
+                    </small>
+                </div>
+            `,
+            confirmButtonText: '<i class="bi bi-check-lg"></i> Entendido',
+            confirmButtonColor: '#9b59b6',
+            width: '550px'
+        });
+    }, 1500);
+}

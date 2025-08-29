@@ -29,10 +29,17 @@
             <div class="alert alert-info">
               <h6><i class="bi bi-lightbulb"></i> Formato esperado:</h6>
               <small>
-                <strong>Columna A:</strong> Código de artículo<br>
-                <strong>Columna B:</strong> Cantidad<br>
-                <strong>Columna C:</strong> Observaciones
+                <strong>Primera fila:</strong> Encabezados (ARTICULO, CANTIDAD, OBSERVACIONES)<br>
+                <strong>Columna A:</strong> Código de artículo (ej: XC5SLZ03C0301)<br>
+                <strong>Columna B:</strong> Cantidad a excluir<br>
+                <strong>Columna C:</strong> Observaciones o motivo
               </small>
+              <hr>
+              <div class="d-grid">
+                <button type="button" class="btn btn-outline-info btn-sm" onclick="descargarPlantilla()">
+                  <i class="bi bi-download"></i> Descargar Plantilla con Ejemplos Reales
+                </button>
+              </div>
             </div>
           </div>
         </div>

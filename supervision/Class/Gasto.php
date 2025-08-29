@@ -209,9 +209,9 @@ class Gasto
 }
 
     public function traerSupervisoras() {
-        $sql = "SELECT ID, DESCRIPCION NOMBRE_SUPERVISORA FROM SOF_USUARIOS WHERE TIPO = 'SUPERVISION'
-                AND ID IN (965, 967, 968, 969, 978, 991, 998)
-                ORDER BY 1";
+        $sql = "SELECT ID, NOMBRE NOMBRE_SUPERVISORA FROM [LAKERBIS].LOCALES_LAKERS.DBO.RO_T_SUPERVISORAS_COMERCIAL 
+                WHERE ACTIVA = 1
+                ORDER BY NOMBRE";
         $stmt = sqlsrv_query($this->cid_central, $sql);
         
         if ($stmt === false) {

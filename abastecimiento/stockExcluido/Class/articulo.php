@@ -6,7 +6,7 @@ class Articulo
     private function retornarArray($sqlEnviado)
     {
 
-        require_once '../../Class/conexion.php';
+        require_once '../Class/conexion.php';
 
         $cid = new Conexion();
         $cid_central = $cid->conectar('central');

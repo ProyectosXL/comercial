@@ -34,10 +34,10 @@ $articulo = new Articulo();
     <!-- Header -->
     <div class="main-header">
         <div class="container-fluid">
-            <h2>
+            <h1>
                 <i class="bi bi-calendar-x"></i>
                 Sistema de Artículos Excluidos
-            </h2>
+            </h1>
         </div>
     </div>
 
@@ -82,6 +82,13 @@ $articulo = new Articulo();
                                 data-bs-target="#altaModalImport">
                             <i class="bi bi-file-earmark-excel"></i>
                             Importar
+                        </button>
+                        
+                        <button class="btn btn-custom btn-template" 
+                                id="btn_template"
+                                onclick="descargarPlantilla()">
+                            <i class="bi bi-file-earmark-arrow-down"></i>
+                            Plantilla
                         </button>
                         
                         <button class="btn btn-custom btn-export" 
@@ -156,9 +163,9 @@ $articulo = new Articulo();
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.0/dist/xlsx.full.min.js"></script>
     <script src="js/jquery.table2excel.js"></script>
     <script src="js/modern-main.js"></script>
-    <script src="js/main2.js"></script>
+    <script src="js/checkbox-manager.js"></script>
+    <script src="js/import-excel.js"></script>
     <script src="js/help.js"></script>
-
     <!-- Initialize Select2 after page load -->
     <script>
         $(document).ready(function() {
