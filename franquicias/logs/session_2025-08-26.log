@@ -1,0 +1,3 @@
+{"timestamp":"2025-08-26 12:08:03","session_id":"47glr4a8trskocff2ln81ogkh5","event":"session_config_loaded","data":{"status":2,"id":"47glr4a8trskocff2ln81ogkh5","has_cookie":false,"cookie_name":"PHPSESSID"},"file":"index.php","cookies":[]}
+{"timestamp":"2025-08-26 12:08:03","session_id":"47glr4a8trskocff2ln81ogkh5","event":"session_verify","data":{"valida":false,"session_data":[]},"file":"index.php","cookies":[]}
+{"timestamp":"2025-08-26 12:08:05","session_id":"47glr4a8trskocff2ln81ogkh5","event":"session_config_loaded","data":{"status":2,"id":"47glr4a8trskocff2ln81ogkh5","has_cookie":true,"cookie_name":"PHPSESSID"},"file":"login.php","cookies":{"PHPSESSID":"47glr4a8trskocff2ln81ogkh5"}}
