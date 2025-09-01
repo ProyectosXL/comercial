@@ -20,15 +20,18 @@ require_once __DIR__ . '/../class/DatabaseSQLServer.php';
 
 class ReportesCumplimientoController {
     private $sistemas_conn;
+    private $laker_conn;
     
     public function __construct() {
         try {
             $db = DatabaseSQLServer::getInstance();
-            $this->sistemas_conn = $db->getConnection();
-            error_log("DEBUG REPORTES: Conexión a sistemas establecida");
+            $this->sistemas_conn = $db->getConnection('sistemas');
+            $this->laker_conn = $db->getConnection('laker_sa');
+            error_log("DEBUG REPORTES: Conexiones establecidas a sistemas y laker_sa");
         } catch (Exception $e) {
             error_log("Error en constructor reportes: " . $e->getMessage());
             $this->sistemas_conn = null;
+            $this->laker_conn = null;
         }
     }
     
@@ -115,35 +118,42 @@ class ReportesCumplimientoController {
     }
     
     /**
-     * Obtener TODAS las franquicias del sistema (activas e inactivas)
+     * Obtener TODAS las franquicias del sistema desde SOF_USUARIOS
      */
     private function obtenerTodasLasFranquicias() {
         try {
-            $sql = "SELECT 
-                        id,
-                        nombre,
-                        codigo_usuario as codigo,
-                        CASE WHEN activa = 1 THEN 1 ELSE 0 END as activa
-                    FROM franquicias 
-                    ORDER BY nombre";
+            if (!$this->laker_conn) {
+                throw new Exception('No hay conexión a la base LAKER_SA');
+            }
             
-            $stmt = sqlsrv_query($this->sistemas_conn, $sql);
+            $sql = "SELECT 
+                        NOMBRE as codigo,
+                        DESCRIPCION as nombre
+                    FROM SOF_USUARIOS 
+                    WHERE TIPO = 'FRANQUICIA'
+                    ORDER BY DESCRIPCION";
+            
+            $stmt = sqlsrv_query($this->laker_conn, $sql);
             
             $franquicias = [];
             if ($stmt) {
                 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                    $franquicias[] = $row;
+                    $franquicias[] = [
+                        'id' => $row['codigo'], // Usamos el código como ID
+                        'codigo' => $row['codigo'],
+                        'nombre' => $row['nombre']
+                    ];
                 }
                 sqlsrv_free_stmt($stmt);
             } else {
-                error_log("Error SQL obtener franquicias: " . print_r(sqlsrv_errors(), true));
+                error_log("Error SQL obtener franquicias de LAKER_SA: " . print_r(sqlsrv_errors(), true));
             }
             
-            error_log("DEBUG REPORTES: Obtenidas " . count($franquicias) . " franquicias totales");
+            error_log("DEBUG REPORTES: Obtenidas " . count($franquicias) . " franquicias desde SOF_USUARIOS");
             return $franquicias;
             
         } catch (Exception $e) {
-            error_log("Error obtener franquicias: " . $e->getMessage());
+            error_log("Error obtener franquicias desde SOF_USUARIOS: " . $e->getMessage());
             return [];
         }
     }

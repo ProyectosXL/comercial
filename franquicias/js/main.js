@@ -405,9 +405,9 @@ class MainSystem {
     }
     
     /**
-     * Exportar tabla a CSV
+     * Exportar tabla a Excel (XLSX)
      */
-    exportarTablaCSV(tabla, nombreArchivo = 'datos.csv') {
+    exportarTablaExcel(tabla, nombreArchivo = 'datos') {
         const filas = tabla.querySelectorAll('tr');
         const datos = [];
         
@@ -416,19 +416,115 @@ class MainSystem {
             const filaData = [];
             
             celdas.forEach(celda => {
-                // Limpiar texto y escapar comillas
                 let texto = celda.textContent.trim();
-                texto = texto.replace(/"/g, '""');
-                filaData.push(`"${texto}"`);
+                filaData.push(texto);
             });
             
             if (filaData.length > 0) {
-                datos.push(filaData.join(','));
+                datos.push(filaData);
             }
         });
         
-        const csvContent = datos.join('\n');
+        this.exportarAExcel(datos, nombreArchivo, 'Datos');
+    }
+    
+    /**
+     * Exportar datos a Excel usando SheetJS
+     */
+    exportarAExcel(datos, nombreArchivo, nombreHoja = 'Hoja1') {
+        try {
+            console.log('Intentando exportar a Excel...', {XLSX: typeof XLSX});
+            
+            // Verificar si SheetJS está disponible
+            if (typeof XLSX === 'undefined') {
+                console.warn('SheetJS no está disponible, intentando cargar dinámicamente...');
+                this.cargarSheetJSYExportar(datos, nombreArchivo, nombreHoja);
+                return;
+            }
+            
+            console.log('SheetJS disponible, procediendo con exportación...');
+            
+            // Crear libro de trabajo
+            const wb = XLSX.utils.book_new();
+            
+            // Crear hoja de trabajo con los datos
+            const ws = XLSX.utils.aoa_to_sheet(datos);
+            
+            // Estilizar un poco la hoja
+            if (ws['!ref']) {
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                // Hacer la primera fila bold (header)
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    const cell_address = XLSX.utils.encode_cell({r: 0, c: C});
+                    if (!ws[cell_address]) continue;
+                    if (!ws[cell_address].s) ws[cell_address].s = {};
+                    ws[cell_address].s.font = {bold: true};
+                }
+            }
+            
+            // Agregar la hoja al libro
+            XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
+            
+            // Generar y descargar el archivo
+            XLSX.writeFile(wb, `${nombreArchivo}.xlsx`);
+            console.log('Archivo Excel generado exitosamente:', `${nombreArchivo}.xlsx`);
+            
+        } catch (error) {
+            console.error('Error al exportar a Excel:', error);
+            console.warn('Usando fallback a CSV...');
+            this.exportarDatosCSV(datos, nombreArchivo + '.csv');
+        }
+    }
+    
+    /**
+     * Cargar SheetJS dinámicamente si no está disponible
+     */
+    cargarSheetJSYExportar(datos, nombreArchivo, nombreHoja) {
+        console.log('Cargando SheetJS dinámicamente...');
+        
+        // Intentar cargar SheetJS desde CDN
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        
+        script.onload = () => {
+            console.log('SheetJS cargado dinámicamente, reintentando exportación...');
+            setTimeout(() => {
+                this.exportarAExcel(datos, nombreArchivo, nombreHoja);
+            }, 100);
+        };
+        
+        script.onerror = () => {
+            console.error('No se pudo cargar SheetJS, usando CSV como fallback');
+            this.exportarDatosCSV(datos, nombreArchivo + '.csv');
+        };
+        
+        document.head.appendChild(script);
+    }
+    
+    /**
+     * Exportar datos como CSV (método de respaldo)
+     */
+    exportarDatosCSV(datos, nombreArchivo) {
+        const csvContent = datos.map(fila => 
+            fila.map(celda => `"${String(celda).replace(/"/g, '""')}"`).join(',')
+        ).join('\n');
+        
         this.descargarArchivo(csvContent, nombreArchivo, 'text/csv');
+    }
+    
+    /**
+     * Función de test para verificar que Excel funciona
+     */
+    testExportarExcel() {
+        const datosTest = [
+            ['Nombre', 'Apellido', 'Edad'],
+            ['Juan', 'Pérez', 25],
+            ['María', 'García', 30],
+            ['Pedro', 'López', 28]
+        ];
+        
+        console.log('Ejecutando test de exportación Excel...');
+        this.exportarAExcel(datosTest, 'test_excel', 'Datos de Test');
     }
     
     /**
@@ -663,13 +759,40 @@ class MainSystem {
             }
         });
     }
+    
+    /**
+     * Método simple de test
+     */
+    simpleTest() {
+        console.log('Método simpleTest funcionando');
+        return 'OK';
+    }
 }
 
 // Inicializar sistema principal
 let mainSystem;
 
+// Exponer MainSystem globalmente de inmediato
+window.MainSystem = MainSystem;
+
 document.addEventListener('DOMContentLoaded', function() {
-    mainSystem = new MainSystem();
+    console.log('DOMContentLoaded - Verificando mainSystem...');
+    
+    // Si ya fue inicializado por la función inmediata, usarlo
+    if (window.mainSystem) {
+        mainSystem = window.mainSystem;
+        console.log('mainSystem ya estaba inicializado');
+    } else {
+        console.log('Inicializando mainSystem...');
+        try {
+            mainSystem = new MainSystem();
+            window.mainSystem = mainSystem;
+            console.log('mainSystem inicializado exitosamente');
+        } catch (error) {
+            console.error('Error inicializando mainSystem:', error);
+            return;
+        }
+    }
     
     // Configurar funcionalidades adicionales
     configurarTablas();
@@ -771,4 +894,30 @@ function actualizarTimestamps() {
 /**
  * Funciones globales útiles
  */
-window.mainSystem = mainSystem;
+// Inicialización inmediata para garantizar disponibilidad
+try {
+    if (typeof window !== 'undefined') {
+        // Exponer la clase MainSystem inmediatamente
+        window.MainSystem = MainSystem;
+        
+        // Crear una función para inicializar cuando el DOM esté listo
+        window.initMainSystem = function() {
+            if (!window.mainSystem) {
+                console.log('Inicializando mainSystem desde initMainSystem...');
+                window.mainSystem = new MainSystem();
+            }
+            return window.mainSystem;
+        };
+        
+        // Si el DOM ya está listo, inicializar inmediatamente
+        if (document.readyState === 'loading') {
+            // DOM aún cargando, esperar al evento
+            document.addEventListener('DOMContentLoaded', window.initMainSystem);
+        } else {
+            // DOM ya está listo, inicializar inmediatamente
+            window.initMainSystem();
+        }
+    }
+} catch (error) {
+    console.error('Error en inicialización inmediata de mainSystem:', error);
+}

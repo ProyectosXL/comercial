@@ -494,7 +494,56 @@ function exportarReporte() {
         return;
     }
     
-    // TODO: Implementar exportación a Excel
-    alert('Funcionalidad de exportación en desarrollo');
+    // Exportar usando XLSX directamente
+    if (typeof XLSX !== 'undefined') {
+        try {
+            const tipoReporte = document.getElementById('tipo-reporte').value;
+            const nombreArchivo = `reporte_${tipoReporte}_${new Date().toISOString().split('T')[0]}`;
+            
+            // Preparar datos para Excel
+            const headers = Object.keys(reportesManager.datosReporte[0]);
+            const datos = [headers];
+            
+            reportesManager.datosReporte.forEach(row => {
+                datos.push(Object.values(row));
+            });
+            
+            console.log('Exportando reporte a Excel...', {filas: datos.length});
+            
+            // Crear libro de trabajo
+            const wb = XLSX.utils.book_new();
+            
+            // Crear hoja de trabajo con los datos
+            const ws = XLSX.utils.aoa_to_sheet(datos);
+            
+            // Aplicar formato a las cabeceras
+            if (datos.length > 0) {
+                for (let col = 0; col < datos[0].length; col++) {
+                    const cellRef = XLSX.utils.encode_cell({c: col, r: 0});
+                    if (!ws[cellRef]) continue;
+                    ws[cellRef].s = {
+                        font: { bold: true },
+                        fill: { fgColor: { rgb: "E6F3FF" } }
+                    };
+                }
+            }
+            
+            // Agregar la hoja al libro
+            XLSX.utils.book_append_sheet(wb, ws, `Reporte ${tipoReporte}`);
+            
+            // Generar y descargar el archivo
+            XLSX.writeFile(wb, `${nombreArchivo}.xlsx`);
+            
+            alert('Reporte exportado a Excel correctamente');
+            console.log('Reporte Excel generado exitosamente');
+            
+        } catch (error) {
+            console.error('Error al exportar reporte:', error);
+            alert('Error al exportar el reporte: ' + error.message);
+        }
+    } else {
+        console.error('XLSX no está disponible');
+        alert('Error: La biblioteca Excel no está cargada. Recarga la página e intenta nuevamente.');
+    }
 }
 </script>

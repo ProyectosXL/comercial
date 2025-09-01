@@ -92,48 +92,33 @@ class AuthFranquicia {
     }
     
     /**
-     * Obtiene o crea la franquicia en la base sistemas
+     * Obtiene el código de franquicia (usuario) directamente para compatibilidad
      */
     public function obtenerFranquiciaId($nombreUsuario) {
         try {
-            // Primero buscar si ya existe
-            $stmt = $this->conexion_sistemas->prepare(
-                "SELECT id FROM franquicias WHERE codigo_usuario = ?"
+            // Verificar que el usuario existe en SOF_USUARIOS
+            $stmt = $this->conexion_laker->prepare(
+                "SELECT NOMBRE, DESCRIPCION FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' AND NOMBRE = ?"
             );
             $stmt->execute([$nombreUsuario]);
             $franquicia = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($franquicia) {
-                error_log("DEBUG AUTH: Franquicia existente encontrada para $nombreUsuario, ID: " . $franquicia['id']);
-                return $franquicia['id'];
+                error_log("DEBUG AUTH: Franquicia encontrada en SOF_USUARIOS: " . $franquicia['NOMBRE'] . " - " . $franquicia['DESCRIPCION']);
+                
+                // Retornar directamente el código de usuario para compatibilidad con reportes
+                return $franquicia['NOMBRE'];
+            } else {
+                error_log("DEBUG AUTH: Franquicia no encontrada en SOF_USUARIOS para: $nombreUsuario");
+                throw new Exception("Franquicia no encontrada en el sistema");
             }
             
-            // Si no existe, crearla
-            $nombreFranquicia = $this->generarNombreFranquicia($nombreUsuario);
-            
-            $stmt = $this->conexion_sistemas->prepare(
-                "INSERT INTO franquicias (nombre, codigo_usuario, activa, fecha_registro) 
-                 VALUES (?, ?, 1, GETDATE())"
-            );
-            $stmt->execute([$nombreFranquicia, $nombreUsuario]);
-            
-            // Obtener el ID recién insertado
-            $stmt = $this->conexion_sistemas->prepare(
-                "SELECT SCOPE_IDENTITY() as new_id"
-            );
-            $stmt->execute();
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            $newId = $result['new_id'];
-            
-            error_log("DEBUG AUTH: Nueva franquicia creada para $nombreUsuario, ID: $newId");
-            return $newId;
-            
         } catch (Exception $e) {
-            error_log("Error obteniendo/creando franquicia: " . $e->getMessage());
+            error_log("Error obteniendo código de franquicia: " . $e->getMessage());
             throw $e;
         }
     }
-    
+
     /**
      * Genera un nombre amigable para la franquicia basado en el código de usuario
      */

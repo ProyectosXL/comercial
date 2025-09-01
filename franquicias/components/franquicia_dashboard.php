@@ -6,8 +6,9 @@
             Gestión de Stock
         </h1>
         <p class="mb-0 mt-2" style="font-size: 1.1rem; opacity: 0.9;">
-            Administra el inventario de tu franquicia de manera fácil y eficiente
+            Administrá el inventario de tu franquicia de manera fácil y eficiente
         </p>
+        
     </div>
 
     <!-- Alertas y Mensajes -->
@@ -287,3 +288,147 @@
         </div>
     </div>
 </div>
+
+<script>
+// Función de test para Excel
+function testExcel() {
+    console.log('=== TEST EXCEL ===');
+    console.log('XLSX disponible:', typeof XLSX !== 'undefined');
+    console.log('MainSystem class disponible:', typeof MainSystem !== 'undefined');
+    console.log('mainSystem variable disponible:', typeof mainSystem !== 'undefined');
+    console.log('window.mainSystem disponible:', typeof window.mainSystem !== 'undefined');
+    
+    // Intentar múltiples formas de acceder a mainSystem
+    let systemInstance = null;
+    
+    if (typeof window.mainSystem !== 'undefined') {
+        systemInstance = window.mainSystem;
+        console.log('Usando window.mainSystem');
+    } else if (typeof mainSystem !== 'undefined') {
+        systemInstance = mainSystem;
+        console.log('Usando variable global mainSystem');
+    } else if (typeof MainSystem !== 'undefined') {
+        console.log('Creando nueva instancia de MainSystem');
+        systemInstance = new MainSystem();
+        window.mainSystem = systemInstance;
+    }
+    
+    if (systemInstance && systemInstance.testExportarExcel) {
+        console.log('Ejecutando test de exportación...');
+        systemInstance.testExportarExcel();
+    } else {
+        console.error('No se pudo acceder a mainSystem o no tiene el método testExportarExcel');
+        
+        // Mostrar información de debugging
+        if (systemInstance) {
+            console.log('systemInstance encontrado:', systemInstance);
+            console.log('Métodos disponibles:', Object.getOwnPropertyNames(Object.getPrototypeOf(systemInstance)));
+        }
+        
+        // Intentar test alternativo directo
+        console.log('Intentando test alternativo de Excel...');
+        testExcelAlternativo();
+    }
+}
+
+// Función alternativa de test Excel
+function testExcelAlternativo() {
+    console.log('=== TEST EXCEL ALTERNATIVO ===');
+    
+    if (typeof XLSX === 'undefined') {
+        console.error('XLSX no está disponible');
+        alert('XLSX no está disponible. Verifica que la biblioteca se haya cargado.');
+        return;
+    }
+    
+    try {
+        // Datos de prueba
+        const datos = [
+            ['Nombre', 'Apellido', 'Edad'],
+            ['Juan', 'Pérez', 25],
+            ['María', 'García', 30],
+            ['Pedro', 'López', 28]
+        ];
+        
+        // Crear libro de trabajo
+        const wb = XLSX.utils.book_new();
+        
+        // Crear hoja de trabajo con los datos
+        const ws = XLSX.utils.aoa_to_sheet(datos);
+        
+        // Agregar la hoja al libro
+        XLSX.utils.book_append_sheet(wb, ws, 'Test');
+        
+        // Generar y descargar el archivo
+        XLSX.writeFile(wb, 'test_excel_alternativo.xlsx');
+        
+        console.log('Test Excel alternativo exitoso');
+        alert('¡Excel funciona! Se generó test_excel_alternativo.xlsx');
+        
+    } catch (error) {
+        console.error('Error en test Excel alternativo:', error);
+        alert('Error en test Excel: ' + error.message);
+    }
+}
+
+// Función de debug para diagnosticar problemas
+function debugMainSystem() {
+    console.log('=== DEBUG MAIN SYSTEM ===');
+    console.log('Document ready state:', document.readyState);
+    console.log('MainSystem class:', typeof MainSystem !== 'undefined' ? 'DISPONIBLE' : 'NO DISPONIBLE');
+    console.log('window.MainSystem:', typeof window.MainSystem !== 'undefined' ? 'DISPONIBLE' : 'NO DISPONIBLE');
+    console.log('mainSystem variable:', typeof mainSystem !== 'undefined' ? 'DISPONIBLE' : 'NO DISPONIBLE');
+    console.log('window.mainSystem:', typeof window.mainSystem !== 'undefined' ? 'DISPONIBLE' : 'NO DISPONIBLE');
+    console.log('window.initMainSystem función:', typeof window.initMainSystem !== 'undefined' ? 'DISPONIBLE' : 'NO DISPONIBLE');
+    
+    // Verificar métodos específicos
+    if (typeof window.mainSystem !== 'undefined') {
+        console.log('Verificando métodos específicos:');
+        console.log('- simpleTest:', typeof window.mainSystem.simpleTest);
+        console.log('- testExportarExcel:', typeof window.mainSystem.testExportarExcel);
+        console.log('- exportarAExcel:', typeof window.mainSystem.exportarAExcel);
+        console.log('- exportarTablaExcel:', typeof window.mainSystem.exportarTablaExcel);
+        
+        // Intentar llamar al método simple primero
+        if (typeof window.mainSystem.simpleTest === 'function') {
+            console.log('simpleTest disponible:', window.mainSystem.simpleTest());
+        }
+        
+        // Intentar llamar directamente al método
+        if (typeof window.mainSystem.testExportarExcel === 'function') {
+            console.log('¡testExportarExcel SÍ está disponible! Ejecutando...');
+            window.mainSystem.testExportarExcel();
+            return;
+        }
+    }
+    
+    if (typeof window.initMainSystem === 'function') {
+        console.log('Intentando inicializar con window.initMainSystem...');
+        try {
+            const result = window.initMainSystem();
+            console.log('Resultado de initMainSystem:', result);
+        } catch (error) {
+            console.error('Error en initMainSystem:', error);
+        }
+    }
+    
+    // Intentar crear manualmente si no existe
+    if (typeof window.mainSystem === 'undefined' && typeof MainSystem !== 'undefined') {
+        console.log('Creando mainSystem manualmente...');
+        try {
+            window.mainSystem = new MainSystem();
+            console.log('mainSystem creado exitosamente');
+            
+            // Verificar métodos después de crear
+            console.log('Métodos después de crear:');
+            console.log('- testExportarExcel:', typeof window.mainSystem.testExportarExcel);
+            console.log('- exportarAExcel:', typeof window.mainSystem.exportarAExcel);
+            
+        } catch (error) {
+            console.error('Error creando mainSystem manualmente:', error);
+        }
+    }
+    
+    console.log('=== FIN DEBUG ===');
+}
+</script>

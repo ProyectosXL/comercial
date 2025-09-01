@@ -103,14 +103,6 @@
             <i class="bi bi-grid me-2"></i>
             Matriz de Cumplimiento: Franquicias vs Rubros
         </h5>
-        <div class="d-flex gap-2">
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="mostrar-solo-activos" checked>
-                <label class="form-check-label" for="mostrar-solo-activos">
-                    Solo franquicias activas
-                </label>
-            </div>
-        </div>
     </div>
     <div class="card-body p-0">
         <!-- Loading State -->
@@ -630,15 +622,7 @@ class ReportesCumplimientoManager {
             });
         }
         
-        // Filtro solo activos
-        const filtroActivos = document.getElementById('mostrar-solo-activos');
-        if (filtroActivos) {
-            filtroActivos.addEventListener('change', () => {
-                if (this.datosReporte) {
-                    this.mostrarTablaReporte();
-                }
-            });
-        }
+        // Eventos configurados
     }
     
     async cargarPeriodosDisponibles() {
@@ -723,10 +707,8 @@ class ReportesCumplimientoManager {
             return;
         }
         
-        const filtroActivos = document.getElementById('mostrar-solo-activos').checked;
-        const datos = filtroActivos ? 
-                     this.datosReporte.franquicias.filter(f => f.activa) : 
-                     this.datosReporte.franquicias;
+        // Usar todas las franquicias (sin filtro)
+        const datos = this.datosReporte.franquicias;
         
         // Crear headers
         this.crearHeadersTabla(this.datosReporte.rubros);
@@ -817,13 +799,14 @@ class ReportesCumplimientoManager {
         }
         
         try {
-            // Crear datos CSV
+            // Crear datos para Excel
             const headers = ['Franquicia', 'Código', 'Estado General'];
             this.datosReporte.rubros.forEach(rubro => {
                 headers.push(rubro.nombre);
             });
-            
-            const filas = [headers];
+
+            const datos = [];
+            datos.push(headers);
             
             this.datosReporte.franquicias.forEach(franquicia => {
                 const informoAlgunRubro = franquicia.rubros_informados && franquicia.rubros_informados.length > 0;
@@ -839,18 +822,13 @@ class ReportesCumplimientoManager {
                     fila.push(informoRubro ? 'SÍ' : 'NO');
                 });
                 
-                filas.push(fila);
+                datos.push(fila);
             });
             
-            // Convertir a CSV
-            const csvContent = filas.map(fila => 
-                fila.map(celda => `"${celda}"`).join(',')
-            ).join('\n');
+            // Exportar a Excel usando la función global
+            this.exportarAExcel(datos, `reporte_cumplimiento_${this.periodoActual}`, 'Reporte de Cumplimiento');
             
-            // Descargar archivo
-            this.descargarArchivo(csvContent, `reporte_cumplimiento_${this.periodoActual}.csv`, 'text/csv');
-            
-            this.mostrarAlerta('Reporte exportado correctamente', 'success');
+            this.mostrarAlerta('Reporte exportado correctamente a Excel', 'success');
             
         } catch (error) {
             console.error('Error exportando:', error);
@@ -882,6 +860,61 @@ class ReportesCumplimientoManager {
     
     capitalizarPrimeraLetra(string) {
         return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+    
+    /**
+     * Función de exportación a Excel usando XLSX directamente
+     */
+    exportarAExcel(datos, nombreArchivo, nombreHoja) {
+        console.log('Iniciando exportación a Excel...', {datos: datos.length, archivo: nombreArchivo});
+        
+        if (typeof XLSX === 'undefined') {
+            console.error('XLSX no está disponible');
+            this.mostrarAlerta('Error: La biblioteca Excel no está cargada', 'danger');
+            return;
+        }
+        
+        try {
+            // Crear libro de trabajo
+            const wb = XLSX.utils.book_new();
+            
+            // Crear hoja de trabajo con los datos
+            const ws = XLSX.utils.aoa_to_sheet(datos);
+            
+            // Aplicar formato a las cabeceras (primera fila)
+            if (datos.length > 0) {
+                const headerRange = XLSX.utils.encode_range({s: {c: 0, r: 0}, e: {c: datos[0].length - 1, r: 0}});
+                for (let col = 0; col < datos[0].length; col++) {
+                    const cellRef = XLSX.utils.encode_cell({c: col, r: 0});
+                    if (!ws[cellRef]) continue;
+                    ws[cellRef].s = {
+                        font: { bold: true },
+                        fill: { fgColor: { rgb: "E6F3FF" } },
+                        alignment: { horizontal: "center" }
+                    };
+                }
+            }
+            
+            // Agregar la hoja al libro
+            XLSX.utils.book_append_sheet(wb, ws, nombreHoja || 'Reporte');
+            
+            // Generar y descargar el archivo
+            XLSX.writeFile(wb, `${nombreArchivo}.xlsx`);
+            
+            console.log('Excel exportado exitosamente');
+            
+        } catch (error) {
+            console.error('Error al exportar Excel:', error);
+            this.mostrarAlerta('Error al exportar Excel: ' + error.message, 'danger');
+            
+            // Fallback a CSV en caso de error
+            console.log('Intentando fallback a CSV...');
+            const csvContent = datos.map(fila => 
+                fila.map(celda => `"${celda}"`).join(',')
+            ).join('\n');
+            
+            this.descargarArchivo(csvContent, `${nombreArchivo}.csv`, 'text/csv');
+        }
     }
     
     async fetchWithErrorHandling(url, options) {

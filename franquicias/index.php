@@ -126,8 +126,30 @@ if (!in_array($vista, $vistas_permitidas)) {
     <!-- Select2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     
+    <!-- SheetJS para exportar Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <!-- Scripts principales -->
     <script src="js/main.js"></script>
+    <script>
+        // Verificar que mainSystem se inicialice correctamente
+        document.addEventListener('DOMContentLoaded', function() {
+            // Esperar un poco para que main.js termine de inicializar
+            setTimeout(function() {
+                if (typeof window.mainSystem === 'undefined') {
+                    console.warn('mainSystem no se inicializó automáticamente, creando manualmente...');
+                    if (typeof MainSystem !== 'undefined') {
+                        window.mainSystem = new MainSystem();
+                        console.log('mainSystem creado manualmente');
+                    } else {
+                        console.error('MainSystem class no está disponible');
+                    }
+                } else {
+                    console.log('mainSystem ya está disponible');
+                }
+            }, 100);
+        });
+    </script>
     <script src="js/estado_global.js"></script>
     
     <?php if ($vista === 'franquicia'): ?>

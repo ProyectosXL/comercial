@@ -7,48 +7,31 @@
  */
 
 class DatabaseSQLServer {
-    private $conn;
+    private $connections = [];
     private static $instance = null;
     
-    // Configuración directa de conexión
-    private const SERVER = "192.168.0.143";
-    private const DATABASE = "sistemas";
-    private const USER = "sa";
-    private const PASSWORD = "Axoft1988";
+    // Configuración directa de conexiones
+    private const CONEXIONES = [
+        'sistemas' => [
+            'server' => "192.168.0.143",
+            'database' => "sistemas",
+            'user' => "sa",
+            'password' => "Axoft1988"
+        ],
+        'laker_sa' => [
+            'server' => "SERVIDOR",
+            'database' => "LAKER_SA",
+            'user' => "sa",
+            'password' => "Axoft1988"
+        ]
+    ];
     
     /**
      * Constructor privado para implementar Singleton
      */
     private function __construct() {
-        try {
-            $connectionInfo = array(
-                "Database" => self::DATABASE,
-                "UID" => self::USER,
-                "PWD" => self::PASSWORD,
-                "CharacterSet" => "UTF-8"
-            );
-            
-            $this->conn = sqlsrv_connect(self::SERVER, $connectionInfo);
-            
-            if (!$this->conn) {
-                $errors = sqlsrv_errors();
-                $errorMsg = "No se pudo conectar a SQL Server";
-                
-                if ($errors) {
-                    $errorDetails = [];
-                    foreach ($errors as $error) {
-                        $errorDetails[] = "SQLSTATE: " . $error['SQLSTATE'] . " - " . $error['message'];
-                    }
-                    $errorMsg .= " - Detalles: " . implode("; ", $errorDetails);
-                }
-                
-                throw new Exception($errorMsg);
-            }
-            
-        } catch (Exception $e) {
-            error_log("Error en DatabaseSQLServer constructor: " . $e->getMessage());
-            throw new Exception("Error de conexión a SQL Server: " . $e->getMessage());
-        }
+        // No iniciamos conexiones en el constructor
+        // Se crean bajo demanda en getConnection()
     }
     
     /**
@@ -62,13 +45,56 @@ class DatabaseSQLServer {
     }
     
     /**
-     * Obtener la conexión SQL Server directa
+     * Obtener conexión específica por nombre
      */
-    public function getConnection() {
-        if (!$this->conn) {
-            throw new Exception("No hay conexión activa a SQL Server");
+    public function getConnection($database = 'sistemas') {
+        // Si ya existe la conexión, la devolvemos
+        if (isset($this->connections[$database]) && $this->connections[$database]) {
+            return $this->connections[$database];
         }
-        return $this->conn;
+        
+        // Si no existe la configuración para esa base
+        if (!isset(self::CONEXIONES[$database])) {
+            throw new Exception("Configuración de base de datos '{$database}' no encontrada");
+        }
+        
+        $config = self::CONEXIONES[$database];
+        
+        try {
+            $connectionInfo = array(
+                "Database" => $config['database'],
+                "UID" => $config['user'],
+                "PWD" => $config['password'],
+                "CharacterSet" => "UTF-8"
+            );
+            
+            $conn = sqlsrv_connect($config['server'], $connectionInfo);
+            
+            if (!$conn) {
+                $errors = sqlsrv_errors();
+                $errorMsg = "No se pudo conectar a SQL Server ({$database})";
+                
+                if ($errors) {
+                    $errorDetails = [];
+                    foreach ($errors as $error) {
+                        $errorDetails[] = "SQLSTATE: " . $error['SQLSTATE'] . " - " . $error['message'];
+                    }
+                    $errorMsg .= " - Detalles: " . implode("; ", $errorDetails);
+                }
+                
+                throw new Exception($errorMsg);
+            }
+            
+            // Guardar la conexión para reutilizar
+            $this->connections[$database] = $conn;
+            error_log("Conexión establecida exitosamente a: {$database}");
+            
+            return $conn;
+            
+        } catch (Exception $e) {
+            error_log("Error conectando a {$database}: " . $e->getMessage());
+            throw new Exception("Error de conexión a SQL Server ({$database}): " . $e->getMessage());
+        }
     }
     
     /**

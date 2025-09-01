@@ -688,23 +688,64 @@ function exportarHistorial() {
         ]);
     });
     
-    // Convertir a CSV
-    const csvContent = datos.map(fila => 
-        fila.map(celda => `"${celda}"`).join(',')
-    ).join('\n');
+    // Exportar a Excel usando XLSX directamente
+    if (typeof XLSX !== 'undefined') {
+        try {
+            console.log('Exportando historial a Excel...');
+            
+            // Crear libro de trabajo
+            const wb = XLSX.utils.book_new();
+            
+            // Crear hoja de trabajo con los datos
+            const ws = XLSX.utils.aoa_to_sheet(datos);
+            
+            // Aplicar formato a las cabeceras
+            if (datos.length > 0) {
+                for (let col = 0; col < datos[0].length; col++) {
+                    const cellRef = XLSX.utils.encode_cell({c: col, r: 0});
+                    if (!ws[cellRef]) continue;
+                    ws[cellRef].s = {
+                        font: { bold: true },
+                        fill: { fgColor: { rgb: "E6F3FF" } }
+                    };
+                }
+            }
+            
+            // Agregar la hoja al libro
+            XLSX.utils.book_append_sheet(wb, ws, 'Historial de Stock');
+            
+            // Generar y descargar el archivo
+            XLSX.writeFile(wb, `historial_stock_${new Date().toISOString().split('T')[0]}.xlsx`);
+            
+            console.log('Historial exportado a Excel exitosamente');
+            
+        } catch (error) {
+            console.error('Error al exportar historial a Excel:', error);
+            // Fallback a CSV en caso de error
+            exportarCSV();
+        }
+    } else {
+        console.warn('XLSX no disponible, exportando a CSV');
+        exportarCSV();
+    }
     
-    // Crear y descargar archivo
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `historial_stock_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    function exportarCSV() {
+        const csvContent = datos.map(fila => 
+            fila.map(celda => `"${celda}"`).join(',')
+        ).join('\n');
+        
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `historial_stock_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
     
     if (historialManager) {
         historialManager.mostrarAlerta('Archivo descargado correctamente', 'success');

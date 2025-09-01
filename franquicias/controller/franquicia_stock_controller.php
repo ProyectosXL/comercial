@@ -387,6 +387,7 @@ if (!class_exists('FranquiciaStockController')) {
     public function registrarMovimiento($franquicia_id_sesion) {
         try {
             error_log("DEBUG: Iniciando registrarMovimiento para franquicia_id: " . $franquicia_id_sesion);
+            error_log("DEBUG: Tipo de franquicia_id: " . gettype($franquicia_id_sesion));
             
             // Verificar si tenemos la instancia de franquicias
             if (!$this->franquicias) {
@@ -458,20 +459,26 @@ if (!class_exists('FranquiciaStockController')) {
             
             $stockArray = json_decode($stockDataJson, true);
             if (!$stockArray || !is_array($stockArray)) {
-                throw new Exception('Formato de datos de stock inválido');
+                throw new Exception('Formato de datos de stock inválido: ' . json_last_error_msg());
             }
             
             error_log("DEBUG: Array de stock decodificado: " . json_encode($stockArray));
             
+            // Validar que vengan datos válidos
+            $datosValidos = array_filter($stockArray, function($item) {
+                return isset($item['categoria']) && isset($item['cantidad']) && 
+                       isset($item['rubro']) && intval($item['cantidad']) > 0;
+            });
+            
+            if (empty($datosValidos)) {
+                throw new Exception('No se encontraron datos válidos para procesar. Verifique que las cantidades sean mayores a 0.');
+            }
+            
             $movimientosRegistrados = 0;
             $errores = [];
             
-            foreach ($stockArray as $item) {
+            foreach ($datosValidos as $item) {
                 try {
-                    if (!isset($item['categoria']) || !isset($item['cantidad']) || intval($item['cantidad']) == 0) {
-                        continue; // Saltar elementos vacíos
-                    }
-                    
                     $codigoArticulo = $item['rubro'] . '_' . $item['categoria']; // Generar código único
                     $descripcion = $item['categoria'] . ' - ' . $item['rubro'];
                     $cantidad = intval($item['cantidad']);
@@ -487,6 +494,9 @@ if (!class_exists('FranquiciaStockController')) {
                     
                     if ($resultado) {
                         $movimientosRegistrados++;
+                        error_log("DEBUG: Movimiento registrado exitosamente para: " . $codigoArticulo);
+                    } else {
+                        $errores[] = "No se pudo registrar {$item['categoria']}";
                     }
                     
                 } catch (Exception $e) {
@@ -517,8 +527,21 @@ if (!class_exists('FranquiciaStockController')) {
      */
     private function registrarArticuloIndividual($franquicia_id, $codigo_articulo, $descripcion, $movimiento, $tipo_movimiento) {
         try {
+            error_log("DEBUG: registrarArticuloIndividual - franquicia_id: '$franquicia_id' (tipo: " . gettype($franquicia_id) . ")");
+            error_log("DEBUG: registrarArticuloIndividual - codigo_articulo: '$codigo_articulo'");
+            
+            // Intentar reconectar si no hay conexión
             if (!$this->sistemas_conn) {
-                throw new Exception('No hay conexión a la base de datos sistemas');
+                error_log("DEBUG: Reintentando conexión a sistemas en registrarArticuloIndividual");
+                try {
+                    require_once __DIR__ . '/../class/DatabaseSQLServer.php';
+                    $dbSistemas = DatabaseSQLServer::getInstance();
+                    $this->sistemas_conn = $dbSistemas->getConnection('sistemas');
+                    error_log("DEBUG: Reconexión exitosa a sistemas");
+                } catch (Exception $e) {
+                    error_log("DEBUG: Error en reconexión: " . $e->getMessage());
+                    throw new Exception('No se pudo establecer conexión a la base de datos sistemas: ' . $e->getMessage());
+                }
             }
             
             // Obtener stock anterior

@@ -205,13 +205,13 @@ class PanelComercialManager {
             return;
         }
         
-        // Crear URL para descarga
+        // Crear URL para descarga - servidor ahora devuelve Excel
         const url = `controller/panel_comercial_controller.php?export=1&periodo=${this.periodoActual}&tipo=${tipo}`;
         
         // Crear enlace temporal
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${tipo}_${this.periodoActual}.csv`;
+        link.download = `${tipo}_${this.periodoActual}.xlsx`;
         link.style.display = 'none';
         
         document.body.appendChild(link);

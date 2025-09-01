@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../class/DatabaseSQLServer.php';
+
 class PanelComercialController {
     private $pdo;
     
@@ -22,28 +24,53 @@ class PanelComercialController {
      */
     public function obtenerResumenCumplimiento($periodo) {
         try {
-            $query = "SELECT 
-                        f.id as franquicia_id,
-                        f.nombre as franquicia_nombre,
-                        f.ciudad,
-                        CASE 
-                            WHEN COUNT(fs.id) > 0 THEN 'INFORMÓ'
-                            ELSE 'NO INFORMÓ'
-                        END as estado,
-                        COUNT(fs.id) as total_registros,
-                        MAX(fs.fecha_actualizacion) as ultima_actualizacion
-                     FROM franquicias f
-                     LEFT JOIN franquicia_stock fs ON f.id = fs.franquicia_id 
-                                                    AND fs.periodo = :periodo
-                     WHERE f.activa = 1
-                     GROUP BY f.id, f.nombre, f.ciudad
-                     ORDER BY f.nombre";
+            // Primero obtenemos todas las franquicias desde SOF_USUARIOS
+            $db = DatabaseSQLServer::getInstance();
+            $laker_conn = $db->getConnection('laker_sa');
             
-            $stmt = $this->pdo->prepare($query);
-            $stmt->bindParam(':periodo', $periodo, PDO::PARAM_STR);
-            $stmt->execute();
+            $sql_franquicias = "SELECT 
+                                    NOMBRE as codigo,
+                                    DESCRIPCION as nombre
+                                FROM SOF_USUARIOS 
+                                WHERE TIPO = 'FRANQUICIA'
+                                ORDER BY DESCRIPCION";
             
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt_franquicias = sqlsrv_query($laker_conn, $sql_franquicias);
+            $franquicias = [];
+            
+            if ($stmt_franquicias) {
+                while ($row = sqlsrv_fetch_array($stmt_franquicias, SQLSRV_FETCH_ASSOC)) {
+                    $franquicias[] = [
+                        'franquicia_id' => $row['codigo'],
+                        'franquicia_nombre' => $row['nombre'],
+                        'codigo' => $row['codigo']
+                    ];
+                }
+                sqlsrv_free_stmt($stmt_franquicias);
+            }
+            
+            // Ahora verificamos cuáles tienen stock reportado
+            foreach ($franquicias as &$franquicia) {
+                $query = "SELECT 
+                            COUNT(fs.id) as total_registros,
+                            MAX(fs.fecha_actualizacion) as ultima_actualizacion
+                         FROM franquicia_historial_stock fs
+                         WHERE fs.franquicia_id = ? 
+                           AND YEAR(fs.fecha_movimiento) = ? 
+                           AND MONTH(fs.fecha_movimiento) = ?";
+                
+                list($mes, $año) = explode('-', $periodo);
+                $stmt = $this->pdo->prepare($query);
+                $stmt->execute([$franquicia['franquicia_id'], $año, $mes]);
+                $stock_info = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                $franquicia['total_registros'] = $stock_info['total_registros'] ?? 0;
+                $franquicia['ultima_actualizacion'] = $stock_info['ultima_actualizacion'] ?? null;
+                $franquicia['estado'] = $franquicia['total_registros'] > 0 ? 'INFORMÓ' : 'NO INFORMÓ';
+            }
+            
+            return $franquicias;
+            
         } catch (Exception $e) {
             error_log("Error al obtener resumen de cumplimiento: " . $e->getMessage());
             return [];
@@ -62,8 +89,7 @@ class PanelComercialController {
                         ROUND((COUNT(DISTINCT CASE WHEN fs.id IS NOT NULL THEN f.id END) * 100.0 / COUNT(DISTINCT f.id)), 2) as porcentaje_cumplimiento
                      FROM franquicias f
                      LEFT JOIN franquicia_stock fs ON f.id = fs.franquicia_id 
-                                                    AND fs.periodo = :periodo
-                     WHERE f.activa = 1";
+                                                    AND fs.periodo = :periodo";
             
             $stmt = $this->pdo->prepare($query);
             $stmt->bindParam(':periodo', $periodo, PDO::PARAM_STR);
@@ -139,45 +165,78 @@ class PanelComercialController {
             switch ($tipo_reporte) {
                 case 'cumplimiento':
                     $datos = $this->obtenerResumenCumplimiento($periodo);
-                    $headers = ['Franquicia', 'Ciudad', 'Estado', 'Total Registros', 'Última Actualización'];
-                    $filename = "cumplimiento_franquicias_{$periodo}.csv";
+                    $headers = ['Franquicia', 'Código', 'Estado', 'Total Registros', 'Última Actualización'];
+                    $filename = "cumplimiento_franquicias_{$periodo}.xlsx";
+                    $titulo = "Reporte de Cumplimiento - {$periodo}";
                     break;
                     
                 case 'stock_consolidado':
                     $datos = $this->obtenerStockConsolidadoPorRubro($periodo);
                     $headers = ['Rubro', 'Categoría', 'Franquicias Reportan', 'Cantidad Total', 'Promedio', 'Mínimo', 'Máximo'];
-                    $filename = "stock_consolidado_{$periodo}.csv";
+                    $filename = "stock_consolidado_{$periodo}.xlsx";
+                    $titulo = "Stock Consolidado - {$periodo}";
                     break;
                     
                 default:
                     return false;
             }
             
-            // Crear archivo CSV
-            $output = fopen('php://temp', 'w');
+            // Generar Excel usando HTML (compatible con Excel)
+            $html = $this->generarExcelHTML($headers, $datos, $titulo);
             
-            // Escribir headers
-            fputcsv($output, $headers);
-            
-            // Escribir datos
-            foreach ($datos as $row) {
-                fputcsv($output, array_values($row));
-            }
-            
-            // Obtener contenido
-            rewind($output);
-            $csv_content = stream_get_contents($output);
-            fclose($output);
-            
-            // Headers para descarga
-            header('Content-Type: text/csv');
+            // Headers para descarga de Excel
+            header('Content-Type: application/vnd.ms-excel');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
-            header('Content-Length: ' . strlen($csv_content));
+            header('Cache-Control: max-age=0');
             
-            echo $csv_content;
+            echo $html;
             exit;
             
         } catch (Exception $e) {
+            error_log("Error al exportar Excel: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Generar HTML compatible con Excel
+     */
+    private function generarExcelHTML($headers, $datos, $titulo) {
+        $html = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        $html .= '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        $html .= '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"' . "\n";
+        $html .= ' xmlns:o="urn:schemas-microsoft-com:office:office"' . "\n";
+        $html .= ' xmlns:x="urn:schemas-microsoft-com:office:excel"' . "\n";
+        $html .= ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"' . "\n";
+        $html .= ' xmlns:html="http://www.w3.org/TR/REC-html40">' . "\n";
+        
+        $html .= '<Worksheet ss:Name="' . htmlspecialchars($titulo) . '">' . "\n";
+        $html .= '<Table>' . "\n";
+        
+        // Encabezados
+        $html .= '<Row>' . "\n";
+        foreach ($headers as $header) {
+            $html .= '<Cell><Data ss:Type="String">' . htmlspecialchars($header) . '</Data></Cell>' . "\n";
+        }
+        $html .= '</Row>' . "\n";
+        
+        // Datos
+        foreach ($datos as $row) {
+            $html .= '<Row>' . "\n";
+            foreach (array_values($row) as $cell) {
+                $valor = htmlspecialchars($cell ?? '');
+                $tipo = is_numeric($cell) ? 'Number' : 'String';
+                $html .= '<Cell><Data ss:Type="' . $tipo . '">' . $valor . '</Data></Cell>' . "\n";
+            }
+            $html .= '</Row>' . "\n";
+        }
+        
+        $html .= '</Table>' . "\n";
+        $html .= '</Worksheet>' . "\n";
+        $html .= '</Workbook>' . "\n";
+        
+        return $html;
+    }
             error_log("Error al exportar Excel: " . $e->getMessage());
             return false;
         }
@@ -191,7 +250,7 @@ class PanelComercialController {
             $query = "SELECT DISTINCT periodo 
                      FROM franquicia_stock 
                      ORDER BY periodo DESC 
-                     LIMIT 12";
+                     LIMIT 50";
             
             $stmt = $this->pdo->prepare($query);
             $stmt->execute();
