@@ -134,7 +134,7 @@
                 <table class="table table-bordered table-hover mb-0" id="tabla-cumplimiento-rubros">
                     <thead class="table-dark">
                         <tr id="header-rubros">
-                            <th>Franquicia</th>
+                            <th class="text-center estado-general">Franquicia</th>
                             <th class="text-center estado-general">Estado General</th>
                             <!-- Los rubros se agregarán dinámicamente -->
                         </tr>
@@ -333,7 +333,7 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     display: inline-block;
-    min-width: 60px;
+    min-width: 30px;
 }
 
 .badge.bg-success {
@@ -765,8 +765,7 @@ class ReportesCumplimientoManager {
             const fila = document.createElement('tr');
             
             // Columna de franquicia (sticky)
-            const tdFranquicia = document.createElement('td');
-            tdFranquicia.className = 'sticky-column';
+            const tdFranquicia = document.createElement('td');  
             tdFranquicia.innerHTML = `
                 <div class="d-flex flex-column">
                     <strong style="font-size: 0.75rem;">${franquicia.nombre}</strong>
