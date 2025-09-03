@@ -43,15 +43,15 @@ class AuthFranquicia {
     }
     
     /**
-     * Obtener todos los usuarios de franquicia disponibles
+     * Obtener todos los usuarios de franquicia y supervisión disponibles
      */
     public function obtenerUsuariosFranquicia() {
         try {
             $stmt = $this->conexion_laker->query(
-                "SELECT NOMBRE, PASS FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' ORDER BY NOMBRE"
+                "SELECT NOMBRE, PASS, TIPO FROM SOF_USUARIOS WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'SUPERVISION') ORDER BY TIPO, NOMBRE"
             );
             $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            error_log("DEBUG AUTH: Obtenidos " . count($usuarios) . " usuarios de franquicia");
+            error_log("DEBUG AUTH: Obtenidos " . count($usuarios) . " usuarios (franquicia + supervisión)");
             return $usuarios;
         } catch (Exception $e) {
             error_log("Error obteniendo usuarios: " . $e->getMessage());
@@ -61,11 +61,12 @@ class AuthFranquicia {
     
     /**
      * Valida las credenciales del usuario contra LAKER_SA
+     * Ahora incluye usuarios FRANQUICIA y SUPERVISION
      */
     public function validarCredenciales($usuario, $password) {
         try {
             $stmt = $this->conexion_laker->prepare(
-                "SELECT NOMBRE, PASS FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' AND NOMBRE = ?"
+                "SELECT NOMBRE, PASS, TIPO FROM SOF_USUARIOS WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'SUPERVISION') AND NOMBRE = ?"
             );
             $stmt->execute([$usuario]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -73,9 +74,9 @@ class AuthFranquicia {
             error_log("DEBUG AUTH: Validando credenciales para usuario: $usuario");
             
             if ($user) {
-                error_log("DEBUG AUTH: Usuario encontrado, verificando contraseña");
+                error_log("DEBUG AUTH: Usuario encontrado (Tipo: " . $user['TIPO'] . "), verificando contraseña");
                 if ($user['PASS'] === $password) {
-                    error_log("DEBUG AUTH: Credenciales válidas para: $usuario");
+                    error_log("DEBUG AUTH: Credenciales válidas para: $usuario (Tipo: " . $user['TIPO'] . ")");
                     return true;
                 } else {
                     error_log("DEBUG AUTH: Contraseña incorrecta para: $usuario");
@@ -116,6 +117,60 @@ class AuthFranquicia {
         } catch (Exception $e) {
             error_log("Error obteniendo código de franquicia: " . $e->getMessage());
             throw $e;
+        }
+    }
+
+    /**
+     * Obtiene el rol del usuario basado en su tipo en la base de datos
+     */
+    public function obtenerRolUsuario($usuario) {
+        try {
+            $stmt = $this->conexion_laker->prepare(
+                "SELECT TIPO FROM SOF_USUARIOS WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'SUPERVISION') AND NOMBRE = ?"
+            );
+            $stmt->execute([$usuario]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($user) {
+                $rol = strtolower($user['TIPO']); // 'franquicia' o 'supervision'
+                error_log("DEBUG AUTH: Rol determinado para $usuario: $rol");
+                return $rol;
+            }
+            
+            error_log("DEBUG AUTH: No se pudo determinar rol para: $usuario");
+            return null;
+        } catch (Exception $e) {
+            error_log("Error obteniendo rol de usuario: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Verifica si el usuario tiene acceso a una funcionalidad específica según su rol
+     */
+    public function tieneAccesoFuncionalidad($funcionalidad) {
+        if (!$this->isAuthenticated()) {
+            return false;
+        }
+        
+        $rol = $_SESSION['user_role'] ?? null;
+        
+        switch ($funcionalidad) {
+            case 'stock_loading':
+            case 'historial':
+                // Solo usuarios franquicia pueden cargar stock y ver historial
+                return $rol === 'franquicia';
+                
+            case 'reports':
+                // Solo usuarios supervisión pueden ver reportes
+                return $rol === 'supervision';
+                
+            case 'article_consultation':
+                // Nadie puede consultar artículos (funcionalidad removida)
+                return false;
+                
+            default:
+                return false;
         }
     }
 
@@ -222,23 +277,38 @@ class AuthFranquicia {
         }
         
         try {
-            $franquiciaId = $this->obtenerFranquiciaId($usuario);
+            // Obtener el rol del usuario
+            $rol = $this->obtenerRolUsuario($usuario);
+            if (!$rol) {
+                error_log("DEBUG AUTH: No se pudo determinar el rol para: $usuario");
+                return false;
+            }
             
             // Incluir configuración de sesiones
             require_once __DIR__ . '/../config_sesiones_fixed.php';
             
             $_SESSION['usuario_franquicia'] = $usuario;
-            $_SESSION['franquicia_id'] = $franquiciaId;
+            $_SESSION['user_role'] = $rol; // Nuevo: rol del usuario
             $_SESSION['autenticado'] = true;
             $_SESSION['timestamp_login'] = time();
             
+            // Solo para usuarios franquicia necesitamos franquicia_id
+            if ($rol === 'franquicia') {
+                $franquiciaId = $this->obtenerFranquiciaId($usuario);
+                $_SESSION['franquicia_id'] = $franquiciaId;
+                $info_id = $franquiciaId;
+            } else {
+                $info_id = $usuario; // Para supervision usamos el usuario
+            }
+            
             // Log del login exitoso
-            error_log("DEBUG AUTH: Login exitoso para $usuario, franquicia_id: $franquiciaId");
+            error_log("DEBUG AUTH: Login exitoso para $usuario, rol: $rol, info_id: $info_id");
             
             return [
                 'success' => true,
                 'usuario' => $usuario,
-                'franquicia_id' => $franquiciaId
+                'franquicia_id' => $info_id,
+                'rol' => $rol
             ];
             
         } catch (Exception $e) {
@@ -248,7 +318,7 @@ class AuthFranquicia {
     }
     
     /**
-     * Verifica si hay una sesión activa válida
+     * Verifica si hay una sesión activa válida (franquicia o supervisión)
      */
     public static function verificarSesion() {
         // Incluir configuración de sesiones
@@ -256,7 +326,8 @@ class AuthFranquicia {
         
         $valida = isset($_SESSION['autenticado']) && 
                $_SESSION['autenticado'] === true && 
-               isset($_SESSION['franquicia_id']);
+               isset($_SESSION['usuario_franquicia']) &&
+               isset($_SESSION['user_role']);
                
         return $valida;
     }
@@ -271,6 +342,136 @@ class AuthFranquicia {
         return isset($_SESSION['franquicia_id']) ? $_SESSION['franquicia_id'] : null;
     }
     
+    /**
+     * Obtiene lista de franquicias autorizadas para acceso especial
+     * JOIN entre SOF_USUARIOS.NRO_SUCURS y [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS.NRO_SUCURSAL
+     * con filtro CANAL = 'FRANQUICIAS' AND HABILITADO = 1 AND NRO_SUC_MADRE IS NULL AND TANGO IS NULL
+     */
+    public function obtenerFranquiciasAutorizadas() {
+        try {
+            // Primero, verificar si las tablas existen y tienen datos
+            error_log("DEBUG AUTH: Iniciando obtención de franquicias autorizadas");
+            
+            // Consulta más robusta con manejo de diferentes tipos de datos
+            $sql = "
+                SELECT DISTINCT 
+                    u.NOMBRE AS codigo_usuario,
+                    u.DESCRIPCION AS descripcion_usuario,
+                    u.NRO_SUCURS AS nro_sucurs_usuario,
+                    s.NRO_SUCURSAL AS nro_sucursal_tabla,
+                    s.DESCRIPCION AS descripcion_sucursal,
+                    s.CANAL,
+                    s.HABILITADO,
+                    s.NRO_SUC_MADRE,
+                    s.TANGO
+                FROM SOF_USUARIOS u
+                INNER JOIN [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s ON CAST(u.NRO_SUCURS AS VARCHAR) = CAST(s.NRO_SUCURSAL AS VARCHAR)
+                WHERE u.TIPO = 'FRANQUICIA'
+                AND UPPER(LTRIM(RTRIM(ISNULL(s.CANAL, '')))) = 'FRANQUICIAS'
+                AND s.HABILITADO = 1
+                AND s.NRO_SUC_MADRE IS NULL
+                AND s.TANGO IS NULL
+                ORDER BY u.NOMBRE
+            ";
+            
+            error_log("DEBUG AUTH: Ejecutando consulta SQL para franquicias autorizadas");
+            
+            $stmt = $this->conexion_laker->query($sql);
+            $franquicias = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            error_log("DEBUG AUTH: Consulta ejecutada. Resultados encontrados: " . count($franquicias));
+            
+            // Log detallado de los primeros resultados para debugging
+            if (count($franquicias) > 0) {
+                $primer_resultado = $franquicias[0];
+                error_log("DEBUG AUTH: Primer resultado - Usuario: " . $primer_resultado['codigo_usuario'] . 
+                         ", Canal: '" . $primer_resultado['CANAL'] . "'" . 
+                         ", Habilitado: " . $primer_resultado['HABILITADO']);
+            } else {
+                error_log("DEBUG AUTH: No se encontraron resultados. Verificando con consulta de diagnóstico...");
+                
+                // Consulta de diagnóstico sin filtros para ver qué hay
+                $sql_debug = "
+                    SELECT COUNT(*) as total_usuarios
+                    FROM SOF_USUARIOS 
+                    WHERE TIPO = 'FRANQUICIA'
+                ";
+                $stmt_debug = $this->conexion_laker->query($sql_debug);
+                $debug_result = $stmt_debug->fetch(PDO::FETCH_ASSOC);
+                error_log("DEBUG AUTH: Total usuarios franquicia: " . $debug_result['total_usuarios']);
+                
+                // Verificar si existe la tabla [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS
+                $sql_tabla = "SELECT COUNT(*) as total_sucursales FROM [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS";
+                $stmt_tabla = $this->conexion_laker->query($sql_tabla);
+                $tabla_result = $stmt_tabla->fetch(PDO::FETCH_ASSOC);
+                error_log("DEBUG AUTH: Total sucursales en [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS: " . $tabla_result['total_sucursales']);
+            }
+            
+            return $franquicias;
+            
+        } catch (Exception $e) {
+            error_log("Error obteniendo franquicias autorizadas: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
+            return [];
+        }
+    }
+    
+    /**
+     * Verifica si el usuario actual está autorizado para acceder a la página especial
+     */
+    public function tieneAccesoEspecial($nombreUsuario = null) {
+        try {
+            // Si no se proporciona usuario, usar el de la sesión actual
+            if ($nombreUsuario === null) {
+                $nombreUsuario = self::obtenerFranquiciaIdSesion();
+            }
+            
+            if (!$nombreUsuario) {
+                error_log("DEBUG AUTH: No se pudo obtener usuario para verificar acceso especial");
+                return false;
+            }
+            
+            $sql = "
+                SELECT COUNT(*) as tiene_acceso
+                FROM SOF_USUARIOS u
+                INNER JOIN [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s ON u.NRO_SUCURS = s.NRO_SUCURSAL
+                WHERE u.TIPO = 'FRANQUICIA'
+                AND u.NOMBRE = ?
+                AND s.CANAL = 'FRANQUICIAS'
+                AND s.HABILITADO = 1
+                AND s.NRO_SUC_MADRE IS NULL
+                AND s.TANGO IS NULL
+            ";
+            
+            $stmt = $this->conexion_laker->prepare($sql);
+            $stmt->execute([$nombreUsuario]);
+            $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $tieneAcceso = $resultado['tiene_acceso'] > 0;
+            
+            error_log("DEBUG AUTH: Usuario $nombreUsuario " . ($tieneAcceso ? "SÍ" : "NO") . " tiene acceso especial");
+            
+            return $tieneAcceso;
+            
+        } catch (Exception $e) {
+            error_log("Error verificando acceso especial: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Método estático para verificar acceso especial desde cualquier lugar
+     */
+    public static function verificarAccesoEspecial() {
+        try {
+            $auth = new self();
+            return $auth->tieneAccesoEspecial();
+        } catch (Exception $e) {
+            error_log("Error en verificación estática de acceso especial: " . $e->getMessage());
+            return false;
+        }
+    }
+
     /**
      * Cierra la sesión actual
      */

@@ -14,18 +14,37 @@
         <div class="navbar-nav ms-auto d-none d-lg-flex">
             <ul class="navbar-nav me-auto">
                 <?php if ($rol === 'franquicia'): ?>
+                    <?php 
+                    // Determinar si estamos en página especial (carga de ventas)
+                    $en_pagina_especial = (basename($_SERVER['PHP_SELF']) === 'carga_ventas_sin_tango.php');
+                    $base_url = $en_pagina_especial ? 'index.php' : '';
+                    ?>
                     <li class="nav-item">
-                        <a class="nav-link <?= $vista === 'franquicia' ? 'active' : '' ?>" href="?vista=franquicia">
+                        <a class="nav-link <?= $vista === 'franquicia' ? 'active' : '' ?>" href="<?= $base_url ?>?vista=franquicia">
                             <i class="bi bi-clipboard-data me-1"></i>
                             Mi Stock
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link <?= $vista === 'historial' ? 'active' : '' ?>" href="?vista=historial">
+                        <a class="nav-link <?= $vista === 'historial' ? 'active' : '' ?>" href="<?= $base_url ?>?vista=historial">
                             <i class="bi bi-clock-history me-1"></i>
                             Historial
                         </a>
                     </li>
+                    <?php 
+                    // Verificar acceso especial para mostrar enlace a página especial
+                    require_once __DIR__ . '/../class/AuthFranquicia.php';
+                    if (AuthFranquicia::verificarAccesoEspecial()): 
+                    ?>
+                    <li class="nav-item">
+                        <a class="nav-link <?= $vista === 'carga_ventas' ? 'active' : '' ?>" href="carga_ventas_sin_tango.php">
+                            <i class="bi bi-cash-coin text-success me-1"></i>
+                            Carga de Ventas
+                        </a>
+                    </li>
+                    <?php endif; ?>
+                <?php elseif ($rol === 'supervision'): ?>
+                    <!-- Menú para usuarios de supervisión: solo reportes -->
                     <li class="nav-item">
                         <a class="nav-link <?= $vista === 'reportes' ? 'active' : '' ?>" href="?vista=reportes">
                             <i class="bi bi-table me-1"></i>

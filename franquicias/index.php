@@ -14,7 +14,7 @@ if (!AuthFranquicia::verificarSesion()) {
 // Obtener datos de la sesión
 $usuario = $_SESSION['usuario_franquicia'] ?? '';
 $franquicia_id = $_SESSION['franquicia_id'] ?? 0;
-$rol = 'franquicia'; // Por ahora todos son franquicias
+$rol = $_SESSION['user_role'] ?? 'franquicia'; // Obtener rol de la sesión
 
 // Variable que esperan los componentes
 $franquicia = $usuario; // Para compatibilidad con componentes
@@ -40,15 +40,21 @@ if (!function_exists('es_modo_desarrollo')) {
     }
 }
 
-// Determinar vista según el parámetro GET
-$vista = $_GET['vista'] ?? 'franquicia'; // Por defecto vista franquicia
+// Determinar vista según el parámetro GET y rol del usuario
+$vista = $_GET['vista'] ?? ($rol === 'franquicia' ? 'franquicia' : 'reportes');
 
-// Vistas permitidas para franquicias
-$vistas_permitidas = ['franquicia', 'historial', 'reportes'];
+// Vistas permitidas según el rol
+if ($rol === 'franquicia') {
+    $vistas_permitidas = ['franquicia', 'historial'];
+} elseif ($rol === 'supervision') {
+    $vistas_permitidas = ['reportes'];
+} else {
+    $vistas_permitidas = []; // Sin acceso por defecto
+}
 
-// Si la vista no está permitida, ir a la vista franquicia
+// Si la vista no está permitida, ir a la primera vista permitida
 if (!in_array($vista, $vistas_permitidas)) {
-    $vista = 'franquicia';
+    $vista = $vistas_permitidas[0]; // Primera vista permitida para el rol
 }
 ?>
 <!DOCTYPE html>
@@ -92,6 +98,19 @@ if (!in_array($vista, $vistas_permitidas)) {
         <!-- Área de Contenido -->
         <main class="main-content">
             <?php
+            // Mostrar mensaje de error si no tiene acceso especial
+            if (isset($_GET['error']) && $_GET['error'] === 'sin_acceso_especial'):
+            ?>
+            <div class="container-fluid">
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Acceso denegado:</strong> No tienes permisos para acceder a la página especial solicitada.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <?php
             switch ($vista) {
                 case 'franquicia':
                     include 'components/franquicia_dashboard.php';
@@ -106,7 +125,13 @@ if (!in_array($vista, $vistas_permitidas)) {
                     include 'components/historial.php';
                     break;
                 default:
-                    include 'components/franquicia_dashboard.php';
+                    if ($rol === 'franquicia') {
+                        include 'components/franquicia_dashboard.php';
+                    } elseif ($rol === 'supervision') {
+                        include 'components/reportes_cumplimiento.php';
+                    } else {
+                        echo '<div class="alert alert-warning">Vista no disponible para su rol.</div>';
+                    }
                     break;
             }
             ?>
@@ -150,10 +175,10 @@ if (!in_array($vista, $vistas_permitidas)) {
             }, 100);
         });
     </script>
-    <script src="js/estado_global.js"></script>
+    <script src="js/estado_global.js?v=<?php echo time(); ?>"></script>
     
     <?php if ($vista === 'franquicia'): ?>
-        <script src="js/franquicia_stock.js"></script>
+        <script src="js/franquicia_stock.js?v=<?php echo time(); ?>"></script>
     <?php elseif ($vista === 'panel'): ?>
         <script src="js/panel_comercial_simple.js"></script>
     <?php elseif ($vista === 'reportes'): ?>

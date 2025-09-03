@@ -1,10 +1,12 @@
 <?php
-// Solo accesible para roles comercial y admin
-// Por ahora permitimos a franquicias también para pruebas
-// if ($rol !== 'comercial' && $rol !== 'admin') {
-//     header('Location: ?vista=franquicia');
-//     exit;
-// }
+// Solo accesible para usuarios de supervisión
+if ($rol !== 'supervision') {
+    echo '<div class="alert alert-danger">';
+    echo '<i class="bi bi-exclamation-triangle me-2"></i>';
+    echo '<strong>Acceso Denegado:</strong> Esta vista solo está disponible para usuarios de supervisión.';
+    echo '</div>';
+    return;
+}
 ?>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -14,10 +16,6 @@
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
-            <button type="button" class="btn btn-sm btn-primary" onclick="actualizarReporte()">
-                <i class="bi bi-arrow-clockwise me-1"></i>
-                Actualizar
-            </button>
             <button type="button" class="btn btn-sm btn-success" onclick="exportarReporte()">
                 <i class="bi bi-download me-1"></i>
                 Exportar Excel

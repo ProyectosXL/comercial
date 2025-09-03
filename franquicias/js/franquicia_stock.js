@@ -1,5 +1,5 @@
 /**
- * Gestión de Stock - Funcionalidades para Franquicias (VERSIÓN ACTUALIZADA)
+ * Gestión de Stock - Funcionalidades para Franquicias
  */
 
 class FranquiciaStockManager {
@@ -578,10 +578,16 @@ class FranquiciaStockManager {
      * Actualizar stock en memoria
      */
     actualizarStock(categoria, cantidad) {
-        if (cantidad === '' || cantidad === null) {
+        if (cantidad === '' || cantidad === null || cantidad === undefined) {
             delete this.stockData[categoria];
         } else {
-            this.stockData[categoria] = parseInt(cantidad) || 0;
+            // Permitir valores 0 - convertir a número pero mantener 0 como válido
+            const valorNumerico = parseInt(cantidad);
+            if (!isNaN(valorNumerico)) {
+                this.stockData[categoria] = valorNumerico;
+            } else {
+                delete this.stockData[categoria];
+            }
         }
     }
     
@@ -624,13 +630,21 @@ class FranquiciaStockManager {
      */
     actualizarContadores() {
         const totalCategorias = this.categoriasData.length;
-        const completadas = Object.keys(this.stockData).length;
         
         const totalElement = document.getElementById('total-categorias');
-        const completadasElement = document.getElementById('categorias-completadas');
-        
         if (totalElement) totalElement.textContent = totalCategorias;
-        if (completadasElement) completadasElement.textContent = completadas;
+        
+        // Eliminar el contador de "completadas" - ya no es necesario
+        const completadasElement = document.getElementById('categorias-completadas');
+        if (completadasElement) {
+            completadasElement.style.display = 'none';
+        }
+        
+        // Ocultar el elemento padre del contador si existe
+        const contadorCompletadas = document.querySelector('.contador-completadas');
+        if (contadorCompletadas) {
+            contadorCompletadas.style.display = 'none';
+        }
     }
     
     /**
@@ -640,11 +654,20 @@ class FranquiciaStockManager {
         const boton = document.getElementById('btn-guardar-stock');
         if (!boton) return;
         
-        const tieneStock = Object.keys(this.stockData).length > 0;
+        // Verificar si hay al menos un input con valor (incluyendo 0)
+        const inputs = document.querySelectorAll('.cantidad-input');
+        let tieneAlgunValor = false;
         
-        boton.disabled = !tieneStock;
+        inputs.forEach(input => {
+            const valor = input.value.trim();
+            if (valor !== '' && !isNaN(valor)) {
+                tieneAlgunValor = true;
+            }
+        });
         
-        if (tieneStock) {
+        boton.disabled = !tieneAlgunValor;
+        
+        if (tieneAlgunValor) {
             boton.classList.remove('btn-secondary');
             boton.classList.add('btn-success');
         } else {
@@ -671,8 +694,34 @@ class FranquiciaStockManager {
     async guardarStock() {
         console.log('DEBUG: Iniciando guardarStock');
         
-        if (!this.rubroActual || Object.keys(this.stockData).length === 0) {
-            this.mostrarAlerta('Debe seleccionar un rubro y cargar al menos una cantidad', 'warning');
+        // Verificar que hay un rubro seleccionado y al menos un input con valor
+        if (!this.rubroActual) {
+            this.mostrarAlerta('Debe seleccionar un rubro', 'warning');
+            return;
+        }
+        
+        // Verificar si hay al menos un input con valor (incluyendo 0)
+        const inputs = document.querySelectorAll('.cantidad-input');
+        let tieneAlgunValor = false;
+        
+        inputs.forEach(input => {
+            const valor = input.value.trim();
+            const categoria = input.getAttribute('data-categoria');
+            
+            if (categoria) {
+                if (valor !== '' && !isNaN(valor)) {
+                    // Tiene valor numérico válido
+                    tieneAlgunValor = true;
+                    this.actualizarStock(categoria, valor);
+                } else {
+                    // Campo vacío = asignar 0
+                    this.actualizarStock(categoria, '0');
+                }
+            }
+        });
+        
+        if (!tieneAlgunValor) {
+            this.mostrarAlerta('Debe cargar al menos una cantidad', 'warning');
             return;
         }
         
@@ -684,6 +733,14 @@ class FranquiciaStockManager {
         }));
         
         console.log('DEBUG: Datos a enviar:', stockArray);
+        console.log('DEBUG: stockData completo:', this.stockData);
+        console.log('DEBUG: Número de categorías a enviar:', stockArray.length);
+        
+        // TIMEOUT ABSOLUTO - garantizar que el modal se oculte después de 10 segundos máximo
+        window.timeoutModal = setTimeout(() => {
+            console.log('DEBUG: TIMEOUT ABSOLUTO - Forzando ocultación del modal');
+            this.forzarOcultacionModal();
+        }, 10000);
         
         try {
             this.mostrarLoading('Guardando stock...');
@@ -697,30 +754,85 @@ class FranquiciaStockManager {
             });
             
             console.log('DEBUG: Respuesta del servidor:', data);
-            this.ocultarLoading();
+            console.log('🔥 ARCHIVO ACTUALIZADO - TIMESTAMP: 2025-09-03 14:40 🔥');
             
+            // OCULTACIÓN SIMPLE Y DIRECTA DEL MODAL
+            console.log('DEBUG: OCULTANDO MODAL DE FORMA SIMPLE');
+            
+            // Eliminar el modal completamente del DOM
+            const modalElement = document.getElementById('modalLoading');
+            if (modalElement) {
+                console.log('DEBUG: Modal encontrado, eliminándolo del DOM');
+                modalElement.remove();
+            }
+            
+            // Eliminar cualquier backdrop
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => backdrop.remove());
+            
+            // Restaurar body
+            document.body.classList.remove('modal-open');
+            document.body.style.paddingRight = '';
+            document.body.style.overflow = '';
+            
+            console.log('DEBUG: Modal eliminado completamente');
+            
+            // Limpieza de timeouts si existen
+            if (window.timeoutModal) {
+                clearTimeout(window.timeoutModal);
+                console.log('DEBUG: Timeout de modal limpiado');
+            }
+            
+            if (window.timeoutModalEmergencia) {
+                clearTimeout(window.timeoutModalEmergencia);
+                console.log('DEBUG: Timeout de emergencia limpiado');
+            }
+
             if (data.success) {
                 console.log('DEBUG: Guardado exitoso, limpiando formulario');
-                this.mostrarAlerta('Stock guardado correctamente', 'success');
                 
-                // Actualizar estados
-                await this.verificarEstadoCarga();
-                await this.cargarResumenStock();
-                
-                // Limpiar formulario automáticamente después de guardar exitosamente
+                // Limpiar formulario inmediatamente
                 this.limpiarRubroSinConfirmacion();
                 const selectorRubro = document.getElementById('selector-rubro');
                 if (selectorRubro) selectorRubro.value = '';
                 this.ocultarCategorias();
                 
                 console.log('DEBUG: Formulario limpiado exitosamente');
+                
+                // DOBLE PROTECCIÓN - forzar ocultación del modal después de mostrar éxito
+                setTimeout(() => {
+                    console.log('DEBUG: Protección adicional - forzando ocultación del modal');
+                    this.forzarOcultacionModal();
+                    
+                    // Mostrar mensaje de éxito DESPUÉS de ocultar el modal para mejor visibilidad
+                    setTimeout(() => {
+                        console.log('DEBUG: Mostrando alerta de éxito');
+                        this.mostrarAlerta(`Stock guardado exitosamente. Se registraron ${data.movimientos_registrados} movimientos en la base de datos.`, 'success');
+                        console.log('DEBUG: Alerta de éxito mostrada');
+                        
+                        // Notificar al sistema global que el stock ha cambiado
+                        if (typeof window.notificarCambioStock === 'function') {
+                            console.log('DEBUG: Notificando cambio de stock a estado global...');
+                            window.notificarCambioStock();
+                        }
+                    }, 200);
+                }, 100);
+                
+                // NO ejecutar actualizaciones en segundo plano por ahora para evitar conflictos
+                console.log('DEBUG: Saltando actualización en segundo plano para evitar conflictos');
+                
             } else {
                 console.error('DEBUG: Error en respuesta del servidor:', data.message);
                 this.mostrarAlerta(data.message || 'Error al guardar el stock', 'danger');
             }
         } catch (error) {
-            this.ocultarLoading();
+            // ASEGURAR que el modal se oculte en caso de error
             console.error('DEBUG: Error en guardarStock:', error);
+            
+            this.ocultarLoading();
+            this.forzarOcultacionModal();
+            console.log('DEBUG: Modal ocultado por error');
+            
             this.mostrarAlerta('Error de conexión', 'danger');
         }
     }
@@ -765,7 +877,7 @@ class FranquiciaStockManager {
                 infoEstado.innerHTML = `
                     <div class="d-flex align-items-center">
                         <i class="bi bi-check-circle text-success me-2"></i>
-                        <span class="text-success fw-bold">Stock cargado para este período</span>
+                        <span class="text-success fw-bold">Stock cargado para este período en al menos 1 rubro</span>
                     </div>
                 `;
             }
@@ -783,6 +895,60 @@ class FranquiciaStockManager {
                 `;
             }
         }
+    }
+    
+    /**
+     * Actualizar estados en segundo plano sin bloquear la UI
+     */
+    async actualizarEstadosEnSegundoPlano() {
+        console.log('DEBUG: Iniciando actualización de estados en segundo plano');
+        
+        // Usar setTimeout para asegurar que se ejecute de forma asíncrona
+        setTimeout(async () => {
+            try {
+                // Ejecutar actualizaciones en paralelo con timeout
+                const promesas = [
+                    this.ejecutarConTimeout(this.verificarEstadoCarga.bind(this), 5000, 'verificarEstadoCarga'),
+                    this.ejecutarConTimeout(this.cargarResumenStock.bind(this), 5000, 'cargarResumenStock')
+                ];
+                
+                // Usar Promise.allSettled para que una falla no afecte a la otra
+                const resultados = await Promise.allSettled(promesas);
+                
+                resultados.forEach((resultado, index) => {
+                    const nombres = ['verificarEstadoCarga', 'cargarResumenStock'];
+                    if (resultado.status === 'rejected') {
+                        console.warn(`Error en ${nombres[index]}:`, resultado.reason);
+                    } else {
+                        console.log(`✓ ${nombres[index]} completado exitosamente`);
+                    }
+                });
+                
+                console.log('DEBUG: Actualización de estados completada');
+            } catch (error) {
+                console.error('Error en actualizarEstadosEnSegundoPlano:', error);
+            }
+        }, 100); // Ejecutar después de 100ms para no bloquear el hilo principal
+    }
+    
+    /**
+     * Ejecutar función con timeout
+     */
+    async ejecutarConTimeout(funcion, timeout, nombre) {
+        return new Promise(async (resolve, reject) => {
+            const timer = setTimeout(() => {
+                reject(new Error(`Timeout: ${nombre} tardó más de ${timeout}ms`));
+            }, timeout);
+            
+            try {
+                const resultado = await funcion();
+                clearTimeout(timer);
+                resolve(resultado);
+            } catch (error) {
+                clearTimeout(timer);
+                reject(error);
+            }
+        });
     }
     
     /**
@@ -1009,6 +1175,19 @@ class FranquiciaStockManager {
         if (modalElement) {
             const modal = new bootstrap.Modal(modalElement);
             modal.show();
+            
+            // TIMEOUT DE EMERGENCIA - AUTO-HIDE después de 15 segundos
+            window.timeoutModalEmergencia = setTimeout(() => {
+                console.log('DEBUG: TIMEOUT DE EMERGENCIA - Eliminando modal por fuerza después de 15s');
+                if (modalElement) {
+                    modalElement.remove();
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(backdrop => backdrop.remove());
+                    document.body.classList.remove('modal-open');
+                    document.body.style.paddingRight = '';
+                    document.body.style.overflow = '';
+                }
+            }, 15000);
         }
     }
     
@@ -1016,13 +1195,88 @@ class FranquiciaStockManager {
      * Ocultar loading
      */
     ocultarLoading() {
+        console.log('DEBUG: Intentando ocultar modal de loading...');
+        
         const modalElement = document.getElementById('modalLoading');
         if (modalElement) {
+            console.log('DEBUG: Elemento modal encontrado');
+            
             const modal = bootstrap.Modal.getInstance(modalElement);
             if (modal) {
+                console.log('DEBUG: Instancia de modal encontrada, ocultando...');
                 modal.hide();
+            } else {
+                console.log('DEBUG: No hay instancia de modal, forzando ocultación...');
+                // Si no hay instancia, forzar ocultación
+                modalElement.style.display = 'none';
+                modalElement.classList.remove('show');
+                modalElement.classList.remove('fade');
+                modalElement.setAttribute('aria-hidden', 'true');
+                modalElement.removeAttribute('aria-modal');
+                modalElement.removeAttribute('role');
+                
+                // Remover backdrop si existe
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    console.log('DEBUG: Removiendo backdrop...');
+                    backdrop.remove();
+                }
+                
+                // Restaurar scroll del body
+                document.body.classList.remove('modal-open');
+                document.body.style.paddingRight = '';
+                document.body.style.overflow = '';
             }
+            
+            // Doble verificación - forzar ocultación después de 100ms
+            setTimeout(() => {
+                if (modalElement.classList.contains('show') || modalElement.style.display !== 'none') {
+                    console.log('DEBUG: Modal aún visible, forzando ocultación final...');
+                    modalElement.style.display = 'none';
+                    modalElement.classList.remove('show', 'fade');
+                    document.body.classList.remove('modal-open');
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) backdrop.remove();
+                }
+            }, 100);
+            
+        } else {
+            console.log('DEBUG: Elemento modal no encontrado');
         }
+        
+        console.log('DEBUG: Función ocultarLoading completada');
+    }
+    
+    /**
+     * Forzar ocultación del modal sin usar Bootstrap
+     */
+    forzarOcultacionModal() {
+        console.log('DEBUG: FORZANDO ocultación del modal de loading...');
+        
+        const modalElement = document.getElementById('modalLoading');
+        if (modalElement) {
+            // Forzar estilos CSS directamente
+            modalElement.style.display = 'none';
+            modalElement.style.opacity = '0';
+            modalElement.style.visibility = 'hidden';
+            modalElement.classList.remove('show', 'fade', 'd-block');
+            modalElement.setAttribute('aria-hidden', 'true');
+            modalElement.removeAttribute('aria-modal');
+            modalElement.removeAttribute('role');
+        }
+        
+        // Remover todos los backdrops
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        
+        // Restaurar body completamente
+        document.body.classList.remove('modal-open');
+        document.body.style.paddingRight = '';
+        document.body.style.overflow = '';
+        document.body.style.paddingLeft = '';
+        document.body.style.marginRight = '';
+        
+        console.log('DEBUG: Modal forzadamente ocultado');
     }
 }
 

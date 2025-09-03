@@ -3,7 +3,6 @@
 // La autenticación ya se verificó en index.php
 
 // Obtener franquicia_id de la sesión
-require_once __DIR__ . '/../config_sesiones_simple.php';
 require_once __DIR__ . '/../class/AuthFranquicia.php';
 
 $franquicia_id = AuthFranquicia::obtenerFranquiciaIdSesion();
@@ -21,10 +20,6 @@ if (!$franquicia_id) {
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
-            <button type="button" class="btn btn-sm btn-primary" onclick="actualizarHistorial()">
-                <i class="bi bi-arrow-clockwise me-1"></i>
-                Actualizar
-            </button>
             <button type="button" class="btn btn-sm btn-success" onclick="exportarHistorial()">
                 <i class="bi bi-download me-1"></i>
                 Exportar Excel
@@ -123,14 +118,6 @@ if (!$franquicia_id) {
             <i class="bi bi-table me-2"></i>
             Datos Históricos
         </h5>
-        <div class="d-flex gap-2">
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="modo-compacto" checked>
-                <label class="form-check-label" for="modo-compacto">
-                    Vista compacta
-                </label>
-            </div>
-        </div>
     </div>
     <div class="card-body p-0">
         <!-- Loading State -->

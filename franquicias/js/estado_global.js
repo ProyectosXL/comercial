@@ -129,7 +129,7 @@ function actualizarEstadoSidebar(tieneStock) {
             infoEstado.innerHTML = `
                 <div class="d-flex align-items-center">
                     <i class="bi bi-check-circle text-success me-2"></i>
-                    <span class="text-success fw-bold">Stock cargado para este período</span>
+                    <span class="text-success fw-bold">Stock cargado para este período en al menos 1 rubro</span>
                 </div>
             `;
         } else {
@@ -172,9 +172,22 @@ async function verificarEstadoDespuesDeGuardar() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM cargado, verificando estado global...');
     
-    // Esperar un poco más para que se carguen otros scripts
+    // Verificar estado pero solo si no estamos en medio de una operación de guardado
     setTimeout(async () => {
-        await verificarEstadoPeriodoGlobal();
+        // Solo verificar si no hay un modal de loading visible
+        const modalLoading = document.getElementById('modalLoading');
+        if (!modalLoading || !modalLoading.classList.contains('show')) {
+            console.log('Ejecutando verificación automática del estado...');
+            await verificarEstadoPeriodoGlobal();
+        } else {
+            console.log('Modal de loading visible, posponiendo verificación...');
+            // Si hay modal, esperar a que termine y luego verificar
+            setTimeout(() => {
+                if (!modalLoading.classList.contains('show')) {
+                    verificarEstadoPeriodoGlobal();
+                }
+            }, 2000);
+        }
     }, 1000);
 });
 
@@ -182,7 +195,13 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('visibilitychange', function() {
     if (!document.hidden) {
         console.log('Página visible de nuevo, verificando estado...');
-        setTimeout(verificarEstadoPeriodoGlobal, 500);
+        // Verificar estado después de un pequeño delay
+        setTimeout(() => {
+            const modalLoading = document.getElementById('modalLoading');
+            if (!modalLoading || !modalLoading.classList.contains('show')) {
+                verificarEstadoPeriodoGlobal();
+            }
+        }, 500);
     }
 });
 

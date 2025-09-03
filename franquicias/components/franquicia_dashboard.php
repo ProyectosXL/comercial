@@ -247,10 +247,6 @@
                                         <span class="me-2 fw-bold text-muted">Total:</span>
                                         <span id="total-categorias" class="dashboard-badge bg-info">0</span>
                                     </div>
-                                    <div class="d-flex align-items-center">
-                                        <span class="me-2 fw-bold text-muted">Completadas:</span>
-                                        <span id="categorias-completadas" class="dashboard-badge bg-success">0</span>
-                                    </div>
                                 </div>
                             </div>
                         </div>

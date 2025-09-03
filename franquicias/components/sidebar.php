@@ -21,25 +21,36 @@
 
         <!-- Navegación para Franquicias -->
         <?php if ($rol === 'franquicia'): ?>
+            <?php 
+            // Determinar si estamos en página especial (carga de ventas)
+            $en_pagina_especial = (basename($_SERVER['PHP_SELF']) === 'carga_ventas_sin_tango.php');
+            $base_url = $en_pagina_especial ? 'index.php' : '';
+            ?>
             <ul class="nav nav-pills flex-column">
                 <li class="nav-item">
-                    <a href="?vista=franquicia" class="nav-link <?= $vista === 'franquicia' ? 'active' : '' ?>">
+                    <a href="<?= $base_url ?>?vista=franquicia" class="nav-link <?= $vista === 'franquicia' ? 'active' : '' ?>">
                         <i class="bi bi-clipboard-data"></i>
                         Cargar Stock
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="?vista=historial" class="nav-link <?= $vista === 'historial' ? 'active' : '' ?>">
+                    <a href="<?= $base_url ?>?vista=historial" class="nav-link <?= $vista === 'historial' ? 'active' : '' ?>">
                         <i class="bi bi-clock-history"></i>
                         Historial
                     </a>
                 </li>
+                <?php 
+                // Verificar acceso especial para mostrar enlace a página especial en sidebar
+                require_once __DIR__ . '/../class/AuthFranquicia.php';
+                if (AuthFranquicia::verificarAccesoEspecial()): 
+                ?>
                 <li class="nav-item">
-                    <a href="?vista=reportes" class="nav-link <?= $vista === 'reportes' ? 'active' : '' ?>">
-                        <i class="bi bi-table"></i>
-                        Reportes
+                    <a href="carga_ventas_sin_tango.php" class="nav-link <?= $vista === 'carga_ventas' ? 'active' : '' ?>">
+                        <i class="bi bi-cash-coin text-success"></i>
+                        Carga de Ventas
                     </a>
                 </li>
+                <?php endif; ?>
             </ul>
 
             <!-- Información del Período Actual -->
@@ -61,6 +72,33 @@
                                 Verificando...
                             </span>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+        <?php endif; ?>
+
+        <!-- Navegación para Supervisión -->
+        <?php if ($rol === 'supervision'): ?>
+            <ul class="nav nav-pills flex-column">
+                <li class="nav-item">
+                    <a href="?vista=reportes" class="nav-link <?= $vista === 'reportes' ? 'active' : '' ?>">
+                        <i class="bi bi-table"></i>
+                        Reportes
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Información para Supervisión -->
+            <div class="info-card card">
+                <div class="card-header bg-warning">
+                    <i class="bi bi-shield-check me-1"></i>
+                    Acceso de Supervisión
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h6 class="mb-1 text-warning">Solo Reportes</h6>
+                        <small class="text-muted">Acceso exclusivo a reportes del sistema</small>
                     </div>
                 </div>
             </div>

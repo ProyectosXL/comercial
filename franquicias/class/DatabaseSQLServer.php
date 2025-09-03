@@ -100,15 +100,17 @@ class DatabaseSQLServer {
     /**
      * Ejecutar una consulta SQL
      */
-    public function ejecutarConsulta($sql, $params = null) {
+    public function ejecutarConsulta($sql, $params = null, $database = 'sistemas') {
         try {
+            $conn = $this->getConnection($database);
+            
             if ($params) {
-                $stmt = sqlsrv_prepare($this->conn, $sql, $params);
+                $stmt = sqlsrv_prepare($conn, $sql, $params);
                 if ($stmt && sqlsrv_execute($stmt)) {
                     return $stmt;
                 }
             } else {
-                $stmt = sqlsrv_query($this->conn, $sql);
+                $stmt = sqlsrv_query($conn, $sql);
                 if ($stmt) {
                     return $stmt;
                 }
@@ -129,10 +131,12 @@ class DatabaseSQLServer {
     /**
      * Obtener una fila de resultado
      */
-    public function obtenerFila($sql, $params = null) {
-        $stmt = $this->ejecutarConsulta($sql, $params);
+    public function obtenerFila($sql, $params = null, $database = 'sistemas') {
+        $stmt = $this->ejecutarConsulta($sql, $params, $database);
         if ($stmt) {
-            return sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+            $result = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+            sqlsrv_free_stmt($stmt);
+            return $result;
         }
         return false;
     }
@@ -140,13 +144,14 @@ class DatabaseSQLServer {
     /**
      * Obtener todas las filas de resultado
      */
-    public function obtenerFilas($sql, $params = null) {
-        $stmt = $this->ejecutarConsulta($sql, $params);
+    public function obtenerFilas($sql, $params = null, $database = 'sistemas') {
+        $stmt = $this->ejecutarConsulta($sql, $params, $database);
         $filas = [];
         if ($stmt) {
             while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                 $filas[] = $row;
             }
+            sqlsrv_free_stmt($stmt);
         }
         return $filas;
     }
