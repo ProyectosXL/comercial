@@ -1,0 +1,103 @@
+
+/* css/styles.css */
+.card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5a67d8 0%, #6b4194 100%);
+    transform: translateY(-1px);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.1);
+}
+
+.objetivo-input {
+    width: 140px;
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+.loading {
+    display: none;
+}
+
+/* Tabla más compacta */
+.table-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+#tablaObjetivos {
+    font-size: 0.9rem;
+}
+
+#tablaObjetivos th {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+    padding: 12px 8px;
+}
+
+#tablaObjetivos td {
+    vertical-align: middle;
+    padding: 10px 8px;
+}
+
+/* Alineaciones específicas por columna */
+#tablaObjetivos td:nth-child(1) { /* Nro. Sucursal */
+    text-align: center;
+    font-weight: 600;
+}
+
+#tablaObjetivos td:nth-child(2) { /* Sucursal */
+    text-align: left;
+}
+
+#tablaObjetivos td:nth-child(3) { /* Objetivo Actual */
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+#tablaObjetivos td:nth-child(4) { /* Nuevo Objetivo */
+    text-align: center;
+}
+
+#tablaObjetivos td:nth-child(5) { /* Última Modificación */
+    text-align: center;
+    font-size: 0.8rem;
+}
+
+#tablaObjetivos td:nth-child(6) { /* Acciones */
+    text-align: center;
+}
+
+/* Anchos de columnas */
+#tablaObjetivos th:nth-child(1) { width: 8%; }
+#tablaObjetivos th:nth-child(2) { width: 30%; }
+#tablaObjetivos th:nth-child(3) { width: 18%; }
+#tablaObjetivos th:nth-child(4) { width: 18%; }
+#tablaObjetivos th:nth-child(5) { width: 16%; }
+#tablaObjetivos th:nth-child(6) { width: 10%; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .objetivo-input {
+        width: 120px;
+        font-size: 0.9rem;
+    }
+    
+    #tablaObjetivos {
+        font-size: 0.8rem;
+    }
+}
