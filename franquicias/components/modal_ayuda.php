@@ -84,7 +84,7 @@
                                                 <li>Complete la cantidad de stock para cada categoría mostrada</li>
                                                 <li>Use números enteros (no decimales)</li>
                                                 <li>Si no tiene stock de una categoría, ingrese "0"</li>
-                                                <li>Puede usar el botón "Limpiar" para borrar una cantidad específica</li>
+                                                <li>Puede usar el botón "Borrar" para eliminar una cantidad específica</li>
                                             </ol>
                                         </div>
                                     </div>

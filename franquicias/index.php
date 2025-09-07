@@ -12,7 +12,7 @@ if (!AuthFranquicia::verificarSesion()) {
 }
 
 // Obtener datos de la sesión
-$usuario = $_SESSION['usuario_franquicia'] ?? '';
+$usuario = $_SESSION['usuario_franquicia'] ?? '';   
 $franquicia_id = $_SESSION['franquicia_id'] ?? 0;
 $rol = $_SESSION['user_role'] ?? 'franquicia'; // Obtener rol de la sesión
 

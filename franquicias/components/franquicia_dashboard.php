@@ -32,7 +32,7 @@
                                     <i class="bi bi-building me-1"></i>
                                     Franquicia:
                                 </strong>
-                                <span class="ms-2"><?= htmlspecialchars($franquicia) ?></span>
+                                <span class="ms-2"><?= htmlspecialchars($nombreFranquicia) ?></span>
                             </div>
                             <div class="mb-0">
                                 <strong class="text-primary">
@@ -162,16 +162,10 @@
         <div class="col-12">
             <div class="dashboard-card">
                 <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap">
-                        <h5 class="mb-0">
-                            <i class="bi bi-box-seam me-2"></i>
-                            Cargar Stock por Categorías
-                        </h5>
-                        <button type="button" class="dashboard-btn btn-success" id="btn-guardar-stock" disabled>
-                            <i class="bi bi-save me-1"></i>
-                            Guardar Stock
-                        </button>
-                    </div>
+                    <h5 class="mb-0">
+                        <i class="bi bi-box-seam me-2"></i>
+                        Cargar Stock por Categorías
+                    </h5>
                 </div>
                 <div class="card-body">
                     <!-- Selector de Rubro -->
@@ -218,13 +212,13 @@
                                             <i class="bi bi-tag me-1"></i>
                                             Categoría
                                         </th>
-                                        <th style="width: 200px;">
+                                        <th style="width: 250px;">
                                             <i class="bi bi-box me-1"></i>
                                             Cantidad en Stock
                                         </th>
-                                        <th style="width: 120px;">
-                                            <i class="bi bi-gear me-1"></i>
-                                            Acciones
+                                        <th style="width: 100px;">
+                                            <i class="bi bi-trash me-1"></i>
+                                            Borrar
                                         </th>
                                     </tr>
                                 </thead>
@@ -235,19 +229,17 @@
                         </div>
 
                         <div class="row mt-4">
-                            <div class="col-md-6 mb-3">
-                                <button type="button" class="dashboard-btn btn-secondary" id="btn-limpiar-rubro">
-                                    <i class="bi bi-arrow-clockwise me-1"></i>
-                                    Limpiar Rubro
-                                </button>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <span class="me-2 fw-bold text-muted">Total:</span>
+                                    <span id="total-categorias" class="dashboard-badge bg-info">0</span>
+                                </div>
                             </div>
                             <div class="col-md-6 text-end">
-                                <div class="d-flex align-items-center justify-content-end flex-wrap gap-3">
-                                    <div class="d-flex align-items-center">
-                                        <span class="me-2 fw-bold text-muted">Total:</span>
-                                        <span id="total-categorias" class="dashboard-badge bg-info">0</span>
-                                    </div>
-                                </div>
+                                <button type="button" class="dashboard-btn btn-success" id="btn-guardar-stock" disabled>
+                                    <i class="bi bi-save me-1"></i>
+                                    Guardar Stock
+                                </button>
                             </div>
                         </div>
                     </div>

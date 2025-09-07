@@ -1,7 +1,7 @@
 <?php
 // Version simplificada del index para debug
 // Incluir configuración de sesiones ANTES que cualquier otra cosa
-require_once 'config_sesiones_simple.php';
+require_once 'config_sesiones_fixed.php';
 
 // Cargar la nueva clase de autenticación
 require_once 'class/AuthFranquicia.php';

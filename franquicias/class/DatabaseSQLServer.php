@@ -19,7 +19,7 @@ class DatabaseSQLServer {
             'password' => "Axoft1988"
         ],
         'laker_sa' => [
-            'server' => "SERVIDOR",
+            'server' => "SERVIDOR",  // Usar 'SERVIDOR' como está configurado en AuthFranquicia
             'database' => "LAKER_SA",
             'user' => "sa",
             'password' => "Axoft1988"
@@ -154,22 +154,6 @@ class DatabaseSQLServer {
             sqlsrv_free_stmt($stmt);
         }
         return $filas;
-    }
-    
-    /**
-     * Obtener todas las franquicias activas
-     */
-    public function obtenerFranquiciasActivas() {
-        $sql = "SELECT * FROM franquicias_sistema WHERE estado = 'activo' ORDER BY nombre";
-        return $this->obtenerFilas($sql);
-    }
-    
-    /**
-     * Obtener franquicia por código
-     */
-    public function obtenerFranquiciaPorCodigo($codigo) {
-        $sql = "SELECT * FROM franquicias_sistema WHERE codigo = ?";
-        return $this->obtenerFila($sql, [$codigo]);
     }
     
     /**

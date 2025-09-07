@@ -366,14 +366,6 @@ class FranquiciaStockManager {
                 this.guardarStock();
             });
         }
-        
-        // Botón limpiar rubro
-        const btnLimpiar = document.getElementById('btn-limpiar-rubro');
-        if (btnLimpiar) {
-            btnLimpiar.addEventListener('click', () => {
-                this.limpiarRubro();
-            });
-        }
     }
     
     /**
@@ -521,10 +513,10 @@ class FranquiciaStockManager {
             </td>
             <td>
                 <button type="button" 
-                        class="btn btn-sm btn-outline-secondary"
+                        class="btn btn-sm btn-outline-danger"
                         onclick="franquiciaStock.limpiarCategoria('${categoria}')"
-                        title="Limpiar cantidad">
-                    <i class="bi bi-arrow-clockwise"></i>
+                        title="Borrar cantidad">
+                    <i class="bi bi-trash"></i>
                 </button>
             </td>
         `;
@@ -605,13 +597,16 @@ class FranquiciaStockManager {
     }
     
     /**
-     * Limpiar todo el rubro (con confirmación)
+     * Limpiar todo el rubro (con confirmación) - FUNCIÓN DESHABILITADA
+     * Esta función se usaba con el botón "Limpiar Rubro" que fue removido
      */
+    /*
     limpiarRubro() {
         if (confirm('¿Está seguro de que desea limpiar todas las cantidades del rubro actual?')) {
             this.limpiarRubroSinConfirmacion();
         }
     }
+    */
     
     /**
      * Limpiar rubro sin confirmación (para uso interno después de guardar)

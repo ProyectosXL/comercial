@@ -6,7 +6,7 @@
 
 // Verificar que no haya output previo
 if (headers_sent($file, $line)) {
-    die("Error: Headers ya enviados en $file línea $line. Incluir config_sesiones_simple.php antes de cualquier output.");
+    die("Error: Headers ya enviados en $file línea $line. Incluir config_sesiones_fixed.php antes de cualquier output.");
 }
 
 // Solo configurar si la sesión no está activa

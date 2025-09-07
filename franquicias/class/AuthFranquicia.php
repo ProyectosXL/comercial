@@ -295,7 +295,9 @@ class AuthFranquicia {
             // Solo para usuarios franquicia necesitamos franquicia_id
             if ($rol === 'franquicia') {
                 $franquiciaId = $this->obtenerFranquiciaId($usuario);
+                $nombreFranquicia = $this->generarNombreFranquicia($franquiciaId);
                 $_SESSION['franquicia_id'] = $franquiciaId;
+                $_SESSION['nombre_franquicia'] = $nombreFranquicia;
                 $info_id = $franquiciaId;
             } else {
                 $info_id = $usuario; // Para supervision usamos el usuario
