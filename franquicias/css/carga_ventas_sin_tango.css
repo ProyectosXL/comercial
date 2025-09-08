@@ -542,3 +542,87 @@ body .carga-ventas-card.card .card-body {
     border-color: #27ae60;
     border-right-color: transparent;
 }
+
+/* === ESTILOS PARA DISEÑO MEJORADO === */
+
+/* Estilos específicos para el diseño centrado */
+.info-icon-box {
+    padding: 1rem;
+    border-radius: 8px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.info-icon-box:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+}
+
+/* Mejoras para botones grandes */
+.btn-lg {
+    padding: 0.75rem 2rem !important;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+}
+
+/* Mejoras específicas para botones primarios */
+body .btn-primary {
+    background: linear-gradient(135deg, #4e73df, #224abe) !important;
+    border: none !important;
+    box-shadow: 0 4px 6px rgba(78, 115, 223, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+body .btn-primary:hover {
+    background: linear-gradient(135deg, #224abe, #1e3a8a) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 12px rgba(78, 115, 223, 0.4) !important;
+}
+
+body .btn-outline-primary {
+    border: 2px solid #4e73df !important;
+    color: #4e73df !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+
+body .btn-outline-primary:hover {
+    background: #4e73df !important;
+    border-color: #4e73df !important;
+    color: #ffffff !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(78, 115, 223, 0.3) !important;
+}
+
+/* Espaciado mejorado entre cards */
+.card + .card {
+    margin-top: 2rem;
+}
+
+/* Iconos informativos */
+.fs-4 {
+    font-size: 1.5rem !important;
+}
+
+/* Alert mejorado */
+.alert-info {
+    background: linear-gradient(135deg, #d1ecf1, #bee5eb) !important;
+    border: 1px solid #b6d4df !important;
+    color: #0c5460 !important;
+}
+
+/* Badges mejorados */
+.badge {
+    font-size: 0.85rem !important;
+    padding: 0.5rem 0.75rem !important;
+}
+
+.badge.bg-warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800) !important;
+    color: #212529 !important;
+}
+
+.badge.bg-success {
+    background: linear-gradient(135deg, #28a745, #20c997) !important;
+}

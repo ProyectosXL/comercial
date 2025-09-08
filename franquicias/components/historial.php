@@ -13,6 +13,9 @@ if (!$franquicia_id) {
 }
 ?>
 
+<!-- Contenedor específico para historial con tema oscuro -->
+<div id="historial-component" data-component="historial" class="historial-container">
+
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
         <i class="bi bi-clock-history me-2"></i>
@@ -511,3 +514,5 @@ if (!$franquicia_id) {
 
 <!-- JavaScript específico para el historial -->  
 <script src="js/historial.js"></script>
+
+</div> <!-- Fin del contenedor historial-component -->

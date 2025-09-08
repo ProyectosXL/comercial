@@ -28,6 +28,7 @@ if (!AuthFranquicia::verificarAccesoEspecial()) {
 // Obtener datos de sesión para navbar
 $usuario = $_SESSION['usuario_franquicia'] ?? 'N/A';
 $franquiciaId = $_SESSION['franquicia_id'] ?? 'N/A';
+$nombreFranquicia = $usuario; // Usar el usuario como nombre de franquicia
 $rol = 'franquicia';
 $franquicia = $usuario; // Para compatibilidad con navbar
 $vista = 'carga_ventas'; // Para navbar activo
@@ -203,69 +204,56 @@ if (!function_exists('es_modo_desarrollo')) {
                 </div>
 
                 <!-- Mensaje informativo -->
-                <div class="alert alert-info" role="alert">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <strong>Acceso autorizado para franquicias sin Tango</strong><br>
-                    Este entorno está diseñado específicamente para franquicias que no utilizan el sistema Tango y requieren un proceso de carga de ventas alternativo.
+                <div class="alert alert-info border-0 shadow-sm" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-info-circle me-3 fs-4"></i>
+                        <div>
+                            <strong>Acceso autorizado para franquicias sin Tango</strong><br>
+                            <small>Este entorno está diseñado específicamente para franquicias que no utilizan el sistema Tango.</small>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Información de la franquicia -->
                 <div class="row">
-                    <div class="col-lg-8">
+                    <div class="col-md-8 mx-auto">
                         <div class="card carga-ventas-card">
-                            <div class="card-header">
+                            <div class="card-header text-center">
                                 <h5 class="card-title mb-0">
                                     <i class="bi bi-building me-2"></i>
                                     Información de la Franquicia
                                 </h5>
                             </div>
                             <div class="card-body">
-                                <dl class="row">
-                                    <dt class="col-sm-3">Usuario:</dt>
-                                    <dd class="col-sm-9"><?= htmlspecialchars($usuario) ?></dd>
-                                    
-                                    <dt class="col-sm-3">Franquicia :</dt>
-                                    <dd class="col-sm-9"><?= htmlspecialchars($nombreFranquicia) ?></dd>
-                                    
-                                    <dt class="col-sm-3">Tipo de Sistema:</dt>
-                                    <dd class="col-sm-9"><span class="badge bg-warning text-dark">Sin Tango</span></dd>
-                                    
-                                    <dt class="col-sm-3">Fecha de acceso:</dt>
-                                    <dd class="col-sm-9"><?= date('d/m/Y H:i:s') ?></dd>
-                                    
-                                    <dt class="col-sm-3">Criterios de acceso:</dt>
-                                    <dd class="col-sm-9">
-                                        <ul class="mb-0">
-                                            <li>Canal: FRANQUICIAS</li>
-                                            <li>Estado: HABILITADO</li>
-                                            <li>Sistema Tango: <strong>NO</strong> ✓</li>
-                                        </ul>
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-4">
-                        <div class="card carga-ventas-card">
-                            <div class="card-header">
-                                <h6 class="card-title mb-0">
-                                    <i class="bi bi-shield-check me-2"></i>
-                                    Estado del Sistema
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-flex align-items-center mb-3">
-                                    <i class="bi bi-check-circle text-success me-2"></i>
-                                    <span class="text-success">Acceso autorizado</span>
-                                </div>
-                                <div class="d-flex align-items-center mb-3">
-                                    <i class="bi bi-x-circle text-success me-2"></i>
-                                    <span class="text-success">Sin dependencia de Tango</span>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <i class="bi bi-cloud-check text-success me-2"></i>
-                                    <span class="text-success">Sistema operativo</span>
+                                <div class="row text-center">
+                                    <div class="col-md-3 mb-3">
+                                        <div class="p-2">
+                                            <i class="bi bi-person-circle text-primary fs-4 d-block mb-1"></i>
+                                            <small class="text-muted d-block">Usuario</small>
+                                            <strong><?= htmlspecialchars($usuario) ?></strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="p-2">
+                                            <i class="bi bi-shop text-success fs-4 d-block mb-1"></i>
+                                            <small class="text-muted d-block">Tipo</small>
+                                            <span class="badge bg-warning text-dark">Sin Tango</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="p-2">
+                                            <i class="bi bi-shield-check text-success fs-4 d-block mb-1"></i>
+                                            <small class="text-muted d-block">Estado</small>
+                                            <span class="badge bg-success">Autorizado</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="p-2">
+                                            <i class="bi bi-clock text-info fs-4 d-block mb-1"></i>
+                                            <small class="text-muted d-block">Acceso</small>
+                                            <small><?= date('d/m/Y') ?></small>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -284,52 +272,43 @@ if (!function_exists('es_modo_desarrollo')) {
                             </div>
                             <div class="card-body">
                                 <div class="row">
-                                    <div class="col-md-6">
-                                        <h6><i class="bi bi-calendar3 me-2"></i>Período Actual</h6>
-                                        <p class="text-muted">
-                                            <?= date('F Y') ?> - Período abierto para carga de ventas
-                                        </p>
-                                        
-                                        <h6><i class="bi bi-file-earmark-spreadsheet me-2"></i>Opciones de Carga</h6>
-                                        <div class="d-grid gap-2">
-                                            <button class="btn btn-primary" type="button" disabled>
-                                                <i class="bi bi-plus-circle me-2"></i>
-                                                Carga Manual de Ventas
-                                            </button>
-                                            <button class="btn btn-outline-primary" type="button" id="btnImportarExcel">
-                                                <i class="bi bi-upload me-2"></i>
-                                                Importar desde Excel
-                                            </button>
+                                    <div class="col-md-8 mx-auto">
+                                        <div class="text-center mb-4">
+                                            <h6><i class="bi bi-calendar3 me-2"></i>Período Actual</h6>
+                                            <p class="text-muted mb-4">
+                                                <?= date('F Y') ?> - Período abierto para carga de ventas
+                                            </p>
                                         </div>
-                                    </div>
-                                    
-                                    <div class="col-md-6">
-                                        <h6><i class="bi bi-graph-up me-2"></i>Resumen de Ventas</h6>
-                                        <div class="card bg-light">
-                                            <div class="card-body text-center">
-                                                <h4 class="text-primary">$0</h4>
-                                                <p class="text-muted mb-0">Total ventas mes actual</p>
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <div class="d-grid">
+                                                    <button class="btn btn-primary btn-lg" type="button" disabled>
+                                                        <i class="bi bi-plus-circle me-2"></i>
+                                                        Carga Manual de Ventas
+                                                    </button>
+                                                    <small class="text-muted text-center mt-2">Próximamente disponible</small>
+                                                </div>
                                             </div>
-                                        </div>
-                                        
-                                        <div class="mt-3">
-                                            <small class="text-muted">
-                                                <i class="bi bi-clock me-1"></i>
-                                                Última actualización: Sin datos
-                                            </small>
+                                            <div class="col-md-6 mb-3">
+                                                <div class="d-grid">
+                                                    <button class="btn btn-outline-primary btn-lg" type="button" id="btnImportarExcel">
+                                                        <i class="bi bi-upload me-2"></i>
+                                                        Importar desde Excel
+                                                    </button>
+                                                    <small class="text-muted text-center mt-2">Subir archivo de ventas</small>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                                 
                                 <hr>
                                 
-                                <div class="text-center py-4 text-muted">
-                                    <i class="bi bi-tools display-1"></i>
-                                    <h4 class="mt-3">Funcionalidades en Desarrollo</h4>
-                                    <p class="mb-0">
-                                        Las herramientas de carga de ventas para franquicias sin Tango estarán disponibles próximamente.
-                                        <br>Este módulo está siendo desarrollado específicamente para sus necesidades.
-                                    </p>
+                                <div class="text-center py-3 text-muted">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>Información:</strong> Este módulo está diseñado específicamente para franquicias que no utilizan el sistema Tango.
+                                    <br>Las funcionalidades de carga manual estarán disponibles próximamente.
                                 </div>
                             </div>
                         </div>

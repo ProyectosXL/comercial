@@ -87,6 +87,8 @@ if (!in_array($vista, $vistas_permitidas)) {
     <?php if ($vista === 'franquicia'): ?>
         <link href="css/franquicia_stock.css?v=<?php echo time(); ?>" rel="stylesheet">
         <link href="css/franquicia_dashboard.css?v=<?php echo time(); ?>" rel="stylesheet">
+    <?php elseif ($vista === 'historial'): ?>
+        <link href="css/historial_dark_theme.css?v=<?php echo time(); ?>&force=true" rel="stylesheet">
     <?php elseif ($vista === 'panel'): ?>
         <link href="css/panel_comercial.css?v=<?php echo time(); ?>" rel="stylesheet">
     <?php elseif ($vista === 'reportes'): ?>

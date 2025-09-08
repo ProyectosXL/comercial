@@ -60,7 +60,7 @@ $vista = 'nueva_pagina'; // Para el navbar
             define('NUEVA_PAGINA_CONTEXT', true);
             
             // Incluir el componente
-            include 'components/nueva_pagina.php'; 
+            include 'components/nueva_pagina.php';  
             ?>
         </main>
     </div>

@@ -1,0 +1,105 @@
+/*
+ * Tema Oscuro Específico para Historial de Stock
+ * Solo afecta componentes del historial - NO TOCAR para evitar conflictos
+ * IMPORTANTE: Cache-busting aplicado - Versión 2024-09-08
+ */
+
+    
+
+/* ESTILOS ESPECÍFICOS PARA HISTORIAL - Solo cards dentro del contenedor de historial */
+body #historial-component .card .card-body,
+body .historial-container .card .card-body,
+body [data-component="historial"] .card .card-body,
+/* Backup selector para cuando el componente esté en main-content */
+body .main-content .card .card-body {
+    background: #2c3e50 !important;
+    color: #ecf0f1 !important;
+}
+
+/* OVERRIDE ESPECÍFICO para el card con estilo inline - MUY IMPORTANTE */
+body .card[style*="background: #f1ececff"],
+body .card[style*="background:#f1ececff"],
+body .card[style] {
+    background: #34495e !important;
+}
+
+/* Cards principales del historial */
+body #historial-component .card,
+body .historial-container .card,
+body [data-component="historial"] .card {
+    background: #34495e !important;
+    border: 1px solid #4a6b8a !important;
+}
+
+/* Labels y texto dentro de cards del historial */
+body #historial-component .card .card-body .form-label,
+body .historial-container .card .card-body .form-label,
+body [data-component="historial"] .card .card-body .form-label,
+body .main-content .card .card-body .form-label {
+    color: #ecf0f1 !important;
+}
+
+/* Texto específico para cards del historial */
+body #historial-component .card .card-body .text-white,
+body .historial-container .card .card-body .text-white,
+body [data-component="historial"] .card .card-body .text-white,
+body .main-content .card .card-body .text-white {
+    color: #ecf0f1 !important;
+}
+
+/* Números y datos estadísticos */
+body #historial-component .card .card-body h4,
+body .historial-container .card .card-body h4,
+body [data-component="historial"] .card .card-body h4,
+body .main-content .card .card-body h4 {
+    color: #3498db !important;
+}
+
+/* Inputs dentro de las cards del historial */
+body #historial-component .card .card-body .form-select,
+body #historial-component .card .card-body .form-control,
+body .historial-container .card .card-body .form-select,
+body .historial-container .card .card-body .form-control,
+body [data-component="historial"] .card .card-body .form-select,
+body [data-component="historial"] .card .card-body .form-control,
+body .main-content .card .card-body .form-select,
+body .main-content .card .card-body .form-control {
+    background: #1a252f !important;
+    border: 1px solid #4a6b8a !important;
+    color: #ecf0f1 !important;
+}
+
+/* Focus states para inputs */
+body #historial-component .card .card-body .form-select:focus,
+body #historial-component .card .card-body .form-control:focus,
+body .historial-container .card .card-body .form-select:focus,
+body .historial-container .card .card-body .form-control:focus,
+body [data-component="historial"] .card .card-body .form-select:focus,
+body [data-component="historial"] .card .card-body .form-control:focus,
+body .main-content .card .card-body .form-select:focus,
+body .main-content .card .card-body .form-control:focus {
+    background: #1a252f !important;
+    border-color: #3498db !important;
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25) !important;
+    color: #ecf0f1 !important;
+}
+
+/* Botones dentro de las cards del historial */
+body #historial-component .card .card-body .btn-outline-secondary,
+body .historial-container .card .card-body .btn-outline-secondary,
+body [data-component="historial"] .card .card-body .btn-outline-secondary,
+body .main-content .card .card-body .btn-outline-secondary {
+    border-color: #4a6b8a !important;
+    color: #ecf0f1 !important;
+    background: transparent !important;
+}
+
+body #historial-component .card .card-body .btn-outline-secondary:hover,
+body .historial-container .card .card-body .btn-outline-secondary:hover,
+body [data-component="historial"] .card .card-body .btn-outline-secondary:hover,
+body .main-content .card .card-body .btn-outline-secondary:hover {
+    background: #4a6b8a !important;
+    border-color: #4a6b8a !important;
+    color: #ecf0f1 !important;
+}
+
