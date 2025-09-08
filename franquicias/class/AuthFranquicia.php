@@ -1,23 +1,73 @@
 <?php
 /**
  * Clase para manejar la autenticación de usuarios de franquicia
- * desde la base de datos LAKER_SA - VERSIÓN CORREGIDA
+ * desde la base de datos LAKER_SA - Usa configuración del .env principal
  */
+
 class AuthFranquicia {
     private $conexion_laker;
     private $conexion_sistemas;
+    private $envVars;
     
     public function __construct() {
+        $this->cargarConfiguracion();
         $this->conectarLaker();
         $this->conectarSistemas();
+    }
+    
+    private function cargarConfiguracion() {
+        try {
+            // Usar ruta relativa desde franquicias/class/ hacia la raíz del proyecto
+            $envPath = __DIR__ . '/../../.env';
+            
+            // Resolver la ruta completa para debugging
+            $envPathResolved = realpath($envPath);
+            if (!$envPathResolved) {
+                throw new Exception("No se pudo resolver la ruta del archivo .env desde: " . $envPath);
+            }
+            
+            if (!file_exists($envPathResolved)) {
+                throw new Exception("Archivo .env no encontrado en: " . $envPathResolved);
+            }
+            
+            $this->envVars = $this->parseEnvFile($envPathResolved);
+        } catch (Exception $e) {
+            error_log("Error cargando .env en AuthFranquicia: " . $e->getMessage());
+            throw new Exception("No se pudo cargar la configuración del .env principal: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Parse del archivo .env de forma manual
+     */
+    private function parseEnvFile($filePath) {
+        $lines = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $vars = [];
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            
+            // Saltar comentarios
+            if (strpos($line, '#') === 0 || empty($line)) {
+                continue;
+            }
+            
+            // Separar clave=valor
+            if (strpos($line, '=') !== false) {
+                list($key, $value) = explode('=', $line, 2);
+                $vars[trim($key)] = trim($value);
+            }
+        }
+        
+        return $vars;
     }
     
     private function conectarLaker() {
         try {
             $this->conexion_laker = new PDO(
-                "sqlsrv:server=SERVIDOR;Database=LAKER_SA", 
-                "sa", 
-                "Axoft1988"
+                "sqlsrv:server={$this->envVars['HOST_CENTRAL']};Database={$this->envVars['DATABASE_CENTRAL']}", 
+                $this->envVars['USER'], 
+                $this->envVars['PASS']
             );
             $this->conexion_laker->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             error_log("DEBUG AUTH: Conexión a LAKER_SA exitosa");
@@ -30,9 +80,9 @@ class AuthFranquicia {
     private function conectarSistemas() {
         try {
             $this->conexion_sistemas = new PDO(
-                "sqlsrv:server=192.168.0.143;Database=sistemas", 
-                "sa", 
-                "Axoft1988"
+                "sqlsrv:server={$this->envVars['HOST_APPS']};Database={$this->envVars['DATABASE_APPS']}", 
+                $this->envVars['USER'], 
+                $this->envVars['PASS']
             );
             $this->conexion_sistemas->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             error_log("DEBUG AUTH: Conexión a sistemas exitosa");

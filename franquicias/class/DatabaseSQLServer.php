@@ -2,29 +2,88 @@
 /**
  * Clase DatabaseSQLServer - Adaptador simplificado para SQL Server
  * 
- * Esta clase conecta directamente a SQL Server para el sistema de franquicias,
- * sin depender de archivos .env que pueden tener problemas de ruta.
+ * Esta clase conecta a SQL Server usando las variables del .env principal.
  */
 
 class DatabaseSQLServer {
     private $connections = [];
     private static $instance = null;
+    private $envVars = null;
     
-    // Configuración directa de conexiones
-    private const CONEXIONES = [
-        'sistemas' => [
-            'server' => "192.168.0.143",
-            'database' => "sistemas",
-            'user' => "sa",
-            'password' => "Axoft1988"
-        ],
-        'laker_sa' => [
-            'server' => "SERVIDOR",  // Usar 'SERVIDOR' como está configurado en AuthFranquicia
-            'database' => "LAKER_SA",
-            'user' => "sa",
-            'password' => "Axoft1988"
-        ]
-    ];
+    /**
+     * Obtener configuración desde .env principal
+     */
+    private function getEnvConfig() {
+        if ($this->envVars === null) {
+            try {
+                // Usar ruta relativa desde franquicias/class/ hacia la raíz del proyecto
+                $envPath = __DIR__ . '/../../.env';
+                
+                // Resolver la ruta completa para debugging
+                $envPathResolved = realpath($envPath);
+                if (!$envPathResolved) {
+                    throw new Exception("No se pudo resolver la ruta del archivo .env desde: " . $envPath);
+                }
+                
+                if (!file_exists($envPathResolved)) {
+                    throw new Exception("Archivo .env no encontrado en: " . $envPathResolved);
+                }
+                
+                $this->envVars = $this->parseEnvFile($envPathResolved);
+            } catch (Exception $e) {
+                error_log("Error cargando .env: " . $e->getMessage());
+                throw new Exception("No se pudo cargar la configuración del .env principal: " . $e->getMessage());
+            }
+        }
+        return $this->envVars;
+    }
+    
+    /**
+     * Parse del archivo .env de forma manual
+     */
+    private function parseEnvFile($filePath) {
+        $lines = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $vars = [];
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            
+            // Saltar comentarios
+            if (strpos($line, '#') === 0 || empty($line)) {
+                continue;
+            }
+            
+            // Separar clave=valor
+            if (strpos($line, '=') !== false) {
+                list($key, $value) = explode('=', $line, 2);
+                $vars[trim($key)] = trim($value);
+            }
+        }
+        
+        return $vars;
+    }
+    
+    /**
+     * Obtener configuraciones de conexión desde .env
+     */
+    private function getConexiones() {
+        $config = $this->getEnvConfig();
+        
+        return [
+            'sistemas' => [
+                'server' => $config['HOST_APPS'],
+                'database' => $config['DATABASE_APPS'],
+                'user' => $config['USER'],
+                'password' => $config['PASS']
+            ],
+            'laker_sa' => [
+                'server' => $config['HOST_CENTRAL'],
+                'database' => $config['DATABASE_CENTRAL'],
+                'user' => $config['USER'],
+                'password' => $config['PASS']
+            ]
+        ];
+    }
     
     /**
      * Constructor privado para implementar Singleton
@@ -53,12 +112,15 @@ class DatabaseSQLServer {
             return $this->connections[$database];
         }
         
+        // Obtener configuraciones dinámicamente
+        $conexiones = $this->getConexiones();
+        
         // Si no existe la configuración para esa base
-        if (!isset(self::CONEXIONES[$database])) {
+        if (!isset($conexiones[$database])) {
             throw new Exception("Configuración de base de datos '{$database}' no encontrada");
         }
         
-        $config = self::CONEXIONES[$database];
+        $config = $conexiones[$database];
         
         try {
             $connectionInfo = array(

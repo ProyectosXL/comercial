@@ -728,3 +728,119 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Estilos para el modal de confirmación de stock */
+#modalConfirmarStock {
+    z-index: 1060 !important;
+}
+
+#modalConfirmarStock .modal-dialog {
+    z-index: 1061 !important;
+}
+
+#modalConfirmarStock .modal-content {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: var(--dashboard-shadow-lg);
+    z-index: 1062 !important;
+}
+
+#modalConfirmarStock .modal-header {
+    border-bottom: 2px solid #fbbf24;
+}
+
+#modalConfirmarStock .alert-info {
+    border-color: #3b82f6;
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+#modalConfirmarStock #resumen-confirmacion {
+    background-color: var(--dashboard-bg-secondary);
+    border-radius: 0.5rem;
+    border: 1px solid var(--dashboard-border);
+}
+
+#modalConfirmarStock .btn-warning:hover {
+    background-color: #d97706;
+    border-color: #d97706;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(217, 119, 6, 0.3);
+}
+
+#modalConfirmarStock .btn-secondary:hover {
+    background-color: #4b5563;
+    border-color: #4b5563;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(75, 85, 99, 0.3);
+}
+
+/* Asegurar que el backdrop funcione correctamente */
+.modal-backdrop {
+    z-index: 1055 !important;
+}
+
+/* Fix para problemas de visualización del modal */
+.modal.show {
+    display: block !important;
+}
+
+.modal.show .modal-dialog {
+    transform: none !important;
+}
+
+/* Debugging: resaltar el modal cuando esté visible */
+#modalConfirmarStock.show {
+    background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+#modalConfirmarStock.show .modal-content {
+    background-color: white !important;
+    opacity: 1 !important;
+}
+
+/* SOLUCION AGRESIVA PARA BACKDROPS PROBLEMÁTICOS */
+/* Ocultar cualquier backdrop duplicado o problemático */
+.modal-backdrop + .modal-backdrop {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Forzar que solo el último backdrop sea visible */
+.modal-backdrop:not(:last-of-type) {
+    display: none !important;
+}
+
+/* Prevenir acumulación de z-index */
+.modal-backdrop {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Asegurar que los modales tengan mayor z-index que los backdrops */
+.modal {
+    z-index: 1056 !important;
+}
+
+/* Clase de utilidad para forzar limpieza */
+.backdrop-cleanup {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Prevenir elementos fantasma con posición fija y fondo negro */
+body > div[style*="position: fixed"][style*="background"] {
+    display: none !important;
+}
+
+/* Limpiar cualquier elemento con características de backdrop */
+div[style*="rgba(0, 0, 0, 0.5)"][style*="position: fixed"] {
+    display: none !important;
+}

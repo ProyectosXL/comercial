@@ -684,7 +684,7 @@ class FranquiciaStockManager {
     }
     
     /**
-     * Guardar stock
+     * Guardar stock con confirmación
      */
     async guardarStock() {
         console.log('DEBUG: Iniciando guardarStock');
@@ -698,6 +698,7 @@ class FranquiciaStockManager {
         // Verificar si hay al menos un input con valor (incluyendo 0)
         const inputs = document.querySelectorAll('.cantidad-input');
         let tieneAlgunValor = false;
+        let resumenDatos = [];
         
         inputs.forEach(input => {
             const valor = input.value.trim();
@@ -708,9 +709,11 @@ class FranquiciaStockManager {
                     // Tiene valor numérico válido
                     tieneAlgunValor = true;
                     this.actualizarStock(categoria, valor);
+                    resumenDatos.push({categoria: categoria, cantidad: valor});
                 } else {
                     // Campo vacío = asignar 0
                     this.actualizarStock(categoria, '0');
+                    resumenDatos.push({categoria: categoria, cantidad: '0'});
                 }
             }
         });
@@ -719,6 +722,135 @@ class FranquiciaStockManager {
             this.mostrarAlerta('Debe cargar al menos una cantidad', 'warning');
             return;
         }
+        
+        // Mostrar modal de confirmación
+        this.mostrarModalConfirmacion(resumenDatos);
+    }
+    
+    /**
+     * Mostrar modal de confirmación con resumen de datos
+     */
+    mostrarModalConfirmacion(resumenDatos) {
+        console.log('DEBUG: Iniciando mostrarModalConfirmacion');
+        
+        // Usar modal de Bootstrap para evitar conflictos
+        this.crearModalBootstrap(resumenDatos);
+    }
+    
+    /**
+     * Crear modal usando Bootstrap para evitar conflictos con otros modales
+     */
+    crearModalBootstrap(resumenDatos) {
+        // Eliminar modal anterior si existe
+        const modalAnterior = document.getElementById('modalConfirmacionStock');
+        if (modalAnterior) {
+            modalAnterior.remove();
+        }
+        
+        // Generar resumen
+        let htmlResumen = '';
+        resumenDatos.forEach(item => {
+            if (item.cantidad !== '0') {
+                htmlResumen += `
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">${item.categoria}:</span>
+                        <strong>${item.cantidad}</strong>
+                    </div>
+                `;
+            }
+        });
+        
+        // Crear HTML del modal usando clases de Bootstrap
+        const modalHTML = `
+            <div class="modal fade" id="modalConfirmacionStock" tabindex="-1" aria-labelledby="modalConfirmacionStockLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color: #e1dfda;">
+                            <h5 class="modal-title" id="modalConfirmacionStockLabel">
+                                <i class="bi bi-box-seam me-2"></i>
+                                Confirmar Carga de Stock
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info d-flex align-items-center mb-3">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                <strong>¿Está seguro que desea cargar el stock?</strong>
+                            </div>
+                            
+                            <p class="text-muted mb-3">
+                                Esta acción registrará los movimientos de stock en la base de datos y no se puede deshacer fácilmente.
+                            </p>
+                            
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="bi bi-tag me-1"></i>
+                                        Rubro: ${this.rubroActual}
+                                    </h6>
+                                    <div class="mt-3">
+                                        ${htmlResumen}
+                                    </div>
+                                    <hr>
+                                    <small class="text-muted">Total de categorías: ${resumenDatos.length}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="bi bi-x-circle me-1"></i>
+                                Cancelar
+                            </button>
+                            <button type="button" class="btn btn-success" id="btnConfirmarStock">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Confirmar Carga
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Insertar modal en el body
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+        // Obtener referencias
+        const modalElement = document.getElementById('modalConfirmacionStock');
+        const btnConfirmar = document.getElementById('btnConfirmarStock');
+        
+        // Configurar evento del botón confirmar
+        btnConfirmar.addEventListener('click', () => {
+            console.log('DEBUG: Confirmar carga clickeado');
+            
+            // Cerrar modal usando Bootstrap
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Ejecutar guardado después de cerrar
+            setTimeout(() => {
+                this.ejecutarGuardadoStock();
+            }, 200);
+        });
+        
+        // Limpiar modal cuando se cierre
+        modalElement.addEventListener('hidden.bs.modal', () => {
+            modalElement.remove();
+        });
+        
+        // Mostrar modal usando Bootstrap
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
+        
+        console.log('DEBUG: Modal Bootstrap creado y mostrado');
+    }
+    
+    /**
+     * Ejecutar el guardado real del stock
+     */
+    async ejecutarGuardadoStock() {
+        console.log('DEBUG: Ejecutando guardado confirmado');
         
         // Preparar datos para enviar
         const stockArray = Object.entries(this.stockData).map(([categoria, cantidad]) => ({

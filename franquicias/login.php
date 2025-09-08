@@ -50,14 +50,7 @@ try {
     }
 } catch (Exception $e) {
     $error_usuarios = 'Error de conexión: ' . $e->getMessage();
-    error_log("Error cargando usuarios: " . $e->getMessage());
-    
-    // Usuarios de fallback solo para desarrollo
-    $usuarios = [
-        ['NOMBRE' => 'xlcentro', 'PASS' => 'prueba123'],
-        ['NOMBRE' => 'xlbahia', 'PASS' => 'prueba123'],
-        ['NOMBRE' => 'xlcordoba', 'PASS' => 'prueba123']
-    ];
+    error_log("Error cargando usuarios en login: " . $e->getMessage());
 }
 ?>
 <!DOCTYPE html>
@@ -245,14 +238,18 @@ try {
                 <div class="form-floating">
                     <select name="usuario" id="usuario" class="form-select" required onchange="updatePassword()">
                         <option value="">Seleccionar usuario...</option>
-                        <?php foreach ($usuarios as $user): ?>
-                            <option value="<?= htmlspecialchars($user['NOMBRE']) ?>" 
-                                    data-pass="<?= htmlspecialchars($user['PASS']) ?>"
-                                    data-tipo="<?= htmlspecialchars($user['TIPO']) ?>">
-                                <?= htmlspecialchars($user['NOMBRE']) ?> 
-                                (<?= $user['TIPO'] === 'FRANQUICIA' ? 'Franquicia' : 'Supervisión' ?>)
-                            </option>
-                        <?php endforeach; ?>
+                        <?php if (!empty($usuarios)): ?>
+                            <?php foreach ($usuarios as $user): ?>
+                                <option value="<?= htmlspecialchars($user['NOMBRE'] ?? '') ?>" 
+                                        data-pass="<?= htmlspecialchars($user['PASS'] ?? '') ?>"
+                                        data-tipo="<?= htmlspecialchars($user['TIPO'] ?? 'FRANQUICIA') ?>">
+                                    <?= htmlspecialchars($user['NOMBRE'] ?? 'Usuario sin nombre') ?> 
+                                    (<?= isset($user['TIPO']) && $user['TIPO'] === 'FRANQUICIA' ? 'Franquicia' : 'Supervisión' ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <option value="" disabled>No hay usuarios disponibles</option>
+                        <?php endif; ?>
                     </select>
                     <label for="usuario">
                         <i class="bi bi-person me-2"></i>Usuario del Sistema

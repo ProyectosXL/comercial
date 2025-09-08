@@ -422,3 +422,36 @@ function debugMainSystem() {
     console.log('=== FIN DEBUG ===');
 }
 </script>
+
+<!-- Modal de Confirmación para Carga de Stock -->
+<div class="modal fade" id="modalConfirmarStock" tabindex="-1" aria-labelledby="modalConfirmarStockLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="modalConfirmarStockLabel">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Confirmar Carga de Stock
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>¿Está seguro que desea cargar el stock?</strong>
+                </div>
+                <p class="mb-0">Esta acción registrará los movimientos de stock en la base de datos y no se puede deshacer fácilmente.</p>
+                <div id="resumen-confirmacion" class="mt-3">
+                    <!-- Se llenará dinámicamente con el resumen -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-warning" id="btn-confirmar-carga">
+                    <i class="bi bi-check-circle me-1"></i>Confirmar Carga
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

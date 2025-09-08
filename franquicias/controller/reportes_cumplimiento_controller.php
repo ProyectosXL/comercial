@@ -128,9 +128,11 @@ class ReportesCumplimientoController {
             
             $sql = "SELECT 
                         NOMBRE as codigo,
-                        DESCRIPCION as nombre
+                        DESCRIPCION as nombre,
+                        NRO_SUCURS as nro_sucurs
                     FROM SOF_USUARIOS 
                     WHERE TIPO = 'FRANQUICIA'
+                    AND NRO_SUCURS IS NOT NULL
                     ORDER BY DESCRIPCION";
             
             $stmt = sqlsrv_query($this->laker_conn, $sql);
@@ -139,9 +141,10 @@ class ReportesCumplimientoController {
             if ($stmt) {
                 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                     $franquicias[] = [
-                        'id' => $row['codigo'], // Usamos el código como ID
+                        'id' => $row['nro_sucurs'], // Usamos NRO_SUCURS como ID para que coincida con franquicia_historial_stock
                         'codigo' => $row['codigo'],
-                        'nombre' => $row['nombre']
+                        'nombre' => $row['nombre'],
+                        'nro_sucurs' => $row['nro_sucurs']
                     ];
                 }
                 sqlsrv_free_stmt($stmt);
@@ -197,36 +200,23 @@ class ReportesCumplimientoController {
      */
     private function obtenerStockPorFranquiciaYRubro($periodo) {
         try {
-            // Convertir período MM-YYYY a formato de fecha para SQL
+            // Convertir período MM-YYYY a formato para consulta
             list($mes, $año) = explode('-', $periodo);
-            $fechaInicio = "$año-$mes-01";
-            $fechaFin = date('Y-m-t', strtotime($fechaInicio)); // Último día del mes
             
             $sql = "SELECT 
                         franquicia_id,
-                        CASE 
-                            WHEN CHARINDEX('_', codigo_articulo) > 0 
-                            THEN LEFT(codigo_articulo, CHARINDEX('_', codigo_articulo) - 1)
-                            ELSE 'SIN RUBRO'
-                        END as rubro,
+                        rubro,
                         COUNT(*) as total_registros,
                         SUM(stock_actual) as total_stock
                     FROM franquicia_historial_stock 
-                    WHERE fecha_movimiento BETWEEN ? AND ?
-                    GROUP BY franquicia_id, 
-                        CASE 
-                            WHEN CHARINDEX('_', codigo_articulo) > 0 
-                            THEN LEFT(codigo_articulo, CHARINDEX('_', codigo_articulo) - 1)
-                            ELSE 'SIN RUBRO'
-                        END
-                    HAVING CASE 
-                        WHEN CHARINDEX('_', codigo_articulo) > 0 
-                        THEN LEFT(codigo_articulo, CHARINDEX('_', codigo_articulo) - 1)
-                        ELSE 'SIN RUBRO'
-                    END != 'SIN RUBRO'
+                    WHERE MONTH(fecha_movimiento) = ? 
+                    AND YEAR(fecha_movimiento) = ?
+                    AND rubro IS NOT NULL 
+                    AND rubro != ''
+                    GROUP BY franquicia_id, rubro
                     ORDER BY franquicia_id, rubro";
             
-            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$fechaInicio, $fechaFin]);
+            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$mes, $año]);
             
             $stockData = [];
             if ($stmt && sqlsrv_execute($stmt)) {

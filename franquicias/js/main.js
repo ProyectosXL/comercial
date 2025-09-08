@@ -891,12 +891,31 @@ function actualizarTimestamps() {
     });
 }
 
-/**
- * Funciones globales útiles
- */
+// Funciones globales útiles
 // Inicialización inmediata para garantizar disponibilidad
 try {
     if (typeof window !== 'undefined') {
+        // LIMPIEZA INMEDIATA AL CARGAR LA PÁGINA
+        const limpiezaInmediata = () => {
+            // Remover cualquier backdrop huérfano que pueda existir
+            const backdrops = document.querySelectorAll('.modal-backdrop, [class*="backdrop"]');
+            backdrops.forEach(b => {
+                console.log('Limpieza inicial: removiendo backdrop huérfano');
+                b.remove();
+            });
+            
+            // Resetear body
+            document.body.classList.remove('modal-open');
+            document.body.style.paddingRight = '';
+            document.body.style.overflow = '';
+        };
+        
+        // Ejecutar limpieza inmediata
+        limpiezaInmediata();
+        
+        // Ejecutar nuevamente después de un momento
+        setTimeout(limpiezaInmediata, 100);
+        
         // Exponer la clase MainSystem inmediatamente
         window.MainSystem = MainSystem;
         
@@ -921,3 +940,198 @@ try {
 } catch (error) {
     console.error('Error en inicialización inmediata de mainSystem:', error);
 }
+
+/**
+ * Función global para limpiar modales problemáticos
+ */
+function limpiarModalesBugueados() {
+    console.log('Ejecutando limpieza completa de modales...');
+    
+    // 1. Remover TODOS los backdrops, sin excepción
+    const backdrops = document.querySelectorAll('.modal-backdrop, [class*="backdrop"], [style*="backdrop"]');
+    backdrops.forEach(backdrop => {
+        console.log('Removiendo backdrop:', backdrop.className);
+        backdrop.remove();
+    });
+    
+    // 2. Buscar elementos con z-index alto que puedan ser backdrops ocultos
+    const elementos = document.querySelectorAll('*');
+    elementos.forEach(el => {
+        const style = window.getComputedStyle(el);
+        const zIndex = parseInt(style.zIndex);
+        const bgColor = style.backgroundColor;
+        const position = style.position;
+        
+        // Si tiene z-index alto, posición fija y color de fondo semi-transparente
+        if (zIndex > 1000 && position === 'fixed' && 
+            (bgColor.includes('rgba') || bgColor === 'rgba(0, 0, 0, 0.5)')) {
+            console.log('Removiendo posible backdrop oculto:', el);
+            el.remove();
+        }
+    });
+    
+    // 3. Restaurar body completamente
+    document.body.classList.remove('modal-open');
+    document.body.style.paddingRight = '';
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    
+    // 4. Cerrar todos los modales visibles forzadamente
+    const modalesVisibles = document.querySelectorAll('.modal.show, .modal[style*="display: block"]');
+    modalesVisibles.forEach(modal => {
+        console.log('Cerrando modal forzadamente:', modal.id);
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        modal.removeAttribute('aria-modal');
+        modal.removeAttribute('role');
+    });
+    
+    // 5. Limpiar eventos de teclado duplicados
+    document.removeEventListener('keydown', handleModalEscape);
+    
+    console.log('Limpieza completa de modales finalizada');
+}
+
+// Variable global para el manejador de escape
+let handleModalEscape = null;
+
+// Función específica para limpiar cuando se cierra el modal de ayuda
+function limpiarModalAyuda() {
+    console.log('Limpiando modal de ayuda específicamente');
+    
+    // Cerrar el modal de ayuda si está abierto
+    const modalAyuda = document.getElementById('modalAyuda');
+    if (modalAyuda) {
+        const modalInstance = bootstrap.Modal.getInstance(modalAyuda);
+        if (modalInstance) {
+            modalInstance.hide();
+        }
+        
+        // También forzar cierre manual
+        modalAyuda.classList.remove('show');
+        modalAyuda.style.display = 'none';
+        modalAyuda.setAttribute('aria-hidden', 'true');
+    }
+    
+    // Ejecutar limpieza general después de un momento
+    setTimeout(() => {
+        limpiarModalesBugueados();
+    }, 100);
+}
+
+// Función para prevenir múltiples backdrops
+function prevenirBackdropDuplicado() {
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1 && node.classList && 
+                        node.classList.contains('modal-backdrop')) {
+                        
+                        // Contar cuántos backdrops hay
+                        const backdrops = document.querySelectorAll('.modal-backdrop');
+                        if (backdrops.length > 1) {
+                            console.log('Backdrop duplicado detectado, removiendo...');
+                            node.remove();
+                        }
+                    }
+                });
+            }
+        });
+    });
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+}
+
+// Agregar evento global para limpiar modales al hacer ESC
+handleModalEscape = function(e) {
+    if (e.key === 'Escape') {
+        console.log('ESC presionado - iniciando limpieza...');
+        
+        // Limpieza inmediata
+        setTimeout(() => {
+            limpiarModalesBugueados();
+        }, 100);
+        
+        // Limpieza secundaria por si acaso
+        setTimeout(() => {
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            if (backdrops.length > 0) {
+                console.log('Limpieza secundaria - removiendo backdrops restantes');
+                backdrops.forEach(b => b.remove());
+            }
+        }, 500);
+    }
+};
+
+document.addEventListener('keydown', handleModalEscape);
+
+// Agregar evento para cuando se oculta el modal de ayuda
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar prevención de backdrops duplicados
+    prevenirBackdropDuplicado();
+    
+    const modalAyuda = document.getElementById('modalAyuda');
+    if (modalAyuda) {
+        // Evento cuando el modal se está cerrando
+        modalAyuda.addEventListener('hide.bs.modal', function() {
+            console.log('Modal de ayuda cerrándose...');
+        });
+        
+        // Evento cuando el modal ya se cerró completamente
+        modalAyuda.addEventListener('hidden.bs.modal', function() {
+            console.log('Modal de ayuda cerrado - ejecutando limpieza automática agresiva');
+            
+            // Limpieza inmediata
+            limpiarModalesBugueados();
+            
+            // Limpieza adicional por si acaso
+            setTimeout(() => {
+                limpiarModalesBugueados();
+            }, 200);
+        });
+        
+        // Limpieza cuando se hace clic en cualquier parte del modal
+        modalAyuda.addEventListener('click', function(e) {
+            // Si se hace clic en el botón X, fondo del modal, o cualquier botón de cerrar
+            if (e.target.classList.contains('btn-close') || 
+                e.target.closest('.btn-close') ||
+                e.target === modalAyuda ||
+                e.target.hasAttribute('data-bs-dismiss')) {
+                
+                console.log('Click de cierre detectado en modal de ayuda');
+                setTimeout(() => {
+                    limpiarModalesBugueados();
+                }, 150);
+            }
+        });
+        
+        // Interceptar todos los eventos de Bootstrap del modal
+        modalAyuda.addEventListener('show.bs.modal', function() {
+            console.log('Modal de ayuda abriéndose - verificando limpieza previa');
+            // Limpiar cualquier backdrop previo antes de mostrar
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            if (backdrops.length > 0) {
+                console.log('Backdrops previos encontrados, limpiando...');
+                backdrops.forEach(b => b.remove());
+            }
+        });
+    }
+    
+    // Limpieza global cada 30 segundos para prevenir acumulación
+    setInterval(() => {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if (backdrops.length > 1) {
+            console.log('Limpieza automática - múltiples backdrops detectados');
+            limpiarModalesBugueados();
+        }
+    }, 30000);
+});
+
+// Exponer funciones globalmente
+window.limpiarModalesBugueados = limpiarModalesBugueados;
+window.limpiarModalAyuda = limpiarModalAyuda;
