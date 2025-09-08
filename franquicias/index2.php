@@ -2,23 +2,14 @@
 <?php
 
 session_start();
-require_once __DIR__.'/../Class/classEnv.php';
-require_once __DIR__.'/../Class/Conexion.php';
+// require_once $_SERVER['DOCUMENT_ROOT'] . '/sistemas/assets/js/js.php';
+if (!isset($_SESSION['username'])) {
+	header("Location:login.php");
+} else {
 
-if (!isset($_SESSION['username']) || !isset($_SESSION['tipo'])) {
-    header("Location: ../login.php");
-    exit();
-}
-
-// Solo permitir acceso a usuarios de tipo FRANQUICIA o SUPERVISION
-if (!in_array($_SESSION['tipo'], ['FRANQUICIA', 'SUPERVISION'])) {
-    header("Location: ../login.php");
-    exit();
-}
-
+$rol = $_SESSION['tipo'];
 $usuario = $_SESSION['username'];
-$rol = strtolower($_SESSION['tipo']);
-$nombreFranquicia = $_SESSION['descLocal'] ?? $usuario;
+$nombreFranquicia = $usuario; 
 
 // Funciones que pueden faltar
 if (!function_exists('fecha_espanol')) {
@@ -188,5 +179,9 @@ if (!in_array($vista, $vistas_permitidas)) {
         <!-- El JavaScript está incluido en reportes_cumplimiento.php -->
     <?php endif; ?>
 </body>
+
+<?php
+}
+?>
 
 </html>

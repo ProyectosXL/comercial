@@ -34,7 +34,6 @@ if (!headers_sent()) {
 }
 
 require_once __DIR__ . '/../config_sesiones_fixed.php';
-require_once __DIR__ . '/../class/AuthFranquicia.php';
 require_once __DIR__ . '/../class/DatabaseSQLServer.php';
 
 class HistorialStockController {
@@ -108,8 +107,8 @@ class HistorialStockController {
             
             error_log("DEBUG HISTORIAL: Procesando acción: " . $accion);
             
-            // Verificar autenticación
-            if (!AuthFranquicia::verificarSesion()) {
+            // Verificar que exista la sesión y el número de sucursal
+            if (!isset($_SESSION['username']) || !isset($_SESSION['numsuc'])) {
                 return [
                     'success' => false,
                     'message' => 'No autorizado - sesión inválida',
@@ -118,28 +117,25 @@ class HistorialStockController {
             }
             
             // Usar el número de sucursal como identificador de franquicia
-            $nro_sucurs = $_SESSION['numsuc'] ?? null;
-            if (!$nro_sucurs) {
-                return [
-                    'success' => false,
-                    'message' => 'No autorizado - falta número de sucursal en sesión',
-                    'error_type' => 'unauthorized'
-                ];
-            }
+            $nro_sucurs = $_SESSION['numsuc'];
             error_log("DEBUG HISTORIAL: Usando número de sucursal: " . $nro_sucurs);
             
             switch ($accion) {
+                case 'obtener_estado':
+                    // Método simplificado que solo verifica si hay registros en el período actual
+                    return $this->obtenerEstado($nro_sucurs);
+                    
                 case 'obtener_historial':
                     return $this->obtenerHistorial($nro_sucurs);
                     
                 case 'obtener_periodos':
-                    return $this->obtenerPeriodosDisponibles($franquicia_id_sesion);
+                    return $this->obtenerPeriodosDisponibles($nro_sucurs);
                     
                 case 'obtener_rubros_historial':
-                    return $this->obtenerRubrosHistorial($franquicia_id_sesion);
+                    return $this->obtenerRubrosHistorial($nro_sucurs);
                     
                 case 'editar_stock':
-                    return $this->editarStock($franquicia_id_sesion);
+                    return $this->editarStock($nro_sucurs);
                     
                 default:
                     throw new Exception('Acción no válida: ' . $accion);
@@ -156,17 +152,58 @@ class HistorialStockController {
     }
     
     /**
-     * Obtener historial de stock basado en la estructura real
+     * Obtener estado del período actual
      */
-    public function obtenerHistorial($franquicia_id) {
+    public function obtenerEstado($nro_sucurs) {
         try {
             if (!$this->sistemas_conn) {
                 throw new Exception('No hay conexión a la base de datos');
             }
             
-            // Convertir nombre de usuario a NRO_SUCURS para la consulta
-            $nroSucurs = $this->obtenerNroSucursUsuario($franquicia_id);
-            error_log("DEBUG HISTORIAL: Obteniendo historial para usuario '$franquicia_id' -> NRO_SUCURS '$nroSucurs'");
+            // Obtener el período actual (MM-YYYY)
+            $periodoActual = date('m-Y');
+            
+            // Consulta simplificada que solo verifica existencia de registros en el período actual
+            $sql = "SELECT COUNT(*) as total
+                    FROM franquicia_historial_stock 
+                    WHERE nro_sucurs = ? 
+                    AND FORMAT(fecha_movimiento, 'MM-yyyy') = ?";
+            
+            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$nro_sucurs, $periodoActual]);
+            
+            if ($stmt && sqlsrv_execute($stmt)) {
+                $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+                sqlsrv_free_stmt($stmt);
+                
+                return [
+                    'success' => true,
+                    'tiene_stock' => ($row['total'] > 0),
+                    'periodo' => $periodoActual,
+                    'nro_sucurs' => $nro_sucurs
+                ];
+            }
+            
+            throw new Exception('Error al consultar estado');
+            
+        } catch (Exception $e) {
+            error_log("Error en obtenerEstado: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Obtener historial de stock basado en la estructura real
+     */
+    public function obtenerHistorial($nro_sucurs) {
+        try {
+            if (!$this->sistemas_conn) {
+                throw new Exception('No hay conexión a la base de datos');
+            }
+            
+            error_log("DEBUG HISTORIAL: Obteniendo historial para NRO_SUCURS '$nro_sucurs'");
             
             // Esta query obtiene los movimientos de stock con rubro y categoria
             $sql = "SELECT 
@@ -178,7 +215,7 @@ class HistorialStockController {
                         -- Crear período en formato MM-YYYY basado en fecha_movimiento
                         FORMAT(fecha_movimiento, 'MM-yyyy') as periodo
                     FROM franquicia_historial_stock 
-                    WHERE franquicia_id = ?
+                    WHERE nro_sucurs = ?
                     ORDER BY fecha_movimiento DESC";
             
             $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$nroSucurs]);
@@ -217,7 +254,7 @@ class HistorialStockController {
                 'success' => true,
                 'data' => $historial,
                 'total_registros' => count($historial),
-                'franquicia_id' => $franquicia_id
+                'nro_sucurs' => $nroSucurs
             ];
             
         } catch (Exception $e) {
@@ -281,7 +318,7 @@ class HistorialStockController {
             
             $sql = "SELECT DISTINCT rubro
                     FROM franquicia_historial_stock 
-                    WHERE franquicia_id = ? AND rubro IS NOT NULL AND rubro != ''
+                    WHERE nro_sucurs = ? AND rubro IS NOT NULL AND rubro != ''
                     ORDER BY rubro";
             
             $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$nroSucurs]);
@@ -333,7 +370,7 @@ class HistorialStockController {
             
             $sqlVerificar = "SELECT id, FORMAT(fecha_movimiento, 'MM-yyyy') as periodo, stock_anterior, movimiento
                             FROM franquicia_historial_stock 
-                            WHERE id = ? AND franquicia_id = ?";
+                            WHERE id = ? AND nro_sucurs = ?";
             
             $stmt = sqlsrv_prepare($this->sistemas_conn, $sqlVerificar, [$id, $nro_sucurs]);
             
@@ -355,7 +392,7 @@ class HistorialStockController {
             // Actualizar el stock_actual (que es lo que se muestra como cantidad)
             $sqlActualizar = "UPDATE franquicia_historial_stock 
                              SET stock_actual = ?
-                             WHERE id = ? AND franquicia_id = ?";
+                             WHERE id = ? AND nro_sucurs = ?";
             
             $stmt = sqlsrv_prepare($this->sistemas_conn, $sqlActualizar, [$cantidad, $id, $nro_sucurs]);
             

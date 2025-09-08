@@ -21,7 +21,7 @@ async function verificarEstadoPeriodoGlobal() {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: 'accion=obtener_historial'
+                body: 'accion=obtener_estado'
             });
         } else {
             // En otras vistas, usar el controlador principal
@@ -44,13 +44,17 @@ async function verificarEstadoPeriodoGlobal() {
         if (data.success) {
             let tieneStock = false;
             
-            if (vistaActual === 'historial') {
-                // En historial, verificar si hay datos del período actual
+            // Usar directamente la respuesta del servidor que indica si tiene stock
+            if (data.tiene_stock !== undefined) {
+                tieneStock = data.tiene_stock;
+                console.log('Estado desde servidor - Tiene stock:', tieneStock);
+            } else if (vistaActual === 'historial') {
+                // Fallback para compatibilidad
                 const datosHistorial = data.data || [];
                 tieneStock = datosHistorial.some(item => item.periodo === periodoActual);
                 console.log('Estado desde historial - Período actual:', periodoActual, 'Tiene stock:', tieneStock);
             } else {
-                // En otras vistas, verificar si hay datos en general
+                // Fallback para otras vistas
                 const stockData = data.stock || data.data || [];
                 tieneStock = stockData.length > 0;
                 console.log('Estado desde stock - Tiene stock:', tieneStock);
