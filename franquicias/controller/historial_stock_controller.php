@@ -312,7 +312,13 @@ class HistorialStockController {
                 throw new Exception('Parámetros requeridos faltantes');
             }
             
-            error_log("DEBUG HISTORIAL: Editando stock - ID: $id, Cantidad: $cantidad");
+            // Obtener NRO_SUCURS dinámicamente del usuario
+            $nro_sucurs = $this->obtenerNroSucursUsuario($franquicia_id);
+            if (!$nro_sucurs) {
+                throw new Exception("No se pudo obtener NRO_SUCURS para el usuario: " . $franquicia_id);
+            }
+            
+            error_log("DEBUG HISTORIAL: Editando stock - ID: $id, Cantidad: $cantidad, Usuario: $franquicia_id -> NRO_SUCURS: $nro_sucurs");
             
             // Verificar que el registro pertenece a la franquicia y es del período actual
             $periodoActual = date('m-Y');
@@ -321,7 +327,7 @@ class HistorialStockController {
                             FROM franquicia_historial_stock 
                             WHERE id = ? AND franquicia_id = ?";
             
-            $stmt = sqlsrv_prepare($this->sistemas_conn, $sqlVerificar, [$id, $franquicia_id]);
+            $stmt = sqlsrv_prepare($this->sistemas_conn, $sqlVerificar, [$id, $nro_sucurs]);
             
             if (!$stmt || !sqlsrv_execute($stmt)) {
                 throw new Exception('Error al verificar registro');
@@ -343,7 +349,7 @@ class HistorialStockController {
                              SET stock_actual = ?
                              WHERE id = ? AND franquicia_id = ?";
             
-            $stmt = sqlsrv_prepare($this->sistemas_conn, $sqlActualizar, [$cantidad, $id, $franquicia_id]);
+            $stmt = sqlsrv_prepare($this->sistemas_conn, $sqlActualizar, [$cantidad, $id, $nro_sucurs]);
             
             if ($stmt && sqlsrv_execute($stmt)) {
                 sqlsrv_free_stmt($stmt);
