@@ -36,6 +36,7 @@ if (!class_exists('FranquiciaStockController')) {
     private $franquicias;
     private $cid; // SQL Server connection for rubros/categorias
     private $sistemas_conn; // Conexión específica a base sistemas
+    private $laker_conn; // Conexión específica a base LAKER_SA
     
     public function __construct() {
         try {
@@ -74,10 +75,56 @@ if (!class_exists('FranquiciaStockController')) {
                 $this->sistemas_conn = null;
             }
             
+            // Conexión adicional a LAKER_SA para consultas de usuarios
+            try {
+                $this->laker_conn = $dbSistemas->getConnection('laker_sa');
+                error_log("DEBUG: Conexión a LAKER_SA exitosa");
+            } catch (Exception $e) {
+                error_log("DEBUG: Error conectando a LAKER_SA: " . $e->getMessage());
+                $this->laker_conn = null;
+            }
+            
         } catch (Exception $e) {
             error_log("Error grave en constructor: " . $e->getMessage());
             $this->cid = null;
             $this->sistemas_conn = null;
+        }
+    }
+    
+    /**
+     * Obtener NRO_SUCURS del usuario desde LAKER_SA
+     */
+    private function obtenerNroSucursUsuario($nombreUsuario) {
+        try {
+            if (!$this->laker_conn) {
+                error_log("ERROR: No hay conexión a LAKER_SA");
+                return $nombreUsuario; // Fallback al nombre de usuario
+            }
+            
+            $sql = "SELECT NRO_SUCURS FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' AND NOMBRE = ?";
+            error_log("DEBUG: Consultando SOF_USUARIOS para usuario: '$nombreUsuario'");
+            $stmt = sqlsrv_prepare($this->laker_conn, $sql, [$nombreUsuario]);
+            
+            if ($stmt && sqlsrv_execute($stmt)) {
+                $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+                sqlsrv_free_stmt($stmt);
+                
+                if ($row && isset($row['NRO_SUCURS'])) {
+                    error_log("DEBUG: Usuario '$nombreUsuario' -> NRO_SUCURS: " . $row['NRO_SUCURS']);
+                    return $row['NRO_SUCURS'];
+                } else {
+                    error_log("WARNING: No se encontró NRO_SUCURS para usuario '$nombreUsuario' en SOF_USUARIOS");
+                    return $nombreUsuario; // Fallback al nombre de usuario
+                }
+            } else {
+                $errors = sqlsrv_errors();
+                error_log("ERROR SQL obteniendo NRO_SUCURS: " . print_r($errors, true));
+                return $nombreUsuario; // Fallback al nombre de usuario
+            }
+            
+        } catch (Exception $e) {
+            error_log("ERROR obteniendo NRO_SUCURS: " . $e->getMessage());
+            return $nombreUsuario; // Fallback al nombre de usuario
         }
     }
     
@@ -118,7 +165,8 @@ if (!class_exists('FranquiciaStockController')) {
                 
                 case 'obtener_resumen_stock':
                     // Usar franquicia_id de la sesión en lugar del parámetro
-                    return $this->obtenerResumenStock($franquicia_id_sesion);
+                    $periodo = $_POST['periodo'] ?? null;
+                    return $this->obtenerResumenStock($franquicia_id_sesion, $periodo);
                 
                 case 'registrar_movimiento':
                     return $this->registrarMovimiento($franquicia_id_sesion);
@@ -275,15 +323,22 @@ if (!class_exists('FranquiciaStockController')) {
     /**
      * Obtener resumen de stock para una franquicia
      */
-    public function obtenerResumenStock($franquicia_id) {
+    public function obtenerResumenStock($franquicia_id, $periodo = null) {
         try {
             // Si franquicias es null, usar método directo
             if (!$this->franquicias) {
                 error_log("DEBUG: franquicias es null, usando método directo para resumen");
-                return $this->obtenerResumenStockDirecto($franquicia_id);
+                return $this->obtenerResumenStockDirecto($franquicia_id, $periodo);
             }
             
-            $resumen = $this->franquicias->obtenerResumenStock($franquicia_id);
+            // Obtener NRO_SUCURS dinámicamente del usuario
+            $nro_sucurs = $this->obtenerNroSucursUsuario($franquicia_id);
+            if (!$nro_sucurs) {
+                throw new Exception("No se pudo obtener NRO_SUCURS para el usuario: " . $franquicia_id);
+            }
+            
+            error_log("DEBUG: Llamando a FranquiciasSQLServer->obtenerResumenStock con NRO_SUCURS: " . $nro_sucurs . " y periodo: " . $periodo);
+            $resumen = $this->franquicias->obtenerResumenStock($nro_sucurs, $periodo);
             
             // Transformar datos para que coincidan con lo que espera el frontend
             $resumenTransformado = $this->transformarResumenStock($resumen);
@@ -297,7 +352,7 @@ if (!class_exists('FranquiciaStockController')) {
             error_log("Error al obtener resumen de stock: " . $e->getMessage());
             // Intentar método directo como fallback
             try {
-                return $this->obtenerResumenStockDirecto($franquicia_id);
+                return $this->obtenerResumenStockDirecto($franquicia_id, $periodo);
             } catch (Exception $e2) {
                 throw new Exception("Error al obtener resumen de stock: " . $e->getMessage());
             }
@@ -307,29 +362,67 @@ if (!class_exists('FranquiciaStockController')) {
     /**
      * Obtener resumen de stock usando conexión directa
      */
-    private function obtenerResumenStockDirecto($franquicia_id) {
+    private function obtenerResumenStockDirecto($franquicia_id, $periodo = null) {
         try {
             if (!$this->sistemas_conn) {
                 throw new Exception('No hay conexión a la base de datos sistemas');
             }
+
+            // Obtener NRO_SUCURS del usuario actual
+            $nroSucurs = $this->obtenerNroSucursUsuario($franquicia_id);
+            error_log("DEBUG RESUMEN: Usuario '$franquicia_id' -> NRO_SUCURS: '$nroSucurs'");
+
+            // Si se especifica período, filtrar por él. Si no, tomar todo
+            if ($periodo) {
+                // Convertir periodo MM-YYYY a filtro de fecha  
+                list($mes, $año) = explode('-', $periodo);
+                error_log("DEBUG RESUMEN: Filtrando por período $mes-$año para franquicia $nroSucurs");
+                
+                $sql = "SELECT 
+                            rubro,
+                            categoria,
+                            stock_actual,
+                            fecha_movimiento as ultima_actualizacion
+                        FROM franquicia_historial_stock hs1
+                        WHERE hs1.franquicia_id = ?
+                        AND MONTH(hs1.fecha_movimiento) = ? AND YEAR(hs1.fecha_movimiento) = ?
+                        AND hs1.fecha_movimiento = (
+                            SELECT MAX(hs2.fecha_movimiento) 
+                            FROM franquicia_historial_stock hs2 
+                            WHERE hs2.franquicia_id = hs1.franquicia_id 
+                            AND hs2.rubro = hs1.rubro 
+                            AND hs2.categoria = hs1.categoria
+                            AND MONTH(hs2.fecha_movimiento) = ?
+                            AND YEAR(hs2.fecha_movimiento) = ?
+                        )
+                        ORDER BY rubro, categoria";
+                        
+                $params = [$nroSucurs, $mes, $año, $mes, $año];
+            } else {
+                // Sin filtro de período - tomar toda la historia
+                error_log("DEBUG RESUMEN: Sin filtro de período para franquicia $nroSucurs");
+                
+                $sql = "SELECT 
+                            rubro,
+                            categoria,
+                            stock_actual,
+                            fecha_movimiento as ultima_actualizacion
+                        FROM franquicia_historial_stock hs1
+                        WHERE hs1.franquicia_id = ?
+                        AND hs1.fecha_movimiento = (
+                            SELECT MAX(hs2.fecha_movimiento) 
+                            FROM franquicia_historial_stock hs2 
+                            WHERE hs2.franquicia_id = hs1.franquicia_id 
+                            AND hs2.rubro = hs1.rubro 
+                            AND hs2.categoria = hs1.categoria
+                        )
+                        ORDER BY rubro, categoria";
+                        
+                $params = [$nroSucurs];
+            }
             
-            // Usar franquicia_id directamente como texto
-            $sql = "SELECT 
-                        codigo_articulo,
-                        descripcion_articulo,
-                        stock_actual,
-                        fecha_movimiento as ultima_actualizacion
-                    FROM franquicia_historial_stock hs1
-                    WHERE hs1.franquicia_id = ?
-                    AND hs1.fecha_movimiento = (
-                        SELECT MAX(hs2.fecha_movimiento) 
-                        FROM franquicia_historial_stock hs2 
-                        WHERE hs2.franquicia_id = hs1.franquicia_id 
-                        AND hs2.codigo_articulo = hs1.codigo_articulo
-                    )
-                    ORDER BY codigo_articulo";
-            
-            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$franquicia_id]);
+            error_log("DEBUG RESUMEN: Ejecutando SQL con params: " . json_encode($params));
+            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, $params);
             $resumen = [];
             
             if ($stmt && sqlsrv_execute($stmt)) {
@@ -337,6 +430,7 @@ if (!class_exists('FranquiciaStockController')) {
                     $resumen[] = $row;
                 }
                 sqlsrv_free_stmt($stmt);
+                error_log("DEBUG RESUMEN: Encontrados " . count($resumen) . " registros");
             } else {
                 $errors = sqlsrv_errors();
                 error_log("DEBUG: Error SQL en resumen: " . print_r($errors, true));
@@ -363,10 +457,9 @@ if (!class_exists('FranquiciaStockController')) {
         $resumenTransformado = [];
         
         foreach ($resumenDb as $item) {
-            // Extraer rubro y categoría del código_articulo (formato: RUBRO_CATEGORIA)
-            $partes = explode('_', $item['codigo_articulo'], 2);
-            $rubro = $partes[0] ?? 'Sin Rubro';
-            $categoria = $partes[1] ?? $item['descripcion_articulo'] ?? 'Sin Categoría';
+            // Usar directamente rubro y categoría de la base de datos
+            $rubro = $item['rubro'] ?? 'Sin Rubro';
+            $categoria = $item['categoria'] ?? 'Sin Categoría';
             
             // Convertir fecha DateTime a string si es necesario
             $ultimaActualizacion = null;
@@ -382,8 +475,8 @@ if (!class_exists('FranquiciaStockController')) {
                 'rubro' => $rubro,
                 'categoria' => $categoria,
                 'cantidad' => $item['stock_actual'] ?? 0,
-                'codigo_articulo' => $item['codigo_articulo'],
-                'descripcion_articulo' => $item['descripcion_articulo'] ?? '',
+                'codigo_articulo' => $rubro . '_' . $categoria, // Crear dinámicamente
+                'descripcion_articulo' => $categoria . ' - ' . $rubro, // Crear dinámicamente
                 'ultima_actualizacion' => $ultimaActualizacion
             ];
         }
@@ -559,6 +652,11 @@ if (!class_exists('FranquiciaStockController')) {
             error_log("DEBUG: registrarArticuloIndividual - descripcion: '$descripcion'");
             error_log("DEBUG: registrarArticuloIndividual - movimiento: '$movimiento'");
             
+            // Obtener NRO_SUCURS del usuario logueado desde LAKER_SA
+            $nombreUsuario = $franquicia_id; // El nombre de usuario actual
+            $nroSucurs = $this->obtenerNroSucursUsuario($nombreUsuario);
+            error_log("DEBUG: Usuario '$nombreUsuario' convertido a NRO_SUCURS: '$nroSucurs'");
+            
             // Validar que la descripción no esté vacía o tenga caracteres problemáticos
             if (empty($descripcion)) {
                 $descripcion = $codigo_articulo; // Usar el código como descripción si está vacía
@@ -594,28 +692,39 @@ if (!class_exists('FranquiciaStockController')) {
                 }
             }
             
-            // Obtener stock anterior
-            $stockAnterior = $this->obtenerStockAnteriorDirecto($franquicia_id, $codigo_articulo);
+            // Obtener stock anterior (usando el nombre de usuario para la consulta pero insertando el NRO_SUCURS)
+            $stockAnterior = $this->obtenerStockAnteriorDirecto($nombreUsuario, $codigo_articulo);
             $stockActual = $stockAnterior + $movimiento;
             
-            // Usar franquicia_id directamente como texto (ya no convertimos a numérico)
-            error_log("DEBUG: Usando franquicia_id como texto: '$franquicia_id'");
+            // Usar nroSucurs para el INSERT
+            error_log("DEBUG: Usando NRO_SUCURS para INSERT: '$nroSucurs'");
+            
+            // Extraer rubro y categoría del código de artículo
+            $partes = explode('_', $codigo_articulo, 2);
+            $rubro = $partes[0] ?? '';
+            $categoria = $partes[1] ?? '';
+            
+            // Si no hay categoría separada, usar la descripción
+            if (empty($categoria)) {
+                $categoria = $descripcion;
+            }
+            
+            error_log("DEBUG: Rubro extraído: '$rubro', Categoría extraída: '$categoria'");
             
             $sql = "INSERT INTO franquicia_historial_stock 
-                    (franquicia_id, codigo_articulo, descripcion_articulo, stock_anterior, 
-                     movimiento, stock_actual, tipo_movimiento, observaciones, usuario) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    (franquicia_id, rubro, categoria, stock_anterior, 
+                     movimiento, stock_actual, observaciones, usuario) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             
             $params = [
-                $franquicia_id, // Usar directamente como texto
-                $codigo_articulo,
-                $descripcion,
+                $nroSucurs, // Usar NRO_SUCURS en lugar del nombre de usuario
+                $rubro,
+                $categoria,
                 $stockAnterior,
                 $movimiento,
                 $stockActual,
-                $tipo_movimiento,
                 'Registro desde interfaz web',
-                $_SESSION['usuario_franquicia'] ?? $franquicia_id // Usar usuario de sesión o franquicia_id como fallback
+                $nombreUsuario // Mantener el nombre de usuario en campo usuario
             ];
             
             $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, $params);
@@ -653,44 +762,52 @@ if (!class_exists('FranquiciaStockController')) {
             if (!$this->sistemas_conn) {
                 throw new Exception('No hay conexión a la base de datos sistemas');
             }
+
+            // Obtener NRO_SUCURS del usuario logueado desde LAKER_SA
+            $nombreUsuario = $franquicia_id_sesion; // El nombre de usuario actual
+            $nroSucurs = $this->obtenerNroSucursUsuario($nombreUsuario);
             
             $datos = [
-                'franquicia_id' => $franquicia_id_sesion,
+                'franquicia_id' => $nroSucurs, // Usar NRO_SUCURS en lugar del nombre de usuario
                 'codigo_articulo' => $_POST['codigo_articulo'] ?? null,
                 'descripcion_articulo' => $_POST['descripcion_articulo'] ?? '',
                 'movimiento' => intval($_POST['movimiento'] ?? 0),
                 'tipo_movimiento' => $_POST['tipo_movimiento'] ?? 'AJUSTE',
                 'observaciones' => $_POST['observaciones'] ?? '',
-                'usuario' => $franquicia_id_sesion // Usar el mismo ID de franquicia como usuario
+                'usuario' => $nombreUsuario // Mantener el nombre de usuario en campo usuario
             ];
             
             // Validar datos requeridos
             if (!$datos['franquicia_id'] || !$datos['codigo_articulo']) {
                 throw new Exception('Datos requeridos faltantes: franquicia_id o codigo_articulo');
             }
-            
+
             if ($datos['movimiento'] == 0) {
                 throw new Exception('El movimiento no puede ser cero');
             }
-            
+
+            // Extraer rubro y categoría del código de artículo
+            $partes = explode('_', $datos['codigo_articulo'], 2);
+            $rubro = $partes[0] ?? '';
+            $categoria = $partes[1] ?? $datos['descripcion_articulo'] ?? '';
+
             // Obtener stock anterior (0 si es nuevo artículo)
             $stockAnterior = $this->obtenerStockAnteriorDirecto($datos['franquicia_id'], $datos['codigo_articulo']);
             $stockActual = $stockAnterior + $datos['movimiento'];
-            
-            // Insertar en la tabla
+
+            // Insertar en la tabla (sin tipo_movimiento que fue eliminado)
             $sql = "INSERT INTO franquicia_historial_stock 
-                    (franquicia_id, codigo_articulo, descripcion_articulo, stock_anterior, 
-                     movimiento, stock_actual, tipo_movimiento, observaciones, usuario) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    (franquicia_id, rubro, categoria, stock_anterior, 
+                     movimiento, stock_actual, observaciones, usuario) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             
             $params = [
                 $datos['franquicia_id'],
-                $datos['codigo_articulo'],
-                $datos['descripcion_articulo'],
+                $rubro,
+                $categoria,
                 $stockAnterior,
                 $datos['movimiento'],
                 $stockActual,
-                $datos['tipo_movimiento'],
                 $datos['observaciones'],
                 $datos['usuario']
             ];
@@ -722,13 +839,25 @@ if (!class_exists('FranquiciaStockController')) {
      */
     private function obtenerStockAnteriorDirecto($franquicia_id, $codigo_articulo) {
         try {
+            // Si franquicia_id parece ser un nombre de usuario, convertir a NRO_SUCURS
+            $nroSucursConsulta = $franquicia_id;
+            if (!is_numeric($franquicia_id)) {
+                $nroSucursConsulta = $this->obtenerNroSucursUsuario($franquicia_id);
+                error_log("DEBUG: Convirtiendo '$franquicia_id' a NRO_SUCURS '$nroSucursConsulta' para consulta de stock anterior");
+            }
+            
+            // Extraer rubro y categoría del código de artículo
+            $partes = explode('_', $codigo_articulo, 2);
+            $rubro = $partes[0] ?? '';
+            $categoria = $partes[1] ?? '';
+            
             // Usar franquicia_id directamente como texto
             $sql = "SELECT TOP 1 stock_actual 
                     FROM franquicia_historial_stock 
-                    WHERE franquicia_id = ? AND codigo_articulo = ? 
+                    WHERE franquicia_id = ? AND rubro = ? AND categoria = ? 
                     ORDER BY fecha_movimiento DESC";
             
-            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$franquicia_id, $codigo_articulo]);
+            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$nroSucursConsulta, $rubro, $categoria]);
             if ($stmt && sqlsrv_execute($stmt)) {
                 $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
                 sqlsrv_free_stmt($stmt);
@@ -790,8 +919,8 @@ if (!class_exists('FranquiciaStockController')) {
             $sql = "SELECT TOP ? 
                         id,
                         franquicia_id,
-                        codigo_articulo,
-                        descripcion_articulo,
+                        rubro,
+                        categoria,
                         stock_anterior,
                         movimiento,
                         stock_actual,
@@ -812,6 +941,11 @@ if (!class_exists('FranquiciaStockController')) {
                     if (isset($row['fecha_movimiento']) && is_object($row['fecha_movimiento'])) {
                         $row['fecha_movimiento'] = $row['fecha_movimiento']->format('Y-m-d H:i:s');
                     }
+                    
+                    // Agregar campos dinámicos para compatibilidad con frontend
+                    $row['codigo_articulo'] = $row['rubro'] . '_' . $row['categoria'];
+                    $row['descripcion_articulo'] = $row['categoria'] . ' - ' . $row['rubro'];
+                    
                     $historial[] = $row;
                 }
                 sqlsrv_free_stmt($stmt);

@@ -221,11 +221,11 @@ if (!function_exists('es_modo_desarrollo')) {
                             </div>
                             <div class="card-body">
                                 <dl class="row">
-                                    <dt class="col-sm-3">Código Usuario:</dt>
+                                    <dt class="col-sm-3">Usuario:</dt>
                                     <dd class="col-sm-9"><?= htmlspecialchars($usuario) ?></dd>
                                     
-                                    <dt class="col-sm-3">Franquicia ID:</dt>
-                                    <dd class="col-sm-9"><?= htmlspecialchars($franquiciaId) ?></dd>
+                                    <dt class="col-sm-3">Franquicia :</dt>
+                                    <dd class="col-sm-9"><?= htmlspecialchars($nombreFranquicia) ?></dd>
                                     
                                     <dt class="col-sm-3">Tipo de Sistema:</dt>
                                     <dd class="col-sm-9"><span class="badge bg-warning text-dark">Sin Tango</span></dd>
@@ -238,7 +238,6 @@ if (!function_exists('es_modo_desarrollo')) {
                                         <ul class="mb-0">
                                             <li>Canal: FRANQUICIAS</li>
                                             <li>Estado: HABILITADO</li>
-                                            <li>Sucursal madre: NO</li>
                                             <li>Sistema Tango: <strong>NO</strong> ✓</li>
                                         </ul>
                                     </dd>

@@ -169,23 +169,62 @@ class FranquiciasSQLServer {
     /**
      * Obtener resumen de stock por franquicia
      */
-    public function obtenerResumenStock($franquiciaId) {
-        $sql = "SELECT 
-                    codigo_articulo,
-                    descripcion_articulo,
-                    stock_actual,
-                    fecha_movimiento as ultima_actualizacion
-                FROM franquicia_historial_stock hs1
-                WHERE hs1.franquicia_id = ?
-                AND hs1.fecha_movimiento = (
-                    SELECT MAX(hs2.fecha_movimiento) 
-                    FROM franquicia_historial_stock hs2 
-                    WHERE hs2.franquicia_id = hs1.franquicia_id 
-                    AND hs2.codigo_articulo = hs1.codigo_articulo
-                )
-                ORDER BY codigo_articulo";
+    public function obtenerResumenStock($franquiciaId, $periodo = null) {
+        if ($periodo) {
+            // Convertir periodo MM-YYYY a filtro de fecha  
+            list($mes, $año) = explode('-', $periodo);
+            
+            $sql = "SELECT 
+                        rubro,
+                        categoria,
+                        stock_actual,
+                        fecha_movimiento as ultima_actualizacion
+                    FROM franquicia_historial_stock hs1
+                    WHERE hs1.franquicia_id = ?
+                    AND MONTH(hs1.fecha_movimiento) = ?
+                    AND YEAR(hs1.fecha_movimiento) = ?
+                    AND hs1.fecha_movimiento = (
+                        SELECT MAX(hs2.fecha_movimiento) 
+                        FROM franquicia_historial_stock hs2 
+                        WHERE hs2.franquicia_id = hs1.franquicia_id 
+                        AND hs2.rubro = hs1.rubro 
+                        AND hs2.categoria = hs1.categoria
+                        AND MONTH(hs2.fecha_movimiento) = ?
+                        AND YEAR(hs2.fecha_movimiento) = ?
+                    )
+                    ORDER BY rubro, categoria";
+                    
+            $resultados = $this->db->obtenerFilas($sql, [$franquiciaId, $mes, $año, $mes, $año]);
+        } else {
+            // Sin filtro de período - tomar toda la historia
+            $sql = "SELECT 
+                        rubro,
+                        categoria,
+                        stock_actual,
+                        fecha_movimiento as ultima_actualizacion
+                    FROM franquicia_historial_stock hs1
+                    WHERE hs1.franquicia_id = ?
+                    AND hs1.fecha_movimiento = (
+                        SELECT MAX(hs2.fecha_movimiento) 
+                        FROM franquicia_historial_stock hs2 
+                        WHERE hs2.franquicia_id = hs1.franquicia_id 
+                        AND hs2.rubro = hs1.rubro 
+                        AND hs2.categoria = hs1.categoria
+                    )
+                    ORDER BY rubro, categoria";
+                    
+            $resultados = $this->db->obtenerFilas($sql, [$franquiciaId]);
+        }
         
-        return $this->db->obtenerFilas($sql, [$franquiciaId]);
+        // Transformar para agregar campos de compatibilidad
+        $resultadosTransformados = [];
+        foreach ($resultados as $item) {
+            $item['codigo_articulo'] = $item['rubro'] . '_' . $item['categoria'];
+            $item['descripcion_articulo'] = $item['categoria'] . ' - ' . $item['rubro'];
+            $resultadosTransformados[] = $item;
+        }
+        
+        return $resultadosTransformados;
     }
     
     /**

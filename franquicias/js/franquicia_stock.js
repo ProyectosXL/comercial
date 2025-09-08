@@ -842,7 +842,7 @@ class FranquiciaStockManager {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `accion=obtener_resumen_stock`
+                body: `accion=obtener_resumen_stock&periodo=${this.periodoActual}`
             });
             
             if (data.success) {
@@ -872,7 +872,7 @@ class FranquiciaStockManager {
                 infoEstado.innerHTML = `
                     <div class="d-flex align-items-center">
                         <i class="bi bi-check-circle text-success me-2"></i>
-                        <span class="text-success fw-bold">Stock cargado para este período en al menos 1 rubro</span>
+                        <span class="text-success fw-bold">Stock cargado para este período en al menos un rubro</span>
                     </div>
                 `;
             }

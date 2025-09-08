@@ -196,6 +196,8 @@
                                         1. Seleccione un rubro de la lista<br>
                                         2. Complete las cantidades por categoría<br>
                                         3. Presione "Guardar Stock"
+                                        <br>
+                                        <strong>ACLARACIÓN:</strong> Las categorías no completadas de un rubro cargado se guardan automáticamente con stock 0.
                                     </div>
                                 </div>
                             </div>

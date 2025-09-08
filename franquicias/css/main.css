@@ -219,7 +219,7 @@ body {
     background: rgba(255, 255, 255, 0.2);
     color: white;
     border: 2px solid rgba(255, 255, 255, 0.3);
-    padding-bottom: 5px;
+    padding-bottom: 2px;
 }
 
 .sidebar .user-info-card h6 {
@@ -455,13 +455,21 @@ body {
 .table thead th {
     border-top: none;
     background: linear-gradient(135deg, #040e18 0%, #071d39 100%);
-    color: var(--text-color);
+    color: white !important;
     font-weight: 600;
     text-transform: uppercase;
     font-size: 0.75rem;
     letter-spacing: 0.05em;
     padding: 1rem 1rem;
     border-bottom: 2px solid var(--border-color);
+}
+
+/* Regla más específica para asegurar que se aplique en tablas de franquicia */
+.franquicia-categorias-table .table thead th,
+.dashboard-card .table thead th,
+.categorias-table thead th {
+    background: linear-gradient(135deg, #0B5394 0%, #1c7ed6 100%) !important;
+    color: white !important;
 }
 
 .table tbody tr {

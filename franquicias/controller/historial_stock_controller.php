@@ -39,15 +39,62 @@ require_once __DIR__ . '/../class/DatabaseSQLServer.php';
 
 class HistorialStockController {
     private $sistemas_conn;
+    private $laker_conn; // Conexión específica a base LAKER_SA
     
     public function __construct() {
         try {
             $db = DatabaseSQLServer::getInstance();
             $this->sistemas_conn = $db->getConnection();
             error_log("DEBUG HISTORIAL: Conexión a sistemas establecida");
+            
+            // Conexión adicional a LAKER_SA para consultas de usuarios
+            try {
+                $this->laker_conn = $db->getConnection('laker_sa');
+                error_log("DEBUG HISTORIAL: Conexión a LAKER_SA exitosa");
+            } catch (Exception $e) {
+                error_log("DEBUG HISTORIAL: Error conectando a LAKER_SA: " . $e->getMessage());
+                $this->laker_conn = null;
+            }
         } catch (Exception $e) {
             error_log("Error en constructor historial: " . $e->getMessage());
             $this->sistemas_conn = null;
+        }
+    }
+    
+    /**
+     * Obtener NRO_SUCURS del usuario desde LAKER_SA
+     */
+    private function obtenerNroSucursUsuario($nombreUsuario) {
+        try {
+            if (!$this->laker_conn) {
+                error_log("ERROR HISTORIAL: No hay conexión a LAKER_SA");
+                return $nombreUsuario; // Fallback al nombre de usuario
+            }
+            
+            $sql = "SELECT NRO_SUCURS FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' AND NOMBRE = ?";
+            error_log("DEBUG HISTORIAL: Consultando SOF_USUARIOS para usuario: '$nombreUsuario'");
+            $stmt = sqlsrv_prepare($this->laker_conn, $sql, [$nombreUsuario]);
+            
+            if ($stmt && sqlsrv_execute($stmt)) {
+                $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+                sqlsrv_free_stmt($stmt);
+                
+                if ($row && isset($row['NRO_SUCURS'])) {
+                    error_log("DEBUG HISTORIAL: Usuario '$nombreUsuario' -> NRO_SUCURS: " . $row['NRO_SUCURS']);
+                    return $row['NRO_SUCURS'];
+                } else {
+                    error_log("WARNING HISTORIAL: No se encontró NRO_SUCURS para usuario '$nombreUsuario' en SOF_USUARIOS");
+                    return $nombreUsuario; // Fallback al nombre de usuario
+                }
+            } else {
+                $errors = sqlsrv_errors();
+                error_log("ERROR SQL HISTORIAL obteniendo NRO_SUCURS: " . print_r($errors, true));
+                return $nombreUsuario; // Fallback al nombre de usuario
+            }
+            
+        } catch (Exception $e) {
+            error_log("ERROR HISTORIAL obteniendo NRO_SUCURS: " . $e->getMessage());
+            return $nombreUsuario; // Fallback al nombre de usuario
         }
     }
     
@@ -109,35 +156,24 @@ class HistorialStockController {
                 throw new Exception('No hay conexión a la base de datos');
             }
             
-            error_log("DEBUG HISTORIAL: Obteniendo historial para franquicia ID: " . $franquicia_id);
+            // Convertir nombre de usuario a NRO_SUCURS para la consulta
+            $nroSucurs = $this->obtenerNroSucursUsuario($franquicia_id);
+            error_log("DEBUG HISTORIAL: Obteniendo historial para usuario '$franquicia_id' -> NRO_SUCURS '$nroSucurs'");
             
-            // Esta query obtiene los movimientos de stock y los convierte al formato esperado por el frontend
+            // Esta query obtiene los movimientos de stock con rubro y categoria
             $sql = "SELECT 
                         id,
-                        codigo_articulo,
-                        descripcion_articulo,
+                        rubro,
+                        categoria,
                         stock_actual as cantidad,
                         fecha_movimiento as fecha_carga,
-                        tipo_movimiento,
-                        observaciones,
-                        -- Extraer rubro y categoría del código de artículo o descripción
-                        CASE 
-                            WHEN CHARINDEX('_', codigo_articulo) > 0 
-                            THEN LEFT(codigo_articulo, CHARINDEX('_', codigo_articulo) - 1)
-                            ELSE 'SIN RUBRO'
-                        END as rubro,
-                        CASE 
-                            WHEN CHARINDEX('_', codigo_articulo) > 0 
-                            THEN SUBSTRING(codigo_articulo, CHARINDEX('_', codigo_articulo) + 1, LEN(codigo_articulo))
-                            ELSE descripcion_articulo
-                        END as categoria,
                         -- Crear período en formato MM-YYYY basado en fecha_movimiento
                         FORMAT(fecha_movimiento, 'MM-yyyy') as periodo
                     FROM franquicia_historial_stock 
                     WHERE franquicia_id = ?
                     ORDER BY fecha_movimiento DESC";
             
-            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$franquicia_id]);
+            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$nroSucurs]);
             
             $historial = [];
             if ($stmt && sqlsrv_execute($stmt)) {
@@ -153,6 +189,10 @@ class HistorialStockController {
                     // Limpiar valores nulos
                     $row['rubro'] = $row['rubro'] ?? 'SIN RUBRO';
                     $row['categoria'] = $row['categoria'] ?? 'SIN CATEGORIA';
+                    
+                    // Agregar campos dinámicos para compatibilidad con frontend
+                    $row['codigo_articulo'] = $row['rubro'] . '_' . $row['categoria'];
+                    $row['descripcion_articulo'] = $row['categoria'] . ' - ' . $row['rubro'];
                     
                     $historial[] = $row;
                 }
@@ -187,12 +227,15 @@ class HistorialStockController {
                 throw new Exception('No hay conexión a la base de datos');
             }
             
+            // Convertir nombre de usuario a NRO_SUCURS para la consulta
+            $nroSucurs = $this->obtenerNroSucursUsuario($franquicia_id);
+            
             $sql = "SELECT DISTINCT FORMAT(fecha_movimiento, 'MM-yyyy') as periodo
                     FROM franquicia_historial_stock 
                     WHERE franquicia_id = ?
                     ORDER BY periodo DESC";
             
-            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$franquicia_id]);
+            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$nroSucurs]);
             
             $periodos = [];
             if ($stmt && sqlsrv_execute($stmt)) {
@@ -225,24 +268,20 @@ class HistorialStockController {
                 throw new Exception('No hay conexión a la base de datos');
             }
             
-            $sql = "SELECT DISTINCT 
-                        CASE 
-                            WHEN CHARINDEX('_', codigo_articulo) > 0 
-                            THEN LEFT(codigo_articulo, CHARINDEX('_', codigo_articulo) - 1)
-                            ELSE 'SIN RUBRO'
-                        END as rubro
+            // Convertir nombre de usuario a NRO_SUCURS para la consulta
+            $nroSucurs = $this->obtenerNroSucursUsuario($franquicia_id);
+            
+            $sql = "SELECT DISTINCT rubro
                     FROM franquicia_historial_stock 
-                    WHERE franquicia_id = ?
+                    WHERE franquicia_id = ? AND rubro IS NOT NULL AND rubro != ''
                     ORDER BY rubro";
             
-            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$franquicia_id]);
+            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$nroSucurs]);
             
             $rubros = [];
             if ($stmt && sqlsrv_execute($stmt)) {
                 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                    if ($row['rubro'] !== 'SIN RUBRO') {
-                        $rubros[] = $row['rubro'];
-                    }
+                    $rubros[] = $row['rubro'];
                 }
                 sqlsrv_free_stmt($stmt);
             }

@@ -1,3 +1,14 @@
+<?php
+// Obtener el nombre completo de la franquicia para mostrar en el dashboard
+$nombreFranquicia = $usuario; // Valor por defecto
+try {
+    $auth = new AuthFranquicia();
+    $nombreFranquicia = $auth->obtenerNombreFranquicia($usuario);
+} catch (Exception $e) {
+    error_log("Error obteniendo nombre de franquicia: " . $e->getMessage());
+    $nombreFranquicia = $usuario; // Fallback
+}
+?>
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
         <!-- Botón para sidebar en móviles -->
@@ -84,7 +95,7 @@
                     <ul class="dropdown-menu dropdown-menu-end">
                         <?php if ($rol === 'franquicia'): ?>
                             <li class="dropdown-header">
-                                Franquicia: <?= htmlspecialchars($franquicia) ?>
+                                Franquicia: <?= htmlspecialchars($nombreFranquicia) ?>
                             </li>
                             <li><hr class="dropdown-divider"></li>
                         <?php endif; ?>

@@ -19,6 +19,16 @@ $rol = $_SESSION['user_role'] ?? 'franquicia'; // Obtener rol de la sesión
 // Variable que esperan los componentes
 $franquicia = $usuario; // Para compatibilidad con componentes
 
+// Obtener el nombre completo de la franquicia para mostrar en el dashboard
+$nombreFranquicia = $usuario; // Valor por defecto
+try {
+    $auth = new AuthFranquicia();
+    $nombreFranquicia = $auth->obtenerNombreFranquicia($usuario);
+} catch (Exception $e) {
+    error_log("Error obteniendo nombre de franquicia: " . $e->getMessage());
+    $nombreFranquicia = $usuario; // Fallback
+}
+
 // Funciones que pueden faltar
 if (!function_exists('fecha_espanol')) {
     function fecha_espanol($formato = 'F Y') {
@@ -73,14 +83,14 @@ if (!in_array($vista, $vistas_permitidas)) {
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     
     <!-- CSS Personalizados -->
-    <link href="css/main.css" rel="stylesheet">
+    <link href="css/main.css?v=<?php echo time(); ?>" rel="stylesheet">
     <?php if ($vista === 'franquicia'): ?>
-        <link href="css/franquicia_stock.css" rel="stylesheet">
-        <link href="css/franquicia_dashboard.css" rel="stylesheet">
+        <link href="css/franquicia_stock.css?v=<?php echo time(); ?>" rel="stylesheet">
+        <link href="css/franquicia_dashboard.css?v=<?php echo time(); ?>" rel="stylesheet">
     <?php elseif ($vista === 'panel'): ?>
-        <link href="css/panel_comercial.css" rel="stylesheet">
+        <link href="css/panel_comercial.css?v=<?php echo time(); ?>" rel="stylesheet">
     <?php elseif ($vista === 'reportes'): ?>
-        <link href="css/panel_comercial.css" rel="stylesheet">
+        <link href="css/panel_comercial.css?v=<?php echo time(); ?>" rel="stylesheet">
     <?php endif; ?>
 </head>
 <body>

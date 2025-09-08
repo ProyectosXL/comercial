@@ -1,3 +1,14 @@
+<?php
+// Obtener el nombre completo de la franquicia para mostrar en el dashboard
+$nombreFranquicia = $usuario; // Valor por defecto
+try {
+    $auth = new AuthFranquicia();
+    $nombreFranquicia = $auth->obtenerNombreFranquicia($usuario);
+} catch (Exception $e) {
+    error_log("Error obteniendo nombre de franquicia: " . $e->getMessage());
+    $nombreFranquicia = $usuario; // Fallback
+}
+?>
 <div class="sidebar">
     <div class="sidebar-content">
         <!-- Información del Usuario -->
@@ -5,10 +16,10 @@
             <div class="card-body" style="background-color: #000000ff !important;">
                 <div class="d-flex align-items-center">
                     <div class="avatar-circle me-3">
-                        <?= substr($usuario, 0, 1) ?>
+                        <?= substr($nombreFranquicia, 0, 1) ?>
                     </div>
                     <div class="flex-grow-1">
-                        <h6 class="mb-0"><?= htmlspecialchars($usuario) ?></h6>
+                        <h6 class="mb-0"><?= htmlspecialchars($nombreFranquicia) ?></h6>
                         <?php if ($rol === 'franquicia'): ?>
                             <small><?= htmlspecialchars($franquicia) ?></small>
                         <?php else: ?>

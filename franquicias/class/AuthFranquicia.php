@@ -121,6 +121,30 @@ class AuthFranquicia {
     }
 
     /**
+     * Obtiene la descripción/nombre completo de la franquicia
+     */
+    public function obtenerNombreFranquicia($nombreUsuario) {
+        try {
+            $stmt = $this->conexion_laker->prepare(
+                "SELECT DESCRIPCION FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' AND NOMBRE = ?"
+            );
+            $stmt->execute([$nombreUsuario]);
+            $franquicia = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($franquicia && !empty($franquicia['DESCRIPCION'])) {
+                return $franquicia['DESCRIPCION'];
+            } else {
+                // Si no hay descripción, devolver el nombre del usuario
+                return $nombreUsuario;
+            }
+            
+        } catch (Exception $e) {
+            error_log("Error obteniendo nombre de franquicia: " . $e->getMessage());
+            return $nombreUsuario; // Fallback al usuario
+        }
+    }
+
+    /**
      * Obtiene el rol del usuario basado en su tipo en la base de datos
      */
     public function obtenerRolUsuario($usuario) {

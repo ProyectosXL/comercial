@@ -160,19 +160,25 @@ class DatabaseSQLServer {
      * Registrar movimiento de stock
      */
     public function registrarMovimientoStock($datos) {
+        // Extraer rubro y categoría del código de artículo si están presentes
+        if (isset($datos['codigo_articulo'])) {
+            $partes = explode('_', $datos['codigo_articulo'], 2);
+            $datos['rubro'] = $partes[0] ?? '';
+            $datos['categoria'] = $partes[1] ?? ($datos['descripcion_articulo'] ?? '');
+        }
+        
         $sql = "INSERT INTO franquicia_historial_stock 
-                (franquicia_id, codigo_articulo, descripcion_articulo, stock_anterior, 
-                 movimiento, stock_actual, tipo_movimiento, observaciones, usuario) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                (franquicia_id, rubro, categoria, stock_anterior, 
+                 movimiento, stock_actual, observaciones, usuario) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
         $params = [
             $datos['franquicia_id'],
-            $datos['codigo_articulo'],
-            $datos['descripcion_articulo'],
+            $datos['rubro'] ?? '',
+            $datos['categoria'] ?? '',
             $datos['stock_anterior'],
             $datos['movimiento'],
             $datos['stock_actual'],
-            $datos['tipo_movimiento'],
             $datos['observaciones'] ?? '',
             $datos['usuario'] ?? 'sistema'
         ];
@@ -197,12 +203,17 @@ class DatabaseSQLServer {
      * Obtener stock actual por artículo y franquicia
      */
     public function obtenerStockActual($franquiciaId, $codigoArticulo) {
+        // Extraer rubro y categoría del código de artículo
+        $partes = explode('_', $codigoArticulo, 2);
+        $rubro = $partes[0] ?? '';
+        $categoria = $partes[1] ?? '';
+        
         $sql = "SELECT TOP 1 stock_actual 
                 FROM franquicia_historial_stock 
-                WHERE franquicia_id = ? AND codigo_articulo = ? 
+                WHERE franquicia_id = ? AND rubro = ? AND categoria = ? 
                 ORDER BY fecha_movimiento DESC";
         
-        $resultado = $this->obtenerFila($sql, [$franquiciaId, $codigoArticulo]);
+        $resultado = $this->obtenerFila($sql, [$franquiciaId, $rubro, $categoria]);
         return $resultado ? $resultado['stock_actual'] : 0;
     }
     
