@@ -193,13 +193,31 @@
 .cantidad-input {
     border: 2px solid var(--dashboard-border);
     border-radius: 0.5rem;
-    padding: 0.75rem;
+    padding: 1rem 0.75rem;
     text-align: center;
     font-weight: 500;
-    font-size: 1rem;
+    font-size: 1.1rem;
+    min-height: 50px;
+    width: 100%;
     transition: all 0.3s ease;
     background: var(--dashboard-bg);
     color: var(--dashboard-text);
+}
+
+/* Input group para cantidad más destacado */
+.categorias-table .input-group {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.categorias-table .input-group-text {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border: 2px solid var(--dashboard-border);
+    border-left: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #64748b;
 }
 
 .cantidad-input:focus {
@@ -214,6 +232,22 @@
 
 .cantidad-input.is-invalid {
     border-color: #ef4444;
+}
+
+/* Botones de borrar en tabla */
+.btn-outline-danger.btn-sm {
+    border-width: 2px;
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-danger.btn-sm:hover {
+    background-color: #dc2626;
+    border-color: #dc2626;
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
 }
 
 /* Botones mejorados */
@@ -394,8 +428,9 @@
     }
     
     .cantidad-input {
-        padding: 0.625rem;
-        font-size: 0.9rem;
+        padding: 0.75rem;
+        font-size: 1rem;
+        min-height: 45px;
     }
     
     .dashboard-btn {

@@ -157,16 +157,3 @@
     </div>
 </div>
 
-<!-- Modal de Loading -->
-<div class="modal fade" id="modalLoading" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-body text-center py-4">
-                <div class="spinner-border text-primary mb-3" role="status">
-                    <span class="visually-hidden">Cargando...</span>
-                </div>
-                <p class="mb-0" id="mensaje-loading">Procesando...</p>
-            </div>
-        </div>
-    </div>
-</div>

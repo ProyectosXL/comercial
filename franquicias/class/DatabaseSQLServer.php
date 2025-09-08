@@ -7,48 +7,31 @@
  */
 
 class DatabaseSQLServer {
-    private $conn;
+    private $connections = [];
     private static $instance = null;
     
-    // Configuración directa de conexión
-    private const SERVER = "192.168.0.143";
-    private const DATABASE = "sistemas";
-    private const USER = "sa";
-    private const PASSWORD = "Axoft1988";
+    // Configuración directa de conexiones
+    private const CONEXIONES = [
+        'sistemas' => [
+            'server' => "192.168.0.143",
+            'database' => "sistemas",
+            'user' => "sa",
+            'password' => "Axoft1988"
+        ],
+        'laker_sa' => [
+            'server' => "SERVIDOR",  // Usar 'SERVIDOR' como está configurado en AuthFranquicia
+            'database' => "LAKER_SA",
+            'user' => "sa",
+            'password' => "Axoft1988"
+        ]
+    ];
     
     /**
      * Constructor privado para implementar Singleton
      */
     private function __construct() {
-        try {
-            $connectionInfo = array(
-                "Database" => self::DATABASE,
-                "UID" => self::USER,
-                "PWD" => self::PASSWORD,
-                "CharacterSet" => "UTF-8"
-            );
-            
-            $this->conn = sqlsrv_connect(self::SERVER, $connectionInfo);
-            
-            if (!$this->conn) {
-                $errors = sqlsrv_errors();
-                $errorMsg = "No se pudo conectar a SQL Server";
-                
-                if ($errors) {
-                    $errorDetails = [];
-                    foreach ($errors as $error) {
-                        $errorDetails[] = "SQLSTATE: " . $error['SQLSTATE'] . " - " . $error['message'];
-                    }
-                    $errorMsg .= " - Detalles: " . implode("; ", $errorDetails);
-                }
-                
-                throw new Exception($errorMsg);
-            }
-            
-        } catch (Exception $e) {
-            error_log("Error en DatabaseSQLServer constructor: " . $e->getMessage());
-            throw new Exception("Error de conexión a SQL Server: " . $e->getMessage());
-        }
+        // No iniciamos conexiones en el constructor
+        // Se crean bajo demanda en getConnection()
     }
     
     /**
@@ -62,27 +45,72 @@ class DatabaseSQLServer {
     }
     
     /**
-     * Obtener la conexión SQL Server directa
+     * Obtener conexión específica por nombre
      */
-    public function getConnection() {
-        if (!$this->conn) {
-            throw new Exception("No hay conexión activa a SQL Server");
+    public function getConnection($database = 'sistemas') {
+        // Si ya existe la conexión, la devolvemos
+        if (isset($this->connections[$database]) && $this->connections[$database]) {
+            return $this->connections[$database];
         }
-        return $this->conn;
+        
+        // Si no existe la configuración para esa base
+        if (!isset(self::CONEXIONES[$database])) {
+            throw new Exception("Configuración de base de datos '{$database}' no encontrada");
+        }
+        
+        $config = self::CONEXIONES[$database];
+        
+        try {
+            $connectionInfo = array(
+                "Database" => $config['database'],
+                "UID" => $config['user'],
+                "PWD" => $config['password'],
+                "CharacterSet" => "UTF-8"
+            );
+            
+            $conn = sqlsrv_connect($config['server'], $connectionInfo);
+            
+            if (!$conn) {
+                $errors = sqlsrv_errors();
+                $errorMsg = "No se pudo conectar a SQL Server ({$database})";
+                
+                if ($errors) {
+                    $errorDetails = [];
+                    foreach ($errors as $error) {
+                        $errorDetails[] = "SQLSTATE: " . $error['SQLSTATE'] . " - " . $error['message'];
+                    }
+                    $errorMsg .= " - Detalles: " . implode("; ", $errorDetails);
+                }
+                
+                throw new Exception($errorMsg);
+            }
+            
+            // Guardar la conexión para reutilizar
+            $this->connections[$database] = $conn;
+            error_log("Conexión establecida exitosamente a: {$database}");
+            
+            return $conn;
+            
+        } catch (Exception $e) {
+            error_log("Error conectando a {$database}: " . $e->getMessage());
+            throw new Exception("Error de conexión a SQL Server ({$database}): " . $e->getMessage());
+        }
     }
     
     /**
      * Ejecutar una consulta SQL
      */
-    public function ejecutarConsulta($sql, $params = null) {
+    public function ejecutarConsulta($sql, $params = null, $database = 'sistemas') {
         try {
+            $conn = $this->getConnection($database);
+            
             if ($params) {
-                $stmt = sqlsrv_prepare($this->conn, $sql, $params);
+                $stmt = sqlsrv_prepare($conn, $sql, $params);
                 if ($stmt && sqlsrv_execute($stmt)) {
                     return $stmt;
                 }
             } else {
-                $stmt = sqlsrv_query($this->conn, $sql);
+                $stmt = sqlsrv_query($conn, $sql);
                 if ($stmt) {
                     return $stmt;
                 }
@@ -103,10 +131,12 @@ class DatabaseSQLServer {
     /**
      * Obtener una fila de resultado
      */
-    public function obtenerFila($sql, $params = null) {
-        $stmt = $this->ejecutarConsulta($sql, $params);
+    public function obtenerFila($sql, $params = null, $database = 'sistemas') {
+        $stmt = $this->ejecutarConsulta($sql, $params, $database);
         if ($stmt) {
-            return sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+            $result = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+            sqlsrv_free_stmt($stmt);
+            return $result;
         }
         return false;
     }
@@ -114,50 +144,41 @@ class DatabaseSQLServer {
     /**
      * Obtener todas las filas de resultado
      */
-    public function obtenerFilas($sql, $params = null) {
-        $stmt = $this->ejecutarConsulta($sql, $params);
+    public function obtenerFilas($sql, $params = null, $database = 'sistemas') {
+        $stmt = $this->ejecutarConsulta($sql, $params, $database);
         $filas = [];
         if ($stmt) {
             while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                 $filas[] = $row;
             }
+            sqlsrv_free_stmt($stmt);
         }
         return $filas;
-    }
-    
-    /**
-     * Obtener todas las franquicias activas
-     */
-    public function obtenerFranquiciasActivas() {
-        $sql = "SELECT * FROM franquicias_sistema WHERE estado = 'activo' ORDER BY nombre";
-        return $this->obtenerFilas($sql);
-    }
-    
-    /**
-     * Obtener franquicia por código
-     */
-    public function obtenerFranquiciaPorCodigo($codigo) {
-        $sql = "SELECT * FROM franquicias_sistema WHERE codigo = ?";
-        return $this->obtenerFila($sql, [$codigo]);
     }
     
     /**
      * Registrar movimiento de stock
      */
     public function registrarMovimientoStock($datos) {
+        // Extraer rubro y categoría del código de artículo si están presentes
+        if (isset($datos['codigo_articulo'])) {
+            $partes = explode('_', $datos['codigo_articulo'], 2);
+            $datos['rubro'] = $partes[0] ?? '';
+            $datos['categoria'] = $partes[1] ?? ($datos['descripcion_articulo'] ?? '');
+        }
+        
         $sql = "INSERT INTO franquicia_historial_stock 
-                (franquicia_id, codigo_articulo, descripcion_articulo, stock_anterior, 
-                 movimiento, stock_actual, tipo_movimiento, observaciones, usuario) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                (franquicia_id, rubro, categoria, stock_anterior, 
+                 movimiento, stock_actual, observaciones, usuario) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
         $params = [
             $datos['franquicia_id'],
-            $datos['codigo_articulo'],
-            $datos['descripcion_articulo'],
+            $datos['rubro'] ?? '',
+            $datos['categoria'] ?? '',
             $datos['stock_anterior'],
             $datos['movimiento'],
             $datos['stock_actual'],
-            $datos['tipo_movimiento'],
             $datos['observaciones'] ?? '',
             $datos['usuario'] ?? 'sistema'
         ];
@@ -182,12 +203,17 @@ class DatabaseSQLServer {
      * Obtener stock actual por artículo y franquicia
      */
     public function obtenerStockActual($franquiciaId, $codigoArticulo) {
+        // Extraer rubro y categoría del código de artículo
+        $partes = explode('_', $codigoArticulo, 2);
+        $rubro = $partes[0] ?? '';
+        $categoria = $partes[1] ?? '';
+        
         $sql = "SELECT TOP 1 stock_actual 
                 FROM franquicia_historial_stock 
-                WHERE franquicia_id = ? AND codigo_articulo = ? 
+                WHERE franquicia_id = ? AND rubro = ? AND categoria = ? 
                 ORDER BY fecha_movimiento DESC";
         
-        $resultado = $this->obtenerFila($sql, [$franquiciaId, $codigoArticulo]);
+        $resultado = $this->obtenerFila($sql, [$franquiciaId, $rubro, $categoria]);
         return $resultado ? $resultado['stock_actual'] : 0;
     }
     

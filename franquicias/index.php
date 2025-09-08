@@ -12,12 +12,22 @@ if (!AuthFranquicia::verificarSesion()) {
 }
 
 // Obtener datos de la sesión
-$usuario = $_SESSION['usuario_franquicia'] ?? '';
+$usuario = $_SESSION['usuario_franquicia'] ?? '';   
 $franquicia_id = $_SESSION['franquicia_id'] ?? 0;
-$rol = 'franquicia'; // Por ahora todos son franquicias
+$rol = $_SESSION['user_role'] ?? 'franquicia'; // Obtener rol de la sesión
 
 // Variable que esperan los componentes
 $franquicia = $usuario; // Para compatibilidad con componentes
+
+// Obtener el nombre completo de la franquicia para mostrar en el dashboard
+$nombreFranquicia = $usuario; // Valor por defecto
+try {
+    $auth = new AuthFranquicia();
+    $nombreFranquicia = $auth->obtenerNombreFranquicia($usuario);
+} catch (Exception $e) {
+    error_log("Error obteniendo nombre de franquicia: " . $e->getMessage());
+    $nombreFranquicia = $usuario; // Fallback
+}
 
 // Funciones que pueden faltar
 if (!function_exists('fecha_espanol')) {
@@ -40,15 +50,21 @@ if (!function_exists('es_modo_desarrollo')) {
     }
 }
 
-// Determinar vista según el parámetro GET
-$vista = $_GET['vista'] ?? 'franquicia'; // Por defecto vista franquicia
+// Determinar vista según el parámetro GET y rol del usuario
+$vista = $_GET['vista'] ?? ($rol === 'franquicia' ? 'franquicia' : 'reportes');
 
-// Vistas permitidas para franquicias
-$vistas_permitidas = ['franquicia', 'historial', 'reportes'];
+// Vistas permitidas según el rol
+if ($rol === 'franquicia') {
+    $vistas_permitidas = ['franquicia', 'historial'];
+} elseif ($rol === 'supervision') {
+    $vistas_permitidas = ['reportes'];
+} else {
+    $vistas_permitidas = []; // Sin acceso por defecto
+}
 
-// Si la vista no está permitida, ir a la vista franquicia
+// Si la vista no está permitida, ir a la primera vista permitida
 if (!in_array($vista, $vistas_permitidas)) {
-    $vista = 'franquicia';
+    $vista = $vistas_permitidas[0]; // Primera vista permitida para el rol
 }
 ?>
 <!DOCTYPE html>
@@ -67,14 +83,14 @@ if (!in_array($vista, $vistas_permitidas)) {
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
     
     <!-- CSS Personalizados -->
-    <link href="css/main.css" rel="stylesheet">
+    <link href="css/main.css?v=<?php echo time(); ?>" rel="stylesheet">
     <?php if ($vista === 'franquicia'): ?>
-        <link href="css/franquicia_stock.css" rel="stylesheet">
-        <link href="css/franquicia_dashboard.css" rel="stylesheet">
+        <link href="css/franquicia_stock.css?v=<?php echo time(); ?>" rel="stylesheet">
+        <link href="css/franquicia_dashboard.css?v=<?php echo time(); ?>" rel="stylesheet">
     <?php elseif ($vista === 'panel'): ?>
-        <link href="css/panel_comercial.css" rel="stylesheet">
+        <link href="css/panel_comercial.css?v=<?php echo time(); ?>" rel="stylesheet">
     <?php elseif ($vista === 'reportes'): ?>
-        <link href="css/panel_comercial.css" rel="stylesheet">
+        <link href="css/panel_comercial.css?v=<?php echo time(); ?>" rel="stylesheet">
     <?php endif; ?>
 </head>
 <body>
@@ -92,6 +108,19 @@ if (!in_array($vista, $vistas_permitidas)) {
         <!-- Área de Contenido -->
         <main class="main-content">
             <?php
+            // Mostrar mensaje de error si no tiene acceso especial
+            if (isset($_GET['error']) && $_GET['error'] === 'sin_acceso_especial'):
+            ?>
+            <div class="container-fluid">
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Acceso denegado:</strong> No tienes permisos para acceder a la página especial solicitada.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <?php
             switch ($vista) {
                 case 'franquicia':
                     include 'components/franquicia_dashboard.php';
@@ -106,7 +135,13 @@ if (!in_array($vista, $vistas_permitidas)) {
                     include 'components/historial.php';
                     break;
                 default:
-                    include 'components/franquicia_dashboard.php';
+                    if ($rol === 'franquicia') {
+                        include 'components/franquicia_dashboard.php';
+                    } elseif ($rol === 'supervision') {
+                        include 'components/reportes_cumplimiento.php';
+                    } else {
+                        echo '<div class="alert alert-warning">Vista no disponible para su rol.</div>';
+                    }
                     break;
             }
             ?>
@@ -126,12 +161,34 @@ if (!in_array($vista, $vistas_permitidas)) {
     <!-- Select2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     
+    <!-- SheetJS para exportar Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <!-- Scripts principales -->
     <script src="js/main.js"></script>
-    <script src="js/estado_global.js"></script>
+    <script>
+        // Verificar que mainSystem se inicialice correctamente
+        document.addEventListener('DOMContentLoaded', function() {
+            // Esperar un poco para que main.js termine de inicializar
+            setTimeout(function() {
+                if (typeof window.mainSystem === 'undefined') {
+                    console.warn('mainSystem no se inicializó automáticamente, creando manualmente...');
+                    if (typeof MainSystem !== 'undefined') {
+                        window.mainSystem = new MainSystem();
+                        console.log('mainSystem creado manualmente');
+                    } else {
+                        console.error('MainSystem class no está disponible');
+                    }
+                } else {
+                    console.log('mainSystem ya está disponible');
+                }
+            }, 100);
+        });
+    </script>
+    <script src="js/estado_global.js?v=<?php echo time(); ?>"></script>
     
     <?php if ($vista === 'franquicia'): ?>
-        <script src="js/franquicia_stock.js"></script>
+        <script src="js/franquicia_stock.js?v=<?php echo time(); ?>"></script>
     <?php elseif ($vista === 'panel'): ?>
         <script src="js/panel_comercial_simple.js"></script>
     <?php elseif ($vista === 'reportes'): ?>

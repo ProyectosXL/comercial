@@ -244,16 +244,18 @@ try {
             <form method="POST" action="">
                 <div class="form-floating">
                     <select name="usuario" id="usuario" class="form-select" required onchange="updatePassword()">
-                        <option value="">Seleccionar franquicia...</option>
+                        <option value="">Seleccionar usuario...</option>
                         <?php foreach ($usuarios as $user): ?>
                             <option value="<?= htmlspecialchars($user['NOMBRE']) ?>" 
-                                    data-pass="<?= htmlspecialchars($user['PASS']) ?>">
-                                <?= htmlspecialchars($user['NOMBRE']) ?>
+                                    data-pass="<?= htmlspecialchars($user['PASS']) ?>"
+                                    data-tipo="<?= htmlspecialchars($user['TIPO']) ?>">
+                                <?= htmlspecialchars($user['NOMBRE']) ?> 
+                                (<?= $user['TIPO'] === 'FRANQUICIA' ? 'Franquicia' : 'Supervisión' ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>
                     <label for="usuario">
-                        <i class="bi bi-person me-2"></i>Usuario de Franquicia
+                        <i class="bi bi-person me-2"></i>Usuario del Sistema
                     </label>
                 </div>
                 

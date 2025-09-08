@@ -49,9 +49,10 @@
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 
-.franquicia-categorias-table .table thead th {
-    background: linear-gradient(135deg, var(--franquicia-primary) 0%, #0056b3 100%);
-    color: white;
+.franquicia-categorias-table .table thead th,
+.categorias-table thead th {
+    background: linear-gradient(135deg, #040e18 0%, #071d39 100%);
+    color: white !important;
     border: none;
     font-weight: 600;
     text-transform: uppercase;
