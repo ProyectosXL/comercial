@@ -44,7 +44,7 @@ class Articulo
                 INNER JOIN (SELECT COD_ARTICU, PRECIO FROM GVA17 WHERE NRO_DE_LIS = '20') B ON A.COD_ARTICU = B.COD_ARTICU
                 LEFT JOIN MAESTRO_DESTINOS C ON A.COD_ARTICU = C.COD_ARTICU
                 INNER JOIN SOF_RUBROS_TANGO D ON A.COD_ARTICU = D.COD_ARTICU
-                WHERE A.COD_ARTICU LIKE 'X%'
+                WHERE A.COD_ARTICU LIKE '[XO]%'
                 AND A.COD_ARTICU = '$codArticu'
         ";
 

@@ -85,26 +85,33 @@ function procesarArchivoExcel(file) {
     reader.readAsBinaryString(file);
 }
 
-// 👇 ESTA VERSIÓN ES LA CORRECTA
 async function procesarDatosExcel(datos) {
     console.log('Procesando datos:', datos);
     
+    // Limpiar datos anteriores
     articulosAImportar = [];
     $('#tblItems tbody').empty();
     hayErrores = false;
     
+    // Saltar la primera fila si contiene encabezados
     let inicioFila = 0;
     if (datos.length > 0 && datos[0]) {
         const primeraFila = datos[0];
+        // Verificar si la primera fila parece ser encabezados
         if (primeraFila[0] && primeraFila[0].toString().toLowerCase().includes('articulo')) {
             inicioFila = 1;
             console.log('Saltando fila de encabezados');
         }
     }
     
+    // Procesar cada fila (saltando encabezados si los hay)
     for (let i = inicioFila; i < datos.length; i++) {
         const fila = datos[i];
-        if (!fila || fila.length === 0 || !fila[0]) continue;
+        
+        // Saltar filas vacías
+        if (!fila || fila.length === 0 || !fila[0]) {
+            continue;
+        }
         
         const codigo = fila[0] ? fila[0].toString().trim() : '';
         const cantidad = fila[1] ? parseInt(fila[1]) : 0;
@@ -136,11 +143,39 @@ function validarTipoArchivo(file) {
     return true;
 }
 
-async function procesarArticulo(codigo, cantidad, observaciones, numeroFila) {
+function procesarDatosExcel(datos) {
+    console.log('Procesando datos:', datos);
+    
+    // Limpiar datos anteriores
+    articulosAImportar = [];
+    $('#tblItems tbody').empty();
+    hayErrores = false;
+    
+    // Procesar cada fila
+    datos.forEach((fila, index) => {
+        // Saltar filas vacías
+        if (!fila || fila.length === 0 || !fila[0]) {
+            return;
+        }
+        
+        const codigo = fila[0] ? fila[0].toString().trim() : '';
+        const cantidad = fila[1] ? parseInt(fila[1]) : 0;
+        const observaciones = fila[2] ? fila[2].toString().trim() : '';
+        
+        if (codigo) {
+            procesarArticulo(codigo, cantidad, observaciones, index + 1);
+        }
+    });
+    
+    actualizarContador();
+    mostrarResumenProcesamiento();
+}
+
+function procesarArticulo(codigo, cantidad, observaciones, numeroFila) {
     console.log(`Procesando artículo ${numeroFila}:`, { codigo, cantidad, observaciones });
     
     // Validar el artículo
-    const validacion = await validarArticulo(codigo, cantidad);
+    const validacion = validarArticulo(codigo, cantidad);
     
     // Crear objeto del artículo
     const articulo = {
@@ -163,7 +198,7 @@ async function procesarArticulo(codigo, cantidad, observaciones, numeroFila) {
     }
 }
 
-async function validarArticulo(codigo, cantidad) {
+function validarArticulo(codigo, cantidad) {
     let descripcion = '';
     let estado = '';
     let esValido = true;
@@ -173,53 +208,26 @@ async function validarArticulo(codigo, cantidad) {
         descripcion = 'ARTÍCULO YA EXCLUIDO';
         estado = 'duplicado';
         esValido = false;
-        return { descripcion, estado, esValido };
     }
-    
+    // Verificar si existe en el maestro (simulación)
+    else if (!codigo.startsWith('X')) {
+        descripcion = 'CÓDIGO INEXISTENTE';
+        estado = 'inexistente';
+        esValido = false;
+    }
     // Verificar cantidad válida
-    if (!cantidad || cantidad <= 0) {
+    else if (!cantidad || cantidad <= 0) {
         descripcion = 'CANTIDAD INVÁLIDA';
         estado = 'cantidad_invalida';
         esValido = false;
-        return { descripcion, estado, esValido };
     }
-    
-    // Verificar si existe en el maestro usando AJAX
-    try {
-        const response = await $.ajax({
-            url: 'Controller/buscarCodigo.php',
-            method: 'POST',
-            data: {
-                codArticu: codigo
-            }
-        });
-        
-        const datos = JSON.parse(response);
-        
-        if (datos.code === 200) {
-            // Artículo existe en el maestro
-            const articuloData = JSON.parse(datos.msg);
-            if (articuloData && articuloData.length > 0) {
-                descripcion = articuloData[0].DESCRIPCIO || 'Descripción no disponible';
-                estado = 'valido';
-                esValido = true;
-            } else {
-                descripcion = 'CÓDIGO INEXISTENTE EN MAESTRO';
-                estado = 'inexistente';
-                esValido = false;
-            }
-        } else {
-            // Artículo no existe
-            descripcion = 'CÓDIGO INEXISTENTE EN MAESTRO';
-            estado = 'inexistente';
-            esValido = false;
-        }
-        
-    } catch (error) {
-        console.error('Error validando artículo:', codigo, error);
-        descripcion = 'ERROR AL VALIDAR CÓDIGO';
-        estado = 'error_validacion';
-        esValido = false;
+    // Artículo válido
+    else {
+        // Aquí normalmente harías la consulta al servidor
+        // Por ahora simulo la descripción
+        descripcion = `Descripción del artículo ${codigo}`;
+        estado = 'valido';
+        esValido = true;
     }
     
     return { descripcion, estado, esValido };
@@ -251,8 +259,13 @@ function agregarFilaPreview(articulo) {
             badgeEstado = '<span class="badge bg-warning"><i class="bi bi-exclamation-triangle"></i> Sin descripción</span>';
             break;
         case 'error_validacion':
+        case 'error_servidor':
+        case 'error_json':
+        case 'error_parse_articulo':
+        case 'error_conexion':
+        case 'error_procesamiento':
             claseEstado = 'table-danger';
-            badgeEstado = '<span class="badge bg-danger"><i class="bi bi-exclamation-circle"></i> Error validación</span>';
+            badgeEstado = '<span class="badge bg-danger"><i class="bi bi-exclamation-circle"></i> Error</span>';
             break;
         default:
             claseEstado = 'table-secondary';

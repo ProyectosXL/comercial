@@ -1,6 +1,12 @@
 <?php
+
 require 'Class/articulo.php';
 $articulo = new Articulo();
+
+// Inicializar variables
+$rubro = isset($_GET['rubro']) ? $_GET['rubro'] : null;
+$temporada = isset($_GET['temporada']) ? $_GET['temporada'] : null;
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
