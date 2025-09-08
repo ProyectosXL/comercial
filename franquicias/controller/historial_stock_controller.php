@@ -117,12 +117,20 @@ class HistorialStockController {
                 ];
             }
             
-            $franquicia_id_sesion = AuthFranquicia::obtenerFranquiciaIdSesion();
-            error_log("DEBUG HISTORIAL: Franquicia ID de sesión: " . $franquicia_id_sesion);
+            // Usar el número de sucursal como identificador de franquicia
+            $nro_sucurs = $_SESSION['numsuc'] ?? null;
+            if (!$nro_sucurs) {
+                return [
+                    'success' => false,
+                    'message' => 'No autorizado - falta número de sucursal en sesión',
+                    'error_type' => 'unauthorized'
+                ];
+            }
+            error_log("DEBUG HISTORIAL: Usando número de sucursal: " . $nro_sucurs);
             
             switch ($accion) {
                 case 'obtener_historial':
-                    return $this->obtenerHistorial($franquicia_id_sesion);
+                    return $this->obtenerHistorial($nro_sucurs);
                     
                 case 'obtener_periodos':
                     return $this->obtenerPeriodosDisponibles($franquicia_id_sesion);

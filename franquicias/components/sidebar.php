@@ -1,13 +1,6 @@
 <?php
-// Obtener el nombre completo de la franquicia para mostrar en el dashboard
-$nombreFranquicia = $usuario; // Valor por defecto
-try {
-    $auth = new AuthFranquicia();
-    $nombreFranquicia = $auth->obtenerNombreFranquicia($usuario);
-} catch (Exception $e) {
-    error_log("Error obteniendo nombre de franquicia: " . $e->getMessage());
-    $nombreFranquicia = $usuario; // Fallback
-}
+// El nombre de la franquicia ya viene en $_SESSION['descLocal']
+$nombreFranquicia = $_SESSION['descLocal'] ?? $usuario;
 ?>
 <div class="sidebar">
     <div class="sidebar-content">
@@ -51,9 +44,8 @@ try {
                     </a>
                 </li>
                 <?php 
-                // Verificar acceso especial para mostrar enlace a página especial en sidebar
-                require_once __DIR__ . '/../class/AuthFranquicia.php';
-                if (AuthFranquicia::verificarAccesoEspecial()): 
+                // Verificar acceso especial usando las variables de sesión
+                if ($_SESSION['tipo'] === 'FRANQUICIA' && $_SESSION['habPedidos'] == 1): 
                 ?>
                 <li class="nav-item">
                     <a href="carga_ventas_sin_tango.php" class="nav-link <?= $vista === 'carga_ventas' ? 'active' : '' ?>">
