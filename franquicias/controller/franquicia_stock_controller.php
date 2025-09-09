@@ -133,62 +133,119 @@ if (!class_exists('FranquiciaStockController')) {
      */
     public function procesarPeticion() {
         try {
+            error_log("DEBUG PROC: Iniciando procesarPeticion");
+            
             $accion = $_POST['accion'] ?? $_GET['accion'] ?? null;
+            error_log("DEBUG PROC: Acción solicitada: " . ($accion ?? 'no especificada'));
             
             if (!$accion) {
-                throw new Exception('Acción no especificada');
+                error_log("DEBUG PROC: Error - Acción no especificada");
+                return [
+                    'success' => false,
+                    'message' => 'Error: Acción no especificada',
+                    'error_type' => 'missing_action'
+                ];
             }
             
-            // Verificar autenticación para todas las acciones excepto login
+            // Verificar sesión
+            error_log("DEBUG PROC: Verificando sesión...");
             if (!AuthFranquicia::verificarSesion()) {
+                error_log("DEBUG PROC: Error - Sesión no válida");
                 return [
                     'success' => false,
                     'message' => 'No autorizado - falta franquicia_id en sesión',
                     'error_type' => 'unauthorized',
-                    'redirect' => 'login.php'
+                    'redirect' => 'login.php',
+                    'session_status' => [
+                        'active' => session_status() === PHP_SESSION_ACTIVE,
+                        'id' => session_id(),
+                        'autenticado' => $_SESSION['autenticado'] ?? false,
+                        'franquicia_id' => $_SESSION['franquicia_id'] ?? null,
+                        'rol' => $_SESSION['user_role'] ?? null
+                    ]
                 ];
             }
             
-            // Obtener franquicia_id de la sesión
+            // Obtener y validar franquicia_id
             $franquicia_id_sesion = AuthFranquicia::obtenerFranquiciaIdSesion();
+            error_log("DEBUG PROC: Franquicia ID de sesión: " . ($franquicia_id_sesion ?? 'no disponible'));
+            
+            if (!$franquicia_id_sesion && $accion !== 'obtener_rubros') {
+                error_log("DEBUG PROC: Error - Franquicia ID no disponible");
+                return [
+                    'success' => false,
+                    'message' => 'Error: ID de franquicia no disponible',
+                    'error_type' => 'missing_franquicia_id'
+                ];
+            }
+            
+            // Procesar acción
+            error_log("DEBUG PROC: Procesando acción: $accion");
+            $resultado = null;
             
             switch ($accion) {
                 case 'obtener_rubros':
-                    return $this->obtenerRubros();
+                    error_log("DEBUG PROC: Llamando a obtenerRubros()");
+                    $resultado = $this->obtenerRubros();
+                    error_log("DEBUG PROC: Resultado obtenerRubros: " . json_encode($resultado));
+                    break;
                 
                 case 'obtener_categorias':
                     $rubro = $_POST['rubro'] ?? $_GET['rubro'] ?? null;
                     if (!$rubro) {
                         throw new Exception('Rubro no especificado');
                     }
-                    return $this->obtenerCategoriasPorRubro($rubro);
+                    $resultado = $this->obtenerCategoriasPorRubro($rubro);
+                    break;
                 
                 case 'obtener_resumen_stock':
-                    // Usar franquicia_id de la sesión en lugar del parámetro
                     $periodo = $_POST['periodo'] ?? null;
-                    return $this->obtenerResumenStock($franquicia_id_sesion, $periodo);
+                    $resultado = $this->obtenerResumenStock($franquicia_id_sesion, $periodo);
+                    break;
                 
                 case 'registrar_movimiento':
-                    return $this->registrarMovimiento($franquicia_id_sesion);
+                    $resultado = $this->registrarMovimiento($franquicia_id_sesion);
+                    break;
                 
                 case 'obtener_historial':
-                    // Usar franquicia_id de la sesión
                     $limite = $_POST['limite'] ?? $_GET['limite'] ?? 100;
-                    return $this->obtenerHistorialStock($franquicia_id_sesion, $limite);
+                    $resultado = $this->obtenerHistorialStock($franquicia_id_sesion, $limite);
+                    break;
                 
                 case 'editar_stock':
-                    return $this->editarStock($franquicia_id_sesion);
+                    $resultado = $this->editarStock($franquicia_id_sesion);
+                    break;
+                    
                 case 'buscar_articulos':
-                    return $this->buscarArticulos();
+                    $resultado = $this->buscarArticulos();
+                    break;
+                    
                 default:
-                    throw new Exception('Acción no válida: ' . $accion);
+                    error_log("DEBUG PROC: Error - Acción no válida: $accion");
+                    return [
+                        'success' => false,
+                        'message' => "Error: Acción no válida: $accion",
+                        'error_type' => 'invalid_action'
+                    ];
             }
             
+            if ($resultado === null) {
+                error_log("DEBUG PROC: Error - Resultado nulo para acción: $accion");
+                throw new Exception("Error procesando acción: $accion");
+            }
+            
+            error_log("DEBUG PROC: Retornando resultado exitoso");
+            return $resultado;
+            
         } catch (Exception $e) {
+            error_log("ERROR PROC: " . $e->getMessage());
+            error_log("ERROR PROC: Stack trace - " . $e->getTraceAsString());
+            
             return [
                 'success' => false,
-                'message' => $e->getMessage(),
-                'error_type' => 'application_error'
+                'message' => 'Error en el servidor: ' . $e->getMessage(),
+                'error_type' => 'application_error',
+                'trace' => es_modo_desarrollo() ? $e->getTraceAsString() : null
             ];
         }
     }
@@ -204,34 +261,54 @@ if (!class_exists('FranquiciaStockController')) {
             if ($this->sistemas_conn) {
                 // Obtener de SQL Server sistemas - usando la query específica
                 $query = "SELECT DISTINCT RUBRO 
-                         FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
+                         FROM [LAKERBIS].LOCALES_LAKERS.DBO.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
                          WHERE CATEGORIA_PADRE != '' AND RUBRO IS NOT NULL AND RUBRO NOT LIKE '%OUTLET'
                          ORDER BY RUBRO";
                 
-                error_log("DEBUG: Ejecutando query rubros");
+                error_log("DEBUG: Ejecutando query: $query");
                 $stmt = sqlsrv_query($this->sistemas_conn, $query);
                 
-                $rubros = [];
-                if ($stmt) {
-                    while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                        $rubros[] = ['RUBRO' => $row['RUBRO']];
-                    }
-                    sqlsrv_free_stmt($stmt);
-                    error_log("DEBUG: Encontrados " . count($rubros) . " rubros desde BD");
-                } else {
-                    error_log("DEBUG: Error en query rubros: " . print_r(sqlsrv_errors(), true));
+                if ($stmt === false) {
+                    $errors = sqlsrv_errors();
+                    error_log("DEBUG: Error SQL en query rubros: " . print_r($errors, true));
+                    error_log("DEBUG: Error específico: " . json_encode($errors));
+                    return [
+                        'success' => false,
+                        'message' => 'Error obteniendo rubros: ' . ($errors ? $errors[0]['message'] : 'Error desconocido'),
+                        'error' => $errors
+                    ];
                 }
                 
+                $rubros = [];
+                while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                    error_log("DEBUG: Procesando fila: " . json_encode($row));
+                    $rubros[] = ['RUBRO' => $row['RUBRO']];
+                }
+                sqlsrv_free_stmt($stmt);
+                
+                error_log("DEBUG: Total rubros encontrados: " . count($rubros));
+                error_log("DEBUG: Rubros: " . json_encode($rubros));
+                
                 if (!empty($rubros)) {
-                    return [
+                    $response = [
                         'success' => true,
                         'rubros' => $rubros,
                         'source' => 'sistemas_database',
                         'count' => count($rubros)
                     ];
+                    error_log("DEBUG: Enviando respuesta: " . json_encode($response));
+                    return $response;
+                } else {
+                    error_log("DEBUG: No se encontraron rubros en la base de datos");
                 }
             } else {
                 error_log("DEBUG: No hay conexión a sistemas para rubros, usando datos de prueba");
+                error_log("DEBUG: Estado de conexión: " . ($this->sistemas_conn ? 'Conectado' : 'No conectado'));
+                error_log("DEBUG: Variables de conexión: " . json_encode([
+                    'sistemas_conn' => !empty($this->sistemas_conn),
+                    'cid' => !empty($this->cid),
+                    'laker_conn' => !empty($this->laker_conn)
+                ]));
             }
             
             // Datos de prueba si no hay conexión
@@ -267,7 +344,7 @@ if (!class_exists('FranquiciaStockController')) {
             if ($this->sistemas_conn) {
                 // Obtener de SQL Server sistemas - usando la query específica
                 $query = "SELECT DISTINCT CATEGORIA_PADRE 
-                         FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
+                         FROM [LAKERBIS].LOCALES_LAKERS.DBO.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
                          WHERE CATEGORIA_PADRE != '' AND RUBRO IS NOT NULL AND RUBRO NOT LIKE '%OUTLET'
                          AND RUBRO = ?
                          ORDER BY CATEGORIA_PADRE";
@@ -571,7 +648,7 @@ if (!class_exists('FranquiciaStockController')) {
             // Validar que vengan datos válidos (incluir cantidades 0)
             $datosValidos = array_filter($stockArray, function($item) {
                 return isset($item['categoria']) && isset($item['cantidad']) && 
-                       isset($item['rubro']) && intval($item['cantidad']) >= 0;
+                       isset($item['rubro']) && is_numeric($item['cantidad']);
             });
             
             if (empty($datosValidos)) {
@@ -586,10 +663,10 @@ if (!class_exists('FranquiciaStockController')) {
                     // Limpiar y validar los datos del item
                     $rubro = trim($item['rubro']);
                     $categoria = trim($item['categoria']);
-                    $cantidad = intval($item['cantidad']);
+                    $cantidad = intval($item['cantidad']); // Nueva cantidad a establecer
                     
-                    if (empty($rubro) || empty($categoria) || $cantidad < 0) {
-                        $errores[] = "Datos inválidos para {$categoria} (rubro: $rubro, cantidad: $cantidad)";
+                    if (empty($rubro) || empty($categoria)) {
+                        $errores[] = "Datos inválidos para {$categoria} (rubro: $rubro)";
                         continue;
                     }
                     
@@ -597,26 +674,37 @@ if (!class_exists('FranquiciaStockController')) {
                     $categoria = preg_replace('/[^\w\s\-\.]/', '', $categoria);
                     $rubro = preg_replace('/[^\w\s\-\.]/', '', $rubro);
                     
-                    $codigoArticulo = $rubro . '_' . $categoria; // Generar código único
+                    $codigoArticulo = $rubro . '_' . $categoria;
                     $descripcion = $categoria . ' - ' . $rubro;
                     
-                    error_log("DEBUG: Procesando item - Rubro: '$rubro', Categoría: '$categoria', Cantidad: $cantidad" . ($cantidad == 0 ? " (REGISTRO CON CERO)" : ""));
+                    // Obtener stock actual
+                    $stockActual = $this->obtenerStockAnteriorDirecto($franquicia_id_sesion, $codigoArticulo);
                     
-                    // Registrar cada artículo individualmente
-                    $resultado = $this->registrarArticuloIndividual(
-                        $franquicia_id_sesion,
-                        $codigoArticulo,
-                        $descripcion,
-                        $cantidad,
-                        'AJUSTE'
-                    );
+                    // Calcular el movimiento necesario para llegar a la cantidad deseada
+                    $movimiento = $cantidad - $stockActual;
                     
-                    if ($resultado) {
-                        $movimientosRegistrados++;
-                        error_log("DEBUG: Movimiento registrado exitosamente para: " . $codigoArticulo);
+                    error_log("DEBUG: Procesando item - Rubro: '$rubro', Categoría: '$categoria', " . 
+                             "Stock actual: $stockActual, Nueva cantidad: $cantidad, Movimiento: $movimiento");
+                    
+                    // Solo registrar si hay un cambio
+                    if ($movimiento !== 0) {
+                        $resultado = $this->registrarArticuloIndividual(
+                            $franquicia_id_sesion,
+                            $codigoArticulo,
+                            $descripcion,
+                            $movimiento, // Enviamos la diferencia, no la cantidad final
+                            'AJUSTE'
+                        );
+                        
+                        if ($resultado) {
+                            $movimientosRegistrados++;
+                            error_log("DEBUG: Movimiento registrado exitosamente para: " . $codigoArticulo);
+                        } else {
+                            $errores[] = "No se pudo registrar '$categoria' en rubro '$rubro'";
+                            error_log("DEBUG: Error registrando: $categoria");
+                        }
                     } else {
-                        $errores[] = "No se pudo registrar '$categoria' en rubro '$rubro'";
-                        error_log("DEBUG: Error registrando: $categoria");
+                        error_log("DEBUG: No se requiere movimiento para: $codigoArticulo (stock actual = cantidad deseada)");
                     }
                     
                 } catch (Exception $e) {
@@ -653,30 +741,44 @@ if (!class_exists('FranquiciaStockController')) {
             error_log("DEBUG: registrarArticuloIndividual - movimiento: '$movimiento'");
             
             // Obtener NRO_SUCURS del usuario logueado desde LAKER_SA
-            $nombreUsuario = $franquicia_id; // El nombre de usuario actual
+            $nombreUsuario = $franquicia_id;
             $nroSucurs = $this->obtenerNroSucursUsuario($nombreUsuario);
             error_log("DEBUG: Usuario '$nombreUsuario' convertido a NRO_SUCURS: '$nroSucurs'");
             
-            // Validar que la descripción no esté vacía o tenga caracteres problemáticos
+            // Validaciones de datos
             if (empty($descripcion)) {
-                $descripcion = $codigo_articulo; // Usar el código como descripción si está vacía
+                $descripcion = $codigo_articulo;
             }
             
-            // Limpiar la descripción de caracteres que puedan causar problemas
             $descripcion = trim($descripcion);
-            $descripcion = preg_replace('/[^\w\s\-\.]/', '', $descripcion); // Solo alfanuméricos, espacios, guiones y puntos
+            $descripcion = preg_replace('/[^\w\s\-\.]/', '', $descripcion);
             
-            // Validar que el código de artículo no sea demasiado largo
             if (strlen($codigo_articulo) > 50) {
                 $codigo_articulo = substr($codigo_articulo, 0, 50);
             }
             
-            // Validar que la descripción no sea demasiado larga
             if (strlen($descripcion) > 255) {
                 $descripcion = substr($descripcion, 0, 255);
             }
             
             error_log("DEBUG: Descripción limpia: '$descripcion'");
+            
+            // Validar que el movimiento sea un número
+            if (!is_numeric($movimiento)) {
+                error_log("ERROR: Movimiento no es un número válido: $movimiento");
+                return false;
+            }
+            
+            // Convertir a entero para asegurar consistencia
+            $movimiento = intval($movimiento);
+            
+            // Obtener stock anterior
+            $stockAnterior = $this->obtenerStockAnteriorDirecto($franquicia_id, $codigo_articulo);
+            error_log("DEBUG: Stock anterior: $stockAnterior");
+            
+            // Calcular nuevo stock
+            $stockActual = $stockAnterior + $movimiento;
+            error_log("DEBUG: Stock actual calculado: $stockActual = $stockAnterior + $movimiento");
             
             // Intentar reconectar si no hay conexión
             if (!$this->sistemas_conn) {
@@ -1027,7 +1129,7 @@ if (!class_exists('FranquiciaStockController')) {
             if ($this->sistemas_conn) {
                 // Buscar por código o descripción
                 $query = "SELECT TOP 50 COD_ARTICU, DESCRIPCION, RUBRO, CATEGORIA_PADRE 
-                        FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
+                        FROM [LAKERBIS].LOCALES_LAKERS.DBO.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
                         WHERE CATEGORIA_PADRE != '' AND RUBRO IS NOT NULL AND RUBRO NOT LIKE '%OUTLET'
                         AND (COD_ARTICU LIKE ? OR DESCRIPCION LIKE ?)
                         ORDER BY COD_ARTICU";
@@ -1161,17 +1263,63 @@ if (!class_exists('FranquiciaStockController')) {
 
 // Procesar petición si es una llamada AJAX directa
 if (($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['accion'])) && !headers_sent()) {
-    // Incluir configuración de sesiones
-    
     try {
+        error_log("DEBUG CONTROLLER: Iniciando procesamiento de petición AJAX");
+        error_log("DEBUG CONTROLLER: Método: " . $_SERVER['REQUEST_METHOD']);
+        error_log("DEBUG CONTROLLER: Acción: " . ($_POST['accion'] ?? $_GET['accion'] ?? 'no especificada'));
+        error_log("DEBUG CONTROLLER: Parámetros POST: " . json_encode($_POST));
+        error_log("DEBUG CONTROLLER: Parámetros GET: " . json_encode($_GET));
+        
+        // Verificar sesión antes de procesar
+        if (!isset($_SESSION)) {
+            error_log("DEBUG CONTROLLER: Iniciando sesión...");
+            session_start();
+        }
+        
+        error_log("DEBUG CONTROLLER: Estado de sesión: " . json_encode([
+            'autenticado' => $_SESSION['autenticado'] ?? false,
+            'usuario' => $_SESSION['usuario_franquicia'] ?? null,
+            'franquicia_id' => $_SESSION['franquicia_id'] ?? null,
+            'rol' => $_SESSION['user_role'] ?? null
+        ]));
+        
+        // Crear controlador y procesar petición
         $controller = new FranquiciaStockController();
+        error_log("DEBUG CONTROLLER: Controlador creado");
+        
         $resultado = $controller->procesarPeticion();
-        echo json_encode($resultado);
+        error_log("DEBUG CONTROLLER: Petición procesada, resultado: " . json_encode($resultado));
+        
+        // Verificar que no se han enviado headers
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=utf-8');
+            error_log("DEBUG CONTROLLER: Headers establecidos");
+        } else {
+            error_log("DEBUG CONTROLLER: Headers ya enviados");
+        }
+        
+        // Codificar respuesta
+        $jsonResponse = json_encode($resultado);
+        if ($jsonResponse === false) {
+            error_log("DEBUG CONTROLLER: Error codificando JSON: " . json_last_error_msg());
+            throw new Exception("Error codificando respuesta JSON: " . json_last_error_msg());
+        }
+        
+        echo $jsonResponse;
+        error_log("DEBUG CONTROLLER: Respuesta enviada exitosamente");
+        
     } catch (Exception $e) {
+        error_log("ERROR CONTROLLER: " . $e->getMessage());
+        
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=utf-8');
+        }
+        
         echo json_encode([
             'success' => false,
             'message' => $e->getMessage(),
-            'error_type' => 'fatal_error'
+            'error_type' => 'fatal_error',
+            'stack_trace' => $e->getTraceAsString()
         ]);
     }
 }

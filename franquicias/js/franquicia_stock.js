@@ -373,7 +373,10 @@ class FranquiciaStockManager {
      */
     async cargarRubros() {
         try {
-            const data = await this.fetchWithErrorHandling('controller/franquicia_stock_controller.php', {
+            console.log('DEBUG: Iniciando carga de rubros...');
+            console.log('DEBUG: URL de petición:', window.location.origin + '/franquicias/controller/franquicia_stock_controller.php');
+            
+            const response = await fetch('controller/franquicia_stock_controller.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -381,14 +384,46 @@ class FranquiciaStockManager {
                 body: 'accion=obtener_rubros'
             });
             
+            console.log('DEBUG: Status de respuesta:', response.status);
+            console.log('DEBUG: Headers de respuesta:', [...response.headers.entries()]);
+            
+            const contentType = response.headers.get('content-type');
+            console.log('DEBUG: Content-Type de respuesta:', contentType);
+            
+            let data;
+            try {
+                const textResponse = await response.text();
+                console.log('DEBUG: Respuesta cruda:', textResponse);
+                
+                try {
+                    data = JSON.parse(textResponse);
+                    console.log('DEBUG: Respuesta parseada:', data);
+                } catch (e) {
+                    console.error('DEBUG: Error parseando JSON:', e);
+                    throw new Error('Respuesta no es JSON válido: ' + textResponse);
+                }
+            } catch (e) {
+                console.error('DEBUG: Error obteniendo texto de respuesta:', e);
+                throw e;
+            }
+            
             if (data.success) {
+                console.log('DEBUG: Datos de éxito recibidos:', {
+                    rubros: data.rubros,
+                    count: data?.rubros?.length,
+                    source: data.source
+                });
                 this.llenarSelectorRubros(data.rubros);
             } else {
+                console.error('DEBUG: Error en respuesta:', {
+                    message: data.message,
+                    error: data.error
+                });
                 this.mostrarAlerta(data.message || 'Error al cargar rubros', 'danger');
             }
         } catch (error) {
-            console.error('Error:', error);
-            this.mostrarAlerta('Error de conexión al cargar rubros', 'danger');
+            console.error('DEBUG: Error en cargarRubros:', error);
+            this.mostrarAlerta('Error de conexión al cargar rubros: ' + error.message, 'danger');
         }
     }
     
@@ -396,35 +431,113 @@ class FranquiciaStockManager {
      * Llenar el selector de rubros
      */
     llenarSelectorRubros(rubros) {
-        const selector = document.getElementById('selector-rubro');
-        if (!selector) return;
+        console.log('DEBUG: Llenando selector con rubros:', rubros);
         
-        // Limpiar opciones existentes excepto la primera
+        // 1. Obtener el selector
+        const selector = document.getElementById('selector-rubro');
+        if (!selector) {
+            const error = 'No se encontró el elemento select#selector-rubro en el DOM';
+            console.error('DEBUG:', error);
+            this.mostrarAlerta(error, 'danger');
+            return;
+        }
+        
+        // 2. Validar los datos
+        if (!rubros) {
+            const error = 'No se recibieron datos de rubros';
+            console.error('DEBUG:', error);
+            this.mostrarAlerta(error, 'warning');
+            return;
+        }
+        
+        if (!Array.isArray(rubros)) {
+            const error = `rubros no es un array: ${typeof rubros}`;
+            console.error('DEBUG:', error, rubros);
+            this.mostrarAlerta(error, 'danger');
+            return;
+        }
+        
+        console.log('DEBUG: Estructura de rubros:', rubros.map(r => ({
+            tipo: typeof r,
+            valor: r,
+            esObjeto: typeof r === 'object',
+            tieneRUBRO: r?.RUBRO !== undefined,
+            tieneRubro: r?.rubro !== undefined
+        })));
+        
+        // 3. Limpiar opciones existentes
         while (selector.children.length > 1) {
             selector.removeChild(selector.lastChild);
         }
         
-        // Agregar nuevas opciones
-        rubros.forEach(rubro => {
-            const option = document.createElement('option');
-            option.value = rubro.RUBRO;
-            option.textContent = rubro.RUBRO;
-            selector.appendChild(option);
+        // 4. Crear fragmento para mejor rendimiento
+        const fragment = document.createDocumentFragment();
+        
+        // 5. Procesar cada rubro
+        rubros.forEach((rubro, index) => {
+            try {
+                const option = document.createElement('option');
+                
+                if (typeof rubro === 'object' && rubro !== null) {
+                    // Si es objeto, intentar obtener el valor de RUBRO o rubro
+                    if (rubro.RUBRO !== undefined) {
+                        option.value = rubro.RUBRO;
+                        option.textContent = rubro.RUBRO;
+                    } else if (rubro.rubro !== undefined) {
+                        option.value = rubro.rubro;
+                        option.textContent = rubro.rubro;
+                    } else {
+                        console.warn('DEBUG: Objeto rubro sin propiedades esperadas:', rubro);
+                        return; // Saltar este rubro
+                    }
+                } else if (typeof rubro === 'string') {
+                    option.value = rubro;
+                    option.textContent = rubro;
+                } else {
+                    console.warn('DEBUG: Tipo de rubro no manejado:', typeof rubro, rubro);
+                    return; // Saltar este rubro
+                }
+                
+                fragment.appendChild(option);
+                
+            } catch (e) {
+                console.error('DEBUG: Error procesando rubro:', {
+                    index,
+                    rubro,
+                    error: e
+                });
+            }
         });
+        
+        // 6. Agregar todas las opciones de una vez
+        selector.appendChild(fragment);
+        
+        // 7. Verificar resultado
+        console.log('DEBUG: Total opciones agregadas:', selector.options.length - 1);
+        if (selector.options.length <= 1) {
+            this.mostrarAlerta('No se encontraron rubros para cargar', 'warning');
+        }
     }
     
     /**
      * Seleccionar rubro y cargar categorías
      */
     async seleccionarRubro(rubro) {
-        if (!rubro) {
-            this.ocultarCategorias();
-            return;
-        }
-        
-        this.rubroActual = rubro;
-        
         try {
+            console.log('DEBUG: Seleccionando rubro:', rubro);
+            
+            if (!rubro) {
+                this.ocultarCategorias();
+                return;
+            }
+            
+            this.rubroActual = rubro;
+            
+            // Limpiar datos actuales
+            this.categoriasData = [];
+            this.stockData = {};
+            
+            // Obtener categorías
             const data = await this.fetchWithErrorHandling('controller/franquicia_stock_controller.php', {
                 method: 'POST',
                 headers: {
@@ -434,15 +547,27 @@ class FranquiciaStockManager {
             });
             
             if (data.success) {
+                console.log('DEBUG: Categorías obtenidas:', data.categorias);
                 this.categoriasData = data.categorias;
+                
+                // Mostrar categorías antes de cargar el stock
                 this.mostrarCategorias();
+                
+                // Cargar stock existente
                 await this.cargarStockExistente(rubro);
+                
+                // Actualizar contadores y estado del botón
+                this.actualizarContadores();
+                this.habilitarBotonGuardar();
+                
+                console.log('DEBUG: Rubro cargado completamente:', rubro);
             } else {
+                console.error('DEBUG: Error cargando categorías:', data.message);
                 this.mostrarAlerta(data.message || 'Error al cargar categorías', 'danger');
             }
         } catch (error) {
-            console.error('Error:', error);
-            this.mostrarAlerta('Error de conexión', 'danger');
+            console.error('DEBUG: Error en seleccionarRubro:', error);
+            this.mostrarAlerta('Error de conexión al cargar el rubro', 'danger');
         }
     }
     
@@ -537,6 +662,8 @@ class FranquiciaStockManager {
      */
     async cargarStockExistente(rubro) {
         try {
+            console.log('DEBUG: Cargando stock existente para rubro:', rubro);
+            
             const data = await this.fetchWithErrorHandling('controller/franquicia_stock_controller.php', {
                 method: 'POST',
                 headers: {
@@ -546,23 +673,44 @@ class FranquiciaStockManager {
             });
             
             if (data.success) {
+                // Limpiar datos actuales del rubro
+                this.stockData = {};
+                
                 // Filtrar stock por rubro actual
                 const stockRubro = data.stock.filter(item => item.rubro === rubro);
+                console.log('DEBUG: Stock filtrado para rubro:', stockRubro);
                 
-                // Actualizar inputs con datos existentes
+                // Actualizar inputs y stockData
                 stockRubro.forEach(item => {
                     const input = document.querySelector(`input[data-categoria="${item.categoria}"]`);
                     if (input) {
-                        input.value = item.cantidad;
-                        this.stockData[item.categoria] = item.cantidad;
+                        const cantidad = parseInt(item.cantidad) || 0;
+                        input.value = cantidad;
+                        this.stockData[item.categoria] = cantidad;
+                        console.log('DEBUG: Actualizado:', item.categoria, 'con cantidad:', cantidad);
+                    }
+                });
+                
+                // Asegurarse que todas las categorías tengan un valor
+                document.querySelectorAll('.cantidad-input').forEach(input => {
+                    const categoria = input.getAttribute('data-categoria');
+                    if (categoria && !this.stockData.hasOwnProperty(categoria)) {
+                        input.value = '0';
+                        this.stockData[categoria] = 0;
+                        console.log('DEBUG: Inicializado:', categoria, 'con 0');
                     }
                 });
                 
                 this.actualizarContadores();
                 this.habilitarBotonGuardar();
+                
+                console.log('DEBUG: Stock cargado completamente:', this.stockData);
+            } else {
+                console.error('DEBUG: Error cargando stock:', data.message);
             }
         } catch (error) {
-            console.error('Error al cargar stock existente:', error);
+            console.error('DEBUG: Error al cargar stock existente:', error);
+            this.mostrarAlerta('Error al cargar el stock existente', 'danger');
         }
     }
     
@@ -570,16 +718,23 @@ class FranquiciaStockManager {
      * Actualizar stock en memoria
      */
     actualizarStock(categoria, cantidad) {
-        if (cantidad === '' || cantidad === null || cantidad === undefined) {
+        // Si la cantidad es vacía, null, undefined o 0, eliminar la entrada
+        if (!cantidad && cantidad !== 0) {
             delete this.stockData[categoria];
-        } else {
-            // Permitir valores 0 - convertir a número pero mantener 0 como válido
-            const valorNumerico = parseInt(cantidad);
-            if (!isNaN(valorNumerico)) {
-                this.stockData[categoria] = valorNumerico;
-            } else {
+            return;
+        }
+        
+        // Convertir a número
+        const valorNumerico = parseInt(cantidad);
+        if (!isNaN(valorNumerico)) {
+            // Si es 0, eliminar la entrada
+            if (valorNumerico === 0) {
                 delete this.stockData[categoria];
+            } else {
+                this.stockData[categoria] = valorNumerico;
             }
+        } else {
+            delete this.stockData[categoria];
         }
     }
     
@@ -587,12 +742,25 @@ class FranquiciaStockManager {
      * Limpiar categoría específica
      */
     limpiarCategoria(categoria) {
+        console.log('DEBUG: Limpiando categoría:', categoria);
         const input = document.querySelector(`input[data-categoria="${categoria}"]`);
         if (input) {
-            input.value = '';
-            delete this.stockData[categoria];
+            // Poner el valor explícitamente en 0
+            input.value = '0';
+            this.stockData[categoria] = 0; // Actualizar el stockData con 0
+            console.log('DEBUG: Valor actualizado a 0 para categoría:', categoria);
+            console.log('DEBUG: Estado actual de stockData:', this.stockData);
             this.actualizarContadores();
             this.habilitarBotonGuardar();
+            
+            // Forzar el cambio para que se detecte
+            const event = new Event('input', {
+                bubbles: true,
+                cancelable: true,
+            });
+            input.dispatchEvent(event);
+        } else {
+            console.error('DEBUG: No se encontró el input para la categoría:', categoria);
         }
     }
     
@@ -711,9 +879,12 @@ class FranquiciaStockManager {
                     this.actualizarStock(categoria, valor);
                     resumenDatos.push({categoria: categoria, cantidad: valor});
                 } else {
-                    // Campo vacío = asignar 0
-                    this.actualizarStock(categoria, '0');
-                    resumenDatos.push({categoria: categoria, cantidad: '0'});
+                    // Campo vacío = eliminar el valor
+                    this.actualizarStock(categoria, '');
+                    // Solo incluir en el resumen si tenía un valor anterior
+                    if (this.stockData[categoria] !== undefined) {
+                        resumenDatos.push({categoria: categoria, cantidad: ''});
+                    }
                 }
             }
         });
@@ -852,12 +1023,24 @@ class FranquiciaStockManager {
     async ejecutarGuardadoStock() {
         console.log('DEBUG: Ejecutando guardado confirmado');
         
-        // Preparar datos para enviar
-        const stockArray = Object.entries(this.stockData).map(([categoria, cantidad]) => ({
-            rubro: this.rubroActual,
-            categoria: categoria,
-            cantidad: cantidad
-        }));
+        // Obtener todas las categorías del formulario
+        const inputs = document.querySelectorAll('.cantidad-input');
+        const stockArray = [];
+        
+        inputs.forEach(input => {
+            const categoria = input.getAttribute('data-categoria');
+            if (categoria) {
+                // Si el valor está vacío o no es número, usar 0
+                const valor = input.value.trim();
+                const cantidad = (valor !== '' && !isNaN(valor)) ? parseInt(valor) : 0;
+                
+                stockArray.push({
+                    rubro: this.rubroActual,
+                    categoria: categoria,
+                    cantidad: cantidad // Siempre enviamos un número, 0 si está vacío
+                });
+            }
+        });
         
         console.log('DEBUG: Datos a enviar:', stockArray);
         console.log('DEBUG: stockData completo:', this.stockData);
@@ -916,26 +1099,29 @@ class FranquiciaStockManager {
             }
 
             if (data.success) {
-                console.log('DEBUG: Guardado exitoso, limpiando formulario');
-                
-                // Limpiar formulario inmediatamente
-                this.limpiarRubroSinConfirmacion();
-                const selectorRubro = document.getElementById('selector-rubro');
-                if (selectorRubro) selectorRubro.value = '';
-                this.ocultarCategorias();
-                
-                console.log('DEBUG: Formulario limpiado exitosamente');
+                console.log('DEBUG: Guardado exitoso');
                 
                 // DOBLE PROTECCIÓN - forzar ocultación del modal después de mostrar éxito
-                setTimeout(() => {
+                setTimeout(async () => {
                     console.log('DEBUG: Protección adicional - forzando ocultación del modal');
                     this.forzarOcultacionModal();
                     
-                    // Mostrar mensaje de éxito DESPUÉS de ocultar el modal para mejor visibilidad
-                    setTimeout(() => {
+                    // Mostrar mensaje de éxito DESPUÉS de ocultar el modal
+                    setTimeout(async () => {
                         console.log('DEBUG: Mostrando alerta de éxito');
                         this.mostrarAlerta(`Stock guardado exitosamente. Se registraron ${data.movimientos_registrados} movimientos en la base de datos.`, 'success');
-                        console.log('DEBUG: Alerta de éxito mostrada');
+                        
+                        // Recargar datos del rubro actual
+                        console.log('DEBUG: Recargando datos del rubro actual:', this.rubroActual);
+                        if (this.rubroActual) {
+                            await this.seleccionarRubro(this.rubroActual);
+                        }
+                        
+                        // Actualizar el resumen de stock
+                        await this.cargarResumenStock();
+                        
+                        // Verificar estado de carga
+                        await this.verificarEstadoCarga();
                         
                         // Notificar al sistema global que el stock ha cambiado
                         if (typeof window.notificarCambioStock === 'function') {
@@ -1114,6 +1300,7 @@ class FranquiciaStockManager {
         const stockPorRubro = {};
         let totalItems = 0;
         let totalStock = 0;
+        let categoriasInventariadas = 0;
         
         stockData.forEach(item => {
             if (!stockPorRubro[item.rubro]) {
@@ -1121,28 +1308,40 @@ class FranquiciaStockManager {
             }
             stockPorRubro[item.rubro].push(item);
             totalItems++;
-            totalStock += parseInt(item.cantidad) || 0;
+            const cantidad = parseInt(item.cantidad) || 0;
+            totalStock += cantidad;
+            if (cantidad > 0) {
+                categoriasInventariadas++;
+            }
         });
         
         let html = `
             <div class="row mb-3">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="card border-primary">
                         <div class="card-body text-center py-2">
                             <h4 class="text-primary mb-1">${Object.keys(stockPorRubro).length}</h4>
-                            <small class="text-muted">Rubros Cargados</small>
+                            <small class="text-muted">Rubros</small>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="card border-info">
                         <div class="card-body text-center py-2">
                             <h4 class="text-info mb-1">${totalItems}</h4>
-                            <small class="text-muted">Categorías</small>
+                            <small class="text-muted">Categorías Totales</small>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <div class="card border-warning">
+                        <div class="card-body text-center py-2">
+                            <h4 class="text-warning mb-1">${categoriasInventariadas}</h4>
+                            <small class="text-muted">Categorías Inventariadas</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
                     <div class="card border-success">
                         <div class="card-body text-center py-2">
                             <h4 class="text-success mb-1">${totalStock.toLocaleString()}</h4>
@@ -1151,9 +1350,25 @@ class FranquiciaStockManager {
                     </div>
                 </div>
             </div>
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <select class="form-select" id="filtro-rubro-resumen">
+                        <option value="">Todos los rubros</option>
+                        ${Object.keys(stockPorRubro).map(rubro => 
+                            `<option value="${rubro}">${rubro}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+                <div class="col-md-8">
+                    <input type="text" class="form-control" id="busqueda-resumen" 
+                           placeholder="Buscar por categoría..."
+                           autocomplete="off">
+                </div>
+            </div>
             
             <div class="table-responsive">
-                <table class="table table-sm table-striped">
+                <table class="table table-sm table-striped table-hover">
                     <thead class="table-secondary">
                         <tr>
                             <th>Rubro</th>
@@ -1161,21 +1376,22 @@ class FranquiciaStockManager {
                             <th class="text-end">Cantidad</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="tabla-resumen-stock">
         `;
         
         Object.entries(stockPorRubro).forEach(([rubro, items]) => {
             items.forEach(item => {
+                const cantidad = parseInt(item.cantidad) || 0;
                 html += `
-                    <tr>
+                    <tr data-rubro="${item.rubro}" data-categoria="${item.categoria.toLowerCase()}" data-cantidad="${cantidad}">
                         <td><strong>${item.rubro}</strong></td>
                         <td>${item.categoria}</td>
-                        <td class="text-end">${parseInt(item.cantidad).toLocaleString()}</td>
+                        <td class="text-end">${cantidad.toLocaleString()}</td>
                     </tr>
                 `;
             });
         });
-        
+
         html += `
                     </tbody>
                 </table>
@@ -1184,6 +1400,74 @@ class FranquiciaStockManager {
         
         contenido.innerHTML = html;
         seccion.style.display = 'block';
+
+        // Configurar filtros
+        const busquedaInput = document.getElementById('busqueda-resumen');
+        const filtroRubro = document.getElementById('filtro-rubro-resumen');
+        const tablaResumen = document.getElementById('tabla-resumen-stock');
+
+        if (busquedaInput && filtroRubro && tablaResumen) {
+            const actualizarTotales = () => {
+                let totalFiltrado = 0;
+                let stockFiltrado = 0;
+                let categoriasInventariadasFiltradas = 0;
+                const filas = tablaResumen.getElementsByTagName('tr');
+
+                Array.from(filas).forEach(fila => {
+                    if (fila.style.display !== 'none') {
+                        totalFiltrado++;
+                        const cantidad = parseInt(fila.getAttribute('data-cantidad') || '0');
+                        stockFiltrado += cantidad;
+                        if (cantidad > 0) {
+                            categoriasInventariadasFiltradas++;
+                        }
+                    }
+                });
+
+                // Actualizar las cards con los totales filtrados
+                const cards = document.querySelectorAll('.card');
+                cards.forEach(card => {
+                    const h4 = card.querySelector('h4');
+                    if (h4) {
+                        if (h4.classList.contains('text-info')) {
+                            // Total de categorías
+                            h4.textContent = totalFiltrado;
+                        } else if (h4.classList.contains('text-warning')) {
+                            // Categorías inventariadas
+                            h4.textContent = categoriasInventariadasFiltradas;
+                        } else if (h4.classList.contains('text-success')) {
+                            // Total stock
+                            h4.textContent = stockFiltrado.toLocaleString();
+                        }
+                    }
+                });
+            };
+
+            const filtrarTabla = () => {
+                const textoBusqueda = busquedaInput.value.toLowerCase();
+                const rubroSeleccionado = filtroRubro.value;
+                const filas = tablaResumen.getElementsByTagName('tr');
+
+                Array.from(filas).forEach(fila => {
+                    const rubro = fila.getAttribute('data-rubro');
+                    const categoria = fila.getAttribute('data-categoria');
+                    
+                    if (rubro && categoria) {
+                        const coincideRubro = !rubroSeleccionado || rubro === rubroSeleccionado;
+                        const coincideTexto = !textoBusqueda || 
+                                            categoria.includes(textoBusqueda) || 
+                                            rubro.toLowerCase().includes(textoBusqueda);
+
+                        fila.style.display = coincideRubro && coincideTexto ? '' : 'none';
+                    }
+                });
+
+                actualizarTotales();
+            };
+
+            busquedaInput.addEventListener('input', filtrarTabla);
+            filtroRubro.addEventListener('change', filtrarTabla);
+        }
     }
     
     /**
@@ -1448,13 +1732,128 @@ async function cargarHistorial() {
         });
         
         if (data.success) {
-            // Redirigir a vista de historial con los datos
-            window.location.href = '?vista=historial';
+            // Guardar los datos en sessionStorage
+            sessionStorage.setItem('historial_stock', JSON.stringify(data));
+            
+            // Redirigir a vista de historial con un parámetro timestamp
+            // para asegurar que se recarga la página
+            window.location.href = `?vista=historial&t=${Date.now()}`;
         } else {
             franquiciaStock.mostrarAlerta(data.message || 'Error al cargar el historial', 'danger');
         }
     } catch (error) {
         console.error('Error:', error);
         franquiciaStock.mostrarAlerta('Error de conexión', 'danger');
+    }
+}
+
+/**
+ * Inicializar vista de historial
+ */
+function inicializarHistorial() {
+    try {
+        // Recuperar datos del historial
+        const historialData = sessionStorage.getItem('historial_stock');
+        if (!historialData) {
+            console.warn('No se encontraron datos del historial');
+            return;
+        }
+
+        const data = JSON.parse(historialData);
+        if (!data.historial || !Array.isArray(data.historial)) {
+            console.warn('Datos de historial inválidos');
+            return;
+        }
+
+        // Generar conjunto único de períodos y rubros
+        const periodos = [...new Set(data.historial.map(item => item.periodo))].sort().reverse();
+        const rubros = [...new Set(data.historial.map(item => item.rubro))].sort();
+
+        // Llenar selectores de filtro
+        const selectorPeriodo = document.getElementById('filtro-periodo');
+        const selectorRubro = document.getElementById('filtro-rubro');
+
+        if (selectorPeriodo) {
+            selectorPeriodo.innerHTML = `
+                <option value="">Todos los períodos</option>
+                ${periodos.map(periodo => `<option value="${periodo}">${periodo}</option>`).join('')}
+            `;
+        }
+
+        if (selectorRubro) {
+            selectorRubro.innerHTML = `
+                <option value="">Todos los rubros</option>
+                ${rubros.map(rubro => `<option value="${rubro}">${rubro}</option>`).join('')}
+            `;
+        }
+
+        // Configurar eventos de filtro
+        const filtrarHistorial = () => {
+            const periodoSeleccionado = selectorPeriodo ? selectorPeriodo.value : '';
+            const rubroSeleccionado = selectorRubro ? selectorRubro.value : '';
+            const busqueda = document.getElementById('busqueda-historial')?.value.toLowerCase() || '';
+
+            const tbody = document.getElementById('tabla-historial-stock');
+            if (!tbody) return;
+
+            let totalStock = 0;
+            let totalCategorias = 0;
+            let categoriasInventariadas = 0;
+
+            // Filtrar y mostrar datos
+            const htmlFilas = data.historial
+                .filter(item => {
+                    const coincidePeriodo = !periodoSeleccionado || item.periodo === periodoSeleccionado;
+                    const coincideRubro = !rubroSeleccionado || item.rubro === rubroSeleccionado;
+                    const coincideBusqueda = !busqueda || 
+                                           item.categoria.toLowerCase().includes(busqueda) || 
+                                           item.rubro.toLowerCase().includes(busqueda);
+                    
+                    const pasa = coincidePeriodo && coincideRubro && coincideBusqueda;
+                    if (pasa) {
+                        totalStock += parseInt(item.cantidad) || 0;
+                        totalCategorias++;
+                        if ((parseInt(item.cantidad) || 0) > 0) {
+                            categoriasInventariadas++;
+                        }
+                    }
+                    return pasa;
+                })
+                .map(item => `
+                    <tr>
+                        <td>${item.periodo}</td>
+                        <td><strong>${item.rubro}</strong></td>
+                        <td>${item.categoria}</td>
+                        <td class="text-end">${parseInt(item.cantidad).toLocaleString()}</td>
+                    </tr>
+                `)
+                .join('');
+
+            tbody.innerHTML = htmlFilas;
+
+            // Actualizar contadores
+            document.querySelectorAll('.card-body h4').forEach(card => {
+                if (card.classList.contains('text-info')) {
+                    card.textContent = totalCategorias;
+                } else if (card.classList.contains('text-warning')) {
+                    card.textContent = categoriasInventariadas;
+                } else if (card.classList.contains('text-success')) {
+                    card.textContent = totalStock.toLocaleString();
+                }
+            });
+        };
+
+        // Configurar eventos
+        if (selectorPeriodo) selectorPeriodo.addEventListener('change', filtrarHistorial);
+        if (selectorRubro) selectorRubro.addEventListener('change', filtrarHistorial);
+        const busquedaInput = document.getElementById('busqueda-historial');
+        if (busquedaInput) busquedaInput.addEventListener('input', filtrarHistorial);
+
+        // Filtrar inicialmente
+        filtrarHistorial();
+
+    } catch (error) {
+        console.error('Error al inicializar historial:', error);
+        franquiciaStock.mostrarAlerta('Error al cargar el historial', 'danger');
     }
 }

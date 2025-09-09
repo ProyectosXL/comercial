@@ -147,25 +147,23 @@ class AuthFranquicia {
      */
     public function obtenerFranquiciaId($nombreUsuario) {
         try {
-            // Verificar que el usuario existe en SOF_USUARIOS
+            // Buscar el ID numérico de la franquicia (NRO_SUCURS)
             $stmt = $this->conexion_laker->prepare(
-                "SELECT NOMBRE, DESCRIPCION FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' AND NOMBRE = ?"
+                "SELECT NRO_SUCURS, NOMBRE, DESCRIPCION FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' AND NOMBRE = ?"
             );
             $stmt->execute([$nombreUsuario]);
             $franquicia = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($franquicia) {
-                error_log("DEBUG AUTH: Franquicia encontrada en SOF_USUARIOS: " . $franquicia['NOMBRE'] . " - " . $franquicia['DESCRIPCION']);
-                
-                // Retornar directamente el código de usuario para compatibilidad con reportes
-                return $franquicia['NOMBRE'];
+
+            if ($franquicia && isset($franquicia['NRO_SUCURS'])) {
+                error_log("DEBUG AUTH: Franquicia encontrada en SOF_USUARIOS: " . $franquicia['NOMBRE'] . " - " . $franquicia['DESCRIPCION'] . " - NRO_SUCURS: " . $franquicia['NRO_SUCURS']);
+                return $franquicia['NRO_SUCURS'];
             } else {
                 error_log("DEBUG AUTH: Franquicia no encontrada en SOF_USUARIOS para: $nombreUsuario");
                 throw new Exception("Franquicia no encontrada en el sistema");
             }
-            
+
         } catch (Exception $e) {
-            error_log("Error obteniendo código de franquicia: " . $e->getMessage());
+            error_log("Error obteniendo NRO_SUCURS de franquicia: " . $e->getMessage());
             throw $e;
         }
     }
@@ -362,6 +360,7 @@ class AuthFranquicia {
             require_once __DIR__ . '/../config_sesiones_fixed.php';
             
             $_SESSION['usuario_franquicia'] = $usuario;
+            $_SESSION['username'] = $usuario; // Compatibilidad para controladores que esperan 'username'
             $_SESSION['user_role'] = $rol; // Nuevo: rol del usuario
             $_SESSION['autenticado'] = true;
             $_SESSION['timestamp_login'] = time();

@@ -222,8 +222,8 @@ try {
     <div class="login-card">
         <div class="login-header">
             <i class="bi bi-shop display-4 mb-3"></i>
-            <h1>Sistema de Franquicias</h1>
-            <p>Gestión de Stock</p>
+            <h1>Sistema de Gestión de Stock</h1>
+            <p>Franquicias</p>
         </div>
         
         <div class="login-body">
@@ -235,28 +235,14 @@ try {
             <?php endif; ?>
             
             <form method="POST" action="">
-                <div class="form-floating">
-                    <select name="usuario" id="usuario" class="form-select" required onchange="updatePassword()">
-                        <option value="">Seleccionar usuario...</option>
-                        <?php if (!empty($usuarios)): ?>
-                            <?php foreach ($usuarios as $user): ?>
-                                <option value="<?= htmlspecialchars($user['NOMBRE'] ?? '') ?>" 
-                                        data-pass="<?= htmlspecialchars($user['PASS'] ?? '') ?>"
-                                        data-tipo="<?= htmlspecialchars($user['TIPO'] ?? 'FRANQUICIA') ?>">
-                                    <?= htmlspecialchars($user['NOMBRE'] ?? 'Usuario sin nombre') ?> 
-                                    (<?= isset($user['TIPO']) && $user['TIPO'] === 'FRANQUICIA' ? 'Franquicia' : 'Supervisión' ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <option value="" disabled>No hay usuarios disponibles</option>
-                        <?php endif; ?>
-                    </select>
+                <div class="form-floating mb-3">
+                    <input type="text" name="usuario" id="usuario" class="form-control" required>
                     <label for="usuario">
                         <i class="bi bi-person me-2"></i>Usuario del Sistema
                     </label>
                 </div>
                 
-                <div class="form-floating">
+                <div class="form-floating mb-4">
                     <input type="password" name="password" id="password" class="form-control" required>
                     <label for="password">
                         <i class="bi bi-lock me-2"></i>Contraseña
@@ -268,32 +254,6 @@ try {
                     Iniciar Sesión
                 </button>
             </form>
-            
-            <?php if (!empty($error_usuarios)): ?>
-                <div class="connection-status">
-                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
-                    <strong>Estado de conexión:</strong> <?= htmlspecialchars($error_usuarios) ?>
-                </div>
-            <?php else: ?>
-                <div class="connection-status">
-                    <i class="bi bi-check-circle text-success me-2"></i>
-                    <strong>Conexión exitosa:</strong> <?= count($usuarios) ?> usuarios de franquicia cargados desde LAKER_SA
-                </div>
-            <?php endif; ?>
-            
-            <div class="quick-access">
-                <h6 class="text-muted mb-3">
-                    <i class="bi bi-lightning me-2"></i>Acceso Rápido
-                </h6>
-                <?php 
-                $usuariosPopulares = array_slice($usuarios, 0, 6); // Mostrar solo los primeros 6
-                foreach ($usuariosPopulares as $user): 
-                ?>
-                    <a href="#" class="quick-btn" onclick="quickLogin('<?= htmlspecialchars($user['NOMBRE']) ?>', '<?= htmlspecialchars($user['PASS']) ?>')">
-                        <?= htmlspecialchars($user['NOMBRE']) ?>
-                    </a>
-                <?php endforeach; ?>
-            </div>
         </div>
     </div>
     
@@ -301,40 +261,9 @@ try {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        function updatePassword() {
-            const select = document.getElementById('usuario');
-            const passwordInput = document.getElementById('password');
-            const selectedOption = select.options[select.selectedIndex];
-            
-            if (selectedOption && selectedOption.dataset.pass) {
-                passwordInput.value = selectedOption.dataset.pass;
-                passwordInput.focus();
-            } else {
-                passwordInput.value = '';
-            }
-        }
-        
-        function quickLogin(usuario, password) {
-            document.getElementById('usuario').value = usuario;
-            document.getElementById('password').value = password;
-            
-            // Enviar formulario automáticamente
-            document.querySelector('form').submit();
-        }
-        
         // Auto-focus en el primer campo
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('usuario').focus();
-        });
-        
-        // Enviar con Enter desde cualquier campo
-        document.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter' && event.target.tagName !== 'BUTTON') {
-                const form = document.querySelector('form');
-                if (form.checkValidity()) {
-                    form.submit();
-                }
-            }
         });
     </script>
 </body>
