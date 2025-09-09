@@ -300,86 +300,89 @@ class Articulo
      * @param int $pageSize
      * @return array
      */
-    public function buscarArticulosSelect2($termino, $page = 1, $pageSize = 20) {
+    public function buscarArticulosSelect2($termino, $page = 1, $pageSize = 20)
+    {
         try {
             error_log("=== buscarArticulosSelect2 === Término: '$termino', Page: $page");
-            
+
             $offset = ($page - 1) * $pageSize;
             $terminoEscapado = $this->escapeSqlString($termino);
-            
-            // SQL corregido según tu especificación
+
+            // SQL con LEFT JOIN para verificar si el artículo ya está en un grupo
             $sql = "SELECT TOP " . ($pageSize + 1) . "
                         s.COD_ARTICU as id,
                         s.DESCRIPCIO as descripcion,
                         '' as color,
-                        CONCAT(s.COD_ARTICU COLLATE Latin1_General_BIN, ' - ', s.DESCRIPCIO COLLATE Latin1_General_BIN) as text
+                        CONCAT(s.COD_ARTICU COLLATE Latin1_General_BIN, ' - ', s.DESCRIPCIO COLLATE Latin1_General_BIN) as text,
+                        eq.COD_EQUIVALENCIA as en_grupo
                     FROM STA11 s
+                    LEFT JOIN RO_T_ARTICULOS_EQUIVALENTES eq ON s.COD_ARTICU COLLATE Latin1_General_BIN = eq.COD_ARTICULO COLLATE Latin1_General_BIN AND eq.ACTIVO = 1
                     WHERE s.USA_ESC = 'B' 
                     AND s.COD_ARTICU LIKE '[XO]%' 
                     AND s.COD_ARTICU NOT LIKE 'OU%' 
                     AND s.PERFIL = 'A'
                     AND (s.COD_ARTICU LIKE '%$terminoEscapado%' OR s.DESCRIPCIO LIKE '%$terminoEscapado%')
-                    AND s.COD_ARTICU COLLATE Latin1_General_BIN NOT IN (
-                        SELECT COD_ARTICULO 
-                        FROM RO_T_ARTICULOS_EQUIVALENTES 
-                        WHERE ACTIVO = 1
-                    )
                     ORDER BY s.COD_ARTICU";
 
             error_log("SQL generado: " . $sql);
-            
+
             $resultados = $this->retornarArray($sql);
             $cantidadResultados = count($resultados);
-            
+
             error_log("Resultados encontrados: " . $cantidadResultados);
-            
+
             $hasMore = $cantidadResultados > $pageSize;
-            
+
             if ($hasMore) {
                 array_pop($resultados); // Remover el registro extra
             }
-            
+
             // Log del primer resultado para debug
             if (count($resultados) > 0) {
                 error_log("Primer resultado: " . json_encode($resultados[0]));
             }
-            
+
             // Asegurar formato correcto
             foreach ($resultados as &$resultado) {
                 // Asegurar que color existe (vacío para esta consulta)
                 $resultado['color'] = '';
-                
+
                 // Asegurar que text existe
                 if (empty($resultado['text'])) {
                     $resultado['text'] = $resultado['id'] . ' - ' . $resultado['descripcion'];
                 }
-                
+
                 // Limpiar valores NULL
                 if (is_null($resultado['descripcion'])) {
                     $resultado['descripcion'] = '';
                 }
+
+                // Asegurar que en_grupo existe y es null si no está definido
+                if (!isset($resultado['en_grupo']) || is_null($resultado['en_grupo'])) {
+                    $resultado['en_grupo'] = null;
+                }
             }
-            
+
             $respuesta = [
                 'articulos' => $resultados,
                 'hasMore' => $hasMore
             ];
-            
+
             error_log("Respuesta final: " . json_encode($respuesta));
-            
+
             return $respuesta;
-            
+
         } catch (Exception $e) {
             error_log("Error en buscarArticulosSelect2: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
-            
+
             // En caso de error, devolver array vacío
             return [
                 'articulos' => [],
                 'hasMore' => false,
                 'error' => $e->getMessage()
             ];
-        }   
+        }
     }
 
     /**

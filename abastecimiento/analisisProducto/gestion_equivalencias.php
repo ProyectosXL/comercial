@@ -66,13 +66,13 @@ require_once 'includes/help-functions.php';
                 <div class="card">
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-3">
+                            <!-- <div class="col-md-3">
                                 <label class="form-label">Buscar por artículo</label>
                                 <select class="form-select" id="buscarArticulo">
                                     <option value="">Seleccionar artículo...</option>
                                 </select>
-                            </div>
-                            <div class="col-md-2">
+                            </div> -->
+                            <div class="col-md-3">
                                 <label class="form-label">Buscar por grupo</label>
                                 <input type="number" class="form-control" id="buscarGrupo" placeholder="Código de equivalencia">
                             </div>

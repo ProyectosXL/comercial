@@ -166,7 +166,9 @@ function initSelect2() {
                     return {
                         id: item.id,
                         text: item.text || (item.id + ' - ' + item.descripcion),
-                        descripcion: item.descripcion || ''
+                        descripcion: item.descripcion || '',
+                        en_grupo: item.en_grupo || null,
+                        disabled: !!item.en_grupo
                     };
                 });
                 
@@ -473,6 +475,12 @@ function agregarArticuloAlGrupo() {
         return;
     }
     
+    // Verificar si el artículo ya pertenece a otro grupo
+    if (articuloSeleccionado.en_grupo) {
+        mostrarError(`El artículo ${articuloSeleccionado.id} ya pertenece al grupo de equivalencia ${articuloSeleccionado.en_grupo}. No se puede agregar.`);
+        return;
+    }
+
     // Verificar si ya existe en el grupo
     const yaExiste = articulosGrupo.some(art => art.COD_ARTICU === articuloSeleccionado.id);
     if (yaExiste) {
@@ -709,7 +717,9 @@ function reinicializarSelect2Modal() {
                     return {
                         id: item.id,
                         text: item.text || (item.id + ' - ' + item.descripcion),
-                        descripcion: item.descripcion || ''
+                        descripcion: item.descripcion || '',
+                        en_grupo: item.en_grupo || null,
+                        disabled: !!item.en_grupo
                     };
                 });
                 
@@ -793,13 +803,18 @@ function formatearResultadoArticulo(articulo) {
         return articulo.text;
     }
     
+    let grupoInfo = '';
+    if (articulo.en_grupo) {
+        grupoInfo = `<span class="badge bg-warning text-dark ms-2">En grupo ${articulo.en_grupo}</span>`;
+    }
+
     return $(`
         <div class="d-flex align-items-center">
             <div class="me-3">
                 <strong>${articulo.id}</strong>
             </div>
             <div class="flex-grow-1">
-                <div>${articulo.descripcion || articulo.text}</div>
+                <div>${articulo.descripcion || articulo.text}${grupoInfo}</div>
                 ${articulo.color ? `<small class="text-muted">${articulo.color}</small>` : ''}
             </div>
         </div>
