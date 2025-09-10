@@ -441,7 +441,16 @@ function debugMainSystem() {
                 </div>
                 <p class="mb-0">Esta acción registrará los movimientos de stock en la base de datos y no se puede deshacer fácilmente.</p>
                 <div id="resumen-confirmacion" class="mt-3">
-                    <!-- Se llenará dinámicamente con el resumen -->
+                    <div class="mb-3">
+                        <strong>Total de categorías:</strong> <span id="totalCategorias">0</span>
+                    </div>
+                    <div id="categoriasSinCargar" class="alert alert-warning" style="display: none;">
+                        <strong>Categorías sin cargar:</strong>
+                        <ul class="list-unstyled mb-0 mt-2"></ul>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Total de unidades:</strong> <span id="totalUnidades">0</span>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">

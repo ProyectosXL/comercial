@@ -191,6 +191,7 @@ if (!in_array($vista, $vistas_permitidas)) {
     
     <?php if ($vista === 'franquicia'): ?>
         <script src="js/franquicia_stock.js?v=<?php echo time(); ?>"></script>
+        <script src="js/modal-stock.js?v=<?php echo time(); ?>"></script>
     <?php elseif ($vista === 'panel'): ?>
         <script src="js/panel_comercial_simple.js"></script>
     <?php elseif ($vista === 'reportes'): ?>
