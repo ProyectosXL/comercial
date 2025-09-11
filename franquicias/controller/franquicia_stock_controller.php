@@ -813,39 +813,93 @@ if (!class_exists('FranquiciaStockController')) {
             
             error_log("DEBUG: Rubro extraído: '$rubro', Categoría extraída: '$categoria'");
             
-            $sql = "INSERT INTO franquicia_historial_stock 
-                    (franquicia_id, rubro, categoria, stock_anterior, 
-                     movimiento, stock_actual, observaciones, usuario) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            // **NUEVA LÓGICA: Verificar si ya existe un registro para este rubro/categoría en el período actual**
+            $periodoActual = date('m-Y');
             
-            $params = [
-                $nroSucurs, // Usar NRO_SUCURS en lugar del nombre de usuario
-                $rubro,
-                $categoria,
-                $stockAnterior,
-                $movimiento,
-                $stockActual,
-                'Registro desde interfaz web',
-                $nombreUsuario // Mantener el nombre de usuario en campo usuario
-            ];
+            $sqlVerificar = "SELECT id, stock_actual 
+                           FROM franquicia_historial_stock 
+                           WHERE franquicia_id = ? AND rubro = ? AND categoria = ? 
+                           AND FORMAT(fecha_movimiento, 'MM-yyyy') = ?";
             
-            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, $params);
-            if ($stmt && sqlsrv_execute($stmt)) {
-                sqlsrv_free_stmt($stmt);
-                error_log("DEBUG: Insert exitoso para artículo: $codigo_articulo");
-                return true;
-            } else {
-                $errors = sqlsrv_errors();
-                $errorMsg = "Error SQL para $codigo_articulo";
-                if ($errors) {
-                    foreach ($errors as $error) {
-                        $errorMsg .= " - SQLSTATE: {$error['SQLSTATE']}, Error: {$error['message']}";
+            $paramsVerificar = [$nroSucurs, $rubro, $categoria, $periodoActual];
+            $stmtVerificar = sqlsrv_prepare($this->sistemas_conn, $sqlVerificar, $paramsVerificar);
+            
+            if (!$stmtVerificar || !sqlsrv_execute($stmtVerificar)) {
+                throw new Exception('Error al verificar registro existente');
+            }
+            
+            $registroExistente = sqlsrv_fetch_array($stmtVerificar, SQLSRV_FETCH_ASSOC);
+            sqlsrv_free_stmt($stmtVerificar);
+            
+            if ($registroExistente) {
+                // **EXISTE UN REGISTRO: Hacer UPDATE**
+                error_log("DEBUG: Registro existente encontrado para $rubro/$categoria, haciendo UPDATE. ID: " . $registroExistente['id']);
+                
+                // Calcular la nueva cantidad (no es incremental, es absoluta)
+                $nuevaCantidad = $stockAnterior + $movimiento; // $movimiento ya contiene la diferencia calculada
+                
+                $sqlUpdate = "UPDATE franquicia_historial_stock 
+                             SET stock_actual = ?, 
+                                 observaciones = 'Actualizado desde interfaz web - ' + CONVERT(varchar, GETDATE(), 20)
+                             WHERE id = ?";
+                
+                $paramsUpdate = [$nuevaCantidad, $registroExistente['id']];
+                $stmtUpdate = sqlsrv_prepare($this->sistemas_conn, $sqlUpdate, $paramsUpdate);
+                
+                if ($stmtUpdate && sqlsrv_execute($stmtUpdate)) {
+                    sqlsrv_free_stmt($stmtUpdate);
+                    error_log("DEBUG: UPDATE exitoso para $rubro/$categoria. Nueva cantidad: $nuevaCantidad");
+                    return true;
+                } else {
+                    $errors = sqlsrv_errors();
+                    $errorMsg = "Error SQL UPDATE para $codigo_articulo";
+                    if ($errors) {
+                        foreach ($errors as $error) {
+                            $errorMsg .= " - SQLSTATE: {$error['SQLSTATE']}, Error: {$error['message']}";
+                        }
                     }
+                    error_log("DEBUG: $errorMsg");
+                    return false;
                 }
-                error_log("DEBUG: $errorMsg");
-                error_log("DEBUG: SQL: $sql");
-                error_log("DEBUG: Params: " . json_encode($params));
-                return false;
+                
+            } else {
+                // **NO EXISTE: Hacer INSERT como antes**
+                error_log("DEBUG: No existe registro para $rubro/$categoria en período $periodoActual, haciendo INSERT");
+                
+                $sqlInsert = "INSERT INTO franquicia_historial_stock 
+                            (franquicia_id, rubro, categoria, stock_anterior, 
+                             movimiento, stock_actual, observaciones, usuario) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                
+                $paramsInsert = [
+                    $nroSucurs, // Usar NRO_SUCURS en lugar del nombre de usuario
+                    $rubro,
+                    $categoria,
+                    $stockAnterior,
+                    $movimiento,
+                    $stockActual,
+                    'Registro desde interfaz web',
+                    $nombreUsuario // Mantener el nombre de usuario en campo usuario
+                ];
+                
+                $stmtInsert = sqlsrv_prepare($this->sistemas_conn, $sqlInsert, $paramsInsert);
+                if ($stmtInsert && sqlsrv_execute($stmtInsert)) {
+                    sqlsrv_free_stmt($stmtInsert);
+                    error_log("DEBUG: INSERT exitoso para artículo: $codigo_articulo");
+                    return true;
+                } else {
+                    $errors = sqlsrv_errors();
+                    $errorMsg = "Error SQL INSERT para $codigo_articulo";
+                    if ($errors) {
+                        foreach ($errors as $error) {
+                            $errorMsg .= " - SQLSTATE: {$error['SQLSTATE']}, Error: {$error['message']}";
+                        }
+                    }
+                    error_log("DEBUG: $errorMsg");
+                    error_log("DEBUG: SQL: $sqlInsert");
+                    error_log("DEBUG: Params: " . json_encode($paramsInsert));
+                    return false;
+                }
             }
             
         } catch (Exception $e) {
