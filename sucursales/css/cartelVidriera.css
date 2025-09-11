@@ -26,6 +26,7 @@
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+    margin-top: 2.5rem;
 }
 
 /* Estilos para cada ítem de producto */
@@ -119,7 +120,7 @@
         box-shadow: none !important;
         margin: 2cm auto !important; /* Margen superior real y centrado horizontal */
         padding: 1.2cm;
-        padding-top: 1.2cm;
+        padding-top: 6rem !important;
         padding-bottom: 3cm;
         page-break-before: auto;
         page-break-after: avoid;
