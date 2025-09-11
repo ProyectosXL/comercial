@@ -242,11 +242,17 @@ try {
                     </label>
                 </div>
                 
-                <div class="form-floating mb-4">
+                <div class="form-floating mb-4 position-relative">
                     <input type="password" name="password" id="password" class="form-control" required>
                     <label for="password">
                         <i class="bi bi-lock me-2"></i>Contraseña
                     </label>
+                    <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y me-2" 
+                            id="togglePassword" 
+                            style="border: none; background: none; z-index: 10; color: #6c757d;"
+                            title="Mostrar/Ocultar contraseña">
+                        <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                    </button>
                 </div>
                 
                 <button type="submit" class="btn btn-primary btn-login w-100">
@@ -264,6 +270,26 @@ try {
         // Auto-focus en el primer campo
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('usuario').focus();
+            
+            // Funcionalidad para mostrar/ocultar contraseña
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('togglePasswordIcon');
+            
+            togglePassword.addEventListener('click', function() {
+                // Cambiar tipo de input
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                
+                // Cambiar icono
+                if (type === 'text') {
+                    toggleIcon.className = 'bi bi-eye-slash';
+                    togglePassword.setAttribute('title', 'Ocultar contraseña');
+                } else {
+                    toggleIcon.className = 'bi bi-eye';
+                    togglePassword.setAttribute('title', 'Mostrar contraseña');
+                }
+            });
         });
     </script>
 </body>
