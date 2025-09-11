@@ -29,21 +29,30 @@ if (empty($datos)) {
 
 // Obtener información de la sesión
 $usuario = $_SESSION['usuario_franquicia'] ?? '';
-$franquiciaId = $_SESSION['franquicia_id'] ?? '';
+$nroSucursal = $_SESSION['franquicia_id'] ?? ''; // Este es el NRO_SUCURS que necesitamos
+
+if (empty($nroSucursal)) {
+    echo json_encode(['success' => false, 'message' => 'No se pudo obtener el número de sucursal']);
+    exit;
+}
+
+// Calcular el período actual (YYYYMM)
+$periodoActual = date('Ym'); // Formato: 202509
 
 try {
-    // Usar la configuración centralizada de base de datos
-    $conexion = DatabaseConfig::conectarLakerSA();
+    // Conectar a ambas bases de datos
+    $conexionLaker = DatabaseConfig::conectarLakerSA(); // Para validar artículos
+    $conexionSistemas = DatabaseConfig::conectarSistemas(); // Para guardar ventas
 
-    // Iniciar transacción
-    $conexion->beginTransaction();
+    // Iniciar transacción en sistemas
+    $conexionSistemas->beginTransaction();
 
-    // Verificar que todos los artículos sean válidos
+    // Validar que todos los artículos sean válidos en LAKER_SA
     $articulosValidar = array_column($datos, 'articulo');
     $placeholders = str_repeat('?,', count($articulosValidar) - 1) . '?';
     
-    $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%' AND HABILITADO = 1";
-    $stmtValidar = $conexion->prepare($sqlValidar);
+    $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
+    $stmtValidar = $conexionLaker->prepare($sqlValidar);
     $stmtValidar->execute($articulosValidar);
     $articulosValidos = $stmtValidar->fetchAll(PDO::FETCH_COLUMN);
 
@@ -54,50 +63,91 @@ try {
         }
     }
 
-    // Determinar tabla destino basada en el mes/año actual
-    $mesActual = date('m');
-    $anioActual = date('Y');
-    $tablaVentas = "VENTAS_FRANQUICIAS_" . $anioActual . "_" . str_pad($mesActual, 2, '0', STR_PAD_LEFT);
-
-    // Verificar si existe la tabla, si no crearla
-    $sqlVerificarTabla = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?";
-    $stmtVerificar = $conexion->prepare($sqlVerificarTabla);
-    $stmtVerificar->execute([$tablaVentas]);
-    
-    if ($stmtVerificar->fetchColumn() == 0) {
-        // Crear tabla si no existe
-        $sqlCrearTabla = "
-            CREATE TABLE [$tablaVentas] (
-                ID int IDENTITY(1,1) PRIMARY KEY,
-                FRANQUICIA_ID varchar(50) NOT NULL,
-                COD_ARTICU varchar(50) NOT NULL,
-                CANTIDAD int NOT NULL,
-                FECHA_CARGA datetime DEFAULT GETDATE(),
-                USUARIO_CARGA varchar(50) NOT NULL,
-                INDEX IX_Franquicia_Articulo (FRANQUICIA_ID, COD_ARTICU)
+    // Crear la tabla si no existe en sistemas y asegurar que tenga todas las columnas
+    $sqlCrearTabla = "
+        IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='ventas_franquicias_sin_tango' AND xtype='U')
+        BEGIN
+            CREATE TABLE ventas_franquicias_sin_tango (
+                id int IDENTITY(1,1) PRIMARY KEY,
+                nro_sucursal varchar(10) NOT NULL,
+                periodo varchar(6) NOT NULL,
+                codigo_articulo varchar(50) NOT NULL,
+                rubro varchar(100) NULL,
+                categoria_padre varchar(100) NULL,
+                cantidad int NOT NULL,
+                fecha_carga datetime DEFAULT GETDATE(),
+                usuario_carga varchar(50) NULL
             )
-        ";
-        $conexion->exec($sqlCrearTabla);
-        error_log("DEBUG IMPORTACION: Tabla $tablaVentas creada");
-    }
+        END
+        
+        -- Agregar columnas que podrían faltar si la tabla ya existía
+        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'id')
+        BEGIN
+            ALTER TABLE ventas_franquicias_sin_tango ADD id int IDENTITY(1,1) PRIMARY KEY
+        END
+        
+        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'usuario_carga')
+        BEGIN
+            ALTER TABLE ventas_franquicias_sin_tango ADD usuario_carga varchar(50) NULL
+        END
+        
+        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'rubro')
+        BEGIN
+            ALTER TABLE ventas_franquicias_sin_tango ADD rubro varchar(100) NULL
+        END
+        
+        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'categoria_padre')
+        BEGIN
+            ALTER TABLE ventas_franquicias_sin_tango ADD categoria_padre varchar(100) NULL
+        END
+    ";
+    $conexionSistemas->exec($sqlCrearTabla);
 
-    // Eliminar registros existentes de esta franquicia para el mes actual (reemplazar datos)
-    $sqlEliminar = "DELETE FROM [$tablaVentas] WHERE FRANQUICIA_ID = ?";
-    $stmtEliminar = $conexion->prepare($sqlEliminar);
-    $stmtEliminar->execute([$franquiciaId]);
+    // Eliminar registros existentes de esta sucursal para el período actual (reemplazar datos)
+    $sqlEliminar = "DELETE FROM ventas_franquicias_sin_tango WHERE nro_sucursal = ? AND periodo = ?";
+    $stmtEliminar = $conexionSistemas->prepare($sqlEliminar);
+    $stmtEliminar->execute([$nroSucursal, $periodoActual]);
 
-    // Insertar nuevos datos
-    $sqlInsertar = "INSERT INTO [$tablaVentas] (FRANQUICIA_ID, COD_ARTICU, CANTIDAD, USUARIO_CARGA) VALUES (?, ?, ?, ?)";
-    $stmtInsertar = $conexion->prepare($sqlInsertar);
+    // Preparar query para insertar nuevos datos - usar solo las columnas que sabemos que existen
+    $sqlInsertar = "INSERT INTO ventas_franquicias_sin_tango 
+                    (nro_sucursal, periodo, codigo_articulo, cantidad, fecha_carga, rubro, categoria_padre, usuario_carga) 
+                    VALUES (?, ?, ?, ?, GETDATE(), ?, ?, ?)";
+    $stmtInsertar = $conexionSistemas->prepare($sqlInsertar);
 
     $procesados = 0;
     foreach ($datos as $item) {
         $cantidad = intval($item['cantidad']);
         if ($cantidad > 0) { // Solo insertar cantidades positivas
+            $codigoArticulo = $item['articulo'];
+            
+            // Obtener rubro y categoría de sistemas
+            $rubro = 'Sin rubro';
+            $categoria = 'Sin categoría';
+            
+            try {
+                $sqlRubroCategoria = "SELECT RUBRO, CATEGORIA_PADRE 
+                                     FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
+                                     WHERE COD_ARTICU = ?";
+                $stmtRubroCategoria = $conexionSistemas->prepare($sqlRubroCategoria);
+                $stmtRubroCategoria->execute([$codigoArticulo]);
+                $datosAdicionales = $stmtRubroCategoria->fetch(PDO::FETCH_ASSOC);
+                
+                if ($datosAdicionales) {
+                    $rubro = trim($datosAdicionales['RUBRO']) ?: 'Sin rubro';
+                    $categoria = trim($datosAdicionales['CATEGORIA_PADRE']) ?: 'Sin categoría';
+                }
+            } catch (Exception $e) {
+                error_log("Error obteniendo rubro/categoría para $codigoArticulo: " . $e->getMessage());
+            }
+            
+            // Insertar el registro
             $stmtInsertar->execute([
-                $franquiciaId,
-                $item['articulo'],
+                $nroSucursal,
+                $periodoActual,
+                $codigoArticulo,
                 $cantidad,
+                $rubro,
+                $categoria,
                 $usuario
             ]);
             $procesados++;
@@ -105,21 +155,23 @@ try {
     }
 
     // Confirmar transacción
-    $conexion->commit();
+    $conexionSistemas->commit();
 
-    error_log("DEBUG IMPORTACION: Procesados $procesados registros para franquicia $franquiciaId en tabla $tablaVentas");
+    error_log("DEBUG IMPORTACION: Procesados $procesados registros para sucursal $nroSucursal en período $periodoActual");
 
     echo json_encode([
         'success' => true,
         'message' => 'Importación completada exitosamente',
         'procesados' => $procesados,
-        'tabla' => $tablaVentas
+        'nro_sucursal' => $nroSucursal,
+        'periodo' => $periodoActual,
+        'tabla' => 'ventas_franquicias_sin_tango'
     ]);
 
 } catch (Exception $e) {
     // Revertir transacción en caso de error
-    if ($conexion->inTransaction()) {
-        $conexion->rollback();
+    if (isset($conexionSistemas) && $conexionSistemas->inTransaction()) {
+        $conexionSistemas->rollback();
     }
     
     error_log("Error procesando importación: " . $e->getMessage());

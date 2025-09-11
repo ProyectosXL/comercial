@@ -147,10 +147,71 @@ if (!function_exists('es_modo_desarrollo')) {
             min-width: 200px;
         }
 
+        /* Select2 custom styles para modales */
+        .select2-dropdown-modal {
+            z-index: 9999 !important;
+        }
+        
+        .modal .select2-container--bootstrap-5 .select2-dropdown {
+            z-index: 9999 !important;
+        }
+        
+        .modal .select2-container {
+            z-index: 9998 !important;
+        }
+        
+        .select2-container--bootstrap-5 .select2-selection {
+            position: relative;
+        }
+
+        /* Estilos para tabla de ventas existentes */
+        .cantidad-editable {
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .cantidad-editable:hover {
+            background-color: #f8f9fa !important;
+        }
+        
+        .cantidad-input {
+            width: 80px !important;
+        }
+        
+        .tabla-ventas-existentes th {
+            background-color: #198754 !important;
+            color: white !important;
+        }
+
         /* Select2 custom styles */
         .select2-container--bootstrap-5 .select2-selection {
             min-height: 31px;
             font-size: 0.875rem;
+        }
+
+        /* Select2 en modales - Fix z-index */
+        .select2-container--open {
+            z-index: 9999 !important;
+        }
+        
+        .select2-dropdown {
+            z-index: 9999 !important;
+        }
+        
+        /* Asegurar que Select2 sea visible en tabla */
+        .table .select2-container {
+            width: 100% !important;
+        }
+        
+        .table .select2-selection {
+            border: 1px solid #ced4da !important;
+            border-radius: 0.375rem !important;
+        }
+        
+        /* Mejorar visibilidad del placeholder */
+        .select2-selection__placeholder {
+            color: #6c757d !important;
+            font-style: italic;
         }
 
         .modal-xl {
@@ -213,6 +274,85 @@ if (!function_exists('es_modo_desarrollo')) {
                         </div>
                     </div>
                 </div>
+
+                <!-- Contenedor para verificar estado de ventas -->
+                <div id="verificacion-ventas">
+                    <!-- Loading inicial -->
+                    <div class="text-center p-4" id="loading-verificacion">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Verificando ventas existentes...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Verificando ventas del período actual...</p>
+                    </div>
+                </div>
+
+                <!-- Mensaje adicional para período sin cargar -->
+                <div class="alert alert-warning border-0 shadow-sm d-none" role="alert" id="mensaje-periodo-faltante">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle fs-4 me-3"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">Carga Pendiente</h6>
+                            <p class="mb-0">
+                                <strong>Falta cargar las ventas para el período actual.</strong>
+                                Utilice el formulario a continuación para importar los datos de ventas.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenedor para ventas existentes (se mostrará si ya hay datos) -->
+                <div id="contenedor-ventas-existentes" class="d-none">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-table me-2"></i>
+                                Ventas Cargadas - <span id="periodo-actual"></span>
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="alert alert-success m-3 mb-2" role="alert">
+                                <i class="bi bi-check-circle me-2"></i>
+                                Ya tiene ventas cargadas para este período. Puede editar las cantidades haciendo clic en cualquier celda de cantidad.
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover mb-0" id="tabla-ventas-existentes">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Código</th>
+                                            <th>Descripción</th>
+                                            <th>Rubro</th>
+                                            <th>Categoría</th>
+                                            <th>Cantidad</th>
+                                            <th>Fecha Carga</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-ventas-existentes">
+                                        <!-- Se llenará dinámicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="card-footer bg-light">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-warning" id="btn-recargar-periodo">
+                                            <i class="bi bi-arrow-clockwise me-1"></i>
+                                            Recargar Período Completo
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6 text-end">
+                                        <span class="text-muted">Total registros: <span id="total-ventas-existentes">0</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenedor original para carga nueva -->
+                <div id="contenedor-carga-nueva">
 
                 <!-- Información de la franquicia -->
                 <div class="row">
@@ -315,7 +455,6 @@ if (!function_exists('es_modo_desarrollo')) {
                     </div>
                 </div>
             </div>
-        </main>
     </div>
 
     <!-- Modales -->
@@ -379,16 +518,22 @@ if (!function_exists('es_modo_desarrollo')) {
                             <p class="mb-0"><small>Debe corregir todos los errores antes de confirmar la importación.</small></p>
                         </div>
                         
+                        <!-- Área para mensajes de estado de validación -->
+                        <div id="mensajeValidacion" class="alert" style="display: none;">
+                        </div>
+                        
                         <div class="mb-3">
                             <h6>Vista previa de datos importados:</h6>
                             <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                                 <table class="table table-sm table-bordered" id="tablaVistaPrevia">
                                     <thead class="table-dark sticky-top">
                                         <tr>
-                                            <th style="width: 20%;">Artículo</th>
-                                            <th style="width: 40%;">Descripción</th>
-                                            <th style="width: 15%;">Cantidad</th>
-                                            <th style="width: 25%;">Corrección</th>
+                                            <th style="width: 15%;">Artículo</th>
+                                            <th style="width: 30%;">Descripción</th>
+                                            <th style="width: 10%;">Cantidad</th>
+                                            <th style="width: 15%;">Rubro</th>
+                                            <th style="width: 15%;">Categoría</th>
+                                            <th style="width: 15%;">Corrección</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -817,16 +962,22 @@ if (!function_exists('es_modo_desarrollo')) {
                                             <p class="mb-0"><small>Debe corregir todos los errores antes de confirmar la importación.</small></p>
                                         </div>
                                         
+                                        <!-- Área para mensajes de estado de validación -->
+                                        <div id="mensajeValidacion" class="alert" style="display: none;">
+                                        </div>
+                                        
                                         <div class="mb-3">
                                             <h6>Vista previa de datos importados:</h6>
                                             <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                                                 <table class="table table-sm table-bordered" id="tablaVistaPrevia">
                                                     <thead class="table-dark sticky-top">
                                                         <tr>
-                                                            <th style="width: 20%;">Artículo</th>
-                                                            <th style="width: 40%;">Descripción</th>
-                                                            <th style="width: 15%;">Cantidad</th>
-                                                            <th style="width: 25%;">Corrección</th>
+                                                            <th style="width: 15%;">Artículo</th>
+                                                            <th style="width: 30%;">Descripción</th>
+                                                            <th style="width: 10%;">Cantidad</th>
+                                                            <th style="width: 15%;">Rubro</th>
+                                                            <th style="width: 15%;">Categoría</th>
+                                                            <th style="width: 15%;">Corrección</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -918,24 +1069,58 @@ if (!function_exists('es_modo_desarrollo')) {
                                     }
                                     
                                 } else if (numero === 2) {
-                                    // Re-inicializar Select2 para las correcciones
-                                    $('.articulo-select').select2({
-                                        theme: 'bootstrap-5',
-                                        placeholder: 'Buscar artículo...',
-                                        allowClear: true,
-                                        ajax: {
-                                            url: 'controller/buscar_articulos_select2.php',
-                                            dataType: 'json',
-                                            delay: 250,
-                                            data: function (params) {
-                                                return { q: params.term };
-                                            },
-                                            processResults: function (data) {
-                                                return { results: data };
-                                            },
-                                            cache: true
+                                    // Re-inicializar Select2 para las correcciones con configuración robusta
+                                    setTimeout(() => {
+                                        console.log('🔧 Re-inicializando Select2 en paso 2...');
+                                        
+                                        // Verificar disponibilidad de librerías
+                                        if (typeof $ === 'undefined' || typeof $.fn.select2 === 'undefined') {
+                                            console.error('❌ jQuery o Select2 no disponibles para reinicialización');
+                                            return;
                                         }
-                                    });
+                                        
+                                        // Destruir cualquier Select2 existente
+                                        $('.articulo-select').select2('destroy');
+                                        
+                                        // Re-inicializar con configuración completa
+                                        $('.articulo-select').each(function() {
+                                            const $select = $(this);
+                                            const index = $select.data('index');
+                                            
+                                            $select.select2({
+                                                theme: 'bootstrap-5',
+                                                placeholder: 'Buscar artículo...',
+                                                allowClear: true,
+                                                width: '100%',
+                                                dropdownParent: $select.closest('.modal-content'),
+                                                dropdownCssClass: 'select2-dropdown-modal',
+                                                ajax: {
+                                                    url: 'controller/buscar_articulos_select2.php',
+                                                    dataType: 'json',
+                                                    delay: 250,
+                                                    data: function (params) {
+                                                        return {
+                                                            q: params.term,
+                                                            page: params.page || 1
+                                                        };
+                                                    },
+                                                    processResults: function (data) {
+                                                        if (!data || !Array.isArray(data.results)) {
+                                                            console.error('❌ Respuesta AJAX inválida:', data);
+                                                            return { results: [] };
+                                                        }
+                                                        return {
+                                                            results: data.results,
+                                                            pagination: data.pagination || { more: false }
+                                                        };
+                                                    },
+                                                    cache: true
+                                                }
+                                            });
+                                        });
+                                        
+                                        console.log('✅ Select2 re-inicializado en paso 2');
+                                    }, 200);
                                     
                                     // Re-configurar botón confirmar
                                     const newBtnConfirmar = document.getElementById('btnConfirmarImportacion');
@@ -1014,6 +1199,23 @@ if (!function_exists('es_modo_desarrollo')) {
                         console.log('⏳ Esperando que el modal esté listo...');
                         setTimeout(async () => {
                             console.log('🔍 Iniciando validación...');
+                            
+                            // Mostrar mensaje de validación
+                            const tbody = document.querySelector('#tablaVistaPrevia tbody');
+                            if (tbody) {
+                                tbody.innerHTML = `
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4">
+                                            <div class="spinner-border text-primary me-2" role="status" style="width: 1.5rem; height: 1.5rem;">
+                                                <span class="visually-hidden">Validando...</span>
+                                            </div>
+                                            <strong>Validando artículos...</strong>
+                                            <br><small class="text-muted">Verificando ${datos.length} productos en la base de datos</small>
+                                        </td>
+                                    </tr>
+                                `;
+                            }
+                            
                             try {
                                 await validarYMostrarDatos(datos);
                                 console.log('✅ Proceso completado exitosamente');
@@ -1082,10 +1284,26 @@ if (!function_exists('es_modo_desarrollo')) {
             async function validarYMostrarDatos(datos) {
                 console.log('🔍 Iniciando validación de datos:', datos);
                 
-                // Obtener artículos válidos del servidor
+                // Variables para contadores que necesitan ser accesibles por los event listeners
+                let validos = 0;
+                let errores = 0;
+                
+                // Extraer códigos únicos de los datos a validar
+                const codigosAValidar = [...new Set(datos.map(item => item.articulo.trim().toUpperCase()))];
+                console.log('📋 Códigos a validar:', codigosAValidar);
+                
+                // Validar solo los códigos específicos del archivo
                 try {
-                    console.log('📡 Obteniendo artículos válidos del servidor...');
-                    const response = await fetch('controller/obtener_articulos_validos.php');
+                    console.log('📡 Validando artículos específicos...');
+                    const response = await fetch('controller/validar_articulos_simple.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            codigos: codigosAValidar
+                        })
+                    });
                     
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1093,15 +1311,38 @@ if (!function_exists('es_modo_desarrollo')) {
                     
                     const result = await response.json();
                     console.log('📊 Respuesta del servidor:', result);
+                    console.log('📊 Tipo de respuesta:', typeof result);
+                    console.log('📊 Success:', result.success);
+                    console.log('📊 Total artículos:', result.total);
+                    console.log('📊 Encontrados:', result.encontrados);
+                    console.log('📊 No encontrados:', result.noEncontrados);
                     
                     if (result.success) {
-                        articulosValidos = new Set(result.articulos.map(a => a.codigo));
+                        // Crear mapas de información de artículos
                         const descripciones = {};
+                        const rubros = {};
+                        const categorias = {};
+                        const articulosEncontrados = new Set();
+                        
                         result.articulos.forEach(a => {
-                            descripciones[a.codigo] = a.descripcion;
+                            const codigoNormalizado = a.codigo.trim().toUpperCase();
+                            
+                            // Solo agregar al Set si el artículo fue realmente encontrado
+                            if (a.descripcion !== 'Artículo no encontrado') {
+                                articulosEncontrados.add(codigoNormalizado);
+                                console.log(`✅ ${codigoNormalizado}: ${a.descripcion}`);
+                            } else {
+                                console.log(`❌ ${codigoNormalizado}: No encontrado`);
+                            }
+                            
+                            // Siempre guardar la información para mostrar en la tabla
+                            descripciones[codigoNormalizado] = a.descripcion.trim();
+                            rubros[codigoNormalizado] = a.rubro || 'Sin rubro';
+                            categorias[codigoNormalizado] = a.categoria || 'Sin categoría';
                         });
 
-                        console.log(`✅ ${articulosValidos.size} artículos válidos cargados`);
+                        console.log(`✅ ${result.encontrados} de ${result.total} artículos encontrados`);
+                        console.log('📋 Artículos válidos:', Array.from(articulosEncontrados));
 
                         // Generar tabla
                         const tbody = document.querySelector('#tablaVistaPrevia tbody');
@@ -1111,30 +1352,40 @@ if (!function_exists('es_modo_desarrollo')) {
                         
                         tbody.innerHTML = '';
 
-                        let validos = 0;
-                        let errores = 0;
+                        // Reiniciar contadores (las variables ya están declaradas arriba)
+                        validos = 0;
+                        errores = 0;
 
                         datos.forEach((item, index) => {
-                            const esValido = articulosValidos.has(item.articulo);
-                            const descripcion = descripciones[item.articulo] || 'Artículo no encontrado';
+                            // Normalizar código para comparación
+                            const codigoNormalizado = item.articulo.trim().toUpperCase();
+                            const esValido = articulosEncontrados.has(codigoNormalizado);
+                            const descripcion = descripciones[codigoNormalizado] || 'Artículo no encontrado';
+                            const rubro = rubros[codigoNormalizado] || 'Sin rubro';
+                            const categoria = categorias[codigoNormalizado] || 'Sin categoría';
                             
                             if (esValido) validos++;
                             else errores++;
 
-                            console.log(`Fila ${index}: ${item.articulo} - ${esValido ? 'VÁLIDO' : 'INVÁLIDO'}`);
+                            console.log(`Fila ${index}: ${codigoNormalizado} - ${esValido ? 'VÁLIDO' : 'INVÁLIDO'}`);
 
                             const tr = document.createElement('tr');
                             tr.className = esValido ? 'table-success' : 'table-danger';
+                            tr.setAttribute('data-index', index);
                             tr.innerHTML = `
-                                <td><code>${item.articulo}</code></td>
-                                <td>${descripcion}</td>
+                                <td><code>${codigoNormalizado}</code></td>
+                                <td class="descripcion-cell">${descripcion}</td>
                                 <td class="text-center">${item.cantidad}</td>
-                                <td>
+                                <td class="rubro-cell">${rubro}</td>
+                                <td class="categoria-cell">${categoria}</td>
+                                <td class="correccion-cell">
                                     ${!esValido ? `
-                                        <select class="form-select form-select-sm articulo-select" data-index="${index}">
+                                        <select class="form-select form-select-sm articulo-select" 
+                                                data-index="${index}" 
+                                                id="select-${index}">
                                             <option value="">Seleccionar artículo...</option>
                                         </select>
-                                    ` : '<span class="badge bg-success">✓ Válido</span>'}
+                                    ` : '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Válido</span>'}
                                 </td>
                             `;
                             tbody.appendChild(tr);
@@ -1142,48 +1393,236 @@ if (!function_exists('es_modo_desarrollo')) {
 
                         console.log(`📋 Tabla generada: ${validos} válidos, ${errores} errores`);
 
+                        // Actualizar contadores en el resumen
+                        const countValidosEl = document.getElementById('countValidos');
+                        const countErroresEl = document.getElementById('countErrores');
+                        
+                        if (countValidosEl) countValidosEl.textContent = validos;
+                        if (countErroresEl) countErroresEl.textContent = errores;
+                        
+                        // Habilitar/deshabilitar botón de confirmar según errores
+                        const btnConfirmar = document.getElementById('btnConfirmarImportacion');
+                        if (btnConfirmar) {
+                            if (errores === 0) {
+                                btnConfirmar.disabled = false;
+                                btnConfirmar.classList.remove('btn-secondary');
+                                btnConfirmar.classList.add('btn-success');
+                            } else {
+                                btnConfirmar.disabled = true;
+                                btnConfirmar.classList.remove('btn-success');
+                                btnConfirmar.classList.add('btn-secondary');
+                            }
+                        }
+
+                        // Mostrar mensaje según el resultado
+                        const mensajeValidacion = document.getElementById('mensajeValidacion');
+                        if (errores > 0) {
+                            console.warn(`⚠️ Se encontraron ${errores} artículo(s) inválido(s). Por favor, corríjalos antes de continuar.`);
+                            // Mostrar mensaje visual en la página
+                            if (mensajeValidacion) {
+                                mensajeValidacion.className = 'alert alert-danger';
+                                mensajeValidacion.innerHTML = `
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    <strong>Se encontraron ${errores} artículo(s) inválido(s).</strong>
+                                    Por favor, corríjalos utilizando los selectores antes de continuar.
+                                `;
+                                mensajeValidacion.style.display = 'block';
+                            }
+                        } else {
+                            console.log(`✅ Todos los artículos son válidos. Puede continuar con la importación.`);
+                            // Mostrar mensaje de éxito
+                            if (mensajeValidacion) {
+                                mensajeValidacion.className = 'alert alert-success';
+                                mensajeValidacion.innerHTML = `
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    <strong>¡Perfecto!</strong> Todos los artículos son válidos. Puede continuar con la importación.
+                                `;
+                                mensajeValidacion.style.display = 'block';
+                            }
+                        }
+
                         // Inicializar Select2 para correcciones
                         console.log('🔧 Inicializando Select2...');
-                        $('.articulo-select').select2({
-                            theme: 'bootstrap-5',
-                            placeholder: 'Buscar artículo...',
-                            allowClear: true,
-                            ajax: {
-                                url: 'controller/buscar_articulos_select2.php',
-                                dataType: 'json',
-                                delay: 250,
-                                data: function (params) {
-                                    return {
-                                        q: params.term,
-                                        page: params.page || 1
-                                    };
-                                },
-                                processResults: function (data) {
-                                    console.log('Select2 resultados:', data);
-                                    return {
-                                        results: data.results || [],
-                                        pagination: data.pagination || {}
-                                    };
+                        
+                        // Esperar a que los elementos estén completamente renderizados
+                        setTimeout(() => {
+                            // Verificar que jQuery y Select2 estén disponibles
+                            if (typeof $ === 'undefined') {
+                                console.error('❌ jQuery no está disponible');
+                                return;
+                            }
+                            
+                            if (typeof $.fn.select2 === 'undefined') {
+                                console.error('❌ Select2 no está disponible');
+                                return;
+                            }
+                            
+                            // Contar elementos Select2 antes de inicializar
+                            const selectores = document.querySelectorAll('.articulo-select');
+                            console.log(`🔍 Encontrados ${selectores.length} selectores .articulo-select`);
+                            
+                            if (selectores.length === 0) {
+                                console.warn('⚠️ No se encontraron selectores .articulo-select');
+                                return;
+                            }
+                            
+                            // Destruir cualquier Select2 existente de manera segura
+                            $('.articulo-select').each(function() {
+                                const $this = $(this);
+                                if ($this.hasClass('select2-hidden-accessible')) {
+                                    try {
+                                        $this.select2('destroy');
+                                        console.log('🗑️ Select2 destruido correctamente');
+                                    } catch (e) {
+                                        console.warn('⚠️ Error al destruir Select2:', e.message);
+                                    }
                                 }
-                            }
-                        });
-
-                        // Manejar cambios en selects
-                        $('.articulo-select').on('change', function() {
-                            const index = $(this).data('index');
-                            const nuevoArticulo = $(this).val();
+                            });
                             
-                            console.log(`✏️ Cambiando artículo en fila ${index}: ${nuevoArticulo}`);
+                            // Inicializar Select2 con configuración robusta
+                            $('.articulo-select').each(function(idx) {
+                                const $select = $(this);
+                                const index = $select.data('index');
+                                const selectId = $select.attr('id');
+                                
+                                console.log(`🔧 Inicializando Select2 ${idx + 1}/${selectores.length} - ID: ${selectId}, index: ${index}`);
+                                
+                                try {
+                                    // Configuración básica más robusta para Select2
+                                    const $modalContent = $select.closest('.modal-content');
+                                    
+                                    $select.select2({
+                                        theme: 'bootstrap-5',
+                                        placeholder: 'Buscar código de artículo...',
+                                        allowClear: true,
+                                        width: '100%',
+                                        dropdownParent: $modalContent.length ? $modalContent : $('body'), // Fallback a body si no encuentra modal
+                                        dropdownCssClass: 'select2-dropdown-modal',
+                                        minimumInputLength: 1, // Reducir a 1 caracter
+                                        language: {
+                                            noResults: function() {
+                                                return "No se encontraron artículos";
+                                            },
+                                            searching: function() {
+                                                return "Buscando...";
+                                            },
+                                            inputTooShort: function() {
+                                                return "Escriba al menos 1 caracter";
+                                            }
+                                        },
+                                        ajax: {
+                                            url: 'controller/buscar_articulos_select2.php',
+                                            dataType: 'json',
+                                            delay: 250,
+                                            data: function (params) {
+                                                console.log(`🔍 Búsqueda Select2 fila ${index} (${selectId}):`, params.term);
+                                                return {
+                                                    q: params.term || '',
+                                                    page: params.page || 1
+                                                };
+                                            },
+                                            processResults: function (data) {
+                                                console.log(`📊 Resultados Select2 fila ${index} (${selectId}):`, data);
+                                                
+                                                // Validar estructura de respuesta
+                                                if (!data) {
+                                                    console.error(`❌ Respuesta vacía para fila ${index}`);
+                                                    return { results: [] };
+                                                }
+                                                
+                                                if (!Array.isArray(data.results)) {
+                                                    console.error(`❌ Estructura de respuesta inválida para fila ${index}:`, data);
+                                                    return { results: [] };
+                                                }
+                                                
+                                                console.log(`✅ ${data.results.length} resultados procesados para fila ${index}`);
+                                                
+                                                return {
+                                                    results: data.results,
+                                                    pagination: data.pagination || { more: false }
+                                                };
+                                            },
+                                            cache: true,
+                                            error: function(xhr, status, error) {
+                                                console.error(`❌ Error AJAX Select2 fila ${index} (${selectId}):`, { 
+                                                    xhr: xhr.responseText, 
+                                                    status, 
+                                                    error 
+                                                });
+                                            }
+                                        },
+                                        escapeMarkup: function (markup) {
+                                            return markup; // No escapar HTML
+                                        }
+                                    }).on('select2:open', function() {
+                                        console.log(`📖 Select2 abierto para fila ${index} (${selectId})`);
+                                    }).on('select2:close', function() {
+                                        console.log(`📖 Select2 cerrado para fila ${index} (${selectId})`);
+                                    }).on('select2:select', function(e) {
+                                        const data = e.params.data;
+                                        console.log(`✅ Artículo seleccionado en fila ${index} (${selectId}):`, data);
+                                        
+                                        // Actualizar los datos y la fila
+                                        if (data && data.id) {
+                                            // Actualizar datos importados
+                                            if (datosImportados[index]) {
+                                                datosImportados[index].articulo = data.id;
+                                                console.log(`✏️ Datos actualizados para fila ${index}:`, datosImportados[index]);
+                                            }
+                                            
+                                            // Actualizar visualmente la fila
+                                            const $row = $select.closest('tr');
+                                            $row.removeClass('table-danger').addClass('table-success');
+                                            
+                                            // Actualizar el código en la primera celda
+                                            $row.find('td:first-child code').text(data.id);
+                                            
+                                            // Actualizar la descripción en la segunda celda
+                                            const descripcionText = data.text.split(' - ').slice(1).join(' - ') || data.text;
+                                            $row.find('.descripcion-cell').text(descripcionText);
+                                            
+                                            // Actualizar rubro y categoría con los datos adicionales del Select2
+                                            if (data.rubro) {
+                                                $row.find('.rubro-cell').text(data.rubro);
+                                            }
+                                            if (data.categoria) {
+                                                $row.find('.categoria-cell').text(data.categoria);
+                                            }
+                                            
+                                            // Cambiar el selector por un badge de éxito
+                                            $row.find('.correccion-cell').html('<span class="badge bg-success"><i class="bi bi-check-circle"></i> Corregido</span>');
+                                            
+                                            // Recalcular contadores desde el DOM
+                                            recalcularContadores();
+                                            
+                                            console.log(`🎉 Fila ${index} corregida exitosamente`);
+                                        }
+                                    }).on('select2:error', function(e) {
+                                        console.error(`❌ Error en Select2 fila ${index} (${selectId}):`, e);
+                                    });
+                                    
+                                    console.log(`✅ Select2 inicializado para fila ${index} (${selectId})`);
+                                    
+                                } catch (error) {
+                                    console.error(`❌ Error inicializando Select2 para fila ${index} (${selectId}):`, error);
+                                }
+                            });
                             
-                            if (nuevoArticulo) {
-                                datosImportados[index].articulo = nuevoArticulo;
-                                const tr = $(this).closest('tr');
-                                tr.removeClass('table-danger').addClass('table-success');
-                                errores--;
-                                validos++;
-                                actualizarResumen(validos, errores);
-                            }
-                        });
+                            // Verificación final
+                            setTimeout(() => {
+                                const inicializados = $('.articulo-select.select2-hidden-accessible').length;
+                                console.log(`📊 Resumen inicialización: ${inicializados}/${selectores.length} Select2 inicializados`);
+                                
+                                if (inicializados === 0) {
+                                    console.error('❌ CRÍTICO: Ningún Select2 se inicializó correctamente');
+                                } else if (inicializados < selectores.length) {
+                                    console.warn(`⚠️ Solo ${inicializados} de ${selectores.length} Select2 se inicializaron`);
+                                } else {
+                                    console.log('🎉 Todos los Select2 inicializados correctamente');
+                                }
+                            }, 500);
+                            
+                        }, 200); // Delay más conservador
 
                         actualizarResumen(validos, errores);
                         console.log('🎉 Validación y generación de tabla completada exitosamente');
@@ -1201,6 +1640,7 @@ if (!function_exists('es_modo_desarrollo')) {
                 
                 const countValidos = document.getElementById('countValidos');
                 const countErrores = document.getElementById('countErrores');
+                const btnConfirmar = document.getElementById('btnConfirmarImportacion');
                 
                 if (countValidos && countErrores) {
                     countValidos.textContent = validos;
@@ -1211,11 +1651,38 @@ if (!function_exists('es_modo_desarrollo')) {
                 }
                 
                 if (btnConfirmar) {
-                    btnConfirmar.disabled = errores > 0;
-                    console.log(`🔘 Botón confirmar ${errores > 0 ? 'deshabilitado' : 'habilitado'}`);
+                    if (errores === 0) {
+                        btnConfirmar.disabled = false;
+                        btnConfirmar.classList.remove('btn-secondary');
+                        btnConfirmar.classList.add('btn-success');
+                        console.log('🔘 Botón confirmar habilitado - sin errores');
+                    } else {
+                        btnConfirmar.disabled = true;
+                        btnConfirmar.classList.remove('btn-success');
+                        btnConfirmar.classList.add('btn-secondary');
+                        console.log(`🔘 Botón confirmar deshabilitado - ${errores} errores restantes`);
+                    }
                 } else {
                     console.error('❌ No se encontró btnConfirmar');
                 }
+            }
+
+            function recalcularContadores() {
+                // Contar filas válidas e inválidas desde el DOM
+                const filas = document.querySelectorAll('#tablaVistaPrevia tbody tr');
+                let validosActuales = 0;
+                let erroresActuales = 0;
+                
+                filas.forEach(fila => {
+                    if (fila.classList.contains('table-success')) {
+                        validosActuales++;
+                    } else if (fila.classList.contains('table-danger')) {
+                        erroresActuales++;
+                    }
+                });
+                
+                console.log(`🔢 Recálculo: ${validosActuales} válidos, ${erroresActuales} errores`);
+                actualizarResumen(validosActuales, erroresActuales);
             }
 
             async function confirmarImportacion() {
@@ -1250,6 +1717,226 @@ if (!function_exists('es_modo_desarrollo')) {
                 }
             }
         }
+
+        // Verificar ventas existentes al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            verificarVentasExistentes();
+        });
+
+        async function verificarVentasExistentes() {
+            try {
+                console.log('🔍 Verificando ventas existentes...');
+                const response = await fetch('controller/verificar_ventas_existentes.php');
+                const result = await response.json();
+                
+                console.log('📊 Resultado verificación:', result);
+                
+                // Ocultar loading
+                document.getElementById('loading-verificacion').style.display = 'none';
+                
+                if (result.success) {
+                    if (result.tiene_ventas) {
+                        // Mostrar tabla de ventas existentes
+                        mostrarVentasExistentes(result);
+                    } else {
+                        // Mostrar formulario de carga nueva + mensaje de período faltante
+                        mostrarFormularioCargaNueva(result);
+                    }
+                } else {
+                    console.error('Error verificando ventas:', result.message);
+                    // Por defecto mostrar formulario de carga
+                    mostrarFormularioCargaNueva({});
+                }
+            } catch (error) {
+                console.error('Error en verificación:', error);
+                document.getElementById('loading-verificacion').style.display = 'none';
+                // Por defecto mostrar formulario de carga
+                mostrarFormularioCargaNueva({});
+            }
+        }
+
+        function mostrarVentasExistentes(data) {
+            console.log('📋 Mostrando ventas existentes');
+            
+            // Ocultar contenedor de carga nueva
+            document.getElementById('contenedor-carga-nueva').classList.add('d-none');
+            
+            // Mostrar contenedor de ventas existentes
+            const container = document.getElementById('contenedor-ventas-existentes');
+            container.classList.remove('d-none');
+            
+            // Actualizar período
+            document.getElementById('periodo-actual').textContent = 
+                data.periodo.substring(4, 6) + '/' + data.periodo.substring(0, 4);
+            
+            // Llenar tabla
+            const tbody = document.getElementById('tbody-ventas-existentes');
+            tbody.innerHTML = '';
+            
+            data.ventas.forEach(venta => {
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-id', venta.unique_key);
+                tr.innerHTML = `
+                    <td><code>${venta.codigo_articulo}</code></td>
+                    <td>${venta.descripcion}</td>
+                    <td>${venta.rubro || 'Sin rubro'}</td>
+                    <td>${venta.categoria_padre || 'Sin categoría'}</td>
+                    <td class="cantidad-editable" data-id="${venta.unique_key}" data-original="${venta.cantidad}">
+                        <span class="cantidad-display">${venta.cantidad}</span>
+                        <input type="number" class="form-control cantidad-input d-none" value="${venta.cantidad}" min="0">
+                    </td>
+                    <td><small>${new Date(venta.fecha_carga).toLocaleString()}</small></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary editar-cantidad" data-id="${venta.unique_key}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            // Actualizar contador
+            document.getElementById('total-ventas-existentes').textContent = data.ventas.length;
+            
+            // Configurar eventos de edición
+            configurarEdicionVentas();
+            
+            // Configurar botón de recarga
+            document.getElementById('btn-recargar-periodo').addEventListener('click', function() {
+                if (confirm('¿Está seguro que desea recargar todo el período? Esto eliminará todas las ventas actuales y mostrará el formulario de carga.')) {
+                    eliminarVentasPeriodo();
+                }
+            });
+        }
+
+        function mostrarFormularioCargaNueva(data) {
+            console.log('📝 Mostrando formulario de carga nueva');
+            
+            // Ocultar contenedor de ventas existentes
+            document.getElementById('contenedor-ventas-existentes').classList.add('d-none');
+            
+            // Mostrar contenedor de carga nueva
+            document.getElementById('contenedor-carga-nueva').classList.remove('d-none');
+            
+            // Mostrar mensaje de período faltante si es apropiado
+            if (data.mensaje) {
+                const mensajePeriodo = document.getElementById('mensaje-periodo-faltante');
+                mensajePeriodo.classList.remove('d-none');
+                mensajePeriodo.querySelector('p').innerHTML = 
+                    `<strong>${data.mensaje}</strong> Utilice el formulario a continuación para importar los datos de ventas.`;
+            }
+        }
+
+        function configurarEdicionVentas() {
+            // Edición en línea de cantidades
+            document.querySelectorAll('.cantidad-editable').forEach(celda => {
+                celda.addEventListener('click', function() {
+                    const display = this.querySelector('.cantidad-display');
+                    const input = this.querySelector('.cantidad-input');
+                    
+                    display.classList.add('d-none');
+                    input.classList.remove('d-none');
+                    input.focus();
+                    input.select();
+                });
+            });
+            
+            // Guardar al presionar Enter o perder foco
+            document.querySelectorAll('.cantidad-input').forEach(input => {
+                input.addEventListener('blur', guardarCantidad);
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        guardarCantidad.call(this);
+                    }
+                });
+            });
+            
+            // Botones de edición
+            document.querySelectorAll('.editar-cantidad').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const id = this.dataset.id;
+                    const celda = document.querySelector(`.cantidad-editable[data-id="${id}"]`);
+                    celda.click();
+                });
+            });
+        }
+
+        async function guardarCantidad() {
+            const celda = this.closest('.cantidad-editable');
+            const display = celda.querySelector('.cantidad-display');
+            const input = this;
+            const id = celda.dataset.id;
+            const valorOriginal = parseInt(celda.dataset.original);
+            const valorNuevo = parseInt(input.value);
+            
+            if (valorNuevo === valorOriginal) {
+                // Sin cambios
+                display.classList.remove('d-none');
+                input.classList.add('d-none');
+                return;
+            }
+            
+            try {
+                const response = await fetch('controller/actualizar_venta_existente.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id, cantidad: valorNuevo })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    display.textContent = valorNuevo;
+                    celda.dataset.original = valorNuevo;
+                    
+                    if (result.accion === 'eliminado') {
+                        // Eliminar fila
+                        celda.closest('tr').remove();
+                        // Actualizar contador
+                        const total = document.getElementById('total-ventas-existentes');
+                        total.textContent = parseInt(total.textContent) - 1;
+                    }
+                    
+                    console.log(`✅ Venta ${result.accion}: ${result.codigo_articulo} - ${valorNuevo}`);
+                } else {
+                    alert('Error: ' + result.message);
+                    input.value = valorOriginal; // Revertir
+                }
+            } catch (error) {
+                console.error('Error actualizando cantidad:', error);
+                alert('Error al actualizar la cantidad');
+                input.value = valorOriginal; // Revertir
+            }
+            
+            display.classList.remove('d-none');
+            input.classList.add('d-none');
+        }
+
+        async function eliminarVentasPeriodo() {
+            try {
+                const response = await fetch('controller/eliminar_ventas_periodo.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error eliminando ventas del período:', error);
+                alert('Error al eliminar ventas del período');
+            }
+        }
     </script>
+
+                </div> <!-- Cierre del contenedor-carga-nueva -->
+            </div> <!-- Cierre del container-fluid -->
+        </main>
+    </div>
 </body>
 </html>

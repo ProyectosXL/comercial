@@ -539,8 +539,13 @@ class AuthFranquicia {
      */
     public static function verificarAccesoEspecial() {
         try {
+            // Incluir configuración de sesiones
+            require_once __DIR__ . '/../config_sesiones_fixed.php';
+            
             $auth = new self();
-            return $auth->tieneAccesoEspecial();
+            // Obtener el nombre de usuario directamente de la sesión, no usar obtenerFranquiciaIdSesion()
+            $usuarioFranquicia = $_SESSION['usuario_franquicia'] ?? $_SESSION['username'] ?? null;
+            return $auth->tieneAccesoEspecial($usuarioFranquicia);
         } catch (Exception $e) {
             error_log("Error en verificación estática de acceso especial: " . $e->getMessage());
             return false;
