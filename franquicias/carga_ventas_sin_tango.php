@@ -719,7 +719,7 @@ if (!function_exists('es_modo_desarrollo')) {
             
             // Asegurar z-index correcto cuando el modal se muestra
             document.getElementById('modalImportarExcel').addEventListener('show.bs.modal', function () {
-                this.style.zIndex = '1060';
+                this.style.zIndex = '999990';
                 const backdrop = document.querySelector('.modal-backdrop');
                 if (backdrop) {
                     backdrop.style.zIndex = '1055';
