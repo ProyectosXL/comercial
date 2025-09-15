@@ -231,9 +231,58 @@ if (!function_exists('es_modo_desarrollo')) {
             font-size: 0.75rem;
             padding: 0.35em 0.65em;
         }
+
+        /* Estilos específicos para el modal de ayuda de ventas */
+        #modalAyudaVentas {
+            z-index: 99999 !important;
+        }
+        
+        #modalAyudaVentas .modal-backdrop {
+            z-index: 99998 !important;
+        }
+        
+        #modalAyudaVentas .modal-dialog {
+            z-index: 100000 !important;
+            margin: 1.75rem auto !important;
+        }
+        
+        #modalAyudaVentas .modal-content {
+            border: none !important;
+            border-radius: 15px !important;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        #modalAyudaVentas .modal-header {
+            background: linear-gradient(135deg, #4e73df, #224abe) !important;
+            border-bottom: none !important;
+            border-radius: 15px 15px 0 0 !important;
+        }
+        
+        #modalAyudaVentas .modal-body {
+            padding: 2rem !important;
+            max-height: 70vh !important;
+            overflow-y: auto !important;
+        }
+        
+        #modalAyudaVentas .accordion-button {
+            background-color: #f8f9fc !important;
+            border: 1px solid #e3e6f0 !important;
+            color: #5a5c69 !important;
+        }
+        
+        #modalAyudaVentas .accordion-button:not(.collapsed) {
+            background-color: #4e73df !important;
+            color: white !important;
+        }
+        
+        #modalAyudaVentas .accordion-body {
+            background-color: #ffffff !important;
+            border: 1px solid #e3e6f0 !important;
+            border-top: none !important;
+        }
     </style>
 </head>
-<body>
+<body data-page="carga-ventas-sin-tango">
     <!-- Navbar -->
     <?php include 'components/navbar.php'; ?>
 
@@ -339,7 +388,7 @@ if (!function_exists('es_modo_desarrollo')) {
                                     <div class="col-md-6">
                                         <button type="button" class="btn btn-warning" id="btn-recargar-periodo">
                                             <i class="bi bi-arrow-clockwise me-1"></i>
-                                            Recargar Período Completo
+                                            Eliminar todo y Recargar Período Completo
                                         </button>
                                     </div>
                                     <div class="col-md-6 text-end">
@@ -421,18 +470,12 @@ if (!function_exists('es_modo_desarrollo')) {
                                         </div>
                                         
                                         <div class="row">
-                                            <div class="col-md-6 mb-3">
+                                            <div class="col-md-8 mx-auto mb-3">
                                                 <div class="d-grid">
-                                                    <button class="btn btn-primary btn-lg" type="button" disabled>
-                                                        <i class="bi bi-plus-circle me-2"></i>
-                                                        Carga Manual de Ventas
-                                                    </button>
-                                                    <small class="text-muted text-center mt-2">Próximamente disponible</small>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6 mb-3">
-                                                <div class="d-grid">
-                                                    <button class="btn btn-outline-primary btn-lg" type="button" id="btnImportarExcel">
+                                                    <button class="btn btn-outline-primary btn-lg" type="button" 
+                                                            id="btnImportarExcel" 
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#modalImportarExcel">
                                                         <i class="bi bi-upload me-2"></i>
                                                         Importar desde Excel
                                                     </button>
@@ -448,7 +491,6 @@ if (!function_exists('es_modo_desarrollo')) {
                                 <div class="text-center py-3 text-muted">
                                     <i class="bi bi-info-circle me-2"></i>
                                     <strong>Información:</strong> Este módulo está diseñado específicamente para franquicias que no utilizan el sistema Tango.
-                                    <br>Las funcionalidades de carga manual estarán disponibles próximamente.
                                 </div>
                             </div>
                         </div>
@@ -670,10 +712,21 @@ if (!function_exists('es_modo_desarrollo')) {
             }
             console.log('✅ Botón importar encontrado');
 
-            const modal = new bootstrap.Modal(document.getElementById('modalImportarExcel'));
+            const modal = new bootstrap.Modal(document.getElementById('modalImportarExcel'), {
+                backdrop: 'static',
+                keyboard: false
+            });
+            
+            // Asegurar z-index correcto cuando el modal se muestra
+            document.getElementById('modalImportarExcel').addEventListener('show.bs.modal', function () {
+                this.style.zIndex = '1060';
+                const backdrop = document.querySelector('.modal-backdrop');
+                if (backdrop) {
+                    backdrop.style.zIndex = '1055';
+                }
+            });
             const archivoInput = document.getElementById('archivoExcel');
             const btnProcesar = document.getElementById('btnProcesarArchivo');
-            const btnDescargar = document.getElementById('btnDescargarEjemplo');
             const btnVolver = document.getElementById('btnVolverPaso1');
             const btnConfirmar = document.getElementById('btnConfirmarImportacion');
 
@@ -682,7 +735,6 @@ if (!function_exists('es_modo_desarrollo')) {
                 modal: !!modal,
                 archivoInput: !!archivoInput,
                 btnProcesar: !!btnProcesar,
-                btnDescargar: !!btnDescargar,
                 btnVolver: !!btnVolver,
                 btnConfirmar: !!btnConfirmar
             };
@@ -693,34 +745,20 @@ if (!function_exists('es_modo_desarrollo')) {
             window.datosImportados = datosImportados; // Hacer global para acceso después del reemplazo
             let articulosValidos = new Set();
 
-            // Abrir modal
-            btnImportar.addEventListener('click', () => {
-                console.log('🔥 Botón importar clicado!');
+            // Usar el evento 'shown.bs.modal' de Bootstrap en lugar de click personalizado
+            const modalElement = document.getElementById('modalImportarExcel');
+            
+            // Mover el modal al final del body para evitar conflictos de z-index
+            document.body.appendChild(modalElement);
+            
+            modalElement.addEventListener('shown.bs.modal', () => {
+                console.log('🔥 Modal de importación mostrado correctamente!');
                 resetModal();
-                modal.show();
-                
-                // Verificar que el modal esté completamente visible antes de continuar
-                setTimeout(() => {
-                    const modalElement = document.getElementById('modalImportarExcel');
-                    const modalRect = modalElement.getBoundingClientRect();
-                    console.log('🔍 Verificación post-show del modal:', {
-                        display: getComputedStyle(modalElement).display,
-                        visible: modalRect.width > 0 && modalRect.height > 0,
-                        classes: modalElement.className,
-                        rect: modalRect
-                    });
-                    
-                    if (modalRect.width === 0 || modalRect.height === 0) {
-                        console.error('❌ PROBLEMA: El modal no está visible después de show()');
-                        // Forzar visibilidad del modal
-                        modalElement.style.cssText = 'display: block !important; opacity: 1 !important; position: fixed !important; top: 50% !important; left: 50% !important; transform: translate(-50%, -50%) !important; z-index: 999999 !important;';
-                    }
-                }, 500);
             });
 
-            // Descargar ejemplo
-            if (btnDescargar) {
-                btnDescargar.addEventListener('click', async () => {
+            // Usar event delegation para el botón de descarga (funciona incluso si se reemplaza el botón)
+            document.addEventListener('click', async (e) => {
+                if (e.target && e.target.id === 'btnDescargarEjemplo') {
                     console.log('Descargando ejemplo Excel...');
                     
                     try {
@@ -772,8 +810,8 @@ if (!function_exists('es_modo_desarrollo')) {
                         console.error('Error generando ejemplo Excel:', error);
                         alert('Error al generar el archivo de ejemplo. Inténtelo nuevamente.');
                     }
-                });
-            }
+                }
+            });
 
             // Cuando se selecciona archivo
             if (archivoInput) {
@@ -930,6 +968,12 @@ if (!function_exists('es_modo_desarrollo')) {
                                                 <li><strong>ARTICULO:</strong> Código del artículo (debe empezar con X u O)</li>
                                                 <li><strong>CANTIDAD:</strong> Cantidad vendida (número entero)</li>
                                             </ul>
+                                            <p class="mb-0">
+                                                <button class="btn btn-sm btn-outline-success" id="btnDescargarEjemplo">
+                                                    <i class="bi bi-download me-1"></i>
+                                                    Descargar ejemplo.xlsx
+                                                </button>
+                                            </p>
                                         </div>
                                         
                                         <div class="row">
@@ -1938,5 +1982,149 @@ if (!function_exists('es_modo_desarrollo')) {
             </div> <!-- Cierre del container-fluid -->
         </main>
     </div>
+
+    <!-- Modal de Ayuda específico para Carga de Ventas -->
+    <div class="modal fade" id="modalAyudaVentas" tabindex="-1" aria-labelledby="modalAyudaVentasLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="modalAyudaVentasLabel">
+                        <i class="bi bi-question-circle-fill me-2"></i>
+                        Ayuda - Carga de Ventas Sin Tango
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-info-circle me-2"></i>
+                                ¿Qué es la Carga de Ventas Sin Tango?
+                            </h6>
+                            <p class="mb-4">
+                                Esta herramienta permite registrar las ventas de tu franquicia cuando no tienes integración 
+                                directa con el sistema Tango. Es especialmente útil para franquicias que manejan su inventario 
+                                de forma manual o con sistemas alternativos.
+                            </p>
+
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-list-check me-2"></i>
+                                Pasos para cargar ventas:
+                            </h6>
+                            <ol class="mb-4">
+                                <li class="mb-2">
+                                    <strong>Selecciona el período:</strong> Escoge el mes y año correspondiente a las ventas que vas a cargar.
+                                </li>
+                                <li class="mb-2">
+                                    <strong>Busca el producto:</strong> Utiliza el buscador para encontrar el artículo vendido. 
+                                    Puedes buscar por código, descripción o categoría.
+                                </li>
+                                <li class="mb-2">
+                                    <strong>Ingresa la cantidad:</strong> Especifica cuántas unidades vendiste de ese producto.
+                                </li>
+                                <li class="mb-2">
+                                    <strong>Confirma la venta:</strong> Revisa los datos y confirma para registrar la venta.
+                                </li>
+                                <li class="mb-2">
+                                    <strong>Revisa el resumen:</strong> Al final podrás ver un resumen de todas las ventas cargadas.
+                                </li>
+                            </ol>
+
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-lightbulb me-2"></i>
+                                Consejos importantes:
+                            </h6>
+                            <ul class="mb-4">
+                                <li class="mb-2">
+                                    <strong>Carga regularmente:</strong> Es recomendable cargar las ventas semanalmente para 
+                                    mantener los datos actualizados.
+                                </li>
+                                <li class="mb-2">
+                                    <strong>Verifica los códigos:</strong> Asegúrate de seleccionar el producto correcto 
+                                    verificando el código y la descripción.
+                                </li>
+                                <li class="mb-2">
+                                    <strong>Cantidades exactas:</strong> Ingresa las cantidades exactas vendidas, 
+                                    no approximaciones.
+                                </li>
+                                <li class="mb-2">
+                                    <strong>Edición posterior:</strong> Puedes editar las cantidades posteriormente si 
+                                    encuentras algún error.
+                                </li>
+                            </ul>
+
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                Solución de problemas comunes:
+                            </h6>
+                            <div class="accordion" id="accordionAyuda">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="headingOne">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                            No encuentro el producto que busco
+                                        </button>
+                                    </h2>
+                                    <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionAyuda">
+                                        <div class="accordion-body">
+                                            <ul>
+                                                <li>Verifica que estés escribiendo correctamente el código o descripción</li>
+                                                <li>Intenta buscar por categoría o palabras clave</li>
+                                                <li>El producto debe estar activo en el sistema para aparecer</li>
+                                                <li>Contacta al área comercial si el producto no existe en el catálogo</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="headingTwo">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                                            Error al guardar la venta
+                                        </button>
+                                    </h2>
+                                    <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionAyuda">
+                                        <div class="accordion-body">
+                                            <ul>
+                                                <li>Verifica tu conexión a internet</li>
+                                                <li>Asegúrate de que la cantidad ingresada sea un número válido</li>
+                                                <li>Recarga la página e intenta nuevamente</li>
+                                                <li>Si el problema persiste, contacta al soporte técnico</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="headingThree">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                                            ¿Puedo modificar ventas ya cargadas?
+                                        </button>
+                                    </h2>
+                                    <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionAyuda">
+                                        <div class="accordion-body">
+                                            <p>Sí, puedes modificar las cantidades de ventas ya cargadas:</p>
+                                            <ul>
+                                                <li>Haz clic en la cantidad que quieres editar en el resumen</li>
+                                                <li>Ingresa la nueva cantidad</li>
+                                                <li>Presiona Enter o haz clic fuera del campo para guardar</li>
+                                                <li>Para eliminar una venta, pon la cantidad en 0</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Cerrar
+                    </button>
+                    <a href="index.php" class="btn btn-primary">
+                        <i class="bi bi-house me-2"></i>Volver al Inicio
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

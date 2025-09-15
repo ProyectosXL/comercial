@@ -83,7 +83,9 @@ try {
         -- Agregar columnas que podrían faltar si la tabla ya existía
         IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'id')
         BEGIN
-            ALTER TABLE ventas_franquicias_sin_tango ADD id int IDENTITY(1,1) PRIMARY KEY
+            -- Solo agregar la columna sin PRIMARY KEY para evitar conflictos
+            -- Si la tabla no tiene PK, se agregará después
+            ALTER TABLE ventas_franquicias_sin_tango ADD id int IDENTITY(1,1)
         END
         
         IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'usuario_carga')

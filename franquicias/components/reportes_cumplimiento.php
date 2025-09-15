@@ -18,7 +18,11 @@ if ($rol !== 'supervision') {
         <div class="btn-group me-2">
             <button type="button" class="btn btn-sm btn-success" onclick="exportarReporte()">
                 <i class="bi bi-download me-1"></i>
-                Exportar Excel
+                Exportar Grilla
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="exportarDetalle()" id="btn-exportar-detalle">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>
+                Exportar Detalle
             </button>
         </div>
     </div>
@@ -99,7 +103,7 @@ if ($rol !== 'supervision') {
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
             <i class="bi bi-grid me-2"></i>
-            Matriz de Cumplimiento: Franquicias vs Rubros
+            Grilla de Cumplimiento: Franquicias vs Rubros
         </h5>
     </div>
     <div class="card-body p-0">
@@ -717,6 +721,12 @@ class ReportesCumplimientoManager {
         // Mostrar tabla
         document.getElementById('contenedor-tabla-reporte').style.display = 'block';
         document.getElementById('reporte-vacio').style.display = 'none';
+        
+        // Mostrar botón "Exportar Detalle" solo para usuarios de supervisión
+        const btnExportarDetalle = document.getElementById('btn-exportar-detalle');
+        if (btnExportarDetalle) {
+            btnExportarDetalle.style.display = 'inline-block';
+        }
     }
     
     crearHeadersTabla(rubros) {
@@ -831,6 +841,57 @@ class ReportesCumplimientoManager {
         } catch (error) {
             console.error('Error exportando:', error);
             this.mostrarAlerta('Error al exportar el reporte', 'danger');
+        }
+    }
+    
+    async exportarDetalle() {
+        if (!this.periodoActual) {
+            this.mostrarAlerta('Debe seleccionar un período antes de exportar el detalle', 'warning');
+            return;
+        }
+        
+        try {
+            this.mostrarAlerta('Generando detalle para exportación...', 'info');
+            
+            const data = await this.fetchWithErrorHandling('controller/reportes_cumplimiento_controller.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `action=exportar_detalle_cumplimiento&periodo=${this.periodoActual}`
+            });
+            
+            if (data.success && data.data && data.data.length > 0) {
+                // Crear headers para Excel
+                const headers = ['PERIODO', 'NRO_SUCURSAL', 'DESC_SUCURSAL', 'RUBRO', 'CATEGORIA', 'STOCK_ACTUAL'];
+                const datosExcel = [headers];
+                
+                // Agregar los datos
+                data.data.forEach(registro => {
+                    datosExcel.push([
+                        registro.PERIODO,
+                        registro.NRO_SUCURSAL,
+                        registro.DESC_SUCURSAL,
+                        registro.RUBRO,
+                        registro.CATEGORIA,
+                        registro.STOCK_ACTUAL
+                    ]);
+                });
+                
+                // Exportar a Excel
+                this.exportarAExcel(datosExcel, `detalle_cumplimiento_${this.periodoActual}`, 'Detalle de Cumplimiento');
+                
+                this.mostrarAlerta(`Detalle exportado correctamente. ${data.total_registros} registros incluidos.`, 'success');
+                
+            } else if (data.success && data.data && data.data.length === 0) {
+                this.mostrarAlerta('No hay datos para exportar en el período seleccionado', 'warning');
+            } else {
+                this.mostrarError(data.message || 'Error al obtener el detalle para exportar');
+            }
+            
+        } catch (error) {
+            console.error('Error exportando detalle:', error);
+            this.mostrarAlerta('Error de conexión al exportar el detalle', 'danger');
         }
     }
     
@@ -985,6 +1046,12 @@ function actualizarReporte() {
 function exportarReporte() {
     if (reportesCumplimientoManager) {
         reportesCumplimientoManager.exportarReporte();
+    }
+}
+
+function exportarDetalle() {
+    if (reportesCumplimientoManager) {
+        reportesCumplimientoManager.exportarDetalle();
     }
 }
 </script>

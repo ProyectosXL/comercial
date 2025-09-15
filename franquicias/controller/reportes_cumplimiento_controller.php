@@ -62,6 +62,13 @@ class ReportesCumplimientoController {
                     }
                     return $this->generarReporteCumplimiento($periodo);
                     
+                case 'exportar_detalle_cumplimiento':
+                    $periodo = $_POST['periodo'] ?? null;
+                    if (!$periodo) {
+                        throw new Exception('Período no especificado');
+                    }
+                    return $this->exportarDetalleCumplimiento($periodo);
+                    
                 default:
                     throw new Exception('Acción no válida: ' . $action);
             }
@@ -302,6 +309,78 @@ class ReportesCumplimientoController {
                 round(($franquiciasInformaron * 100) / $totalFranquicias, 1) : 0,
             'total_rubros' => count($rubros)
         ];
+    }
+    
+    /**
+     * Exportar detalle de cumplimiento con la consulta específica
+     */
+    public function exportarDetalleCumplimiento($periodo) {
+        try {
+            if (!$this->sistemas_conn) {
+                throw new Exception('No hay conexión a la base de datos');
+            }
+            
+            error_log("DEBUG REPORTES: Exportando detalle para período: " . $periodo);
+            
+            // Convertir período MM-YYYY a formato para consulta
+            list($mes, $año) = explode('-', $periodo);
+            
+            // Consulta SQL específica solicitada por el usuario
+            $sql = "SELECT 
+                        CONCAT(MONTH(fecha_movimiento), '-', YEAR(fecha_movimiento)) AS PERIODO,
+                        B.NRO_SUCURSAL,
+                        B.DESC_SUCURSAL,
+                        A.RUBRO,
+                        A.CATEGORIA,
+                        A.STOCK_ACTUAL,
+                        A.fecha_movimiento
+                    FROM franquicia_historial_stock A 
+                    INNER JOIN [LAKERBIS].[LOCALES_LAKERS].[DBO].[SUCURSALES_LAKERS] B 
+                        ON A.franquicia_id = B.NRO_SUCURSAL
+                    WHERE MONTH(A.fecha_movimiento) = ? 
+                    AND YEAR(A.fecha_movimiento) = ?
+                    ORDER BY B.DESC_SUCURSAL, A.RUBRO, A.CATEGORIA, A.fecha_movimiento";
+            
+            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$mes, $año]);
+            
+            $detalles = [];
+            if ($stmt && sqlsrv_execute($stmt)) {
+                while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                    // Formatear la fecha si es un objeto DateTime
+                    $fechaMovimiento = $row['fecha_movimiento'];
+                    if ($fechaMovimiento instanceof DateTime) {
+                        $fechaMovimiento = $fechaMovimiento->format('Y-m-d H:i:s');
+                    }
+                    
+                    $detalles[] = [
+                        'PERIODO' => $row['PERIODO'],
+                        'NRO_SUCURSAL' => $row['NRO_SUCURSAL'],
+                        'DESC_SUCURSAL' => $row['DESC_SUCURSAL'],
+                        'RUBRO' => $row['RUBRO'],
+                        'CATEGORIA' => $row['CATEGORIA'],
+                        'STOCK_ACTUAL' => $row['STOCK_ACTUAL'],
+                        'fecha_movimiento' => $fechaMovimiento
+                    ];
+                }
+                sqlsrv_free_stmt($stmt);
+            } else {
+                error_log("Error SQL exportar detalle: " . print_r(sqlsrv_errors(), true));
+                throw new Exception("Error al ejecutar la consulta de detalle");
+            }
+            
+            error_log("DEBUG REPORTES: Detalle obtenido - " . count($detalles) . " registros");
+            
+            return [
+                'success' => true,
+                'data' => $detalles,
+                'periodo' => $periodo,
+                'total_registros' => count($detalles)
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Error en exportarDetalleCumplimiento: " . $e->getMessage());
+            throw new Exception("Error al exportar detalle: " . $e->getMessage());
+        }
     }
 }
 

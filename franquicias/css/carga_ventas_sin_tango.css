@@ -626,3 +626,30 @@ body .btn-outline-primary:hover {
 .badge.bg-success {
     background: linear-gradient(135deg, #28a745, #20c997) !important;
 }
+
+/* ========================================
+   CORRECCIÓN Z-INDEX MODAL
+   ======================================== */
+
+/* Asegurar que el modal y su backdrop tengan z-index correcto */
+.modal {
+    z-index: 1060 !important;
+}
+
+.modal-backdrop {
+    z-index: 1055 !important;
+}
+
+/* Modal específico de importación */
+#modalImportarExcel {
+    z-index: 1060 !important;
+}
+
+#modalImportarExcel.show {
+    z-index: 1060 !important;
+}
+
+/* Backdrop específico del modal de importación */
+.modal-backdrop.show {
+    z-index: 1055 !important;
+}
