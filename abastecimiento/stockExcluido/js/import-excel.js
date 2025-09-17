@@ -143,40 +143,55 @@ function validarTipoArchivo(file) {
     return true;
 }
 
-function procesarDatosExcel(datos) {
+async function procesarDatosExcel(datos) {
     console.log('Procesando datos:', datos);
-    
+
     // Limpiar datos anteriores
     articulosAImportar = [];
     $('#tblItems tbody').empty();
     hayErrores = false;
-    
-    // Procesar cada fila
-    datos.forEach((fila, index) => {
+
+    // Saltar la primera fila si contiene encabezados
+    let inicioFila = 0;
+    if (datos.length > 0 && datos[0]) {
+        const primeraFila = datos[0];
+        // Verificar si la primera fila parece ser encabezados
+        if (primeraFila[0] && primeraFila[0].toString().toLowerCase().includes('articulo')) {
+            inicioFila = 1;
+            console.log('Saltando fila de encabezados');
+        }
+    }
+
+    // Procesar cada fila (saltando encabezados si los hay)
+    for (let i = inicioFila; i < datos.length; i++) {
+        const fila = datos[i];
+
         // Saltar filas vacías
         if (!fila || fila.length === 0 || !fila[0]) {
-            return;
+            continue;
         }
-        
+
         const codigo = fila[0] ? fila[0].toString().trim() : '';
         const cantidad = fila[1] ? parseInt(fila[1]) : 0;
         const observaciones = fila[2] ? fila[2].toString().trim() : '';
-        
+
         if (codigo) {
-            procesarArticulo(codigo, cantidad, observaciones, index + 1);
+            // Esperar a que termine cada validación antes de continuar
+            await procesarArticulo(codigo, cantidad, observaciones, i + 1);
         }
-    });
-    
+    }
+
     actualizarContador();
     mostrarResumenProcesamiento();
 }
 
-function procesarArticulo(codigo, cantidad, observaciones, numeroFila) {
+
+async function procesarArticulo(codigo, cantidad, observaciones, numeroFila) {
     console.log(`Procesando artículo ${numeroFila}:`, { codigo, cantidad, observaciones });
-    
-    // Validar el artículo
-    const validacion = validarArticulo(codigo, cantidad);
-    
+
+    // Validar el artículo (ahora asíncrono)
+    const validacion = await validarArticulo(codigo, cantidad);
+
     // Crear objeto del artículo
     const articulo = {
         codigo: codigo,
@@ -187,49 +202,79 @@ function procesarArticulo(codigo, cantidad, observaciones, numeroFila) {
         esValido: validacion.esValido,
         numeroFila: numeroFila
     };
-    
+
     articulosAImportar.push(articulo);
-    
+
     // Agregar a la tabla de previsualización
     agregarFilaPreview(articulo);
-    
+
     if (!articulo.esValido) {
         hayErrores = true;
     }
 }
 
-function validarArticulo(codigo, cantidad) {
+
+async function validarArticulo(codigo, cantidad) {
     let descripcion = '';
     let estado = '';
     let esValido = true;
-    
+
     // Verificar si ya existe en el sistema
     if (articulosExistentes.includes(codigo)) {
         descripcion = 'ARTÍCULO YA EXCLUIDO';
         estado = 'duplicado';
         esValido = false;
+        return { descripcion, estado, esValido };
     }
-    // Verificar si existe en el maestro (simulación)
-    else if (!codigo.startsWith('X')) {
+    // Verificar si el código parece válido (debe empezar con X o O, puedes ajustar esto)
+    if (!codigo.startsWith('X') && !codigo.startsWith('O')) {
         descripcion = 'CÓDIGO INEXISTENTE';
         estado = 'inexistente';
         esValido = false;
+        return { descripcion, estado, esValido };
     }
     // Verificar cantidad válida
-    else if (!cantidad || cantidad <= 0) {
+    if (!cantidad || cantidad <= 0) {
         descripcion = 'CANTIDAD INVÁLIDA';
         estado = 'cantidad_invalida';
         esValido = false;
+        return { descripcion, estado, esValido };
     }
-    // Artículo válido
-    else {
-        // Aquí normalmente harías la consulta al servidor
-        // Por ahora simulo la descripción
-        descripcion = `Descripción del artículo ${codigo}`;
-        estado = 'valido';
-        esValido = true;
+
+    // Consultar descripción real al backend
+    try {
+        const response = await $.ajax({
+            url: 'Controller/buscarCodigo.php',
+            method: 'POST',
+            dataType: 'json',
+            data: { codArticu: codigo }
+        });
+        
+        console.log('Respuesta del servidor para', codigo, ':', response);
+        
+        if (response.code === 200 && response.msg) {
+            // El backend retorna un array JSON como string en msg
+            let arr = JSON.parse(response.msg);
+            if (arr && arr[0] && arr[0].DESCRIPCIO) {
+                descripcion = arr[0].DESCRIPCIO;
+                estado = 'valido';
+                esValido = true;
+            } else {
+                descripcion = 'SIN DESCRIPCIÓN';
+                estado = 'sin_descripcion';
+                esValido = false;
+            }
+        } else {
+            descripcion = 'CÓDIGO INEXISTENTE';
+            estado = 'inexistente';
+            esValido = false;
+        }
+    } catch (e) {
+        console.error('Error en AJAX:', e);
+        descripcion = 'ERROR DE CONEXIÓN';
+        estado = 'error';
+        esValido = false;
     }
-    
     return { descripcion, estado, esValido };
 }
 

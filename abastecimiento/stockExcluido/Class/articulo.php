@@ -27,15 +27,17 @@ class Articulo
 
     public function traerArticulos()
     {
-        // CAMBIO: Se ha modificado la cláusula ORDER BY para ordenar por COD_ARTICU ascendentemente
-        $sql = "SELECT * FROM SJ_EXCLUIDOS ORDER BY COD_ARTICU ASC";
-        
+        // Traer artículos excluidos y la descripción real desde STA11
+        $sql = "SELECT E.*, COALESCE(S.DESCRIPCIO, E.DESCRIPCION) AS DESCRIPCION
+                FROM SJ_EXCLUIDOS E
+                LEFT JOIN STA11 S ON E.COD_ARTICU = S.COD_ARTICU
+                ORDER BY E.COD_ARTICU ASC";
+
         $rows = $this->retornarArray($sql);
 
         $myJSON = json_encode($rows);
 
         return $myJSON;
-
     }
 
     public function traerMaestro($codArticu){

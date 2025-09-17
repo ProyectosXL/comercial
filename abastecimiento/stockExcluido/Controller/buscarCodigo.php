@@ -30,7 +30,7 @@ try {
         exit;
     }
 
-    require_once '../Class/Articulo.php';
+    require_once '../Class/articulo.php';
 
     $articulo = new Articulo();
     $articuloArray = $articulo->traerMaestro($codArticu);
