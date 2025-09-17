@@ -252,27 +252,52 @@ async function validarArticulo(codigo, cantidad) {
         
         console.log('Respuesta del servidor para', codigo, ':', response);
         
-        if (response.code === 200 && response.msg) {
-            // El backend retorna un array JSON como string en msg
-            let arr = JSON.parse(response.msg);
-            if (arr && arr[0] && arr[0].DESCRIPCIO) {
-                descripcion = arr[0].DESCRIPCIO;
-                estado = 'valido';
-                esValido = true;
-            } else {
-                descripcion = 'SIN DESCRIPCIÓN';
-                estado = 'sin_descripcion';
+        if (response && response.code === 200 && response.msg) {
+            try {
+                // El backend retorna un array JSON como string en msg
+                let arr = JSON.parse(response.msg);
+                if (arr && Array.isArray(arr) && arr.length > 0 && arr[0]) {
+                    // Verificar si tiene DESCRIPCIO
+                    if (arr[0].DESCRIPCIO && arr[0].DESCRIPCIO.trim() !== '') {
+                        descripcion = arr[0].DESCRIPCIO.trim();
+                        estado = 'valido';
+                        esValido = true;
+                    } else {
+                        descripcion = 'SIN DESCRIPCIÓN';
+                        estado = 'sin_descripcion';
+                        esValido = false;
+                    }
+                } else {
+                    descripcion = 'CÓDIGO INEXISTENTE';
+                    estado = 'inexistente';
+                    esValido = false;
+                }
+            } catch (parseError) {
+                console.error('Error parseando respuesta JSON:', parseError, 'Respuesta:', response.msg);
+                descripcion = 'ERROR AL PROCESAR RESPUESTA';
+                estado = 'error_parse';
                 esValido = false;
             }
-        } else {
+        } else if (response && response.code === 404) {
             descripcion = 'CÓDIGO INEXISTENTE';
             estado = 'inexistente';
             esValido = false;
+        } else {
+            descripcion = 'RESPUESTA INVÁLIDA DEL SERVIDOR';
+            estado = 'error_respuesta';
+            esValido = false;
         }
-    } catch (e) {
-        console.error('Error en AJAX:', e);
+    } catch (ajaxError) {
+        console.error('Error en AJAX:', ajaxError);
+        
+        // Mostrar más información sobre el error para debugging
+        if (ajaxError.status) {
+            console.log('Status HTTP:', ajaxError.status);
+            console.log('Response Text:', ajaxError.responseText);
+        }
+        
         descripcion = 'ERROR DE CONEXIÓN';
-        estado = 'error';
+        estado = 'error_conexion';
         esValido = false;
     }
     return { descripcion, estado, esValido };
@@ -309,6 +334,8 @@ function agregarFilaPreview(articulo) {
         case 'error_parse_articulo':
         case 'error_conexion':
         case 'error_procesamiento':
+        case 'error_parse':
+        case 'error_respuesta':
             claseEstado = 'table-danger';
             badgeEstado = '<span class="badge bg-danger"><i class="bi bi-exclamation-circle"></i> Error</span>';
             break;
