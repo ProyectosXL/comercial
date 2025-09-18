@@ -48,7 +48,7 @@ $codigoArticulo = implode('_', array_slice($partes, 2)); // Por si el código ti
 // Obtener información de la sesión
 $usuario = $_SESSION['usuario_franquicia'] ?? '';
 $nroSucursal = $_SESSION['franquicia_id'] ?? '';
-$periodoActual = date('Ym');
+$periodoActual = date('Ym', strtotime('-1 month')); // Mes anterior
 
 try {
     // Conectar a la base sistemas

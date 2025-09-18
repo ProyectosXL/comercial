@@ -51,7 +51,7 @@ body .main-content .card .card-body {
 body .main-content .card .card-body p,
 body .main-content .card .card-body span,
 body .main-content .card .card-body div {
-    color: #2c3e50 !important;
+    color: #2c3e50 ;
 }
 
 body .main-content .card .card-body .text-muted {

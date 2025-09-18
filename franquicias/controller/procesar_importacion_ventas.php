@@ -36,8 +36,8 @@ if (empty($nroSucursal)) {
     exit;
 }
 
-// Calcular el período actual (YYYYMM)
-$periodoActual = date('Ym'); // Formato: 202509
+// Calcular el período anterior (YYYYMM)
+$periodoActual = date('Ym', strtotime('-1 month')); // Formato: mes anterior al actual
 
 try {
     // Conectar a ambas bases de datos

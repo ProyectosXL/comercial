@@ -16,7 +16,7 @@ try {
 
     // Incluir archivos necesarios
     require_once '../abastecimiento/Class/classEnv.php';
-    require_once 'class/DatabaseConfig.php';
+    require_once '../class/DatabaseConfig.php';
 
     // Limpiar cualquier output previo
     if (ob_get_level()) ob_clean();
@@ -28,97 +28,36 @@ try {
         exit;
     }
 
-    $input = json_decode(file_get_contents('php://input'), true);
-    $codigosAValidar = $input['codigos'] ?? [];
+    // Obtener datos del POST
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
 
-    if (empty($codigosAValidar)) {
-        echo json_encode(['success' => false, 'message' => 'No se proporcionaron códigos para validar']);
+    if (!$data || !isset($data['codigos'])) {
+        echo json_encode(['success' => false, 'message' => 'Datos inválidos']);
         exit;
     }
 
-    // Configurar límites
-    set_time_limit(30);
-    ini_set('memory_limit', '128M');
+    $codigosAValidar = $data['codigos'];
     
-    // Conectar solo a LAKER_SA por ahora
-    $conexionLaker = DatabaseConfig::conectarLakerSA();
+    if (empty($codigosAValidar)) {
+        echo json_encode(['success' => true, 'articulos' => []]);
+        exit;
+    }
 
-    // Crear placeholders para la consulta IN
-    $placeholders = str_repeat('?,', count($codigosAValidar) - 1) . '?';
-    
-    // Buscar solo los artículos específicos en LAKER_SA con filtro para franquicias
-    $sql = "SELECT COD_ARTICU as codigo, DESCRIPCIO as descripcion 
-            FROM STA11 
-            WHERE COD_ARTICU IN ($placeholders)
-            AND COD_ARTICU LIKE '[XO]%'
-            ORDER BY COD_ARTICU";
+    // Conectar a las bases de datos
+    $conexionSistemas = DatabaseConfig::conectarSistemas();
+    $conexionComercial = DatabaseConfig::conectarComercial();
 
-    $stmt = $conexionLaker->prepare($sql);
-    $stmt->execute($codigosAValidar);
-    $articulosDB = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Procesar resultados
-    $articulos = []; // Array compatible con el frontend
-    $validos = [];
-    $invalidos = [];
+    $resultados = [];
     $articulosEncontrados = [];
-    
-    foreach ($articulosDB as $articulo) {
-        $codigo = trim($articulo['codigo']);
-        $descripcion = trim($articulo['descripcion']);
-        $articulosEncontrados[$codigo] = true;
-        
-        $articuloData = [
-            'codigo' => $codigo,
-            'descripcion' => $descripcion,
-            'rubro' => 'Sin rubro',
-            'categoria' => 'Sin categoría',
-            'valido' => true
-        ];
-        
-        $articulos[] = $articuloData; // Para compatibilidad con frontend
-        $validos[] = $articuloData;
-    }
-    
-    // Verificar qué códigos no se encontraron
-    foreach ($codigosAValidar as $codigo) {
-        $codigoNormalizado = trim(strtoupper($codigo));
-        if (!isset($articulosEncontrados[$codigoNormalizado])) {
-            $articuloData = [
-                'codigo' => $codigoNormalizado,
-                'descripcion' => 'Artículo no encontrado',
-                'rubro' => 'Sin rubro',
-                'categoria' => 'Sin categoría',
-                'valido' => false
-            ];
-            
-            $articulos[] = $articuloData; // Para compatibilidad con frontend
-            $invalidos[] = $articuloData;
-        }
-    }
 
-    // Respuesta final compatible con el frontend existente
-    echo json_encode([
-        'success' => true,
-        'articulos' => $articulos, // Campo esperado por el frontend
-        'validos' => $validos,
-        'invalidos' => $invalidos,
-        'total' => count($codigosAValidar),
-        'encontrados' => count($validos),
-        'noEncontrados' => count($invalidos)
-    ]);
+    // Buscar información en la base comercial
+    $placeholders = str_repeat('?,', count($codigosAValidar) - 1) . '?';
+    $sqlComercial = "SELECT codigo, descripcion FROM productos WHERE codigo IN ($placeholders)";
+    $stmtComercial = $conexionComercial->prepare($sqlComercial);
+    $stmtComercial->execute($codigosAValidar);
+    $articulos = $stmtComercial->fetchAll(PDO::FETCH_ASSOC);
 
-} catch (Exception $e) {
-    echo json_encode([
-        'success' => false,
-        'message' => 'Error interno: ' . $e->getMessage(),
-        'debug' => [
-            'file' => $e->getFile(),
-            'line' => $e->getLine()
-        ]
-    ]);
-}
-    
     foreach ($articulos as $articulo) {
         $codigo = trim($articulo['codigo']);
         $descripcion = trim($articulo['descripcion']);
@@ -153,12 +92,11 @@ try {
                 $rubro = trim($datosAdicionales['RUBRO']) ?: 'Sin rubro';
                 $categoria = trim($datosAdicionales['CATEGORIA_PADRE']) ?: 'Sin categoría';
             }
-            
         } catch (Exception $e) {
             error_log("Error consultando sistemas para $codigo: " . $e->getMessage());
         }
         
-        $resultados[] = [
+        $resultados[$codigo] = [
             'codigo' => $codigo,
             'descripcion' => $descripcion,
             'rubro' => $rubro,
@@ -167,11 +105,11 @@ try {
         ];
     }
 
-    // Identificar códigos no encontrados
+    // Crear registros para códigos no encontrados
     $codigosNoEncontrados = array_diff($codigosAValidar, $articulosEncontrados);
-    foreach ($codigosNoEncontrados as $codigoNoEncontrado) {
-        $resultados[] = [
-            'codigo' => $codigoNoEncontrado,
+    foreach ($codigosNoEncontrados as $codigo) {
+        $resultados[$codigo] = [
+            'codigo' => $codigo,
             'descripcion' => 'Artículo no encontrado',
             'rubro' => 'Sin rubro',
             'categoria' => 'Sin categoría',

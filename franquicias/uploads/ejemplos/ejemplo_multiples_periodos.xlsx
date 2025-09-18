@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+<Worksheet ss:Name="Ejemplo Múltiples Períodos">
+<Table>
+<Row>
+<Cell><Data ss:Type="String"><B>ARTICULO</B></Data></Cell>
+<Cell><Data ss:Type="String"><B>CANTIDAD</B></Data></Cell>
+<Cell><Data ss:Type="String"><B>PERIODO</B></Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">X123456</Data></Cell>
+<Cell><Data ss:Type="Number">5</Data></Cell>
+<Cell><Data ss:Type="String">01/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">X789012</Data></Cell>
+<Cell><Data ss:Type="Number">3</Data></Cell>
+<Cell><Data ss:Type="String">01/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">O345678</Data></Cell>
+<Cell><Data ss:Type="Number">8</Data></Cell>
+<Cell><Data ss:Type="String">02/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">X456789</Data></Cell>
+<Cell><Data ss:Type="Number">2</Data></Cell>
+<Cell><Data ss:Type="String">02/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">O567890</Data></Cell>
+<Cell><Data ss:Type="Number">10</Data></Cell>
+<Cell><Data ss:Type="String">03/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">X678901</Data></Cell>
+<Cell><Data ss:Type="Number">1</Data></Cell>
+<Cell><Data ss:Type="String">03/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">O789123</Data></Cell>
+<Cell><Data ss:Type="Number">4</Data></Cell>
+<Cell><Data ss:Type="String">04/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">X890234</Data></Cell>
+<Cell><Data ss:Type="Number">6</Data></Cell>
+<Cell><Data ss:Type="String">04/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">O901345</Data></Cell>
+<Cell><Data ss:Type="Number">12</Data></Cell>
+<Cell><Data ss:Type="String">05/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">X012456</Data></Cell>
+<Cell><Data ss:Type="Number">7</Data></Cell>
+<Cell><Data ss:Type="String">05/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">O123567</Data></Cell>
+<Cell><Data ss:Type="Number">9</Data></Cell>
+<Cell><Data ss:Type="String">06/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">X234678</Data></Cell>
+<Cell><Data ss:Type="Number">3</Data></Cell>
+<Cell><Data ss:Type="String">06/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">O345789</Data></Cell>
+<Cell><Data ss:Type="Number">15</Data></Cell>
+<Cell><Data ss:Type="String">07/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">X456890</Data></Cell>
+<Cell><Data ss:Type="Number">2</Data></Cell>
+<Cell><Data ss:Type="String">07/2024</Data></Cell>
+</Row>
+<Row>
+<Cell><Data ss:Type="String">O567901</Data></Cell>
+<Cell><Data ss:Type="Number">11</Data></Cell>
+<Cell><Data ss:Type="String">08/2024</Data></Cell>
+</Row>
+</Table>
+</Worksheet>
+</Workbook>

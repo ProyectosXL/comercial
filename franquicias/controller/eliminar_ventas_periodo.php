@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Obtener información de la sesión
 $usuario = $_SESSION['usuario_franquicia'] ?? '';
 $nroSucursal = $_SESSION['franquicia_id'] ?? '';
-$periodoActual = date('Ym');
+$periodoActual = date('Ym', strtotime('-1 month')); // Mes anterior
 
 if (empty($nroSucursal)) {
     echo json_encode(['success' => false, 'message' => 'No se pudo obtener el número de sucursal']);
