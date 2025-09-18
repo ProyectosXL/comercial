@@ -16,7 +16,7 @@ const buscar = () => {
 
     $.ajax({
 
-        url: 'http://app.xl.com.ar:6002/api/despacho/guias',
+        url: 'https://app.xl.com.ar/api/despacho/guias',
         type: 'POST',
         contentType: "application/json",
         dataType: "json",
@@ -277,7 +277,7 @@ const guardar = () => {
               
                 $.ajax({
 
-                    url: 'http://app.xl.com.ar:6002/api/despacho/update-guias',
+                    url: 'https://app.xl.com.ar/api/despacho/update-guias',
                     type: 'POST',
                     contentType: "application/json",
                     dataType: "json",

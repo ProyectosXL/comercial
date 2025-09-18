@@ -23,7 +23,7 @@ const traerData = () => {
     guia = guia != '' ? guia : '%' ;
     
     $.ajax({
-        url: 'http://app.xl.com.ar:6002/api/despacho/tracking',
+        url: 'https://app.xl.com.ar/api/despacho/tracking',
         method: 'POST',
         contentType: "application/json",
         dataType: "json",
