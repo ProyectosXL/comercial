@@ -35,11 +35,16 @@ const buscar = () => {
 
             var tableBody = document.querySelector("#tableBody");
 
-            $('#tablaGuias').DataTable().destroy();
+            // Verificar si DataTable ya existe antes de destruirla
+            if ($.fn.DataTable.isDataTable('#tablaGuias')) {
+                $('#tablaGuias').DataTable().destroy();
+            }
 
-            tableBody.innerHTML = ''; 
-       
-            response.body.forEach(function (v) {
+            tableBody.innerHTML = '';
+
+            // Verificar si hay datos
+            if (response.body && response.body.length > 0) {
+                response.body.forEach(function (v) {
 
                 var row = document.createElement("tr");
 
@@ -210,6 +215,12 @@ const buscar = () => {
             
                 },
             });
+            
+            } else {
+                // No hay datos, mostrar mensaje
+                tableBody.innerHTML = '<tr><td colspan="11" class="text-center py-4"><i class="bi bi-info-circle"></i> No se encontraron resultados</td></tr>';
+            }
+            
             spinner.classList.remove("loading");
         },
         error: function (error) {

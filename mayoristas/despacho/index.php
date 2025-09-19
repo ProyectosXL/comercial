@@ -1,62 +1,55 @@
 
-<!doctype HTML>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-    <title>Despacho Mayoristas</title>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Despacho Mayoristas - Tracking System</title>
+    <meta name="description" content="Sistema de tracking para despacho mayoristas - Gestión de comprobantes y guías">
     <link rel="shortcut icon" href="../../assets/css/images/icono.jpg">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: white;
-        }
-        .card-hover:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-        }
-    </style>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="css/modern-menu.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <div class="row justify-content-center mb-4 mt-5 p-4 rounded-2 alert-primary">
-            <div class="col-md-auto">
-                <h2 class="text-center">Tracking Despacho Mayoristas</h2>
-            </div>
-        </div>
+    <main class="main-container">
+        <header class="header-section">
+            <h1 class="main-title">Tracking Despacho Mayoristas</h1>
+            <p class="subtitle">Sistema de gestión y seguimiento de despachos</p>
+        </header>
         
-        <div class="row justify-content-center mb-5">
-            <div class="col-md-auto">
-                <img src="../../assets/css/images/logo.jpg" alt="Logo" class="img-fluid">
-            </div>
-        </div>
+        <section class="logo-section">
+            <img src="../../assets/css/images/logo.jpg" alt="Logo de la empresa" class="logo">
+        </section>
         
-        <div class="row justify-content-center">
-            <div class="col-md-4 mb-4">
-                <div class="card text-center card-hover">
-                    <div class="card-body">
-                        <i class="fas fa-search fa-3x mb-3 text-primary"></i>
-                        <h5 class="card-title">Tracking Comprobantes</h5>
-                        <p class="card-text">Gestiona y realiza seguimiento de tus comprobantes.</p>
-                        <a href="tracking.php" class="btn btn-outline-primary">Acceder</a>
-                    </div>
+        <section class="menu-grid">
+            <article class="menu-card">
+                <div class="card-icon">
+                    <i class="fas fa-search" aria-hidden="true"></i>
                 </div>
-            </div>
-            <div class="col-md-4 mb-4">
-                <div class="card text-center card-hover">
-                    <div class="card-body">
-                        <i class="fas fa-file-alt fa-3x mb-3 text-primary"></i>
-                        <h5 class="card-title">Gestión de Guías</h5>
-                        <p class="card-text">Administra y controla tus guías de despacho.</p>
-                        <a href="guias.php" class="btn btn-outline-primary">Acceder</a>
-                    </div>
+                <h2 class="card-title">Tracking Comprobantes</h2>
+                <p class="card-description">Gestiona y realiza seguimiento completo de todos tus comprobantes de manera eficiente.</p>
+                <a href="tracking.php" class="card-button">
+                    <span>Acceder</span>
+                    <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                </a>
+            </article>
+            
+            <article class="menu-card">
+                <div class="card-icon">
+                    <i class="fas fa-file-alt" aria-hidden="true"></i>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+                <h2 class="card-title">Gestión de Guías</h2>
+                <p class="card-description">Administra y controla todas tus guías de despacho con herramientas avanzadas.</p>
+                <a href="guias.php" class="card-button">
+                    <span>Acceder</span>
+                    <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                </a>
+            </article>
+        </section>
+        
+        <footer class="footer-section">
+            <p class="footer-text">Sistema de Despacho Mayoristas © 2025</p>
+        </footer>
+    </main>
 </body>
 </html>
