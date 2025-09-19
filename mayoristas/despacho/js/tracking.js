@@ -83,7 +83,7 @@ function loadClientesData() {
     let token = localStorage.getItem('token');
     
     $.ajax({
-        url: 'https://app.xl.com.ar/api/despacho/clientes', // Ajusta esta URL según tu API
+        url: 'https://app.xl.com.ar/api/despacho/clientes', 
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${token}`,
@@ -92,11 +92,13 @@ function loadClientesData() {
         success: function(response) {
             console.log('Clientes cargados:', response);
             
+            
             // Procesar datos según la estructura de tu API
-            clientesData = response.map(cliente => ({
-                id: cliente.codigo || cliente.id, // Ajustar según tu estructura
-                text: cliente.razon_social || cliente.nombre || cliente.text
+            clientesData = response.body.map(cliente => ({
+                id: cliente.RAZON_SOCI, // Ajustar según tu estructura
+                text: cliente.RAZON_SOCI 
             }));
+            console.log(clientesData)
             
             // Actualizar el Select2 con los nuevos datos
             updateClienteSelect2();
@@ -131,9 +133,9 @@ function loadTransportesData() {
             console.log('Transportes cargados:', response);
             
             // Procesar datos según la estructura de tu API
-            transportesData = response.map(transporte => ({
-                id: transporte.codigo || transporte.id,
-                text: transporte.nombre || transporte.razon_social || transporte.text
+            transportesData = response.body.map(transporte => ({
+                id: transporte.NOMBRE_TRA,
+                text: transporte.NOMBRE_TRA
             }));
             
             // Actualizar el Select2 con los nuevos datos
