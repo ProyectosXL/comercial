@@ -42,7 +42,7 @@ class EmailNew {
 
             $reintegro = $totalEfectivo - $adelanto;
             
-            $destinatarios = ['rodrigo.alganaraz@xl.com.ar','julieta.bianculli@xl.com.ar','tesoreria@xl.com.ar'];
+            $destinatarios = ['rodrigo.alganaraz@xl.com.ar','julieta.bianculli@xl.com.ar','tesoreria@xl.com.ar','diego.szmulewicz@xl.com.ar'];
             // $destinatarios = ['ramiro.orozco@xl.com.ar'];
 
             $asunto = "Reintegro de Gastos en Efectivo - {$supervisora} - Semana {$semana}";
