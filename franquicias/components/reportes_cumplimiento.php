@@ -20,7 +20,7 @@ if ($rol !== 'supervision') {
                 <i class="bi bi-download me-1"></i>
                 Exportar Grilla
             </button>
-            <button type="button" class="btn btn-sm btn-primary" onclick="exportarDetalle()" id="btn-exportar-detalle">
+            <button type="button" class="btn btn-sm btn-primary" onclick="exportarDetalle()" id="btn-exportar-detalle" style="display: none;">
                 <i class="bi bi-file-earmark-spreadsheet me-1"></i>
                 Exportar Detalle
             </button>
@@ -727,6 +727,8 @@ class ReportesCumplimientoManager {
         if (btnExportarDetalle) {
             btnExportarDetalle.style.display = 'inline-block';
         }
+        
+        console.log('Datos cargados exitosamente:', datos);
     }
     
     crearHeadersTabla(rubros) {
@@ -845,53 +847,55 @@ class ReportesCumplimientoManager {
     }
     
     async exportarDetalle() {
-        if (!this.periodoActual) {
-            this.mostrarAlerta('Debe seleccionar un período antes de exportar el detalle', 'warning');
+        if (!this.datosReporte) {
+            this.mostrarAlerta('Debe generar un reporte antes de exportarlo', 'warning');
             return;
         }
         
         try {
-            this.mostrarAlerta('Generando detalle para exportación...', 'info');
+            this.mostrarAlerta('Obteniendo datos detallados...', 'info');
             
-            const data = await this.fetchWithErrorHandling('controller/reportes_cumplimiento_controller.php', {
+            // Obtener datos detallados del servidor
+            const response = await fetch('controller/reportes_cumplimiento_controller.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `action=exportar_detalle_cumplimiento&periodo=${this.periodoActual}`
+                body: `action=obtener_detalle_cumplimiento&periodo=${this.periodoActual}`
             });
             
-            if (data.success && data.data && data.data.length > 0) {
-                // Crear headers para Excel
-                const headers = ['PERIODO', 'NRO_SUCURSAL', 'DESC_SUCURSAL', 'RUBRO', 'CATEGORIA', 'STOCK_ACTUAL'];
-                const datosExcel = [headers];
+            const data = await response.json();
+            
+            if (data.success) {
+                // Convertir datos a formato para Excel
+                const datosExcel = [];
                 
-                // Agregar los datos
-                data.data.forEach(registro => {
+                // Headers
+                datosExcel.push(['PERIODO', 'NRO_SUCURSAL', 'DESC_SUCURSAL', 'RUBRO', 'CATEGORIA', 'STOCK_ACTUAL']);
+                
+                // Datos
+                data.data.forEach(row => {
                     datosExcel.push([
-                        registro.PERIODO,
-                        registro.NRO_SUCURSAL,
-                        registro.DESC_SUCURSAL,
-                        registro.RUBRO,
-                        registro.CATEGORIA,
-                        registro.STOCK_ACTUAL
+                        row.PERIODO,
+                        row.NRO_SUCURSAL,
+                        row.DESC_SUCURSAL,
+                        row.RUBRO,
+                        row.CATEGORIA,
+                        row.STOCK_ACTUAL
                     ]);
                 });
                 
-                // Exportar a Excel
-                this.exportarAExcel(datosExcel, `detalle_cumplimiento_${this.periodoActual}`, 'Detalle de Cumplimiento');
+                // Exportar usando la función existente
+                this.exportarAExcel(datosExcel, `detalle_cumplimiento_stock_${this.periodoActual}`, 'Detalle Cumplimiento');
+                this.mostrarAlerta('Archivo Excel descargado exitosamente', 'success');
                 
-                this.mostrarAlerta(`Detalle exportado correctamente. ${data.total_registros} registros incluidos.`, 'success');
-                
-            } else if (data.success && data.data && data.data.length === 0) {
-                this.mostrarAlerta('No hay datos para exportar en el período seleccionado', 'warning');
             } else {
-                this.mostrarError(data.message || 'Error al obtener el detalle para exportar');
+                this.mostrarAlerta(data.message || 'Error al obtener datos detallados', 'danger');
             }
             
         } catch (error) {
             console.error('Error exportando detalle:', error);
-            this.mostrarAlerta('Error de conexión al exportar el detalle', 'danger');
+            this.mostrarAlerta('Error al exportar el detalle', 'danger');
         }
     }
     

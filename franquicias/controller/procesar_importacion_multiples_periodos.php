@@ -80,6 +80,52 @@ if (empty($datos)) {
 
 error_log("✅ PASO 7: Datos extraídos - count: " . count($datos));
 
+/**
+ * Función para agrupar artículos duplicados por artículo + período
+ * Suma las cantidades de registros duplicados
+ */
+function agruparArticulosDuplicados($datos) {
+    error_log("🔄 Iniciando agrupación de duplicados en servidor");
+    error_log("📊 Datos originales antes de agrupar: " . count($datos));
+    
+    $agrupados = [];
+    $duplicadosEncontrados = 0;
+    
+    foreach ($datos as $index => $item) {
+        // Crear clave única combinando artículo + período
+        $clave = $item['articulo'] . '_' . $item['periodo'];
+        
+        if (isset($agrupados[$clave])) {
+            // Es un duplicado - sumar cantidad
+            $agrupados[$clave]['cantidad'] += intval($item['cantidad']);
+            $duplicadosEncontrados++;
+            error_log("🔀 Duplicado encontrado: {$item['articulo']} ({$item['periodo']}) - Suma total: {$agrupados[$clave]['cantidad']}");
+        } else {
+            // Primera ocurrencia - crear nueva entrada
+            $agrupados[$clave] = [
+                'articulo' => $item['articulo'],
+                'cantidad' => intval($item['cantidad']),
+                'periodo' => $item['periodo']
+            ];
+        }
+    }
+    
+    $datosAgrupados = array_values($agrupados);
+    
+    error_log("📊 Resultado de agrupación:");
+    error_log("  - Registros originales: " . count($datos));
+    error_log("  - Registros después de agrupación: " . count($datosAgrupados));
+    error_log("  - Duplicados encontrados y agrupados: $duplicadosEncontrados");
+    
+    return $datosAgrupados;
+}
+
+// **NUEVA FUNCIONALIDAD: Agrupar artículos duplicados antes del procesamiento**
+$datosOriginales = $datos;
+$datos = agruparArticulosDuplicados($datosOriginales);
+
+error_log("✅ PASO 7A: Agrupación completada - count original: " . count($datosOriginales) . " -> agrupado: " . count($datos));
+
 // **VALIDACIÓN ESPECÍFICA PARA DATOS CORREGIDOS**
 // Detectar si hay datos que vinieron de correcciones JavaScript
 $hayDatosCorregidos = false;

@@ -95,7 +95,13 @@ try {
                 <li class="nav-item">
                     <a href="?vista=reportes" class="nav-link <?= $vista === 'reportes' ? 'active' : '' ?>">
                         <i class="bi bi-table"></i>
-                        Reportes
+                        Reporte Stock
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="?vista=reportes_ventas" class="nav-link <?= $vista === 'reportes_ventas' ? 'active' : '' ?>">
+                        <i class="bi bi-cash-coin"></i>
+                        Reporte Ventas p/ Sin Tango
                     </a>
                 </li>
             </ul>
@@ -187,14 +193,6 @@ try {
                     Imprimir Página
                 </a>
             </li>
-            <?php if ($vista === 'reportes'): ?>
-                <li class="nav-item">
-                    <a class="nav-link" href="#" onclick="exportarDetalle()">
-                        <i class="bi bi-download"></i>
-                        Exportar Detalle
-                    </a>
-                </li>
-            <?php endif; ?>
         </ul>
     </div>
 </div>

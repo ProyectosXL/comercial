@@ -20,12 +20,54 @@ if (($_SESSION['user_role'] ?? '') !== 'franquicia' || !AuthFranquicia::verifica
 
 // Obtener datos de la solicitud
 $input = json_decode(file_get_contents('php://input'), true);
-$datos = $input['datos'] ?? [];
+$datosOriginales = $input['datos'] ?? [];
 
-if (empty($datos)) {
+if (empty($datosOriginales)) {
     echo json_encode(['success' => false, 'message' => 'No hay datos para procesar']);
     exit;
 }
+
+/**
+ * Función para agrupar artículos duplicados (solo por artículo para carga individual)
+ * Suma las cantidades de registros duplicados
+ */
+function agruparArticulosDuplicadosIndividual($datos) {
+    error_log("🔄 Iniciando agrupación individual de duplicados en servidor");
+    error_log("📊 Datos originales antes de agrupar: " . count($datos));
+    
+    $agrupados = [];
+    $duplicadosEncontrados = 0;
+    
+    foreach ($datos as $item) {
+        // Para carga individual, solo agrupamos por artículo (no hay columna período)
+        $clave = $item['articulo'];
+        
+        if (isset($agrupados[$clave])) {
+            // Es un duplicado - sumar cantidad
+            $agrupados[$clave]['cantidad'] += intval($item['cantidad']);
+            $duplicadosEncontrados++;
+            error_log("🔀 Duplicado individual encontrado: {$item['articulo']} - Suma total: {$agrupados[$clave]['cantidad']}");
+        } else {
+            // Primera ocurrencia - crear nueva entrada
+            $agrupados[$clave] = [
+                'articulo' => $item['articulo'],
+                'cantidad' => intval($item['cantidad'])
+            ];
+        }
+    }
+    
+    $datosAgrupados = array_values($agrupados);
+    
+    error_log("📊 Resultado de agrupación individual:");
+    error_log("  - Registros originales: " . count($datos));
+    error_log("  - Registros después de agrupación: " . count($datosAgrupados));
+    error_log("  - Duplicados encontrados y agrupados: $duplicadosEncontrados");
+    
+    return $datosAgrupados;
+}
+
+// **NUEVA FUNCIONALIDAD: Agrupar artículos duplicados antes del procesamiento**
+$datos = agruparArticulosDuplicadosIndividual($datosOriginales);
 
 // Obtener información de la sesión
 $usuario = $_SESSION['usuario_franquicia'] ?? '';

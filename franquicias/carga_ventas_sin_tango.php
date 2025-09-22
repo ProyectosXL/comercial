@@ -446,8 +446,19 @@ if (!function_exists('es_modo_desarrollo')) {
                     <div class="d-flex align-items-center">
                         <i class="bi bi-info-circle me-3 fs-4"></i>
                         <div>
-                            <strong>Acceso autorizado para franquicias sin Tango</strong><br>
-                            <small>Este entorno está diseñado específicamente para franquicias que no utilizan el sistema Tango.</small>
+                            <strong>Acceso autorizado para franquicias sin Tango (MES ANTERIOR)</strong><br>
+                            <small>Este entorno está diseñado para franquicias que no utilizan el sistema Tango. En esta pestaña se pueden cargar las ventas del mes anterior al actual, para cargar las ventas de otro u otros períodos, utilice la pestaña correspondiente.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mensaje informativo sobre agrupación automática -->
+                <div class="alert alert-success border-0 shadow-sm" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-collection me-3 fs-4"></i>
+                        <div>
+                            <strong>Agrupación automática de duplicados</strong><br>
+                            <small>Si su archivo contiene el mismo artículo repetido, el sistema automáticamente sumará las cantidades y mostrará un único registro en la vista previa.</small>
                         </div>
                     </div>
                 </div>
@@ -666,6 +677,17 @@ if (!function_exists('es_modo_desarrollo')) {
                             </div>
                         </div>
 
+                        <!-- Mensaje informativo sobre agrupación automática para múltiples períodos -->
+                        <div class="alert alert-success border-0 shadow-sm" role="alert">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-collection me-3 fs-4"></i>
+                                <div>
+                                    <strong>Agrupación automática de duplicados</strong><br>
+                                    <small>Si su archivo contiene el mismo artículo repetido en el mismo período, el sistema automáticamente sumará las cantidades y mostrará un único registro en la vista previa.</small>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Tabla de resumen persistente (aparece cuando hay datos cargados) -->
                         <div class="row d-none" id="area-resumen-persistente">
                             <div class="col-12">
@@ -697,7 +719,7 @@ if (!function_exists('es_modo_desarrollo')) {
                                                 <div class="d-grid">
                                                     <button type="button" class="btn btn-danger btn-lg" id="btn-reemplazar-todo-persistente">
                                                         <i class="bi bi-arrow-clockwise me-2"></i>
-                                                        Reemplazar Rango de Períodos
+                                                        Reemplazar sobre un Rango de Períodos
                                                     </button>
                                                 </div>
                                             </div>
@@ -1186,6 +1208,99 @@ if (!function_exists('es_modo_desarrollo')) {
     <script src="js/carga_ventas_sin_tango.js"></script>
     
     <script>
+        // ==============================================
+        // FUNCIONES GLOBALES PARA AGRUPACIÓN DE DUPLICADOS
+        // ==============================================
+        
+        /**
+         * Agrupa artículos duplicados y suma sus cantidades
+         * @param {Array} datos - Array de objetos con artículo, cantidad y (opcional) período  
+         * @param {string} modo - 'individual' o 'multiple'
+         * @returns {Array} - Array de datos agrupados
+         */
+        function agruparArticulosDuplicados(datos, modo = 'individual') {
+            console.log('🔄 Iniciando agrupación de duplicados - Modo:', modo);
+            console.log('📊 Datos originales antes de agrupar:', datos.length);
+            
+            const agrupados = {};
+            let duplicadosEncontrados = 0;
+            
+            datos.forEach((item, index) => {
+                // Crear clave única según el modo
+                const clave = modo === 'multiple' 
+                    ? `${item.articulo}_${item.periodo}` // Artículo + Período para múltiples
+                    : item.articulo; // Solo artículo para individual
+                
+                if (agrupados[clave]) {
+                    // Es un duplicado - sumar cantidad
+                    agrupados[clave].cantidad += item.cantidad;
+                    duplicadosEncontrados++;
+                    console.log(`🔀 Duplicado encontrado: ${item.articulo} ${modo === 'multiple' ? `(${item.periodo})` : ''} - Suma total: ${agrupados[clave].cantidad}`);
+                } else {
+                    // Primera ocurrencia - crear nueva entrada
+                    agrupados[clave] = {
+                        articulo: item.articulo,
+                        cantidad: item.cantidad
+                    };
+                    
+                    // Para múltiples períodos, incluir también el período
+                    if (modo === 'multiple' && item.periodo) {
+                        agrupados[clave].periodo = item.periodo;
+                    }
+                }
+            });
+            
+            const datosAgrupados = Object.values(agrupados);
+            
+            console.log('📊 Resultado de agrupación:');
+            console.log(`  - Registros originales: ${datos.length}`);
+            console.log(`  - Registros después de agrupación: ${datosAgrupados.length}`);
+            console.log(`  - Duplicados encontrados y agrupados: ${duplicadosEncontrados}`);
+            
+            // Mostrar mensaje informativo al usuario si se encontraron duplicados
+            if (duplicadosEncontrados > 0) {
+                const mensaje = `ℹ️ Se encontraron ${duplicadosEncontrados} artículos duplicados que fueron agrupados automáticamente. Las cantidades se sumaron correctamente.`;
+                console.log(mensaje);
+                
+                // Mostrar mensaje temporal en la interfaz
+                mostrarMensajeAgrupacion(duplicadosEncontrados, datos.length, datosAgrupados.length);
+            }
+            
+            return datosAgrupados;
+        }
+
+        /**
+         * Muestra mensaje temporal sobre la agrupación realizada
+         */
+        function mostrarMensajeAgrupacion(duplicados, original, final) {
+            // Crear elemento temporal para mostrar el mensaje
+            const mensajeDiv = document.createElement('div');
+            mensajeDiv.className = 'alert alert-info alert-dismissible fade show position-fixed';
+            mensajeDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+            mensajeDiv.innerHTML = `
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Agrupación automática:</strong><br>
+                <small>
+                    Se encontraron <strong>${duplicados}</strong> artículos duplicados.<br>
+                    Registros: ${original} → ${final} (cantidades sumadas)
+                </small>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(mensajeDiv);
+            
+            // Auto-eliminar después de 8 segundos
+            setTimeout(() => {
+                if (mensajeDiv.parentNode) {
+                    mensajeDiv.parentNode.removeChild(mensajeDiv);
+                }
+            }, 8000);
+        }
+
+        // ==============================================
+        // INICIALIZACIÓN DEL SISTEMA
+        // ==============================================
+        
         // Inicialización específica para carga de ventas sin Tango
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Entorno de carga de ventas sin Tango cargado correctamente');
@@ -1770,8 +1885,12 @@ if (!function_exists('es_modo_desarrollo')) {
 
                 try {
                     console.log('📖 Leyendo archivo Excel...');
-                    const datos = await leerArchivoExcel(archivo);
-                    console.log('📊 Datos leídos:', datos);
+                    const datosOriginales = await leerArchivoExcel(archivo);
+                    console.log('📊 Datos leídos originales:', datosOriginales);
+                    
+                    // **NUEVA FUNCIONALIDAD: Agrupar artículos duplicados**
+                    const datos = agruparArticulosDuplicados(datosOriginales, 'individual');
+                    console.log('📊 Datos después de agrupación:', datos);
                     
                     if (datos && datos.length > 0) {
                         console.log('✅ Datos válidos encontrados, guardando...');
@@ -2794,7 +2913,7 @@ if (!function_exists('es_modo_desarrollo')) {
                 if (tipoAccion === 'agregar') {
                     tituloConfig.innerHTML = '<i class="bi bi-plus-square me-2"></i>Agregar Períodos Faltantes';
                 } else if (tipoAccion === 'reemplazar') {
-                    tituloConfig.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Reemplazar Rango de Períodos';
+                    tituloConfig.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Reemplazar sobre un Rango de Períodos';
                 }
                 console.log('✅ Título actualizado para acción:', tipoAccion);
             }
@@ -2869,7 +2988,7 @@ if (!function_exists('es_modo_desarrollo')) {
             }
         }
 
-        function validarRangoTemporal() {
+        async function validarRangoTemporal() {
             const mesDesde = document.getElementById('mes-desde').value;
             const anoDesde = document.getElementById('ano-desde').value;
             const mesHasta = document.getElementById('mes-hasta').value;
@@ -2902,7 +3021,7 @@ if (!function_exists('es_modo_desarrollo')) {
 
             let errorMsg = '';
 
-            // Validaciones
+            // Validaciones básicas
             if (fechaDesde > fechaHasta) {
                 errorMsg = 'La fecha "Desde" debe ser anterior o igual a la fecha "Hasta".';
             } else if (fechaDesde < fechaMinima) {
@@ -2919,7 +3038,65 @@ if (!function_exists('es_modo_desarrollo')) {
                 return;
             }
 
-            // Rango válido
+            // **NUEVA VALIDACIÓN: Verificar períodos ya cargados**
+            try {
+                console.log('🔍 Verificando períodos existentes en el rango...');
+                
+                // Mostrar estado de verificación
+                btnImportarMultiple.disabled = true;
+                btnImportarMultiple.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Verificando períodos...';
+                
+                const response = await fetch('controller/verificar_periodos_rango.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        mesDesde: mesDesde,
+                        anoDesde: anoDesde,
+                        mesHasta: mesHasta,
+                        anoHasta: anoHasta
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('📊 Resultado verificación períodos:', result);
+
+                if (!result.success) {
+                    throw new Error(result.message || 'Error verificando períodos');
+                }
+
+                // **VALIDACIÓN ESPECÍFICA PARA MODO "AGREGAR FALTANTES"**
+                if (result.hay_conflicto && window.currentMultipleAction === 'agregar') {
+                    // Para el modo "Agregar Períodos Faltantes", los conflictos son un error
+                    errorMsg = `⚠️ El rango seleccionado incluye períodos ya cargados: ${result.periodos_display.join(', ')}. Modifica el rango para incluir solo períodos no cargados.`;
+                    
+                    errorRango.style.display = 'block';
+                    mensajeError.innerHTML = errorMsg;
+                    btnImportarMultiple.disabled = true;
+                    btnImportarMultiple.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Rango con períodos existentes';
+                    
+                    console.log('❌ Conflicto en modo agregar:', result.periodos_display);
+                    return;
+                }
+
+                // **PARA MODO "REEMPLAZAR" - Los conflictos son informativos, no bloquean**
+                if (result.hay_conflicto && window.currentMultipleAction === 'reemplazar') {
+                    console.log('ℹ️ Modo reemplazar - Períodos existentes:', result.periodos_display);
+                    // En modo reemplazar, los períodos existentes se van a sobrescribir, así que no es error
+                }
+
+            } catch (error) {
+                console.error('❌ Error verificando períodos:', error);
+                // Si hay error en la verificación, permitir continuar pero avisar
+                console.warn('⚠️ No se pudo verificar períodos existentes, continuando...');
+            }
+
+            // Rango válido (si llegamos hasta aquí)
             rangoTemporal.desde = `${mesDesde}/${anoDesde}`;
             rangoTemporal.hasta = `${mesHasta}/${anoHasta}`;
             rangoTemporal.valido = true;
@@ -3164,8 +3341,12 @@ if (!function_exists('es_modo_desarrollo')) {
             try {
                 mostrarPasoMultiple(3); // Mostrar loading
 
-                const datos = await leerArchivoExcel(window.archivoSeleccionadoMultiple);
-                console.log('📊 Datos múltiples períodos leídos:', datos);
+                const datosOriginales = await leerArchivoExcel(window.archivoSeleccionadoMultiple);
+                console.log('📊 Datos múltiples períodos leídos originales:', datosOriginales);
+
+                // **NUEVA FUNCIONALIDAD: Agrupar artículos duplicados por artículo + período**
+                const datos = agruparArticulosDuplicados(datosOriginales, 'multiple');
+                console.log('📊 Datos después de agrupación múltiple:', datos);
 
                 // Validar estructura de múltiples períodos (3 columnas)
                 if (datos.length === 0) {

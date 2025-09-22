@@ -57,7 +57,7 @@ $vista = $_GET['vista'] ?? ($rol === 'franquicia' ? 'franquicia' : 'reportes');
 if ($rol === 'franquicia') {
     $vistas_permitidas = ['franquicia', 'historial'];
 } elseif ($rol === 'supervision') {
-    $vistas_permitidas = ['reportes'];
+    $vistas_permitidas = ['reportes', 'reportes_ventas'];
 } else {
     $vistas_permitidas = []; // Sin acceso por defecto
 }
@@ -92,6 +92,8 @@ if (!in_array($vista, $vistas_permitidas)) {
     <?php elseif ($vista === 'panel'): ?>
         <link href="css/panel_comercial.css?v=<?php echo time(); ?>" rel="stylesheet">
     <?php elseif ($vista === 'reportes'): ?>
+        <link href="css/panel_comercial.css?v=<?php echo time(); ?>" rel="stylesheet">
+    <?php elseif ($vista === 'reportes_ventas'): ?>
         <link href="css/panel_comercial.css?v=<?php echo time(); ?>" rel="stylesheet">
     <?php endif; ?>
 </head>
@@ -132,6 +134,9 @@ if (!in_array($vista, $vistas_permitidas)) {
                     break;
                 case 'reportes':
                     include 'components/reportes_cumplimiento.php';
+                    break;
+                case 'reportes_ventas':
+                    include 'components/reportes_ventas.php';
                     break;
                 case 'historial':
                     include 'components/historial.php';
@@ -196,6 +201,8 @@ if (!in_array($vista, $vistas_permitidas)) {
         <script src="js/panel_comercial_simple.js"></script>
     <?php elseif ($vista === 'reportes'): ?>
         <!-- El JavaScript está incluido en reportes_cumplimiento.php -->
+    <?php elseif ($vista === 'reportes_ventas'): ?>
+        <!-- El JavaScript está incluido en reportes_ventas.php -->
     <?php endif; ?>
 </body>
 </html>
