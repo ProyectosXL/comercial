@@ -24,6 +24,13 @@ try {
 
     $directorio = __DIR__ . '/../../imagenes/compSupervision/';
     
+    // Normalizar la ruta del directorio
+    $directorio = realpath($directorio);
+    if ($directorio === false) {
+        throw new Exception('No se pudo resolver la ruta del directorio');
+    }
+    $directorio .= DIRECTORY_SEPARATOR;
+    
     // Buscar solo imágenes
     $extensiones = ['jpg', 'jpeg', 'png'];
     $imagenes = [];
@@ -35,10 +42,6 @@ try {
             $imagenes = array_merge($imagenes, $archivos);
         }
     }
-    
-    error_log("Buscando archivos para: semana=$semana, supervisora=$supervisora, id_conc=$id_conc, type=$type");
-    error_log("Directorio: " . $directorio);
-    error_log("Archivos encontrados: " . count($imagenes));
 
     if ($imagenes === false) {
         throw new Exception('Error al buscar imágenes');

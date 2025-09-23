@@ -528,4 +528,623 @@ $(document).ready(function() {
         }
     }
 
+// Definir la ruta base para las imágenes
+const BASE_IMAGE_PATH = '/comercial/imagenes/compSupervision/';
+
+// Funciones globales para manejo de archivos e imágenes
+window.elegirImagen = async function(btn, tipo) {
+    let $card = $(btn).closest('.card-body');
+    let id_conc = $card.find('.concepto-id').val();
+    let semana = $('#semanaRetail').val().split('|')[0];
+    let supervisora = $('#nombreSupervisora').val() || 'SUPERVISORA_DESCONOCIDA';
+    let $importeInput = $card.find(`.importe-input[attr-type="${tipo}"]`);
+
+    let input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'camera';
+    input.onchange = async (e) => {
+        let file = e.target.files[0];
+        
+        if (file) {
+            Swal.fire({
+                title: 'Procesando imagen...',
+                text: 'Por favor, espere...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                let finalFile = file;
+                
+                // Solo comprimir si el archivo es mayor a 300KB (300 * 1024 bytes)
+                if (file.size > 300 * 1024) {
+                    console.log(`Imagen original: ${(file.size / 1024).toFixed(2)}KB - Comprimiendo...`);
+                    
+                    // Verificar si browser-image-compression está disponible
+                    if (typeof imageCompression !== 'undefined') {
+                        // Comprimir la imagen
+                        finalFile = await imageCompression(file, {
+                            maxSizeMB: 0.3, // Máximo 300KB
+                            maxWidthOrHeight: 1920,
+                            useWebWorker: true,
+                            initialQuality: 0.8
+                        });
+                        
+                        console.log(`Imagen comprimida: ${(finalFile.size / 1024).toFixed(2)}KB`);
+                    } else {
+                        console.log('Librería de compresión no disponible, usando imagen original');
+                    }
+                } else {
+                    console.log(`Imagen original: ${(file.size / 1024).toFixed(2)}KB - No requiere compresión`);
+                }
+
+                let reader = new FileReader();
+                reader.readAsDataURL(finalFile);
+                reader.onload = async (readerEvent) => {
+                    let content = readerEvent.target.result;
+                    try {
+                        await subirImagen(content, id_conc, semana, supervisora, tipo);
+                        console.log("Imagen subida exitosamente");
+                        if (!$importeInput.val() || $importeInput.val() === '0,00') {
+                            $importeInput.addClass('is-invalid');
+                        }
+                    } catch (error) {
+                        console.error("Error al subir la imagen:", error);
+                        Swal.fire('Error', 'No se pudo subir la imagen. Por favor, intente de nuevo.', 'error');
+                        $(btn).addClass('btn-warning').removeClass('btn-outline-primary');
+                    }
+                }
+            } catch (error) {
+                console.error("Error al procesar la imagen:", error);
+                Swal.fire('Error', 'No se pudo procesar la imagen. Por favor, intente de nuevo.', 'error');
+            }
+        }
+    }
+    input.click();
+};
+
+window.adjuntarArchivo = function(btn, tipo) {
+    console.log("Adjuntar archivo iniciado para:", tipo);
+    
+    let input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,.pdf'; // Solo imágenes y PDF por ahora
+    input.multiple = true; // Permitir selección múltiple
+    
+    let $btn = $(btn);
+    let $card = $btn.closest('.card-body'); // Cambiar a card-body para consistencia
+    let id_conc = $card.find('.concepto-id').val();
+    let semana = $('#semanaRetail').val().split('|')[0]; // Usar split para consistencia
+    let supervisora = $('#nombreSupervisora').val() || 'SUPERVISORA_DESCONOCIDA'; // Usar nombreSupervisora
+
+    input.onchange = async function(e) {
+        const files = e.target.files;
+        if (files.length === 0) return;
+
+        console.log(`Archivos seleccionados: ${files.length}`);
+
+        // Verificar tipos de archivo permitidos
+        const tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+        const archivosValidos = [];
+        const archivosRechazados = [];
+
+        for (let file of files) {
+            if (tiposPermitidos.includes(file.type)) {
+                archivosValidos.push(file);
+            } else {
+                archivosRechazados.push(file.name);
+            }
+        }
+
+        if (archivosRechazados.length > 0) {
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Archivos no permitidos',
+                html: `Los siguientes archivos no son compatibles:<br><small>${archivosRechazados.join(', ')}</small><br><br>Solo se permiten: imágenes y PDF`,
+                confirmButtonText: 'Continuar'
+            });
+        }
+
+        if (archivosValidos.length === 0) {
+            return;
+        }
+
+        // Mostrar indicador de carga
+        let uploadProgress = 0;
+        const totalFiles = archivosValidos.length;
+        
+        Swal.fire({
+            title: 'Subiendo archivos...',
+            html: `
+                <div class="upload-progress">
+                    <div>Archivo <span id="current-file">1</span> de ${totalFiles}</div>
+                    <div class="progress mt-2">
+                        <div id="upload-progress-bar" class="progress-bar" style="width: 0%"></div>
+                    </div>
+                    <div id="current-filename" class="mt-2 small text-muted"></div>
+                </div>
+            `,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        let successCount = 0;
+        let errorFiles = [];
+
+        for (let i = 0; i < archivosValidos.length; i++) {
+            const file = archivosValidos[i];
+            
+            // Actualizar progreso visual
+            document.getElementById('current-file').textContent = i + 1;
+            document.getElementById('current-filename').textContent = file.name;
+            const progress = ((i + 1) / totalFiles) * 100;
+            document.getElementById('upload-progress-bar').style.width = progress + '%';
+
+            console.log(`Procesando archivo ${i + 1}: ${file.name} (${file.type})`);
+
+            try {
+                let processedFile = file;
+                
+                // Solo comprimir si es una imagen y es mayor a 300KB
+                if (file.type.startsWith('image/') && file.size > 300 * 1024) {
+                    console.log(`Comprimiendo imagen: ${file.name}`);
+                    
+                    // Usar imageCompression si está disponible
+                    if (typeof imageCompression !== 'undefined') {
+                        try {
+                            processedFile = await imageCompression(file, {
+                                maxSizeMB: 1,
+                                maxWidthOrHeight: 1920,
+                                useWebWorker: true
+                            });
+                            console.log(`Imagen comprimida de ${(file.size / 1024 / 1024).toFixed(2)}MB a ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`);
+                        } catch (compressionError) {
+                            console.warn("Error al comprimir, usando archivo original:", compressionError);
+                            processedFile = file;
+                        }
+                    }
+                }
+
+                // Convertir archivo a base64 para subida
+                const reader = new FileReader();
+                const uploadResult = await new Promise((resolve, reject) => {
+                    reader.onload = function(e) {
+                        const content = e.target.result;
+                        
+                        // Debug logging para verificar los datos antes de enviar
+                        console.log('Datos para subida:', {
+                            archivo: file.name,
+                            id_conc: id_conc,
+                            semana: semana,
+                            supervisora: supervisora,
+                            tipo: tipo,
+                            contentLength: content ? content.length : 'undefined'
+                        });
+                        
+                        subirImagen(content, id_conc, semana, supervisora, tipo)
+                            .then(response => {
+                                console.log(`Archivo ${file.name} subido exitosamente:`, response);
+                                resolve(response);
+                            })
+                            .catch(error => {
+                                console.error(`Error al subir ${file.name}:`, error);
+                                reject(error);
+                            });
+                    };
+                    reader.onerror = () => reject(new Error(`Error al leer ${file.name}`));
+                    reader.readAsDataURL(processedFile);
+                });
+
+                successCount++;
+
+            } catch (error) {
+                console.error(`Error al procesar ${file.name}:`, error);
+                errorFiles.push(file.name);
+            }
+        }
+
+        // Actualizar la visualización
+        actualizarEstadoVisual($card);
+        
+        Swal.close();
+        
+        // Mostrar resultado final
+        if (errorFiles.length === 0) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Archivos subidos!',
+                text: `Se subieron ${successCount} archivo(s) correctamente`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } else if (successCount > 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Subida parcialmente completada',
+                html: `Se subieron ${successCount} de ${totalFiles} archivos válidos.<br>
+                       <small>Archivos con error: ${errorFiles.join(', ')}</small>`,
+                timer: 4000
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error en la subida',
+                text: 'No se pudo subir ningún archivo. Por favor, intente de nuevo.',
+            });
+        }
+    };
+    
+    input.click();
+};
+
+function actualizarEstadoVisual($card) {
+    let $importeInput = $card.find('.importe-input');
+    let id_conc = $card.find('.concepto-id').val();
+
+    let tieneImporte = $importeInput.val() && $importeInput.val() !== '0,00';
+    let tieneFoto = tieneImagenesCargadas(id_conc);
+
+    if (tieneImporte && tieneFoto) {
+        // Todo está completo
+        $importeInput.removeClass('is-invalid');
+    } else if (tieneImporte && !tieneFoto) {
+        // Falta foto
+        $importeInput.removeClass('is-invalid');
+    } else if (!tieneImporte && tieneFoto) {
+        // Falta importe
+        $importeInput.addClass('is-invalid');
+    } else {
+        // Ambos están vacíos
+        $importeInput.removeClass('is-invalid');
+    }
+}
+
+function subirImagen(content, id_conc, semana, supervisora, type) {
+    console.log("Iniciando subida de imagen...");
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: 'Controller/subirImagen.php',
+            method: 'POST',
+            data: JSON.stringify({
+                imagen: content,
+                id_conc: id_conc,
+                semana: semana,
+                supervisora: supervisora,
+                type: type
+            }),
+            contentType: 'application/json',
+            dataType: 'json',
+        })
+        .done(function(response) {
+            console.log("Respuesta del servidor (subirImagen):", response);
+            if (response.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Éxito',
+                    text: response.message,
+                    timer: 3000,
+                    showConfirmButton: false
+                }).then(() => {
+                    actualizarListaImagenes(id_conc, type);
+                    resolve(response); // Resolvemos la Promise con la respuesta
+                });
+            } else {
+                Swal.fire('Error', response.message || 'Hubo un problema al guardar la imagen', 'error');
+                reject(new Error(response.message || 'Error al guardar la imagen')); // Rechazamos la Promise con un error
+            }
+        })
+        .fail(function(xhr, status, error) {
+            console.error("Error AJAX:", status, error);
+            console.error("Respuesta del servidor:", xhr.responseText);
+            Swal.fire('Error', 'Hubo un problema al subir la imagen. Detalles: ' + xhr.responseText, 'error');
+            reject(new Error('Error en la solicitud AJAX: ' + error)); // Rechazamos la Promise con el error
+        });
+    });
+}
+
+// Función para mostrar la imagen
+function mostrarImagen(nombreImagen) {
+    let rutaImagen = BASE_IMAGE_PATH + nombreImagen;
+    Swal.fire({
+        imageUrl: rutaImagen,
+        imageAlt: 'Imagen de comprobante',
+        confirmButtonText: 'Cerrar',
+        width: '80%'
+    });
+}
+
+function actualizarListaImagenes(id_conc, type) {
+    console.log("Actualizando lista de imágenes para ID_CONC:", id_conc);
+    let semana = $('#semanaRetail').val().split('|')[0];
+    let supervisora = $('#nombreSupervisora').val() || 'SUPERVISORA_DESCONOCIDA';
+
+    $.ajax({
+        url: 'Controller/obtenerImagenes.php',
+        method: 'POST',
+        data: JSON.stringify({
+            id_conc: id_conc,
+            semana: semana,
+            supervisora: supervisora,
+            type: type
+        }),
+        contentType: 'application/json',
+        dataType: 'json',
+    })
+    .done(function(response) {
+        console.log("Respuesta completa de obtenerImagenes:", response);
+        if (response.success) {
+            if (response.imagenes && response.imagenes.length > 0) {
+                let listaImagenes = response.imagenes.map(img => {
+                    let nombreCorto = img.length > 20 ? img.substring(0, 17) + '...' : img;
+                    return `
+                        <li class="d-flex justify-content-between align-items-center mb-2">
+                            <span title="${img}">${nombreCorto}</span>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary me-2" onclick="mostrarImagen('${img}')">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="eliminarImagen('${img}', '${id_conc}', '${type}')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </li>`;
+                }).join('');
+                $(`#imagenes_${id_conc}_${type}`).html(`<ul class="list-unstyled">${listaImagenes}</ul>`);
+            } else {
+                $(`#imagenes_${id_conc}_${type}`).html(`<p>No hay imágenes para este concepto.</p>`);
+            }
+        } else {
+            console.error('Error al obtener la lista de imágenes:', response.message);
+            $(`#imagenes_${id_conc}_${type}`).html(`<p>Error al cargar las imágenes: ${response.message}</p>`);
+        }
+    })
+    .fail(function(xhr, status, error) {
+        console.error('Error al obtener la lista de imágenes:', error);
+        console.error('Respuesta del servidor:', xhr.responseText);
+        $(`#imagenes_${id_conc}_${type}`).html(`<p>Error al cargar las imágenes: ${error}</p>`);
+    });
+}
+
+function eliminarImagen(nombreImagen, id_conc, type) {
+    console.log("eliminarImagen llamada con:", {
+        nombreImagen: nombreImagen,
+        id_conc: id_conc,
+        type: type,
+        nombreImagen_type: typeof nombreImagen,
+        id_conc_type: typeof id_conc,
+        type_type: typeof type
+    });
+    
+    // Probar la extracción directamente del nombre del archivo
+    console.log("🔍 Iniciando extracción de datos del nombre del archivo...");
+    
+    const partes = nombreImagen.split('_');
+    console.log("Partes del nombre del archivo:", partes);
+    
+    let semanaExtraida = '';
+    let supervisoraExtraida = '';
+    
+    if (partes.length >= 4) {
+        semanaExtraida = partes[0];
+        // La supervisora puede ser múltiples partes: partes[1] hasta partes[length-3]
+        let supervisoraParts = [];
+        for (let i = 1; i < partes.length - 3; i++) {
+            supervisoraParts.push(partes[i]);
+        }
+        supervisoraExtraida = supervisoraParts.join('_');
+    }
+    
+    console.log("Datos extraídos del nombre:", {
+        semana: semanaExtraida,
+        supervisora: supervisoraExtraida
+    });
+    
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: "No podrás revertir esta acción",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Extraer datos directamente del nombre del archivo
+            // Formato: SEMANA_SUPERVISORA_ID_TIPO_NUMERO.extension
+            // Ejemplo: 39_JOSEFINA_PASTORINO_1_tarjeta_1.jpg
+            
+            const partes = nombreImagen.split('_');
+            let semana = '';
+            let supervisora = '';
+            
+            if (partes.length >= 5) {
+                semana = partes[0];
+                // La supervisora son las partes desde la 1 hasta antes de los últimos 3 elementos
+                // partes[1] hasta partes[length-4] (porque los últimos 3 son ID_TIPO_NUMERO)
+                let supervisoraParts = [];
+                for (let i = 1; i < partes.length - 3; i++) {
+                    supervisoraParts.push(partes[i]);
+                }
+                supervisora = supervisoraParts.join('_');
+            }
+            
+            console.log("📋 Datos finales para eliminación:", {
+                nombreImagen: nombreImagen,
+                id_conc: id_conc,
+                semana: semana,
+                supervisora: supervisora,
+                type: type,
+                partesDelNombre: partes
+            });
+
+            const datosEliminar = {
+                nombreImagen: nombreImagen,
+                id_conc: id_conc,
+                semana: semana,
+                supervisora: supervisora,
+                type: type
+            };
+
+            $.ajax({
+                url: 'Controller/eliminarImagen.php',
+                method: 'POST',
+                data: JSON.stringify(datosEliminar),
+                contentType: 'application/json',
+                dataType: 'json',
+            })
+            .done(function(response) {
+                console.log("Respuesta eliminar imagen:", response);
+                if (response.success) {
+                    Swal.fire(
+                        'Eliminada',
+                        'La imagen ha sido eliminada.',
+                        'success'
+                    );
+                    actualizarListaImagenes(id_conc, type);
+                } else {
+                    Swal.fire(
+                        'Error',
+                        'No se pudo eliminar la imagen: ' + response.message,
+                        'error'
+                    );
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Error AJAX al eliminar la imagen:', {
+                    status: status,
+                    error: error,
+                    responseText: xhr.responseText,
+                    xhr: xhr
+                });
+                
+                let errorMsg = 'Hubo un problema al eliminar la imagen.';
+                
+                // Intentar parsear el mensaje de error del servidor
+                try {
+                    const errorResponse = JSON.parse(xhr.responseText);
+                    if (errorResponse.message) {
+                        errorMsg = errorResponse.message;
+                    }
+                } catch (e) {
+                    // Si no se puede parsear, usar mensaje genérico
+                    if (xhr.responseText) {
+                        errorMsg += ' Detalle: ' + xhr.responseText;
+                    }
+                }
+                
+                Swal.fire(
+                    'Error',
+                    errorMsg,
+                    'error'
+                );
+            });
+        }
+    });
+}
+
+//Carrousel para mostrar imagenes una vez cargados los gastos de una semana//
+function mostrarVisorImagenes(id_conc, type) {
+    let semana = $('#semanaRetail').val().split('|')[0];
+    let supervisora = $('#nombreSupervisora').val() || 'SUPERVISORA_DESCONOCIDA';
+
+    $.ajax({
+        url: 'Controller/obtenerImagenes.php',
+        method: 'POST',
+        data: JSON.stringify({
+            id_conc: id_conc,
+            semana: semana,
+            supervisora: supervisora,
+            type: type
+        }),
+        contentType: 'application/json',
+        dataType: 'json',
+    })
+    .done(function(response) {
+        if (response.success && response.imagenes && response.imagenes.length > 0) {
+            let carouselItems = response.imagenes.map((img, index) => `
+                <div class="carousel-item ${index === 0 ? 'active' : ''}">
+                    <img src="${BASE_IMAGE_PATH}${img}" class="d-block w-100 zoomable" alt="Imagen ${index + 1}">
+                </div>
+            `).join('');
+            
+            let carouselHtml = `
+                <div id="imageCarousel" class="carousel slide" data-bs-ride="carousel">
+                    <div class="carousel-inner">
+                        ${carouselItems}
+                    </div>
+                    <button class="carousel-control-prev" type="button" data-bs-target="#imageCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Anterior</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#imageCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Siguiente</span>
+                    </button>
+                </div>
+                <div id="imageCounter" class="text-center mt-2">
+                    Foto <span id="currentImageIndex">1</span> de ${response.imagenes.length}
+                </div>
+            `;
+            
+            Swal.fire({
+                html: carouselHtml,
+                width: '90%',
+                height: '90vh',
+                showCloseButton: true,
+                showConfirmButton: false,
+                customClass: {
+                    popup: 'swal-large-modal'
+                },
+                didOpen: (modalElement) => {
+                    const carousel = new bootstrap.Carousel(modalElement.querySelector('#imageCarousel'));
+                    
+                    // Verificar si medium-zoom está disponible
+                    if (typeof mediumZoom !== 'undefined') {
+                        const zoomInstances = mediumZoom('.zoomable', {
+                            margin: 50,
+                            background: '#000000e6'
+                        });
+
+                        modalElement.querySelector('#imageCarousel').addEventListener('slid.bs.carousel', (event) => {
+                            const activeIndex = [...event.target.querySelectorAll('.carousel-item')].indexOf(event.target.querySelector('.carousel-item.active'));
+                            modalElement.querySelector('#currentImageIndex').textContent = activeIndex + 1;
+                            
+                            // Cerrar el zoom si está abierto
+                            zoomInstances.forEach(zoom => zoom.close());
+                        });
+                    } else {
+                        // Si no está medium-zoom, solo actualizar el contador
+                        modalElement.querySelector('#imageCarousel').addEventListener('slid.bs.carousel', (event) => {
+                            const activeIndex = [...event.target.querySelectorAll('.carousel-item')].indexOf(event.target.querySelector('.carousel-item.active'));
+                            modalElement.querySelector('#currentImageIndex').textContent = activeIndex + 1;
+                        });
+                    }
+                }
+            });
+        } else {
+            Swal.fire('Sin imágenes', 'No hay imágenes disponibles para este concepto.', 'info');
+        }
+    })
+    .fail(function(xhr, status, error) {
+        console.error('Error al obtener la lista de imágenes:', error);
+        Swal.fire('Error', 'No se pudieron cargar las imágenes. Por favor, intente de nuevo.', 'error');
+    });
+}
+
+// Función auxiliar para verificar si hay imágenes cargadas
+function tieneImagenesCargadas(id_conc) {
+    // Esta función debería implementarse para verificar si existen imágenes
+    // Por ahora retornamos false como placeholder
+    return false;
+}
+
+console.log('✅ Funciones de carga de archivos agregadas a cargaGastosNew.js');
+
 });

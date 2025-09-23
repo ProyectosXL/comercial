@@ -243,6 +243,34 @@ function mostrarImagen(nombreImagen) {
 // Función para eliminar imagen
 function eliminarImagen(nombreImagen, id_conc, type) {
     console.log(`🗑️ Eliminando imagen: ${nombreImagen}`);
+    
+    // Extraer datos directamente del nombre del archivo
+    // Formato: SEMANA_SUPERVISORA_ID_TIPO_NUMERO.extension
+    // Ejemplo: 39_JOSEFINA_PASTORINO_1_tarjeta_1.jpg
+    
+    const partes = nombreImagen.split('_');
+    let semana = '';
+    let supervisora = '';
+    
+    if (partes.length >= 5) {
+        semana = partes[0];
+        // La supervisora son las partes desde la 1 hasta antes de los últimos 3 elementos
+        let supervisoraParts = [];
+        for (let i = 1; i < partes.length - 3; i++) {
+            supervisoraParts.push(partes[i]);
+        }
+        supervisora = supervisoraParts.join('_');
+    }
+    
+    console.log("📋 Datos extraídos para eliminación:", {
+        nombreImagen: nombreImagen,
+        semana: semana,
+        supervisora: supervisora,
+        id_conc: id_conc,
+        type: type,
+        partesDelNombre: partes
+    });
+    
     Swal.fire({
         title: '¿Estás seguro?',
         text: "No podrás revertir esta acción",
@@ -260,23 +288,40 @@ function eliminarImagen(nombreImagen, id_conc, type) {
                 data: JSON.stringify({
                     nombreImagen: nombreImagen,
                     id_conc: id_conc,
+                    semana: semana,
+                    supervisora: supervisora,
                     type: type
                 }),
                 contentType: 'application/json',
                 dataType: 'json'
             })
             .done(function(response) {
+                console.log("🔥 Respuesta eliminación:", response);
                 if (response.success) {
                     Swal.fire('Eliminado', 'La imagen ha sido eliminada.', 'success');
                     // Refrescar la lista
-                    actualizarListaImagenes(id_conc, type);
+                    actualizarListaImagenesConVerificacion(id_conc, type);
                 } else {
                     Swal.fire('Error', 'No se pudo eliminar la imagen: ' + response.message, 'error');
                 }
             })
             .fail(function(xhr, status, error) {
                 console.error('Error al eliminar imagen:', error);
-                Swal.fire('Error', 'Hubo un problema al eliminar la imagen.', 'error');
+                console.error('Respuesta del servidor:', xhr.responseText);
+                
+                let errorMsg = 'Hubo un problema al eliminar la imagen.';
+                try {
+                    const errorResponse = JSON.parse(xhr.responseText);
+                    if (errorResponse.message) {
+                        errorMsg = errorResponse.message;
+                    }
+                } catch (e) {
+                    if (xhr.responseText) {
+                        errorMsg += ' Detalle: ' + xhr.responseText;
+                    }
+                }
+                
+                Swal.fire('Error', errorMsg, 'error');
             });
         }
     });

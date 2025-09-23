@@ -19,11 +19,12 @@ try {
     $archivo = $_FILES['archivo'];
     $id_conc = $_POST['id_conc'] ?? null;
     $semana = $_POST['semana'] ?? null;
+    $anio = $_POST['anio'] ?? null;
     $supervisora = $_POST['supervisora'] ?? null;
     $type = $_POST['type'] ?? null;
 
-    if (!$id_conc || !$semana || !$supervisora || !$type) {
-        throw new Exception('Datos incompletos');
+    if (!$id_conc || !$semana || !$anio || !$supervisora || !$type) {
+        throw new Exception('Datos incompletos. Se requiere: id_conc, semana, año, supervisora y type');
     }
 
     // Validar tipo de archivo - SOLO IMÁGENES
@@ -54,8 +55,8 @@ try {
     while ($numeroArchivo <= 100) {
         $nombreBase = $semana . '_' . strtoupper(str_replace(' ', '_', $supervisora)) . '_' . $id_conc . '_' . $type . '_' . $numeroArchivo;
         
-        // Verificar si YA EXISTE algún archivo con este número (cualquier extensión de imagen)
-        $extensionesBuscar = ['jpg', 'jpeg', 'png'];
+        // Verificar si YA EXISTE algún archivo con este número (cualquier extensión permitida)
+        $extensionesBuscar = ['jpg', 'jpeg', 'png', 'pdf'];
         $numeroOcupado = false;
         
         foreach ($extensionesBuscar as $extCheck) {
