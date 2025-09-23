@@ -3,8 +3,8 @@
 session_start();
 
 // Seteo de usuario de prueba para testeo
-// $_SESSION['username'] = 'Jpastorino';
-// $_SESSION['descLocal'] = 'JOSEFINA PASTORINO';
+$_SESSION['username'] = 'Jpastorino';
+$_SESSION['descLocal'] = 'JOSEFINA PASTORINO';
 
 if (!isset($_SESSION['username'])) {
     header("Location:../sistemas/login.php");
@@ -180,6 +180,14 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
         </div>
     </div>
 </div>
+
+<!-- Botón de debug (comentado para producción)
+<div class="container mb-3">
+    <button type="button" class="btn btn-info btn-sm" onclick="debugBotones()" title="Debug: Ver estado de botones">
+        <i class="fas fa-bug"></i> Debug Botones
+    </button>
+</div>
+-->
     
         <div class="container" id="conceptosList">
         <?php
@@ -230,7 +238,11 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
                                     <?php echo $gastoExistente ? 'style="display:none;"' : ''; ?>>
                                 <i class="bi bi-camera"></i> Cámara
                             </button>
-                            <button type="button" class="btn btn-outline-primary flex-grow-1 me-2 ver-imagenes-btn" 
+                            <button type="button" class="btn btn-outline-secondary flex-grow-1 me-2 archivo-btn" onclick="adjuntarArchivo(this, 'tarjeta')"
+                                    <?php echo $gastoExistente ? 'style="display:none;"' : ''; ?>>
+                                <i class="bi bi-paperclip"></i> Adjuntar
+                            </button>
+                            <button type="button" class="btn btn-outline-primary flex-grow-1 ver-imagenes-btn" 
                                     onclick="mostrarVisorImagenes(<?php echo $concepto['ID_CONC']; ?>, 'tarjeta')"
                                     style="display:none;">
                                 <i class="bi bi-eye"></i> Ver imágenes
@@ -257,7 +269,11 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
                                     <?php echo $gastoExistente ? 'style="display:none;"' : ''; ?>>
                                 <i class="bi bi-camera"></i> Cámara
                             </button>
-                            <button type="button" class="btn btn-outline-primary flex-grow-1 me-2 ver-imagenes-btn" 
+                            <button type="button" class="btn btn-outline-secondary flex-grow-1 me-2 archivo-btn" onclick="adjuntarArchivo(this, 'efectivo')"
+                                    <?php echo $gastoExistente ? 'style="display:none;"' : ''; ?>>
+                                <i class="bi bi-paperclip"></i> Adjuntar
+                            </button>
+                            <button type="button" class="btn btn-outline-primary flex-grow-1 ver-imagenes-btn" 
                                     onclick="mostrarVisorImagenes(<?php echo $concepto['ID_CONC']; ?>, 'efectivo')"
                                     style="display:none;">
                                 <i class="bi bi-eye"></i> Ver imágenes
@@ -302,7 +318,8 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
         var gastosExistentes = <?php echo $gastosExistentesJSON; ?>;
     </script>
     <script src="js/cargaGastosNew.js"></script>
-    <script src="js/imagen.js"></script>
     <script src="js/mostrarNew.js"></script>
+    <script src="js/verificacion-dinamica.js"></script>
+
 </body>
 </html>

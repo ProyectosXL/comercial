@@ -40,6 +40,49 @@
             background-color: #28a745;
             border-color: #28a745;
         }
+        
+        /* Estilos para botones de archivo */
+        .archivo-btn {
+            border-color: #6c757d;
+            color: #6c757d;
+        }
+        .archivo-btn:hover {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: white;
+        }
+        .archivo-btn.btn-success {
+            background-color: #198754;
+            border-color: #198754;
+            color: white;
+        }
+        .archivo-btn.btn-warning {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #212529;
+        }
+        
+        /* Estilos para iconos de archivos en lista */
+        .list-unstyled .bi-file-earmark,
+        .list-unstyled .bi-image,
+        .list-unstyled .bi-file-earmark-pdf,
+        .list-unstyled .bi-file-earmark-word,
+        .list-unstyled .bi-file-earmark-excel {
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+        .list-unstyled .bi-image {
+            color: #17a2b8;
+        }
+        .list-unstyled .bi-file-earmark-pdf {
+            color: #dc3545;
+        }
+        .list-unstyled .bi-file-earmark-word {
+            color: #0d6efd;
+        }
+        .list-unstyled .bi-file-earmark-excel {
+            color: #198754;
+        }
         .vertical-line {
             border-left-width: 5px;
             border-left-style: solid;
@@ -105,9 +148,57 @@
         }
    
        
-        .carousel-item img {
-            max-height: 70vh;
+        /* Estilos mejorados para el carousel */
+        .swal-large-modal .carousel-item {
+            height: 100%;
+            position: relative;
+        }
+        
+        .swal-large-modal .carousel-item img {
             object-fit: contain;
+            max-height: 60vh;
+            width: auto;
+            margin: 0 auto;
+        }
+        
+        .swal-large-modal .carousel-control-prev,
+        .swal-large-modal .carousel-control-next {
+            background-color: rgba(0,0,0,0.5);
+            width: 5%;
+            height: 50px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-radius: 5px;
+        }
+        
+        .swal-large-modal .carousel-control-prev {
+            left: 10px;
+        }
+        
+        .swal-large-modal .carousel-control-next {
+            right: 10px;
+        }
+        
+        .swal-large-modal .carousel-control-prev-icon,
+        .swal-large-modal .carousel-control-next-icon {
+            background-color: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            padding: 8px;
+        }
+        
+        #imageCounter {
+            font-size: 1.1em;
+            font-weight: 500;
+            margin-top: 15px;
+            padding: 10px;
+            background-color: rgba(0,0,0,0.05);
+            border-radius: 5px;
+        }
+        
+        #currentFileName {
+            font-size: 0.9em;
+            color: #666;
+            word-break: break-all;
         }
         .medium-zoom-overlay {
             z-index: 1060;

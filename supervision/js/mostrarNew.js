@@ -8,7 +8,9 @@ function actualizarEstadoInputs(gastos = {}) {
     let puedeEditar = !hayGastosCargados;
 
     $('.importe-input, textarea, #importeAdelanto').prop('disabled', !puedeEditar);
-    $('.camara-btn').toggle(puedeEditar);
+    
+    // LÓGICA GLOBAL: Si hay gastos cargados, ocultar TODOS los botones de carga
+    $('.camara-btn, .archivo-btn').toggle(puedeEditar);
     $('#guardarTodoBtn').toggle(puedeEditar);
 
     let mensaje = "";

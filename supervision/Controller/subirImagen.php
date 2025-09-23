@@ -40,12 +40,38 @@ try {
         }
     }
 
+    // Generar nombre único para el archivo
     $numeroFoto = 1;
-    do {
-        $nombreArchivo = $semana . '_' . strtoupper(str_replace(' ', '_', $supervisora)) . '_' . $id_conc . '_' .$type. '_' . $numeroFoto . '.jpg';
-        $rutaCompleta = $directorio . $nombreArchivo;
+    
+    // Buscar el siguiente número disponible considerando TODAS las extensiones
+    while ($numeroFoto <= 100) {
+        $nombreBase = $semana . '_' . strtoupper(str_replace(' ', '_', $supervisora)) . '_' . $id_conc . '_' .$type. '_' . $numeroFoto;
+        
+        // Verificar si YA EXISTE algún archivo con este número (cualquier extensión de imagen)
+        $extensionesBuscar = ['jpg', 'jpeg', 'png'];
+        $numeroOcupado = false;
+        
+        foreach ($extensionesBuscar as $extCheck) {
+            $rutaCheck = $directorio . $nombreBase . '.' . $extCheck;
+            if (file_exists($rutaCheck)) {
+                $numeroOcupado = true;
+                break;
+            }
+        }
+        
+        if (!$numeroOcupado) {
+            // Este número está libre, usarlo
+            $nombreArchivo = $nombreBase . '.jpg';
+            $rutaCompleta = $directorio . $nombreArchivo;
+            break;
+        }
+        
         $numeroFoto++;
-    } while (file_exists($rutaCompleta));
+    }
+    
+    if ($numeroFoto > 100) {
+        throw new Exception('Se alcanzó el límite máximo de archivos para este concepto');
+    }
 
     if (file_put_contents($rutaCompleta, $imagenDecodificada) === false) {
         throw new Exception('Error al guardar la imagen en ' . $rutaCompleta);

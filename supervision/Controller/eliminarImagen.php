@@ -18,9 +18,9 @@ $rutaCompleta = $rutaBase . $nombreImagen;
 
 if (file_exists($rutaCompleta)) {
     if (unlink($rutaCompleta)) {
-        // Aquí podrías también eliminar la referencia de la imagen en la base de datos si es necesario
+        // Aquí podrías también eliminar la referencia del archivo en la base de datos si es necesario
         
-        echo json_encode(['success' => true, 'message' => 'Imagen eliminada correctamente']);
+        echo json_encode(['success' => true, 'message' => 'Archivo eliminado correctamente']);
     } else {
         echo json_encode(['success' => false, 'message' => 'No se pudo eliminar el archivo']);
     }

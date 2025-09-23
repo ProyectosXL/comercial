@@ -167,9 +167,17 @@ class Gasto
         // Construct the full server path
         $fullPath = $documentRoot . $baseUrl;
         
-        // Search for matching files
-        $patron = $fullPath . $nombreArchivo . '_*.jpg';
-        $imagenes = glob($patron);
+        // Search for matching files with multiple extensions
+        $extensiones = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
+        $imagenes = [];
+        
+        foreach ($extensiones as $ext) {
+            $patron = $fullPath . $nombreArchivo . '_*.' . $ext;
+            $archivos = glob($patron);
+            if ($archivos) {
+                $imagenes = array_merge($imagenes, $archivos);
+            }
+        }
         // Convert server paths to URLs
         $imageUrls = array_map(function($imagen) use ($documentRoot, $baseUrl) {
             $relativePath = str_replace($documentRoot, '', $imagen);
@@ -180,8 +188,9 @@ class Gasto
         $debug = [
             'baseUrl' => $baseUrl,
             'fullPath' => $fullPath,
-            'patron' => $patron,
-            'imagenes_encontradas' => count($imagenes)
+            'nombreArchivo' => $nombreArchivo,
+            'extensiones_buscadas' => $extensiones,
+            'archivos_encontrados' => count($imagenes)
         ];
         
         return [

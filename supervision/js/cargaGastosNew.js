@@ -44,13 +44,30 @@ $(document).ready(function() {
     cargarPresupuestos();
 
     function tieneImagenesCargadas(input) {
-        let tieneFoto = input.parentElement.parentElement.parentElement.childNodes[5].childNodes[0].childNodes.length;
+        // Obtener el ID del concepto y el tipo del input
+        let $input = $(input);
+        let $card = $input.closest('.card');
+        let id_conc = $card.find('.concepto-id').val();
+        let type = $input.attr('attr-type');
         
-        if(tieneFoto == 0){
+        // Buscar el contenedor de imágenes específico para este concepto y tipo
+        let $imagenesContainer = $(`#imagenes_${id_conc}_${type}`);
+        
+        if ($imagenesContainer.length === 0) {
+            console.log(`No existe contenedor para ${id_conc}_${type}`);
             return false;
-        }else{
-            return true;
         }
+        
+        // Verificar si hay elementos li dentro del contenedor (que indican archivos cargados)
+        let imagenesCount = $imagenesContainer.find('ul li').length;
+        
+        // También verificar si hay texto que indique "No hay archivos"
+        let textoContenedor = $imagenesContainer.text().trim();
+        let noHayArchivos = textoContenedor.includes('No hay archivos') || textoContenedor === '' || textoContenedor.includes('Lista de imágenes se mostrará aquí');
+        
+        console.log(`Verificando imágenes para ${id_conc}_${type}: ${imagenesCount} archivos, texto: "${textoContenedor}", noHayArchivos: ${noHayArchivos}`);
+        
+        return imagenesCount > 0 && !noHayArchivos;
     }
 
     function cargarPresupuestos() {
@@ -208,22 +225,30 @@ $(document).ready(function() {
                 let tieneImporte = $importeInput.value && $importeInput.value !== '0,00';
                 let tieneFoto = tieneImagenesCargadas(input);
         
-                console.log(`Procesando ${concepto} (${type}):`, { 
+                console.log(`Validando ${concepto} (${type}):`, { 
                     tieneImporte, 
                     tieneFoto, 
-                    importe: $importeInput.value 
+                    importe: $importeInput.value,
+                    valorImporte: $importeInput.value 
                 });
 
                 if (tieneImporte && tieneFoto) {
+                    // Concepto completo - agregar a la lista para guardar
                     let importe = $importeInput.value.replace(/\./g, '').replace(',', '.');
                     gastosArray.push({ importe, type });
+                    console.log(`✅ Agregado: ${concepto} (${type}) - Importe: ${importe}`);
+                } else if (tieneImporte && !tieneFoto) {
+                    // Tiene importe pero no foto - concepto incompleto
+                    conceptosIncompletos.push(`${concepto} (${type} - falta foto)`);
+                    console.log(`❌ Incompleto (falta foto): ${concepto} (${type})`);
+                } else if (!tieneImporte && tieneFoto) {
+                    // Tiene foto pero no importe - concepto incompleto
+                    conceptosIncompletos.push(`${concepto} (${type} - falta importe)`);
+                    console.log(`❌ Incompleto (falta importe): ${concepto} (${type})`);
                 } else {
-                    if (tieneImporte && !tieneFoto) {
-                        conceptosIncompletos.push(`${concepto} (${type} - falta foto)`);
-                    } else if (tieneFoto && !tieneImporte) {
-                        conceptosIncompletos.push(`${concepto} (${type} - falta importe)`);             
-                    }
+                    console.log(`⚪ Ignorado (vacío): ${concepto} (${type})`);
                 }
+                // Si no tiene importe ni foto, simplemente lo ignoramos (no es un error)
             });
             
             if (gastosArray.length > 0) {
@@ -323,7 +348,23 @@ $(document).ready(function() {
                             confirmButtonText: 'OK'
                         }).then((result) => {
                             if (result.isConfirmed) {
-                                window.location.href = `?semana=${semana}&anio=${anio}`;
+                                // ACTUALIZAR VARIABLE GLOBAL para que las imágenes se muestren correctamente
+                                console.log("🔄 Actualizando estado global de gastos guardados");
+                                gastosExistentes = gastos; // Actualizar la variable global
+                                
+                                // Forzar actualización de todas las listas de imágenes
+                                $('.card').each(function() {
+                                    let $card = $(this);
+                                    let id_conc = $card.find('.concepto-id').val();
+                                    if (id_conc && window.refrescarBotonesConcepto) {
+                                        setTimeout(() => refrescarBotonesConcepto(id_conc), 100);
+                                    }
+                                });
+                                
+                                // Recargar la página después de un momento
+                                setTimeout(() => {
+                                    window.location.href = `?semana=${semana}&anio=${anio}`;
+                                }, 1000);
                             }
                         });
                     } else {

@@ -23,17 +23,28 @@ try {
     $type = $data['type'];
 
     $directorio = __DIR__ . '/../../imagenes/compSupervision/';
-    $patron = $directorio . $semana . '_' . $supervisora . '_' . $id_conc . '_' . $type . '_*.jpg';
     
-    error_log("Buscando imágenes con patrón: " . $patron);
+    // Buscar solo imágenes
+    $extensiones = ['jpg', 'jpeg', 'png'];
+    $imagenes = [];
     
-    $imagenes = glob($patron);
+    foreach ($extensiones as $ext) {
+        $patron = $directorio . $semana . '_' . $supervisora . '_' . $id_conc . '_' . $type . '_*.' . $ext;
+        $archivos = glob($patron);
+        if ($archivos) {
+            $imagenes = array_merge($imagenes, $archivos);
+        }
+    }
+    
+    error_log("Buscando archivos para: semana=$semana, supervisora=$supervisora, id_conc=$id_conc, type=$type");
+    error_log("Directorio: " . $directorio);
+    error_log("Archivos encontrados: " . count($imagenes));
 
     if ($imagenes === false) {
         throw new Exception('Error al buscar imágenes');
     }
 
-    error_log("Imágenes encontradas: " . print_r($imagenes, true));
+    error_log("Archivos encontrados: " . print_r($imagenes, true));
 
     $nombresImagenes = array_map('basename', $imagenes);
 
@@ -41,9 +52,9 @@ try {
         'success' => true, 
         'imagenes' => $nombresImagenes,
         'debug' => [
-            'patron' => $patron,
             'directorio' => $directorio,
-            'imagenes_encontradas' => count($imagenes)
+            'extensiones_buscadas' => $extensiones,
+            'archivos_encontrados' => count($imagenes)
         ]
     ]);
 } catch (Exception $e) {
