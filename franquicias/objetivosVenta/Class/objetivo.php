@@ -16,15 +16,25 @@ class Objetivo
         
         $db = isset($_SESSION['entorno']) ? $_SESSION['entorno'] : 'central';
         $this->cid_central = $this->cid->conectar($db);
+        
+        if (!$this->cid_central) {
+            $errors = sqlsrv_errors();
+            error_log("Error de conexión en Objetivo::__construct: " . print_r($errors, true));
+            throw new Exception("No se pudo establecer conexión a la base de datos: " . print_r($errors, true));
+        }
     }
 
     private function retornarArray($sqlEnviado){
         $sql = $sqlEnviado;
+        error_log("Ejecutando SQL: " . $sql);
+        
         $stmt = sqlsrv_query($this->cid_central, $sql);
 
         if ($stmt === false) {
-            error_log("Error en SQL: " . print_r(sqlsrv_errors(), true));
-            return [];
+            $errors = sqlsrv_errors();
+            error_log("Error en SQL: " . print_r($errors, true));
+            error_log("SQL que falló: " . $sql);
+            throw new Exception("Error en consulta SQL: " . print_r($errors, true));
         }
 
         $rows = array();
@@ -32,6 +42,7 @@ class Objetivo
             $rows[] = $v;
         }
 
+        error_log("Consulta ejecutada correctamente. Filas retornadas: " . count($rows));
         return $rows;
     }
 

@@ -41,9 +41,18 @@ class Conexion{
         }elseif($nameServer == 'apps'){
             return array($this->host_apps, $this->database_apps);
         }else{
+            // Solo usar sesión si no se especifica servidor o si se especifica uno no reconocido
             if (session_status() == PHP_SESSION_NONE) {
                 session_start();
             }
+            
+            // Verificar que las variables de sesión existen
+            if (!isset($_SESSION['conexion_dns']) || !isset($_SESSION['base_nombre'])) {
+                // Si no existen, usar central por defecto
+                error_log("Variables de sesión no definidas, usando central por defecto");
+                return array($this->host_central, $this->database_central);
+            }
+            
             return array($_SESSION['conexion_dns'], $_SESSION['base_nombre']);
         }
 
@@ -53,6 +62,8 @@ class Conexion{
         try {
 
             $serverDB = $this->servidor($nameServer);
+            
+            error_log("Intentando conectar a: " . $serverDB[0] . " - " . $serverDB[1]);
 
             if($this->env == 'PROD' && (strtolower($serverDB[0]) == strtolower('lakerbis'))){
                 $pass = $this->pass_locales;
@@ -66,11 +77,27 @@ class Conexion{
                 "PWD" => $pass, 
                 "CharacterSet" => $this->character
             );
+            
+            // Log de parámetros de conexión (sin contraseña)
+            $params_log = $params;
+            $params_log['PWD'] = '***hidden***';
+            error_log("Parámetros de conexión: " . print_r($params_log, true));
 
             $cid = sqlsrv_connect($serverDB[0], $params);
 
-            if(!$cid) return false;
+            if(!$cid) {
+                $errors = sqlsrv_errors();
+                error_log("Error de conexión SQL Server: " . print_r($errors, true));
+                return false;
+            }
 
+            error_log("Conexión exitosa a: " . $serverDB[0] . " - " . $serverDB[1]);
+            
+            // Iniciar sesión si no está iniciada
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            
             // este cid va a cambiar mil veces
             $_SESSION['cid'] = $cid;
             return $cid;

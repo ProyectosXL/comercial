@@ -3,8 +3,8 @@
 session_start();
 
 // Seteo de usuario de prueba para testeo
-$_SESSION['username'] = 'Jpastorino';
-$_SESSION['descLocal'] = 'JOSEFINA PASTORINO';
+// $_SESSION['username'] = 'Jpastorino';
+// $_SESSION['descLocal'] = 'JOSEFINA PASTORINO';
 
 if (!isset($_SESSION['username'])) {
     header("Location:../sistemas/login.php");
