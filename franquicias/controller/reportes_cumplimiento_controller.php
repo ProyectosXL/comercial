@@ -27,7 +27,7 @@ class ReportesCumplimientoController {
             $db = DatabaseSQLServer::getInstance();
             $this->sistemas_conn = $db->getConnection('sistemas');
             $this->laker_conn = $db->getConnection('laker_sa');
-            error_log("DEBUG REPORTES: Conexiones establecidas a sistemas y laker_sa");
+            error_log("DEBUG REPORTES: Conexiones establecidas a HOST_APPS y HOST_CENTRAL");
         } catch (Exception $e) {
             error_log("Error en constructor reportes: " . $e->getMessage());
             $this->sistemas_conn = null;

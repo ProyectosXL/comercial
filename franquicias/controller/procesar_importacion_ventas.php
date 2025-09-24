@@ -89,7 +89,6 @@ try {
     // Iniciar transacción en sistemas
     $conexionSistemas->beginTransaction();
 
-    // Validar que todos los artículos sean válidos en LAKER_SA
     $articulosValidar = array_column($datos, 'articulo');
     $placeholders = str_repeat('?,', count($articulosValidar) - 1) . '?';
     

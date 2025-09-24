@@ -42,15 +42,15 @@ class ReportesVentasController {
                 $this->sistemas_conn = $db->getConnection('sistemas');
                 $this->laker_conn = $db->getConnection('laker_sa');
                 
-                error_log("DEBUG REPORTES VENTAS: Conexiones establecidas a sistemas y laker_sa");
+                error_log("DEBUG REPORTES VENTAS: Conexiones establecidas a HOST APPS y HOST CENTRAL");
                 
                 // Verificar que las conexiones sean válidas
                 if (!$this->sistemas_conn) {
-                    throw new Exception('No se pudo establecer conexión a sistemas');
+                    throw new Exception('No se pudo establecer conexión a HOST APPS');
                 }
                 
                 if (!$this->laker_conn) {
-                    error_log("ADVERTENCIA: No se pudo establecer conexión a laker_sa");
+                    error_log("ADVERTENCIA: No se pudo establecer conexión a HOST CENTRAL");
                 }
                 
             } catch (Exception $e) {
@@ -207,10 +207,9 @@ class ReportesVentasController {
                 ORDER BY s.DESC_SUCURSAL
             ";
             
-            // Usar conexión laker_sa que apunta a HOST_CENTRAL
             $conn = $this->laker_conn;
             if (!$conn) {
-                error_log("ADVERTENCIA: No hay conexión a laker_sa (HOST_CENTRAL), usando sistemas");
+                error_log("ADVERTENCIA: No hay conexión a HOST_CENTRAL, usando HOST APPS");
                 $conn = $this->sistemas_conn;
             }
             
