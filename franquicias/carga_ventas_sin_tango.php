@@ -3027,7 +3027,7 @@ if (!function_exists('es_modo_desarrollo')) {
             } else if (fechaDesde < fechaMinima) {
                 errorMsg = 'La fecha "Desde" no puede ser anterior a Enero 2023.';
             } else if (fechaHasta > fechaMaxima) {
-                errorMsg = 'La fecha "Hasta" no puede ser posterior al mes anterior al actual.';
+                errorMsg = 'La fecha "Hasta" debe ser solo hasta el mes anterior.';
             }
 
             if (errorMsg) {

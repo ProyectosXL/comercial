@@ -156,10 +156,11 @@
                                 <div class="col-md-12">
                                     <h6>Funcionalidades Disponibles</h6>
                                     <ul>
-                                        <li><strong>Reporte de Cumplimiento:</strong> Visualice qué franquicias informaron stock por rubro</li>
+                                        <li><strong>Reporte Stock:</strong> Visualice qué franquicias informaron stock por rubro</li>
+                                        <li><strong>Reporte Ventas p/ Sin Tango:</strong> Supervise las ventas cargadas por franquicias sin sistema Tango</li>
                                         <li><strong>Exportar Grilla:</strong> Descargue el resumen de cumplimiento en formato Excel</li>
                                         <li><strong>Exportar Detalle:</strong> Descargue todos los registros detallados del período</li>
-                                        <li><strong>Análisis por Período:</strong> Seleccione diferentes meses para analizar</li>
+                                        <li><strong>Análisis por Período:</strong> Seleccione diferentes meses o rangos para analizar</li>
                                     </ul>
                                 </div>
                             </div>
@@ -234,11 +235,49 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#supervision4">
+                                            Nueva Vista: Reporte Ventas p/ Sin Tango
+                                        </button>
+                                    </h2>
+                                    <div id="supervision4" class="accordion-collapse collapse">
+                                        <div class="accordion-body">
+                                            <h6 class="text-success mb-2">¿Qué es esta nueva funcionalidad?</h6>
+                                            <p>El <strong>Reporte Ventas p/ Sin Tango</strong> permite supervisar el cumplimiento de carga de ventas por parte de las franquicias que no tienen integración directa con el sistema Tango.</p>
+                                            
+                                            <h6 class="text-primary mb-2">Características principales:</h6>
+                                            <ul>
+                                                <li><strong>Análisis por rangos:</strong> Seleccione períodos desde/hasta para analizar múltiples meses</li>
+                                                <li><strong>Matriz de cumplimiento:</strong> Visualice qué franquicias cargaron ventas en cada período</li>
+                                                <li><strong>Estadísticas agregadas:</strong> Vea totales, franquicias que cumplieron y que no cumplieron</li>
+                                                <li><strong>Exportación:</strong> Descargue tanto la grilla resumen como el detalle completo</li>
+                                            </ul>
+
+                                            <h6 class="text-warning mb-2">Cómo usar la nueva vista:</h6>
+                                            <ol>
+                                                <li>Acceda desde el menú lateral a <strong>"Reporte Ventas p/ Sin Tango"</strong></li>
+                                                <li>Seleccione el período desde y hasta que desea analizar</li>
+                                                <li>Haga clic en <strong>"Generar Reporte"</strong></li>
+                                                <li>Analice la matriz de cumplimiento resultante</li>
+                                                <li>Use las opciones de exportación según sus necesidades</li>
+                                            </ol>
+
+                                            <div class="alert alert-success mt-2">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                <small><strong>Importante:</strong> Esta vista complementa los reportes de stock tradicionales, permitiendo un control integral del cumplimiento de las franquicias sin Tango.</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="alert alert-info mt-3">
                                 <i class="bi bi-info-circle me-2"></i>
-                                <strong>Nota:</strong> El botón "Exportar Reporte" del sidebar exporta automáticamente el detalle completo.
+                                <strong>Nota:</strong> Ahora dispone de dos tipos de reportes: 
+                                <strong>Reporte Stock</strong> (tradicional) y <strong>Reporte Ventas p/ Sin Tango</strong> (nueva funcionalidad). 
+                                El botón "Exportar Reporte" del sidebar exporta automáticamente el detalle completo del reporte activo.
                             </div>
                         </div>
                     <?php endif; ?>
