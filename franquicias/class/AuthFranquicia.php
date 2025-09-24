@@ -85,10 +85,10 @@ class AuthFranquicia {
                 $this->envVars['PASS']
             );
             $this->conexion_sistemas->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            error_log("DEBUG AUTH: Conexión a sistemas exitosa");
+            error_log("DEBUG AUTH: Conexión a base de datos APPS exitosa");
         } catch (Exception $e) {
-            error_log("ERROR AUTH: No se pudo conectar a sistemas: " . $e->getMessage());
-            throw new Exception("Error conectando a sistemas: " . $e->getMessage());
+            error_log("ERROR AUTH: No se pudo conectar a base de datos APPS: " . $e->getMessage());
+            throw new Exception("Error conectando a base de datos APPS: " . $e->getMessage());
         }
     }
     
@@ -539,8 +539,13 @@ class AuthFranquicia {
      */
     public static function verificarAccesoEspecial() {
         try {
+            // Incluir configuración de sesiones
+            require_once __DIR__ . '/../config_sesiones_fixed.php';
+            
             $auth = new self();
-            return $auth->tieneAccesoEspecial();
+            // Obtener el nombre de usuario directamente de la sesión, no usar obtenerFranquiciaIdSesion()
+            $usuarioFranquicia = $_SESSION['usuario_franquicia'] ?? $_SESSION['username'] ?? null;
+            return $auth->tieneAccesoEspecial($usuarioFranquicia);
         } catch (Exception $e) {
             error_log("Error en verificación estática de acceso especial: " . $e->getMessage());
             return false;

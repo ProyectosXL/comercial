@@ -95,7 +95,13 @@ try {
                 <li class="nav-item">
                     <a href="?vista=reportes" class="nav-link <?= $vista === 'reportes' ? 'active' : '' ?>">
                         <i class="bi bi-table"></i>
-                        Reportes
+                        Reporte Stock
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="?vista=reportes_ventas" class="nav-link <?= $vista === 'reportes_ventas' ? 'active' : '' ?>">
+                        <i class="bi bi-cash-coin"></i>
+                        Reporte Ventas p/ Sin Tango
                     </a>
                 </li>
             </ul>
@@ -176,7 +182,7 @@ try {
         </h6>
         <ul class="nav nav-pills flex-column">
             <li class="nav-item">
-                <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#modalAyuda">
+                <a class="nav-link" href="#" onclick="abrirManualUsuario(); return false;">
                     <i class="bi bi-question-circle"></i>
                     Manual de Usuario
                 </a>
@@ -187,14 +193,23 @@ try {
                     Imprimir Página
                 </a>
             </li>
-            <?php if ($vista === 'reportes'): ?>
-                <li class="nav-item">
-                    <a class="nav-link" href="#" onclick="exportarReporte()">
-                        <i class="bi bi-download"></i>
-                        Exportar Reporte
-                    </a>
-                </li>
-            <?php endif; ?>
         </ul>
     </div>
 </div>
+
+<script>
+function abrirManualUsuario() {
+    // Detectar si estamos en la página de carga de ventas
+    var paginaActual = window.location.pathname;
+    var esPaginaVentas = paginaActual.includes('carga_ventas_sin_tango.php');
+    
+    if (esPaginaVentas && document.getElementById('modalAyudaVentas')) {
+        // Si estamos en la página de ventas y existe el modal específico, usarlo
+        var modal = new bootstrap.Modal(document.getElementById('modalAyudaVentas'));
+        modal.show();
+    } else {
+        // Para cualquier otra página, usar el modal general
+        abrirModalAyuda();
+    }
+}
+</script>

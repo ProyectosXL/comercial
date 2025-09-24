@@ -6,11 +6,17 @@
 // Función global para verificar y actualizar el estado del período
 async function verificarEstadoPeriodoGlobal() {
     try {
-        const periodoActual = obtenerPeriodoActual();
-        
         // Determinar qué vista estamos usando
         const vistaActual = obtenerVistaActual();
         console.log('Verificando estado para vista:', vistaActual);
+        
+        // Solo verificar estado en vistas de franquicia, no en reportes de supervisión
+        if (vistaActual === 'reportes' || vistaActual === 'reportes_ventas' || vistaActual === 'panel') {
+            console.log('Vista de supervisión detectada, omitiendo verificación de estado de franquicia');
+            return false;
+        }
+        
+        const periodoActual = obtenerPeriodoActual();
         
         let response;
         

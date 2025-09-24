@@ -61,9 +61,6 @@ class DatabaseConfig {
         return $vars;
     }
     
-    /**
-     * Obtener configuración para LAKER_SA desde .env
-     */
     private static function getLakerSAConfig() {
         $config = self::getEnvConfig();
         return [
@@ -76,9 +73,6 @@ class DatabaseConfig {
         ];
     }
     
-    /**
-     * Obtener configuración para sistemas desde .env
-     */
     private static function getSistemasConfig() {
         $config = self::getEnvConfig();
         return [
@@ -91,9 +85,6 @@ class DatabaseConfig {
         ];
     }
     
-    /**
-     * Crea una conexión PDO para LAKER_SA
-     */
     public static function conectarLakerSA() {
         try {
             // Obtener configuración desde .env
@@ -103,7 +94,7 @@ class DatabaseConfig {
             $pdo = new PDO($dsn, $config['username'], $config['password']);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             
-            error_log("DEBUG DB: Conexión exitosa a LAKER_SA con servidor: {$config['server']}");
+            error_log("DEBUG DB: Conexión exitosa a base de datos CENTRAL con servidor: {$config['server']}");
             return $pdo;
             
         } catch (Exception $e) {
@@ -112,9 +103,6 @@ class DatabaseConfig {
         }
     }
     
-    /**
-     * Crea una conexión PDO para sistemas
-     */
     public static function conectarSistemas() {
         try {
             $config = self::getSistemasConfig();
@@ -123,18 +111,15 @@ class DatabaseConfig {
             $pdo = new PDO($dsn, $config['username'], $config['password']);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             
-            error_log("DEBUG DB: Conexión exitosa a sistemas");
+            error_log("DEBUG DB: Conexión exitosa a base de datos APPS con servidor: {$config['server']}");
             return $pdo;
             
         } catch (Exception $e) {
-            error_log("ERROR DB: No se pudo conectar a sistemas: " . $e->getMessage());
-            throw new Exception("No se pudo establecer conexión con sistemas: " . $e->getMessage());
+            error_log("ERROR DB: No se pudo conectar a base de datos APPS: " . $e->getMessage());
+            throw new Exception("No se pudo establecer conexión con base de datos APPS: " . $e->getMessage());
         }
     }
     
-    /**
-     * Obtiene la configuración actual de LAKER_SA que está funcionando
-     */
     public static function obtenerConfigLakerSA() {
         try {
             $pdo = self::conectarLakerSA();

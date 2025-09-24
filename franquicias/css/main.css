@@ -586,7 +586,8 @@ body {
 }
 
 .badge.bg-primary {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%) !important;
+    background: linear-gradient(135deg, #9defe8 0%, #66d9d3 100%) !important;
+    color: #333 !important;
 }
 
 /* Stats items */

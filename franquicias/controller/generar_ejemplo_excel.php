@@ -21,11 +21,11 @@ header('Content-Type: application/json; charset=utf-8');
 // Datos de ejemplo para el Excel
 $ejemplos = [
     ['ARTICULO', 'CANTIDAD'], // Cabeceras
-    ['XZST09-004-0136', '10'],
-    ['XLLV23-105-18', '5'],
-    ['XV-ER-CGC 11', '15'],
-    ['XM3WRL00R4318', '8'],
-    ['XCBH03-632-', '12']
+    ['XV3WSI04Z010138', '10'],
+    ['XV5WDC26C0101', '5'],
+    ['XV5SST14Z070237', '15'],
+    ['XV4WSI02Z110136', '8'],
+    ['XT2WBE19P0925', '12']
 ];
 
 echo json_encode([

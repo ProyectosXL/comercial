@@ -947,25 +947,21 @@ try {
 function limpiarModalesBugueados() {
     console.log('Ejecutando limpieza completa de modales...');
     
-    // 1. Remover TODOS los backdrops, sin excepción
-    const backdrops = document.querySelectorAll('.modal-backdrop, [class*="backdrop"], [style*="backdrop"]');
+    // 1. Remover SOLO backdrops verdaderos, no otros elementos
+    const backdrops = document.querySelectorAll('.modal-backdrop');
     backdrops.forEach(backdrop => {
         console.log('Removiendo backdrop:', backdrop.className);
         backdrop.remove();
     });
     
-    // 2. Buscar elementos con z-index alto que puedan ser backdrops ocultos
-    const elementos = document.querySelectorAll('*');
-    elementos.forEach(el => {
-        const style = window.getComputedStyle(el);
-        const zIndex = parseInt(style.zIndex);
-        const bgColor = style.backgroundColor;
-        const position = style.position;
-        
-        // Si tiene z-index alto, posición fija y color de fondo semi-transparente
-        if (zIndex > 1000 && position === 'fixed' && 
-            (bgColor.includes('rgba') || bgColor === 'rgba(0, 0, 0, 0.5)')) {
-            console.log('Removiendo posible backdrop oculto:', el);
+    // 2. NO REMOVER elementos arbitrarios - esta era la causa del problema
+    // Solo buscar backdrops específicos que puedan estar mal etiquetados
+    const backdropsSucios = document.querySelectorAll('[class*="backdrop"]:not(.modal-backdrop)');
+    backdropsSucios.forEach(el => {
+        // Solo remover si es realmente un backdrop (no contiene contenido importante)
+        if (el.children.length === 0 && 
+            (el.style.backgroundColor.includes('rgba') || el.style.background.includes('rgba'))) {
+            console.log('Removiendo backdrop mal etiquetado:', el);
             el.remove();
         }
     });
@@ -976,9 +972,15 @@ function limpiarModalesBugueados() {
     document.body.style.overflow = '';
     document.body.style.position = '';
     
-    // 4. Cerrar todos los modales visibles forzadamente
+    // 4. SOLO cerrar modales que no sean el modal de ayuda
     const modalesVisibles = document.querySelectorAll('.modal.show, .modal[style*="display: block"]');
     modalesVisibles.forEach(modal => {
+        // NO cerrar el modal de ayuda si está funcionando correctamente
+        if (modal.id === 'modalAyuda' && window.modalAyudaAbierto) {
+            console.log('Preservando modal de ayuda que está abierto');
+            return;
+        }
+        
         console.log('Cerrando modal forzadamente:', modal.id);
         modal.classList.remove('show');
         modal.style.display = 'none';
@@ -987,38 +989,11 @@ function limpiarModalesBugueados() {
         modal.removeAttribute('role');
     });
     
-    // 5. Limpiar eventos de teclado duplicados
-    document.removeEventListener('keydown', handleModalEscape);
-    
     console.log('Limpieza completa de modales finalizada');
 }
 
 // Variable global para el manejador de escape
 let handleModalEscape = null;
-
-// Función específica para limpiar cuando se cierra el modal de ayuda
-function limpiarModalAyuda() {
-    console.log('Limpiando modal de ayuda específicamente');
-    
-    // Cerrar el modal de ayuda si está abierto
-    const modalAyuda = document.getElementById('modalAyuda');
-    if (modalAyuda) {
-        const modalInstance = bootstrap.Modal.getInstance(modalAyuda);
-        if (modalInstance) {
-            modalInstance.hide();
-        }
-        
-        // También forzar cierre manual
-        modalAyuda.classList.remove('show');
-        modalAyuda.style.display = 'none';
-        modalAyuda.setAttribute('aria-hidden', 'true');
-    }
-    
-    // Ejecutar limpieza general después de un momento
-    setTimeout(() => {
-        limpiarModalesBugueados();
-    }, 100);
-}
 
 // Función para prevenir múltiples backdrops
 function prevenirBackdropDuplicado() {
@@ -1047,80 +1022,37 @@ function prevenirBackdropDuplicado() {
     });
 }
 
-// Agregar evento global para limpiar modales al hacer ESC
+// Agregar evento global para limpiar modales al hacer ESC (solo para modales que no sean de ayuda)
 handleModalEscape = function(e) {
     if (e.key === 'Escape') {
-        console.log('ESC presionado - iniciando limpieza...');
-        
-        // Limpieza inmediata
-        setTimeout(() => {
-            limpiarModalesBugueados();
-        }, 100);
-        
-        // Limpieza secundaria por si acaso
-        setTimeout(() => {
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            if (backdrops.length > 0) {
-                console.log('Limpieza secundaria - removiendo backdrops restantes');
-                backdrops.forEach(b => b.remove());
-            }
-        }, 500);
+        // Solo limpiar si no es el modal de ayuda (que tiene su propio manejador)
+        const modalAyuda = document.getElementById('modalAyuda');
+        if (!modalAyuda || !modalAyuda.classList.contains('show')) {
+            console.log('ESC presionado - iniciando limpieza...');
+            
+            // Limpieza inmediata
+            setTimeout(() => {
+                limpiarModalesBugueados();
+            }, 100);
+            
+            // Limpieza secundaria por si acaso
+            setTimeout(() => {
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                if (backdrops.length > 0) {
+                    console.log('Limpieza secundaria - removiendo backdrops restantes');
+                    backdrops.forEach(b => b.remove());
+                }
+            }, 500);
+        }
     }
 };
 
 document.addEventListener('keydown', handleModalEscape);
 
-// Agregar evento para cuando se oculta el modal de ayuda
+// Configuración básica sin interferir con el modal de ayuda
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializar prevención de backdrops duplicados
     prevenirBackdropDuplicado();
-    
-    const modalAyuda = document.getElementById('modalAyuda');
-    if (modalAyuda) {
-        // Evento cuando el modal se está cerrando
-        modalAyuda.addEventListener('hide.bs.modal', function() {
-            console.log('Modal de ayuda cerrándose...');
-        });
-        
-        // Evento cuando el modal ya se cerró completamente
-        modalAyuda.addEventListener('hidden.bs.modal', function() {
-            console.log('Modal de ayuda cerrado - ejecutando limpieza automática agresiva');
-            
-            // Limpieza inmediata
-            limpiarModalesBugueados();
-            
-            // Limpieza adicional por si acaso
-            setTimeout(() => {
-                limpiarModalesBugueados();
-            }, 200);
-        });
-        
-        // Limpieza cuando se hace clic en cualquier parte del modal
-        modalAyuda.addEventListener('click', function(e) {
-            // Si se hace clic en el botón X, fondo del modal, o cualquier botón de cerrar
-            if (e.target.classList.contains('btn-close') || 
-                e.target.closest('.btn-close') ||
-                e.target === modalAyuda ||
-                e.target.hasAttribute('data-bs-dismiss')) {
-                
-                console.log('Click de cierre detectado en modal de ayuda');
-                setTimeout(() => {
-                    limpiarModalesBugueados();
-                }, 150);
-            }
-        });
-        
-        // Interceptar todos los eventos de Bootstrap del modal
-        modalAyuda.addEventListener('show.bs.modal', function() {
-            console.log('Modal de ayuda abriéndose - verificando limpieza previa');
-            // Limpiar cualquier backdrop previo antes de mostrar
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            if (backdrops.length > 0) {
-                console.log('Backdrops previos encontrados, limpiando...');
-                backdrops.forEach(b => b.remove());
-            }
-        });
-    }
     
     // Limpieza global cada 30 segundos para prevenir acumulación
     setInterval(() => {
@@ -1132,6 +1064,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 30000);
 });
 
-// Exponer funciones globalmente
+// Exponer función global de limpieza
 window.limpiarModalesBugueados = limpiarModalesBugueados;
-window.limpiarModalAyuda = limpiarModalAyuda;

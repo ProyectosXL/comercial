@@ -27,7 +27,7 @@ class ReportesCumplimientoController {
             $db = DatabaseSQLServer::getInstance();
             $this->sistemas_conn = $db->getConnection('sistemas');
             $this->laker_conn = $db->getConnection('laker_sa');
-            error_log("DEBUG REPORTES: Conexiones establecidas a sistemas y laker_sa");
+            error_log("DEBUG REPORTES: Conexiones establecidas a HOST_APPS y HOST_CENTRAL");
         } catch (Exception $e) {
             error_log("Error en constructor reportes: " . $e->getMessage());
             $this->sistemas_conn = null;
@@ -61,6 +61,20 @@ class ReportesCumplimientoController {
                         throw new Exception('Período no especificado');
                     }
                     return $this->generarReporteCumplimiento($periodo);
+                    
+                case 'exportar_detalle_cumplimiento':
+                    // Esta acción ya no se usa, se reemplazó por obtener_detalle_cumplimiento
+                    return [
+                        'success' => false,
+                        'message' => 'Esta funcionalidad se ha actualizado. Use la exportación desde el cliente.'
+                    ];
+                    
+                case 'obtener_detalle_cumplimiento':
+                    $periodo = $_POST['periodo'] ?? null;
+                    if (!$periodo) {
+                        throw new Exception('Período no especificado');
+                    }
+                    return $this->obtenerDetalleCumplimiento($periodo);
                     
                 default:
                     throw new Exception('Acción no válida: ' . $action);
@@ -303,6 +317,181 @@ class ReportesCumplimientoController {
             'total_rubros' => count($rubros)
         ];
     }
+    
+    /**
+     * Exportar detalle de cumplimiento con la consulta específica
+     */
+    public function exportarDetalleCumplimiento($periodo) {
+        try {
+            if (!$this->sistemas_conn) {
+                throw new Exception('No hay conexión a la base de datos');
+            }
+            
+            error_log("DEBUG REPORTES: Exportando detalle para período: " . $periodo);
+            
+            // Convertir período MM-YYYY a formato para consulta
+            list($mes, $año) = explode('-', $periodo);
+            
+            // Consulta SQL específica solicitada por el usuario
+            $sql = "SELECT 
+                        CONCAT(MONTH(fecha_movimiento), '-', YEAR(fecha_movimiento)) AS PERIODO,
+                        B.NRO_SUCURSAL,
+                        B.DESC_SUCURSAL,
+                        A.RUBRO,
+                        A.CATEGORIA,
+                        A.STOCK_ACTUAL,
+                        A.fecha_movimiento
+                    FROM franquicia_historial_stock A 
+                    INNER JOIN [LAKERBIS].[LOCALES_LAKERS].[DBO].[SUCURSALES_LAKERS] B 
+                        ON A.franquicia_id = B.NRO_SUCURSAL
+                    WHERE MONTH(A.fecha_movimiento) = ? 
+                    AND YEAR(A.fecha_movimiento) = ?
+                    ORDER BY B.DESC_SUCURSAL, A.RUBRO, A.CATEGORIA, A.fecha_movimiento";
+            
+            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$mes, $año]);
+            
+            $detalles = [];
+            if ($stmt && sqlsrv_execute($stmt)) {
+                while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                    // Formatear la fecha si es un objeto DateTime
+                    $fechaMovimiento = $row['fecha_movimiento'];
+                    if ($fechaMovimiento instanceof DateTime) {
+                        $fechaMovimiento = $fechaMovimiento->format('Y-m-d H:i:s');
+                    }
+                    
+                    $detalles[] = [
+                        'PERIODO' => $row['PERIODO'],
+                        'NRO_SUCURSAL' => $row['NRO_SUCURSAL'],
+                        'DESC_SUCURSAL' => $row['DESC_SUCURSAL'],
+                        'RUBRO' => $row['RUBRO'],
+                        'CATEGORIA' => $row['CATEGORIA'],
+                        'STOCK_ACTUAL' => $row['STOCK_ACTUAL']
+                    ];
+                }
+                sqlsrv_free_stmt($stmt);
+            } else {
+                error_log("Error SQL exportar detalle: " . print_r(sqlsrv_errors(), true));
+                throw new Exception("Error al ejecutar la consulta de detalle");
+            }
+            
+            error_log("DEBUG REPORTES: Detalle obtenido - " . count($detalles) . " registros");
+            
+            // **GENERAR ARCHIVO EXCEL DIRECTAMENTE**
+            $filename = "detalle_cumplimiento_stock_{$periodo}.xlsx";
+            
+            // Limpiar cualquier output buffer
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            // Generar archivo Excel usando SimpleXLSXGen
+            $this->generarExcelXML($detalles);
+            exit; // Importante: terminar ejecución aquí para descarga
+            
+        } catch (Exception $e) {
+            error_log("Error en exportarDetalleCumplimiento: " . $e->getMessage());
+            
+            // En caso de error, devolver JSON de error
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => "Error al exportar detalle: " . $e->getMessage()
+            ]);
+            exit;
+        }
+    }
+    
+    /**
+     * Generar archivo Excel verdadero usando SimpleXLSXGen
+     */
+    private function generarExcelXML($detalles) {
+        // Headers de las columnas
+        $headers = ['PERIODO', 'NRO_SUCURSAL', 'DESC_SUCURSAL', 'RUBRO', 'CATEGORIA', 'STOCK_ACTUAL'];
+        
+        // Convertir datos al formato esperado por SimpleXLSXGen
+        $data = [];
+        foreach ($detalles as $detalle) {
+            $data[] = [
+                $detalle['PERIODO'],
+                $detalle['NRO_SUCURSAL'],
+                $detalle['DESC_SUCURSAL'],
+                $detalle['RUBRO'],
+                $detalle['CATEGORIA'],
+                $detalle['STOCK_ACTUAL']
+            ];
+        }
+        
+        // Generar archivo Excel
+        $excel = new SimpleXLSXGen($data, $headers);
+        $excel->output("detalle_cumplimiento_stock_" . date('Y-m-d') . ".xlsx");
+    }
+    
+    /**
+     * Obtener datos detallados para exportación (retorna JSON)
+     */
+    public function obtenerDetalleCumplimiento($periodo) {
+        try {
+            if (!$this->sistemas_conn) {
+                throw new Exception('No hay conexión a la base de datos');
+            }
+            
+            error_log("DEBUG REPORTES: Obteniendo detalle para período: " . $periodo);
+            
+            // Convertir período MM-YYYY a formato para consulta
+            list($mes, $año) = explode('-', $periodo);
+            
+            // Consulta SQL específica solicitada por el usuario
+            $sql = "SELECT 
+                        CONCAT(MONTH(fecha_movimiento), '-', YEAR(fecha_movimiento)) AS PERIODO,
+                        B.NRO_SUCURSAL,
+                        B.DESC_SUCURSAL,
+                        A.RUBRO,
+                        A.CATEGORIA,
+                        A.STOCK_ACTUAL
+                    FROM franquicia_historial_stock A 
+                    INNER JOIN [LAKERBIS].[LOCALES_LAKERS].[DBO].[SUCURSALES_LAKERS] B 
+                        ON A.franquicia_id = B.NRO_SUCURSAL
+                    WHERE MONTH(A.fecha_movimiento) = ? 
+                    AND YEAR(A.fecha_movimiento) = ?
+                    ORDER BY B.DESC_SUCURSAL, A.RUBRO, A.CATEGORIA";
+            
+            $stmt = sqlsrv_prepare($this->sistemas_conn, $sql, [$mes, $año]);
+            
+            $detalles = [];
+            if ($stmt && sqlsrv_execute($stmt)) {
+                while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                    $detalles[] = [
+                        'PERIODO' => $row['PERIODO'],
+                        'NRO_SUCURSAL' => $row['NRO_SUCURSAL'],
+                        'DESC_SUCURSAL' => $row['DESC_SUCURSAL'],
+                        'RUBRO' => $row['RUBRO'],
+                        'CATEGORIA' => $row['CATEGORIA'],
+                        'STOCK_ACTUAL' => $row['STOCK_ACTUAL']
+                    ];
+                }
+                sqlsrv_free_stmt($stmt);
+            } else {
+                error_log("Error SQL obtener detalle: " . print_r(sqlsrv_errors(), true));
+                throw new Exception("Error al ejecutar la consulta de detalle");
+            }
+            
+            error_log("DEBUG REPORTES: Detalle obtenido - " . count($detalles) . " registros");
+            
+            return [
+                'success' => true,
+                'data' => $detalles,
+                'count' => count($detalles)
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Error en obtenerDetalleCumplimiento: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => "Error al obtener detalle: " . $e->getMessage()
+            ];
+        }
+    }
 }
 
 // Procesar petición si es llamada directa
@@ -310,7 +499,11 @@ if ($_POST || $_GET) {
     try {
         $controller = new ReportesCumplimientoController();
         $response = $controller->procesarPeticion();
-        echo json_encode($response);
+        
+        // Solo enviar JSON si no es una exportación (que ya terminó con exit)
+        if ($response !== null) {
+            echo json_encode($response);
+        }
     } catch (Exception $e) {
         echo json_encode([
             'success' => false,

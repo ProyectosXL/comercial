@@ -82,7 +82,11 @@ try {
             
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <button class="btn btn-outline-light me-2" type="button" data-bs-toggle="modal" data-bs-target="#modalAyuda">
+                    <?php 
+                    $en_carga_ventas = (basename($_SERVER['PHP_SELF']) === 'carga_ventas_sin_tango.php');
+                    $modal_target = $en_carga_ventas ? '#modalAyudaVentas' : '#modalAyuda';
+                    ?>
+                    <button class="btn btn-outline-light me-2" type="button" data-bs-toggle="modal" data-bs-target="<?= $modal_target ?>">
                         <i class="bi bi-question-circle me-1"></i>
                         Ayuda
                     </button>
@@ -130,7 +134,11 @@ try {
                         <li><hr class="dropdown-divider"></li>
                     <?php endif; ?>
                     <li>
-                        <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#modalAyuda">
+                        <?php 
+                        $en_carga_ventas = (basename($_SERVER['PHP_SELF']) === 'carga_ventas_sin_tango.php');
+                        $modal_target = $en_carga_ventas ? '#modalAyudaVentas' : '#modalAyuda';
+                        ?>
+                        <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="<?= $modal_target ?>">
                             <i class="bi bi-question-circle me-2"></i>
                             Ayuda
                         </button>
