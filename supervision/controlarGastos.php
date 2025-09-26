@@ -104,8 +104,10 @@ session_start();
                         <th>Supervisora</th>
                         <th>Concepto</th>
                         <th>Importe Tarjeta</th>
+                        <th>CAE Tarjeta</th>
                         <th>Fotos Tarjeta</th>
                         <th>Importe Efectivo</th>
+                        <th>CAE Efectivo</th>
                         <th>Fotos Efectivo</th>
                         <th>Cargado</th>
                     </tr>

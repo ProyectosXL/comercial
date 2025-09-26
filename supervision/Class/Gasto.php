@@ -91,6 +91,82 @@ class Gasto
 
     }
 
+    public function actualizarCAE($idGasto, $caeTarjeta, $caeEfectivo, $supervisora, $semana, $anio) {
+        try {
+            error_log("Iniciando actualizarCAE:");
+            error_log("ID: $idGasto, CAE_T: $caeTarjeta, CAE_E: $caeEfectivo");
+            error_log("Sup: $supervisora, Sem: $semana, Año: $anio");
+            
+            if (!$supervisora || !$semana || !$anio) {
+                throw new Exception("Los parámetros supervisora, semana y año son obligatorios");
+            }
+            
+            // Iniciamos transacción
+            if (sqlsrv_begin_transaction($this->cid_central) === false) {
+                $error = "Error al iniciar la transacción: " . print_r(sqlsrv_errors(), true);
+                error_log($error);
+                throw new Exception($error);
+            }
+
+            // Preparamos la consulta SQL con todos los filtros
+            $sql = "UPDATE RO_T_GASTOS_SUPERVISION 
+                   SET CAE_Tarjeta = ?, 
+                       CAE_Efectivo = ?,
+                       FECHA_CARGADO = GETDATE()
+                   WHERE ID_CONC = ? 
+                   AND SUPERVISORA = ? 
+                   AND SEMANA = ? 
+                   AND ANIO = ?";
+
+            // Preparamos los parámetros incluyendo todos los filtros
+            $params = array(
+                array($caeTarjeta, SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_STRING('UTF-8'), SQLSRV_SQLTYPE_VARCHAR(20)),
+                array($caeEfectivo, SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_STRING('UTF-8'), SQLSRV_SQLTYPE_VARCHAR(20)),
+                array($idGasto, SQLSRV_PARAM_IN),
+                array($supervisora, SQLSRV_PARAM_IN),
+                array($semana, SQLSRV_PARAM_IN),
+                array($anio, SQLSRV_PARAM_IN)
+            );
+            
+            error_log("SQL a ejecutar: " . $sql);
+            error_log("Parámetros: " . print_r($params, true));
+
+            // Ejecutamos la consulta
+            $stmt = sqlsrv_query($this->cid_central, $sql, $params);
+            
+            if ($stmt === false) {
+                $error = "Error al ejecutar la consulta: " . print_r(sqlsrv_errors(), true);
+                error_log($error);
+                throw new Exception($error);
+            }
+            
+            // Verificamos que se haya actualizado al menos una fila
+            $rows_affected = sqlsrv_rows_affected($stmt);
+            error_log("Filas afectadas: " . ($rows_affected === false ? 'false' : $rows_affected));
+            
+            if ($rows_affected === false || $rows_affected === 0) {
+                throw new Exception("No se encontró el registro para actualizar (ID_CONC: $idGasto)");
+            }
+            
+            // Confirmamos la transacción
+            if (sqlsrv_commit($this->cid_central) === false) {
+                $error = "Error al confirmar la transacción: " . print_r(sqlsrv_errors(), true);
+                error_log($error);
+                throw new Exception($error);
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            // Si hay error, hacemos rollback
+            if (sqlsrv_rollback($this->cid_central) === false) {
+                // Si falla el rollback, agregamos esto al mensaje de error
+                $rollbackError = "Error adicional al hacer rollback: " . print_r(sqlsrv_errors(), true);
+                throw new Exception($e->getMessage() . ". " . $rollbackError);
+            }
+            throw $e;
+        }
+    }
+
     public function obtenerGastosExistentes($semana, $anio, $supervisora) {
         $sql = "SELECT ID_CONC, IMPORTE, IMPORTE_TARJETA, OBSERVACIONES, ESTADO, OBSERVACIONES_AUT 
                 FROM RO_T_GASTOS_SUPERVISION 
@@ -296,7 +372,8 @@ class Gasto
 
 public function obtenerGastosAutorizados($semana, $anio, $supervisora = null)
     {
-        $sql = "SELECT g.ID_CONC, g.SUPERVISORA, c.CONCEPTO, g.IMPORTE, g.IMPORTE_TARJETA, g.CARGADO 
+        $sql = "SELECT g.ID_CONC, g.SUPERVISORA, c.CONCEPTO, g.IMPORTE, g.IMPORTE_TARJETA, 
+                       g.CAE_Tarjeta, g.CAE_Efectivo, g.CARGADO 
                 FROM RO_T_GASTOS_SUPERVISION g
                 JOIN RO_T_CONCEPTOS_GASTOS_SUP c ON g.ID_CONC = c.ID_CONC
                 WHERE g.SEMANA = ? AND g.ANIO = ? AND g.ESTADO = 1";
