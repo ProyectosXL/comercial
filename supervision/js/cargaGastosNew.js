@@ -50,25 +50,115 @@ $(document).ready(function() {
         let id_conc = $card.find('.concepto-id').val();
         let type = $input.attr('attr-type');
         
+        console.log(`🔍 Verificando imágenes para ${id_conc}_${type}`);
+        
         // Buscar el contenedor de imágenes específico para este concepto y tipo
         let $imagenesContainer = $(`#imagenes_${id_conc}_${type}`);
         
         if ($imagenesContainer.length === 0) {
-            console.log(`No existe contenedor para ${id_conc}_${type}`);
+            console.log(`❌ No existe contenedor para ${id_conc}_${type}`);
             return false;
         }
         
-        // Verificar si hay elementos li dentro del contenedor (que indican archivos cargados)
-        let imagenesCount = $imagenesContainer.find('ul li').length;
+        // Obtener todo el HTML del contenedor
+        let contenidoHTML = $imagenesContainer.html();
         
-        // También verificar si hay texto que indique "No hay archivos"
-        let textoContenedor = $imagenesContainer.text().trim();
-        let noHayArchivos = textoContenedor.includes('No hay archivos') || textoContenedor === '' || textoContenedor.includes('Lista de imágenes se mostrará aquí');
+        if (!contenidoHTML) {
+            console.log(`❌ Contenedor vacío para ${id_conc}_${type}`);
+            return false;
+        }
         
-        console.log(`Verificando imágenes para ${id_conc}_${type}: ${imagenesCount} archivos, texto: "${textoContenedor}", noHayArchivos: ${noHayArchivos}`);
+        // Verificar diferentes indicadores de que hay imágenes:
         
-        return imagenesCount > 0 && !noHayArchivos;
+        // 1. Buscar elementos <li> que contengan botones (modo edición)
+        let itemsConBotones = $imagenesContainer.find('li').filter(function() {
+            return $(this).find('button').length > 0;
+        }).length;
+        
+        // 2. Buscar texto que indique imágenes cargadas (modo solo lectura)
+        let tieneTextoImagenes = contenidoHTML.includes('imagen(es) cargada(s)') || 
+                                contenidoHTML.includes('text-success');
+        
+        // 3. Buscar iconos de imagen
+        let tieneIconosImagen = contenidoHTML.includes('bi-image') || 
+                            contenidoHTML.includes('bi-images');
+        
+        // 4. Verificar si hay nombres de archivo típicos
+        let tieneNombresArchivo = /\d+_[A-Z_]+_\d+_(tarjeta|efectivo)_\d+\.(jpg|jpeg|png|pdf)/i.test(contenidoHTML);
+        
+        // Verificar casos negativos
+        let textosNegativos = [
+            'No hay archivos',
+            'No hay imágenes', 
+            'sin-imagenes',
+            'error-imagenes',
+            'Lista de imágenes se mostrará aquí'
+        ];
+        
+        let tieneTextosNegativos = textosNegativos.some(texto => 
+            contenidoHTML.toLowerCase().includes(texto.toLowerCase())
+        );
+        
+        let hayImagenes = (itemsConBotones > 0 || tieneTextoImagenes || tieneIconosImagen || tieneNombresArchivo) 
+                        && !tieneTextosNegativos;
+        
+        console.log(`📊 Análisis detallado para ${id_conc}_${type}:`, {
+            itemsConBotones: itemsConBotones,
+            tieneTextoImagenes: tieneTextoImagenes,
+            tieneIconosImagen: tieneIconosImagen,
+            tieneNombresArchivo: tieneNombresArchivo,
+            tieneTextosNegativos: tieneTextosNegativos,
+            contenidoHTML: contenidoHTML.substring(0, 200) + '...',
+            resultado: hayImagenes
+        });
+        
+        return hayImagenes;
     }
+
+    function tieneImagenesCargadasPorId(id_conc, type) {
+    console.log(`🔍 Verificando imágenes por ID: ${id_conc}_${type}`);
+    
+    // Buscar el contenedor de imágenes específico
+    let $imagenesContainer = $(`#imagenes_${id_conc}_${type}`);
+    
+    if ($imagenesContainer.length === 0) {
+        console.log(`❌ No existe contenedor para ${id_conc}_${type}`);
+        return false;
+    }
+    
+    let contenidoHTML = $imagenesContainer.html();
+    
+    if (!contenidoHTML) {
+        console.log(`❌ Contenedor vacío para ${id_conc}_${type}`);
+        return false;
+    }
+    
+    // Verificar si hay elementos que indiquen imágenes cargadas
+    let itemsConBotones = $imagenesContainer.find('li button').length > 0;
+    let tieneTextoImagenes = contenidoHTML.includes('imagen(es) cargada(s)');
+    let tieneIconosImagen = contenidoHTML.includes('bi-image');
+    let tieneNombresArchivo = /\d+_[A-Z_]+_\d+_(tarjeta|efectivo)_\d+\./i.test(contenidoHTML);
+    
+    // Verificar textos que indican ausencia de imágenes
+    let textosNegativos = ['No hay archivos', 'No hay imágenes', 'sin-imagenes'];
+    let tieneTextosNegativos = textosNegativos.some(texto => 
+        contenidoHTML.toLowerCase().includes(texto.toLowerCase())
+    );
+    
+    let hayImagenes = (itemsConBotones || tieneTextoImagenes || tieneIconosImagen || tieneNombresArchivo) 
+                     && !tieneTextosNegativos;
+    
+    console.log(`📊 Verificación por ID ${id_conc}_${type}: ${hayImagenes}`, {
+        contenido: contenidoHTML.substring(0, 100) + '...',
+        itemsConBotones,
+        tieneTextoImagenes,
+        tieneIconosImagen,
+        tieneNombresArchivo,
+        tieneTextosNegativos
+    });
+    
+    return hayImagenes;
+}
 
     function cargarPresupuestos() {
         let seleccion = $('#semanaRetail').val();
@@ -204,7 +294,7 @@ $(document).ready(function() {
         let importeAdelanto = $('#importeAdelanto').val().replace(/\./g, '').replace(',', '.');
         
         console.log("Semana:", semana, "Año:", anio);
-        console.log("Iniciando procesamiento de tarjetas...");
+        console.log("Iniciando procesamiento de conceptos...");
 
         $('.card').each(function() {
             const $card = $(this);
@@ -212,44 +302,64 @@ $(document).ready(function() {
             let concepto = $card.find('.card-title').text().trim();
             let observaciones = $card.find('textarea').val() || '';
             
+            // Ignorar el concepto "Total de gastos" si existe
+            if (concepto.toLowerCase().includes('total de gastos')) {
+                return true; // continuar con el siguiente
+            }
+            
             let gastosArray = [];
-            $card.find('.importe-input').each(function(e, x) {
-                let input = x; 
-                let $importeInput = input;
-                let type = input.getAttribute('attr-type');
-        
-                if (concepto.toLowerCase() === 'total de gastos') {
-                    return true; 
-                }
-        
-                let tieneImporte = $importeInput.value && $importeInput.value !== '0,00';
-                let tieneFoto = tieneImagenesCargadas(input);
-        
-                console.log(`Validando ${concepto} (${type}):`, { 
-                    tieneImporte, 
-                    tieneFoto, 
-                    importe: $importeInput.value,
-                    valorImporte: $importeInput.value 
-                });
-
-                if (tieneImporte && tieneFoto) {
-                    // Concepto completo - agregar a la lista para guardar
-                    let importe = $importeInput.value.replace(/\./g, '').replace(',', '.');
-                    gastosArray.push({ importe, type });
-                    console.log(`✅ Agregado: ${concepto} (${type}) - Importe: ${importe}`);
-                } else if (tieneImporte && !tieneFoto) {
-                    // Tiene importe pero no foto - concepto incompleto
-                    conceptosIncompletos.push(`${concepto} (${type} - falta foto)`);
-                    console.log(`❌ Incompleto (falta foto): ${concepto} (${type})`);
-                } else if (!tieneImporte && tieneFoto) {
-                    // Tiene foto pero no importe - concepto incompleto
-                    conceptosIncompletos.push(`${concepto} (${type} - falta importe)`);
-                    console.log(`❌ Incompleto (falta importe): ${concepto} (${type})`);
-                } else {
-                    console.log(`⚪ Ignorado (vacío): ${concepto} (${type})`);
-                }
-                // Si no tiene importe ni foto, simplemente lo ignoramos (no es un error)
+            let conceptoTieneAlgunGasto = false;
+            
+            // Procesar cada tipo de importe (tarjeta y efectivo)
+        $card.find('.importe-input').each(function() {
+            let input = this;
+            let $importeInput = $(input);
+            let type = input.getAttribute('attr-type');
+            let importe = $importeInput.val();
+            
+            console.log(`🔍 Procesando ${concepto} (${type}):`, {
+                importe: importe,
+                valorNumerico: importe ? parseFloat(importe.replace(/\./g, '').replace(',', '.')) : 0
             });
+            
+            // Verificar si tiene importe válido (mayor a 0)
+            let tieneImporte = importe && importe !== '0,00' && 
+                              parseFloat(importe.replace(/\./g, '').replace(',', '.')) > 0;
+            
+            // Verificar si tiene foto - USAR AMBOS MÉTODOS
+            let tieneFoto1 = tieneImagenesCargadas(input);
+            let tieneFoto2 = tieneImagenesCargadasPorId(id_conc, type);
+            let tieneFoto = tieneFoto1 || tieneFoto2;
+            
+            console.log(`📋 Validación ${concepto} (${type}):`, { 
+                tieneImporte: tieneImporte, 
+                tieneFoto1: tieneFoto1,
+                tieneFoto2: tieneFoto2,
+                tieneFoto: tieneFoto,
+                valorImporte: importe
+            });
+
+            if (tieneImporte && tieneFoto) {
+                // Concepto completo - agregar a la lista para guardar
+                let importeNumerico = importe.replace(/\./g, '').replace(',', '.');
+                gastosArray.push({ importe: importeNumerico, type: type });
+                conceptoTieneAlgunGasto = true;
+                console.log(`✅ Agregado: ${concepto} (${type}) - Importe: ${importeNumerico}`);
+            } else if (tieneImporte && !tieneFoto) {
+                // Tiene importe pero no foto - concepto incompleto
+                conceptosIncompletos.push(`${concepto} (${type} - falta comprobante)`);
+                conceptoTieneAlgunGasto = true;
+                console.log(`❌ Incompleto (falta foto): ${concepto} (${type})`);
+            } else if (!tieneImporte && tieneFoto) {
+                // Tiene foto pero no importe - concepto incompleto
+                conceptosIncompletos.push(`${concepto} (${type} - falta importe)`);
+                conceptoTieneAlgunGasto = true;
+                console.log(`❌ Incompleto (falta importe): ${concepto} (${type})`);
+            } else {
+                // No tiene ni importe ni foto - no es error, simplemente vacío
+                console.log(`⚪ Vacío: ${concepto} (${type})`);
+            }
+        });
             
             if (gastosArray.length > 0) {
                 gastos.push({
@@ -261,11 +371,19 @@ $(document).ready(function() {
             }
         });
         
-        console.log("Gastos a guardar:", gastos);
-        console.log("Conceptos incompletos:", conceptosIncompletos);
+        console.log("📊 Resumen de validación:");
+        console.log("  - Gastos válidos:", gastos.length);
+        console.log("  - Conceptos incompletos:", conceptosIncompletos.length);
+        console.log("  - Gastos a guardar:", gastos);
+        console.log("  - Conceptos incompletos:", conceptosIncompletos);
 
         if (conceptosIncompletos.length > 0) {
-            Swal.fire('Error', `Los siguientes conceptos están incompletos: ${conceptosIncompletos.join(', ')}`, 'error');
+            Swal.fire({
+                icon: 'error',
+                title: 'Conceptos incompletos',
+                html: `Los siguientes conceptos están incompletos:<br><br><strong>${conceptosIncompletos.join('<br>')}</strong><br><br>Por favor, complete todos los datos antes de guardar.`,
+                confirmButtonText: 'Entendido'
+            });
             return;
         }
 
@@ -274,7 +392,7 @@ $(document).ready(function() {
             return;
         }
 
-        // Validar contra presupuesto
+        // Continuar con la validación de presupuesto...
         let validacion = validarContraPresupuesto(gastos);
         
         let mensaje = `Se guardarán ${gastos.length} gasto(s).`;
@@ -282,7 +400,6 @@ $(document).ready(function() {
         if (!validacion.todosValidados) {
             mensaje += `\n\n⚠️ ATENCIÓN: Los siguientes conceptos exceden el presupuesto y serán auditados por la gerencia comercial:\n`;
             validacion.excedidos.forEach(function(item) {
-                // CAMBIO 1: Quitar información del presupuesto total
                 mensaje += `• ${item.concepto}: Excede el presupuesto por ${formatearImporte(item.exceso)}\n`;
             });
         } else {
@@ -302,12 +419,10 @@ $(document).ready(function() {
         }).then((result) => {
             if (result.isConfirmed) {
                 enviarDatosAlServidorConValidacion(gastos, semana, anio, importeAdelanto, validacion);
-                // Enviar notificaciones según las nuevas especificaciones
                 enviarNotificaciones(gastos, validacion, semana, $('#nombreSupervisora').val());
             }
         });
     }
-
 
     function enviarDatosAlServidorConValidacion(gastos, semana, anio, importeAdelanto, validacion) {
         console.log("Enviando datos al servidor con validación...");
@@ -806,7 +921,7 @@ function actualizarEstadoVisual($card) {
 }
 
 function subirImagen(content, id_conc, semana, supervisora, type) {
-    console.log("Iniciando subida de imagen...");
+    console.log("📤 Iniciando subida de imagen...", {id_conc, semana, supervisora, type});
     return new Promise((resolve, reject) => {
         $.ajax({
             url: 'Controller/subirImagen.php',
@@ -822,28 +937,40 @@ function subirImagen(content, id_conc, semana, supervisora, type) {
             dataType: 'json',
         })
         .done(function(response) {
-            console.log("Respuesta del servidor (subirImagen):", response);
+            console.log("✅ Respuesta del servidor (subirImagen):", response);
             if (response.success) {
                 Swal.fire({
                     icon: 'success',
                     title: 'Éxito',
                     text: response.message,
-                    timer: 3000,
+                    timer: 2000,
                     showConfirmButton: false
                 }).then(() => {
+                    // FORZAR actualización inmediata
+                    console.log("🔄 Forzando actualización de lista de imágenes...");
                     actualizarListaImagenes(id_conc, type);
-                    resolve(response); // Resolvemos la Promise con la respuesta
+                    
+                    // Actualizar también el estado visual después de un breve delay
+                    setTimeout(() => {
+                        let $card = $(`.card:has(.concepto-id[value="${id_conc}"])`);
+                        if ($card.length > 0) {
+                            console.log("🔄 Actualizando estado visual del concepto...");
+                            actualizarEstadoVisual($card);
+                        }
+                    }, 500);
+                    
+                    resolve(response);
                 });
             } else {
                 Swal.fire('Error', response.message || 'Hubo un problema al guardar la imagen', 'error');
-                reject(new Error(response.message || 'Error al guardar la imagen')); // Rechazamos la Promise con un error
+                reject(new Error(response.message || 'Error al guardar la imagen'));
             }
         })
         .fail(function(xhr, status, error) {
-            console.error("Error AJAX:", status, error);
+            console.error("❌ Error AJAX:", status, error);
             console.error("Respuesta del servidor:", xhr.responseText);
             Swal.fire('Error', 'Hubo un problema al subir la imagen. Detalles: ' + xhr.responseText, 'error');
-            reject(new Error('Error en la solicitud AJAX: ' + error)); // Rechazamos la Promise con el error
+            reject(new Error('Error en la solicitud AJAX: ' + error));
         });
     });
 }
@@ -860,7 +987,7 @@ function mostrarImagen(nombreImagen) {
 }
 
 function actualizarListaImagenes(id_conc, type) {
-    console.log("Actualizando lista de imágenes para ID_CONC:", id_conc);
+    console.log("🔄 Actualizando lista de imágenes para:", id_conc, type);
     let semana = $('#semanaRetail').val().split('|')[0];
     let supervisora = $('#nombreSupervisora').val() || 'SUPERVISORA_DESCONOCIDA';
 
@@ -877,37 +1004,89 @@ function actualizarListaImagenes(id_conc, type) {
         dataType: 'json',
     })
     .done(function(response) {
-        console.log("Respuesta completa de obtenerImagenes:", response);
+        console.log("📥 Respuesta completa de obtenerImagenes:", response);
         if (response.success) {
             if (response.imagenes && response.imagenes.length > 0) {
+                console.log(`✅ ${response.imagenes.length} imágenes encontradas para ${id_conc}_${type}`);
+                
                 let listaImagenes = response.imagenes.map(img => {
                     let nombreCorto = img.length > 20 ? img.substring(0, 17) + '...' : img;
                     return `
                         <li class="d-flex justify-content-between align-items-center mb-2">
-                            <span title="${img}">${nombreCorto}</span>
+                            <div class="d-flex align-items-center">
+                                <i class="bi-image me-2 text-primary"></i>
+                                <span title="${img}" class="text-success">${nombreCorto}</span>
+                            </div>
                             <div>
-                                <button class="btn btn-sm btn-outline-primary me-2" onclick="mostrarImagen('${img}')">
-                                    <i class="bi bi-eye"></i>
+                                <button class="btn btn-sm btn-outline-primary me-2" onclick="mostrarImagen('${img}')" title="Ver imagen">
+                                    <i class="bi-eye"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="eliminarImagen('${img}', '${id_conc}', '${type}')">
+                                <button class="btn btn-sm btn-outline-danger" onclick="eliminarImagen('${img}', '${id_conc}', '${type}')" title="Eliminar">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>
                         </li>`;
                 }).join('');
-                $(`#imagenes_${id_conc}_${type}`).html(`<ul class="list-unstyled">${listaImagenes}</ul>`);
+                
+                $(`#imagenes_${id_conc}_${type}`).html(`
+                    <div class="imagenes-cargadas">
+                        <ul class="list-unstyled">${listaImagenes}</ul>
+                    </div>
+                `);
+                
+                // Mostrar botón "Ver imágenes" si corresponde
+                let $verBtn = $(`.card .ver-imagenes-btn`).filter(function() {
+                    let $card = $(this).closest('.card');
+                    let cardIdConc = $card.find('.concepto-id').val();
+                    let onclick = $(this).attr('onclick');
+                    return cardIdConc == id_conc && onclick && onclick.includes(`'${type}'`);
+                });
+                $verBtn.show();
+                
             } else {
-                $(`#imagenes_${id_conc}_${type}`).html(`<p>No hay imágenes para este concepto.</p>`);
+                console.log(`📭 No hay imágenes para ${id_conc}_${type}`);
+                $(`#imagenes_${id_conc}_${type}`).html(`
+                    <div class="sin-imagenes">
+                        <p class="text-muted small mb-0">No hay archivos para este concepto.</p>
+                    </div>
+                `);
+                
+                // Ocultar botón "Ver imágenes"
+                let $verBtn = $(`.card .ver-imagenes-btn`).filter(function() {
+                    let $card = $(this).closest('.card');
+                    let cardIdConc = $card.find('.concepto-id').val();
+                    let onclick = $(this).attr('onclick');
+                    return cardIdConc == id_conc && onclick && onclick.includes(`'${type}'`);
+                });
+                $verBtn.hide();
             }
         } else {
-            console.error('Error al obtener la lista de imágenes:', response.message);
-            $(`#imagenes_${id_conc}_${type}`).html(`<p>Error al cargar las imágenes: ${response.message}</p>`);
+            console.error('❌ Error al obtener imágenes:', response.message);
+            $(`#imagenes_${id_conc}_${type}`).html(`
+                <div class="error-imagenes">
+                    <p class="text-danger small mb-0">Error: ${response.message}</p>
+                </div>
+            `);
         }
+        
+        // Forzar actualización del estado visual después de cargar las imágenes
+        setTimeout(() => {
+            let $card = $(`.card:has(.concepto-id[value="${id_conc}"])`);
+            if ($card.length > 0) {
+                console.log(`🔄 Actualizando estado visual para concepto ${id_conc}`);
+                actualizarEstadoVisual($card);
+            }
+        }, 100);
+        
     })
     .fail(function(xhr, status, error) {
-        console.error('Error al obtener la lista de imágenes:', error);
+        console.error('❌ Error AJAX al obtener imágenes:', error);
         console.error('Respuesta del servidor:', xhr.responseText);
-        $(`#imagenes_${id_conc}_${type}`).html(`<p>Error al cargar las imágenes: ${error}</p>`);
+        $(`#imagenes_${id_conc}_${type}`).html(`
+            <div class="error-imagenes">
+                <p class="text-danger small mb-0">Error al cargar imágenes: ${error}</p>
+            </div>
+        `);
     });
 }
 
