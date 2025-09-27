@@ -165,6 +165,7 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
                                 <th>Precio</th>
                                 <th>Stock Locales</th>
                                 <th>Stock Central</th>
+                                <th>Stock Fiscal</th>
                                 <th>Stock Total</th>
                                 <th>Stock Ecommerce</th>
                                 <th>Stock Excluido</th>
@@ -296,6 +297,12 @@ $(document).ready(function() {
                 },
                 { 
                     data: 'STOCK_CENTRAL',
+                    render: function(data) {
+                        return data ? Number(data).toLocaleString('es-AR') : '';
+                    }
+                },
+                { 
+                    data: 'STOCK_CENTRAL_FISCAL',
                     render: function(data) {
                         return data ? Number(data).toLocaleString('es-AR') : '';
                     }
