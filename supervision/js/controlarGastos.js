@@ -622,12 +622,33 @@ $(document).ready(function() {
     // Función para mostrar imágenes
     function mostrarImagenes(id_conc, type) {
         const semanaCompleta = $('#semanaRetail').val();
-        const supervisora    = $('#supervisoraSelect').val();
+        let supervisora = $('#supervisoraSelect').val();
 
-        if (!semanaCompleta || !supervisora) {
-            Swal.fire('Error', 'Por favor, seleccione una semana y una supervisora', 'error');
+        if (!semanaCompleta) {
+            Swal.fire('Error', 'Por favor, seleccione una semana', 'error');
             return;
         }
+
+        // Si no hay supervisora seleccionada en el filtro, buscar la supervisora de la fila específica
+        if (!supervisora) {
+            // Buscar en la tabla la fila que corresponde a este id_conc
+            let rowData = null;
+            table.rows().every(function() {
+                const data = this.data();
+                if (data.id == id_conc) {
+                    rowData = data;
+                    return false; // break the loop
+                }
+            });
+
+            if (rowData && rowData.supervisora) {
+                supervisora = rowData.supervisora;
+            } else {
+                Swal.fire('Error', 'No se pudo determinar la supervisora para este gasto', 'error');
+                return;
+            }
+        }
+
         const [semana, anio] = semanaCompleta.split('|');
 
         // Usamos POST exactamente como antes, pero sin Swal
