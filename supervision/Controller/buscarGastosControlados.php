@@ -33,6 +33,8 @@ try {
             'concepto' => $gasto['CONCEPTO'],
             'importe' => number_format($gasto['IMPORTE'], 2, ',', '.'),
             'importe_tarjeta' => number_format($gasto['IMPORTE_TARJETA'], 2, ',', '.'),
+            'cae_tarjeta' => $gasto['CAE_Tarjeta'] ?? '',
+            'cae_efectivo' => $gasto['CAE_Efectivo'] ?? '',
             'cargado' => $gasto['CARGADO'] == 1
         ];
     }, $gastosAutorizados);
