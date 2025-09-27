@@ -23,6 +23,15 @@ $(document).ready(function() {
                 },
                 className: 'text-center'
             },
+            { 
+                data: null,
+                render: function(data, type, row) {
+                    let disabled = row.cargado_tarj ? 'disabled' : '';
+                    let checked = row.cargado_tarj ? 'checked' : '';
+                    return '<input type="checkbox" class="form-check-input cargadoTarjetaCheck" ' + checked + ' ' + disabled + '>';
+                },
+                className: 'text-center cargado-tarjeta-column'
+            },
             { data: 'importe' },
             {
                 data: 'cae_efectivo',
@@ -79,6 +88,17 @@ $(document).ready(function() {
         let [semana, anio] = semanaCompleta.split('|');
     
         actualizarEstadoCargado(id, supervisora, semana, anio, cargado);
+    });
+
+    $(document).on('change', '.cargadoTarjetaCheck', function() {
+        let row = table.row($(this).closest('tr')).data();
+        let id = row.id;
+        let supervisora = row.supervisora;
+        let cargado = $(this).is(':checked');
+        let semanaCompleta = $('#semanaRetail').val();
+        let [semana, anio] = semanaCompleta.split('|');
+    
+        actualizarEstadoCargadoTarjeta(id, supervisora, semana, anio, cargado);
     });
 
     // Función para buscar gastos
@@ -278,6 +298,155 @@ $(document).ready(function() {
         table.clear();
         table.rows.add(gastos).draw();
     }
+
+    // Manejador de eventos para el checkbox de cargado de tarjeta
+    $(document).on('click', '.cargadoTarjetaCheck', function(e) {
+        const row = table.row($(this).closest('tr'));
+        const data = row.data();
+        const $checkbox = $(this);
+        
+        // Si el checkbox ya estaba marcado, no permitir desmarcarlo
+        if (data.cargado_tarj) {
+            e.preventDefault();
+            return false;
+        }
+
+        // Validar CAE y importe de tarjeta antes de permitir marcar como cargado
+        const $row = $(this).closest('tr');
+        const importeTarjeta = parseFloat(data.importe_tarjeta.replace('.','').replace(',','.')) || 0;
+        const caeTarjeta = $row.find('.cae-tarjeta').val();
+        
+        let validacionOk = true;
+        let mensajeError = '';
+
+        // Validar que haya importe de tarjeta
+        if (importeTarjeta <= 0) {
+            validacionOk = false;
+            mensajeError = 'No hay importe de tarjeta para marcar como cargado';
+        }
+
+        // Validar CAE de tarjeta
+        if (validacionOk && !caeTarjeta) {
+            validacionOk = false;
+            mensajeError = 'Debe ingresar el CAE para el pago con tarjeta';
+        }
+
+        if (!validacionOk) {
+            e.preventDefault();
+            Swal.fire('Error', mensajeError, 'error');
+            return false;
+        }
+
+        // Si pasa todas las validaciones, proceder con el guardado
+        if ($checkbox.prop('checked')) {
+            // Deshabilitar checkbox y campos CAE
+            $checkbox.prop('disabled', true);
+            $row.find('.cae-tarjeta').prop('disabled', true);
+
+            // Guardar los valores CAE de tarjeta en la base de datos
+            const semanaCompleta = $('#semanaRetail').val();
+            const supervisora = $('#supervisoraSelect').val();
+
+            if (!semanaCompleta) {
+                Swal.fire('Error', 'Debe seleccionar una semana', 'error');
+                return false;
+            }
+
+            if (!supervisora) {
+                Swal.fire('Error', 'Debe seleccionar una supervisora', 'error');
+                return false;
+            }
+
+            const [semana, anio] = semanaCompleta.split('|');
+            
+            if (!semana || !anio) {
+                Swal.fire('Error', 'Error al procesar la semana seleccionada', 'error');
+                return false;
+            }
+
+            console.log('Guardando CAE de tarjeta:', {
+                id: data.id,
+                caeTarjeta: caeTarjeta,
+                supervisora: supervisora,
+                semana: semana,
+                anio: anio
+            });
+
+            $.ajax({
+                url: 'Controller/actualizarCAETarjeta.php',
+                method: 'POST',
+                data: JSON.stringify({
+                    id: data.id,
+                    caeTarjeta: caeTarjeta,
+                    supervisora: supervisora,
+                    semana: semana,
+                    anio: anio
+                }),
+                contentType: 'application/json',
+                success: function(response) {
+                    console.log('Respuesta del servidor:', response);
+                    
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Éxito',
+                            text: 'CAE de tarjeta guardado y marcado como cargado correctamente',
+                            icon: 'success',
+                            confirmButtonText: 'Aceptar'
+                        }).then(() => {
+                            // Actualizar la tabla después de cerrar el mensaje
+                            buscarGastos();
+                        });
+                    } else {
+                        console.error('Error en la respuesta:', response);
+                        let errorMsg = response.message || 'Error al guardar CAE de tarjeta';
+                        
+                        // Mostrar error y revertir cambios en la UI
+                        Swal.fire({
+                            title: 'Error',
+                            text: errorMsg,
+                            icon: 'error',
+                            confirmButtonText: 'Aceptar'
+                        }).then(() => {
+                            $checkbox.prop('checked', false).prop('disabled', false);
+                            $row.find('.cae-tarjeta').prop('disabled', false);
+                            
+                            // Refrescar los datos en caso de error también
+                            buscarGastos();
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error AJAX:', {xhr, status, error});
+                    console.log('Respuesta del servidor:', xhr.responseText);
+                    
+                    let errorMsg = 'Error al guardar CAE de tarjeta';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.message) {
+                            errorMsg = response.message;
+                        }
+                    } catch(e) {
+                        errorMsg += ': ' + error;
+                        if (xhr.responseText) {
+                            errorMsg += '\n' + xhr.responseText;
+                        }
+                    }
+                    
+                    // Mostrar mensaje de advertencia
+                    Swal.fire({
+                        title: 'Advertencia',
+                        html: 'El registro parece haberse actualizado pero hubo un error en la respuesta:<br><br>' + 
+                             errorMsg.replace(/\n/g, '<br>'),
+                        icon: 'warning',
+                        confirmButtonText: 'Aceptar'
+                    }).then(() => {
+                        // Refrescar los datos para verificar el estado actual
+                        buscarGastos();
+                    });
+                }
+            });
+        }
+    });
 
     // Manejador de eventos para el checkbox de cargado
     $(document).on('click', '.cargadoCheck', function(e) {
@@ -524,4 +693,45 @@ $(document).ready(function() {
             }
         });
     }
+
+    // Función para actualizar el estado de cargado de tarjeta
+    function actualizarEstadoCargadoTarjeta(id, supervisora, semana, anio, cargado) {
+        $.ajax({
+            url: 'Controller/actualizarEstadoCargadoTarjeta.php',
+            method: 'POST',
+            data: JSON.stringify({ 
+                id: id,
+                supervisora: supervisora,
+                semana: semana,
+                anio: anio,
+                cargado: cargado 
+            }),
+            contentType: 'application/json',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    console.log('Estado de cargado de tarjeta actualizado correctamente');
+                    Swal.fire({
+                        title: 'Éxito',
+                        text: 'Estado de cargado de tarjeta actualizado correctamente',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire('Error', response.message || 'Hubo un problema al actualizar el estado de cargado de tarjeta', 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Error AJAX:", status, error);
+                console.log("Respuesta del servidor:", xhr.responseText);
+                Swal.fire({
+                    title: 'Error',
+                    html: 'Hubo un problema al actualizar el estado de cargado de tarjeta: ' + error + '<br><pre>' + xhr.responseText + '</pre>',
+                    icon: 'error'
+                });
+            }
+        });
+    }
+
 });

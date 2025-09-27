@@ -106,10 +106,11 @@ session_start();
                         <th>Importe Tarjeta</th>
                         <th>CAE Tarjeta</th>
                         <th>Fotos Tarjeta</th>
+                        <th>Cargado Tarjeta</th>
                         <th>Importe Efectivo</th>
                         <th>CAE Efectivo</th>
                         <th>Fotos Efectivo</th>
-                        <th>Cargado</th>
+                        <th>Cargado Efectivo</th>
                     </tr>
                 </thead>
                 <tbody>
