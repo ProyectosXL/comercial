@@ -38,25 +38,27 @@ $data = json_decode($json, true);
 
 if (!$data || 
     !isset($data['id']) || 
-    !isset($data['caeTarjeta']) || 
-    !isset($data['caeEfectivo']) ||
     !isset($data['supervisora']) ||
     !isset($data['semana']) ||
     !isset($data['anio'])) {
     
-    $missing = array_diff(['id', 'caeTarjeta', 'caeEfectivo', 'supervisora', 'semana', 'anio'], array_keys($data));
+    $missing = array_diff(['id', 'supervisora', 'semana', 'anio'], array_keys($data));
     $message = 'Datos incompletos. Faltan los siguientes campos: ' . implode(', ', $missing);
     error_log($message);
     http_response_code(400);
     die(json_encode(['success' => false, 'message' => $message]));
 }
 
+// Los campos CAE ya no son obligatorios, se permiten valores vacíos
+$caeTarjeta = isset($data['caeTarjeta']) ? $data['caeTarjeta'] : '';
+$caeEfectivo = isset($data['caeEfectivo']) ? $data['caeEfectivo'] : '';
+
 try {
     $gasto = new Gasto();
     $result = $gasto->actualizarCAE(
         $data['id'],
-        $data['caeTarjeta'],
-        $data['caeEfectivo'],
+        $caeTarjeta,
+        $caeEfectivo,
         $data['supervisora'],
         $data['semana'],
         $data['anio']

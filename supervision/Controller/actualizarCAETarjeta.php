@@ -38,17 +38,19 @@ $data = json_decode($json, true);
 
 if (!$data || 
     !isset($data['id']) || 
-    !isset($data['caeTarjeta']) || 
     !isset($data['supervisora']) ||
     !isset($data['semana']) ||
     !isset($data['anio'])) {
     
-    $missing = array_diff(['id', 'caeTarjeta', 'supervisora', 'semana', 'anio'], array_keys($data));
+    $missing = array_diff(['id', 'supervisora', 'semana', 'anio'], array_keys($data));
     $message = 'Datos incompletos. Faltan los siguientes campos: ' . implode(', ', $missing);
     error_log($message);
     http_response_code(400);
     die(json_encode(['success' => false, 'message' => $message]));
 }
+
+// El campo caeTarjeta ya no es obligatorio, se permite valor vacío
+$caeTarjeta = isset($data['caeTarjeta']) ? $data['caeTarjeta'] : '';
 
 try {
     $gasto = new Gasto();
@@ -56,7 +58,7 @@ try {
     // Actualizar solo el CAE de tarjeta y marcar como cargado de tarjeta
     $result = $gasto->actualizarCAETarjeta(
         $data['id'],
-        $data['caeTarjeta'],
+        $caeTarjeta,
         $data['supervisora'],
         $data['semana'],
         $data['anio']

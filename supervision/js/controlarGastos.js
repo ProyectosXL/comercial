@@ -303,6 +303,7 @@ $(document).ready(function() {
         const row = table.row($(this).closest('tr'));
         const data = row.data();
         const $checkbox = $(this);
+        const $row = $(this).closest('tr');
 
         // Si el checkbox ya estaba marcado, no permitir desmarcarlo
         if (data.cargado_tarj) {
@@ -335,8 +336,12 @@ $(document).ready(function() {
                 return false;
             }
 
+            // Obtener el valor del CAE de tarjeta de la misma fila
+            const caeTarjeta = $row.find('.cae-tarjeta').val() || '';
+
             console.log('Guardando datos:', {
                 id: data.id,
+                caeTarjeta: caeTarjeta,
                 supervisora: supervisora,
                 semana: semana,
                 anio: anio
@@ -347,6 +352,7 @@ $(document).ready(function() {
                 method: 'POST',
                 data: JSON.stringify({
                     id: data.id,
+                    caeTarjeta: caeTarjeta,
                     supervisora: supervisora,
                     semana: semana,
                     anio: anio
@@ -420,6 +426,7 @@ $(document).ready(function() {
         const row = table.row($(this).closest('tr'));
         const data = row.data();
         const $checkbox = $(this);
+        const $row = $(this).closest('tr');
         
         // Si el checkbox ya estaba marcado, no permitir desmarcarlo
         if (data.cargado) {
@@ -452,8 +459,14 @@ $(document).ready(function() {
                 return false;
             }
 
+            // Obtener los valores de CAE de la misma fila
+            const caeTarjeta = $row.find('.cae-tarjeta').val() || '';
+            const caeEfectivo = $row.find('.cae-efectivo').val() || '';
+
             console.log('Enviando datos:', {
                 id: data.id,
+                caeTarjeta: caeTarjeta,
+                caeEfectivo: caeEfectivo,
                 supervisora: supervisora,
                 semana: semana,
                 anio: anio
@@ -464,6 +477,8 @@ $(document).ready(function() {
                 method: 'POST',
                 data: JSON.stringify({
                     id: data.id,
+                    caeTarjeta: caeTarjeta,
+                    caeEfectivo: caeEfectivo,
                     supervisora: supervisora,
                     semana: semana,
                     anio: anio
