@@ -1,4 +1,3 @@
-
 $(document).ready(function() {
     // Inicialización de la tabla principal
     let table = $('#gastosTable').DataTable({
@@ -304,46 +303,18 @@ $(document).ready(function() {
         const row = table.row($(this).closest('tr'));
         const data = row.data();
         const $checkbox = $(this);
-        
+
         // Si el checkbox ya estaba marcado, no permitir desmarcarlo
         if (data.cargado_tarj) {
             e.preventDefault();
             return false;
         }
 
-        // Validar CAE y importe de tarjeta antes de permitir marcar como cargado
-        const $row = $(this).closest('tr');
-        const importeTarjeta = parseFloat(data.importe_tarjeta.replace('.','').replace(',','.')) || 0;
-        const caeTarjeta = $row.find('.cae-tarjeta').val();
-        
-        let validacionOk = true;
-        let mensajeError = '';
-
-        // Validar que haya importe de tarjeta
-        if (importeTarjeta <= 0) {
-            validacionOk = false;
-            mensajeError = 'No hay importe de tarjeta para marcar como cargado';
-        }
-
-        // Validar CAE de tarjeta
-        if (validacionOk && !caeTarjeta) {
-            validacionOk = false;
-            mensajeError = 'Debe ingresar el CAE para el pago con tarjeta';
-        }
-
-        if (!validacionOk) {
-            e.preventDefault();
-            Swal.fire('Error', mensajeError, 'error');
-            return false;
-        }
-
-        // Si pasa todas las validaciones, proceder con el guardado
+        // Proceder con el guardado sin validaciones adicionales
         if ($checkbox.prop('checked')) {
-            // Deshabilitar checkbox y campos CAE
+            // Deshabilitar checkbox
             $checkbox.prop('disabled', true);
-            $row.find('.cae-tarjeta').prop('disabled', true);
 
-            // Guardar los valores CAE de tarjeta en la base de datos
             const semanaCompleta = $('#semanaRetail').val();
             const supervisora = $('#supervisoraSelect').val();
 
@@ -358,15 +329,14 @@ $(document).ready(function() {
             }
 
             const [semana, anio] = semanaCompleta.split('|');
-            
+
             if (!semana || !anio) {
                 Swal.fire('Error', 'Error al procesar la semana seleccionada', 'error');
                 return false;
             }
 
-            console.log('Guardando CAE de tarjeta:', {
+            console.log('Guardando datos:', {
                 id: data.id,
-                caeTarjeta: caeTarjeta,
                 supervisora: supervisora,
                 semana: semana,
                 anio: anio
@@ -377,7 +347,6 @@ $(document).ready(function() {
                 method: 'POST',
                 data: JSON.stringify({
                     id: data.id,
-                    caeTarjeta: caeTarjeta,
                     supervisora: supervisora,
                     semana: semana,
                     anio: anio
@@ -385,11 +354,11 @@ $(document).ready(function() {
                 contentType: 'application/json',
                 success: function(response) {
                     console.log('Respuesta del servidor:', response);
-                    
+
                     if (response.success) {
                         Swal.fire({
                             title: 'Éxito',
-                            text: 'CAE de tarjeta guardado y marcado como cargado correctamente',
+                            text: 'Guardado y marcado como cargado correctamente',
                             icon: 'success',
                             confirmButtonText: 'Aceptar'
                         }).then(() => {
@@ -408,8 +377,6 @@ $(document).ready(function() {
                             confirmButtonText: 'Aceptar'
                         }).then(() => {
                             $checkbox.prop('checked', false).prop('disabled', false);
-                            $row.find('.cae-tarjeta').prop('disabled', false);
-                            
                             // Refrescar los datos en caso de error también
                             buscarGastos();
                         });
@@ -460,37 +427,8 @@ $(document).ready(function() {
             return false;
         }
 
-        // Validar CAE antes de permitir marcar como cargado
-        const $row = $(this).closest('tr');
-        const importeTarjeta = parseFloat(data.importe_tarjeta) || 0;
-        const importeEfectivo = parseFloat(data.importe) || 0;
-        const caeTarjeta = $row.find('.cae-tarjeta').val();
-        const caeEfectivo = $row.find('.cae-efectivo').val();
-        
-        let validacionOk = true;
-        let mensajeError = '';
-
-        // Validar CAE de tarjeta si hay importe
-        if (importeTarjeta > 0 && !caeTarjeta) {
-            validacionOk = false;
-            mensajeError = 'Debe ingresar el CAE para el pago con tarjeta';
-        }
-
-        // Validar CAE de efectivo si hay importe
-        if (validacionOk && importeEfectivo > 0 && !caeEfectivo) {
-            validacionOk = false;
-            mensajeError = 'Debe ingresar el CAE para el pago en efectivo';
-        }
-
-        if (!validacionOk) {
-            e.preventDefault();
-            Swal.fire('Error', mensajeError, 'error');
-            return false;
-        }
-
         // Si pasa todas las validaciones, deshabilitamos los campos CAE
         if ($checkbox.prop('checked')) {
-            $row.find('.cae-tarjeta, .cae-efectivo').prop('disabled', true);
             $checkbox.prop('disabled', true);
 
             // Guardar los valores CAE en la base de datos
@@ -516,8 +454,6 @@ $(document).ready(function() {
 
             console.log('Enviando datos:', {
                 id: data.id,
-                caeTarjeta: caeTarjeta || '',
-                caeEfectivo: caeEfectivo || '',
                 supervisora: supervisora,
                 semana: semana,
                 anio: anio
@@ -528,8 +464,6 @@ $(document).ready(function() {
                 method: 'POST',
                 data: JSON.stringify({
                     id: data.id,
-                    caeTarjeta: caeTarjeta,
-                    caeEfectivo: caeEfectivo,
                     supervisora: supervisora,
                     semana: semana,
                     anio: anio
@@ -541,7 +475,6 @@ $(document).ready(function() {
                     // Primero actualizamos la UI
                     if (response.success) {
                         // Actualizar el estado visual de los campos
-                        $row.find('.cae-tarjeta, .cae-efectivo').prop('disabled', true);
                         $checkbox.prop('checked', true).prop('disabled', true);
                         
                         // Mostrar mensaje de éxito
@@ -552,11 +485,6 @@ $(document).ready(function() {
                             confirmButtonText: 'Aceptar'
                         }).then(() => {
                             // Actualizar la tabla después de cerrar el mensaje
-                            const semanaCompleta = $('#semanaRetail').val();
-                            const [semana, anio] = semanaCompleta.split('|');
-                            const supervisora = $('#supervisoraSelect').val();
-                            
-                            // Forzar la recarga de los datos
                             buscarGastos();
                         });
                     } else {
@@ -574,8 +502,6 @@ $(document).ready(function() {
                             confirmButtonText: 'Aceptar'
                         }).then(() => {
                             $checkbox.prop('checked', false).prop('disabled', false);
-                            $row.find('.cae-tarjeta, .cae-efectivo').prop('disabled', false);
-                            
                             // Refrescar los datos en caso de error también
                             buscarGastos();
                         });
