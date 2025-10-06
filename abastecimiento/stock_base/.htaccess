@@ -1,0 +1,14 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Establece la base del proyecto
+    RewriteBase /comercial/abastecimiento/stock_base/
+
+    # Regla 1: Si la solicitud es para la raíz del proyecto, sírvela desde /public
+    RewriteRule ^$ public/ [L]
+
+    # Regla 2: Si la solicitud no es un archivo o directorio real, pásala a /public
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
