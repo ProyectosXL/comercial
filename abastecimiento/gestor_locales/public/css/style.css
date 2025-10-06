@@ -1,0 +1,592 @@
+/* Variables de color */
+:root {
+    --primary-color: #4e73df;
+    --secondary-color: #858796;
+    --success-color: #1cc88a;
+    --info-color: #36b9cc;
+    --warning-color: #f6c23e;
+    --danger-color: #e74a3b;
+    --light-color: #f8f9fc;
+    --dark-color: #5a5c69;
+}
+
+/* Estilos generales */
+body {
+    background-color: #f8f9fc;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #5a5c69;
+}
+
+/* Navbar */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+}
+
+.shadow-sm {
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075) !important;
+}
+
+.card-header {
+    border-bottom: 1px solid #e3e6f0;
+    padding: 1rem 1.5rem;
+    background-color: #f8f9fc;
+    border-radius: 10px 10px 0 0 !important;
+}
+
+.card-header h5 {
+    color: #4e73df;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.card-header h5 i {
+    margin-right: 10px;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Formularios */
+.form-control {
+    border: 1px solid #d1d3e2;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    color: #5a5c69;
+    background-color: #fff;
+}
+
+.form-control:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    background-color: #fff;
+}
+
+.form-control option {
+    color: #5a5c69;
+    padding: 8px;
+}
+
+.form-control option:first-child {
+    color: #858796;
+    font-style: italic;
+}
+
+/* Placeholder para inputs */
+.form-control::placeholder {
+    color: #858796;
+    font-style: italic;
+    opacity: 0.7;
+}
+
+label {
+    font-weight: 600;
+    color: #5a5c69;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    display: block;
+}
+
+label i {
+    margin-right: 5px;
+    width: 18px;
+    text-align: center;
+}
+
+/* Iconos de colores para labels */
+label i.fa-store {
+    color: #36b9cc;
+}
+
+label i.fa-tags {
+    color: #f6c23e;
+}
+
+label i.fa-boxes {
+    color: #1cc88a;
+}
+
+/* Grupos de formulario con iconos */
+.form-group {
+    position: relative;
+}
+
+.form-group.has-icon select,
+.form-group.has-icon input {
+    padding-left: 2.5rem;
+}
+
+.form-group .form-icon {
+    position: absolute;
+    left: 12px;
+    top: 38px;
+    color: #858796;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Estilos para diferentes tipos de select */
+.select-sucursal {
+    border-left: 3px solid #36b9cc !important;
+}
+
+.select-rubro {
+    border-left: 3px solid #f6c23e !important;
+}
+
+.input-stock {
+    border-left: 3px solid #1cc88a !important;
+}
+
+.select-sucursal:focus {
+    border-color: #36b9cc !important;
+    box-shadow: 0 0 0 0.2rem rgba(54, 185, 204, 0.25) !important;
+}
+
+.select-rubro:focus {
+    border-color: #f6c23e !important;
+    box-shadow: 0 0 0 0.2rem rgba(246, 194, 62, 0.25) !important;
+}
+
+.input-stock:focus {
+    border-color: #1cc88a !important;
+    box-shadow: 0 0 0 0.2rem rgba(28, 200, 138, 0.25) !important;
+}
+
+/* Botones */
+.btn {
+    border-radius: 5px;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.btn i {
+    margin-right: 5px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,.15);
+}
+
+.btn-success {
+    background-color: #1cc88a;
+    border-color: #1cc88a;
+}
+
+.btn-success:hover {
+    background-color: #17a673;
+    border-color: #17a673;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,.15);
+}
+
+.btn-info {
+    background-color: #36b9cc;
+    border-color: #36b9cc;
+}
+
+.btn-info:hover {
+    background-color: #2c9faf;
+    border-color: #2c9faf;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,.15);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-danger:hover,
+.btn-outline-secondary:hover {
+    transform: translateY(-2px);
+}
+
+/* Tabla */
+.table {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+.table-responsive {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+/* Mantener el header fijo al hacer scroll */
+.table-responsive thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fc;
+    z-index: 10;
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+.table thead th {
+    border-bottom: 2px solid #e3e6f0;
+    color: #4e73df;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f8f9fc;
+    transition: background-color 0.3s ease;
+}
+
+.table td {
+    vertical-align: middle;
+    padding: 1rem 0.75rem;
+}
+
+.table th a {
+    color: #4e73df;
+    text-decoration: none;
+    display: block;
+}
+
+.table th a:hover {
+    color: #2e59d9;
+}
+
+.sortable {
+    cursor: pointer;
+}
+
+.badge {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Modal */
+.modal-content {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+}
+
+.modal-header {
+    border-bottom: 1px solid #e3e6f0;
+    border-radius: 10px 10px 0 0;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #36b9cc 0%, #258391 100%);
+}
+
+.modal-footer {
+    border-top: 1px solid #e3e6f0;
+}
+
+/* Alertas */
+.alert {
+    border: none;
+    border-radius: 5px;
+    padding: 1rem 1.5rem;
+}
+
+.alert i {
+    margin-right: 8px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+/* Toolbar */
+.btn-toolbar {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Alineación de formularios y botones */
+.form-row {
+    align-items: flex-end;
+}
+
+.form-row .form-group {
+    margin-bottom: 0;
+}
+
+/* Custom file input */
+.custom-file-label {
+    border: 1px solid #d1d3e2;
+    border-radius: 5px;
+}
+
+.custom-file-label::after {
+    background-color: #4e73df;
+    color: white;
+    border-radius: 0 5px 5px 0;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeIn 0.5s ease;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .btn-toolbar {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-toolbar .btn-group {
+        width: 100%;
+        margin-right: 0 !important;
+        margin-bottom: 0.5rem;
+    }
+    
+    .btn-toolbar .btn {
+        width: 100%;
+    }
+    
+    .table {
+        font-size: 0.8rem;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* Mejoras visuales adicionales */
+.container {
+    max-width: 1200px;
+}
+
+hr {
+    border-top: 1px solid #e3e6f0;
+}
+
+/* Iconos */
+.fa-inbox {
+    color: #d1d3e2;
+}
+
+/* Estados de carga */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Estilos para modal de ayuda */
+.help-section {
+    margin-bottom: 1.5rem;
+}
+
+.help-section h6 {
+    font-weight: 700;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e3e6f0;
+}
+
+.function-item {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background-color: #f8f9fc;
+    border-radius: 5px;
+}
+
+.function-item strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #5a5c69;
+}
+
+.function-item ul {
+    margin-bottom: 0;
+    padding-left: 1.5rem;
+}
+
+.function-item li {
+    margin-bottom: 0.3rem;
+    color: #6e707e;
+}
+
+.color-ref {
+    text-align: center;
+    padding: 1rem;
+    background-color: #f8f9fc;
+    border-radius: 5px;
+    margin-bottom: 0.5rem;
+}
+
+.color-ref .badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.modal-lg {
+    max-width: 900px;
+}
+
+.navbar .btn-light {
+    font-weight: 600;
+}
+
+.navbar .btn-light:hover {
+    background-color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,.2);
+}
+/* ===== ESTILOS PARA EL OVERLAY DE CARGA ===== */
+
+#loading-overlay {
+    /* Posición y tamaño */
+    position: fixed; /* Se queda fijo en la pantalla aunque hagas scroll */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    /* Color y visibilidad */
+    background-color: rgba(0, 0, 0, 0.7); /* Fondo negro semitransparente */
+    z-index: 10000; /* Asegura que esté por encima de todo, incluso de los modales */
+    
+    /* Centrado del contenido */
+    display: none; /* Oculto por defecto */
+    justify-content: center;
+    align-items: center;
+    
+    /* Animación suave */
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+#loading-overlay.visible {
+    display: flex; /* Lo hacemos visible usando flex para centrar */
+    opacity: 1;
+}
+
+.loading-box {
+    text-align: center;
+}
+
+.help-section {
+    margin-bottom: 1.5rem;
+}
+.help-section:last-child {
+    margin-bottom: 0;
+}
+.help-section h6 {
+    font-weight: 700;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e3e6f0;
+    display: flex;
+    align-items: center;
+}
+.help-section h6 i {
+    margin-right: 10px;
+    font-size: 1.2rem;
+}
+
+/* Estilos específicos para el acordeón de ayuda */
+.help-accordion .card {
+    border: 1px solid #e3e6f0;
+    margin-bottom: -1px; /* Evita bordes dobles */
+    border-radius: 5px !important;
+    overflow: hidden; /* Asegura que los bordes redondeados se apliquen */
+}
+.help-accordion .card-header {
+    padding: 0;
+    background-color: #fff;
+    border-bottom: 0;
+}
+.help-accordion .btn-link {
+    color: #5a5c69;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 1rem 1.25rem;
+    width: 100%;
+    text-align: left;
+    display: flex;
+    align-items: center;
+}
+.help-accordion .btn-link:hover {
+    background-color: #f8f9fc;
+    text-decoration: none;
+}
+.help-accordion .btn-link i {
+    margin-right: 10px;
+    font-size: 1.1rem;
+}
+.help-accordion .btn-link:focus {
+    box-shadow: none; /* Quita el resplandor azul al hacer clic */
+}
+.help-accordion .card-body {
+    font-size: 0.9rem;
+    padding: 1rem 1.5rem;
+    background-color: #f8f9fc;
+}
+.help-accordion .card-body ul {
+    padding-left: 1.25rem;
+    margin-bottom: 0;
+}
+
+/* Ícono de flecha para indicar colapso */
+.help-accordion .btn-link::after {
+    content: '\f078'; /* Ícono de chevron-down de Font Awesome */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    margin-left: auto; /* Empuja la flecha a la derecha */
+    transition: transform 0.2s ease-in-out;
+}
+.help-accordion .btn-link[aria-expanded="true"]::after {
+    transform: rotate(-180deg); /* Gira la flecha hacia arriba cuando está expandido */
+}
