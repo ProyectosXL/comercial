@@ -14,6 +14,7 @@ class Venta
         require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
         $this->cid = new Conexion();
         $this->cid_central = $this->cid->conectar('central');
+        $this->cid_lakerbis = $this->cid->conectar('locales');
     } 
 
     public function traerVentasPropios($desde = null, $hasta = null, $suc = '%'){
@@ -108,7 +109,7 @@ class Venta
             $hasta = date('Y-m-d');
         }
 
-        $sql = "EXEC [LAKERBIS].[LOCALES_LAKERS].[dbo].[SJ_VENTAS_ML_URUGUAY_MOBILE] @DESDE = ?, @HASTA = ?, @SUC = ?";
+        $sql = "EXEC SJ_VENTAS_ML_URUGUAY_MOBILE2 @DESDE = ?, @HASTA = ?, @SUC = ?";
         $params = array($desde, $hasta, $suc);
         
         // Habilitar el manejo de errores de SQL Server
@@ -116,7 +117,7 @@ class Venta
             die(print_r(sqlsrv_errors(), true));
         }
         
-        $stmt = sqlsrv_query($this->cid_central, $sql, $params);
+        $stmt = sqlsrv_query($this->cid_lakerbis, $sql, $params);
         
         if ($stmt === false) {
             // Si la consulta falla, imprime información de depuración
