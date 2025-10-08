@@ -106,6 +106,37 @@ if ($rol !== 'supervision') {
             Grilla de Cumplimiento: Franquicias vs Rubros
         </h5>
     </div>
+    
+    <!-- Filtros y Buscador -->
+    <div id="filtros-reporte" class="card-body border-bottom" style="display: none;">
+        <!-- Buscador de Franquicias -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="buscador-franquicias" class="form-label">
+                    <i class="bi bi-search me-1"></i>
+                    Buscar Franquicia
+                </label>
+                <input type="text" class="form-control" id="buscador-franquicias" 
+                       placeholder="Escriba el nombre de la franquicia..." 
+                       autocomplete="off">
+            </div>
+        </div>
+        
+        <!-- Filtros por Rubro -->
+        <div class="row">
+            <div class="col-12">
+                <label class="form-label">
+                    <i class="bi bi-filter me-1"></i>
+                    Filtrar por Rubros
+                </label>
+                <div id="filtros-rubros" class="d-flex flex-wrap gap-2">
+                    <!-- Los botones de filtro se generarán dinámicamente -->
+                </div>
+                <small class="form-text text-muted">Seleccione los rubros que desea visualizar</small>
+            </div>
+        </div>
+    </div>
+    
     <div class="card-body p-0">
         <!-- Loading State -->
         <div id="loading-reporte" class="text-center p-4" style="display: none;">
@@ -128,8 +159,18 @@ if ($rol !== 'supervision') {
                 <table class="table table-bordered table-hover mb-0" id="tabla-cumplimiento-rubros">
                     <thead class="table-dark">
                         <tr id="header-rubros">
-                            <th class="text-center estado-general">Franquicia</th>
-                            <th class="text-center estado-general">Estado General</th>
+                            <th class="text-center estado-general sortable-column" data-column="franquicia">
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <span>Franquicia</span>
+                                    <i class="bi bi-arrow-down-up ms-1 sort-icon" style="cursor: pointer;"></i>
+                                </div>
+                            </th>
+                            <th class="text-center estado-general sortable-column" data-column="estado">
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <span>Estado General</span>
+                                    <i class="bi bi-arrow-down-up ms-1 sort-icon" style="cursor: pointer;"></i>
+                                </div>
+                            </th>
                             <!-- Los rubros se agregarán dinámicamente -->
                         </tr>
                     </thead>
@@ -237,6 +278,91 @@ if ($rol !== 'supervision') {
     z-index: 10;
 }
 
+/* Columnas ordenables */
+.sortable-column {
+    cursor: pointer !important;
+    user-select: none;
+}
+
+.sortable-column:hover {
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%) !important;
+}
+
+.sort-icon {
+    font-size: 0.8rem;
+    transition: transform 0.2s ease;
+    opacity: 0.7;
+}
+
+.sortable-column:hover .sort-icon {
+    opacity: 1;
+}
+
+/* Hover para columnas de rubros */
+.sortable-rubro {
+    cursor: pointer !important;
+    user-select: none;
+}
+
+.sortable-rubro:hover {
+    background: linear-gradient(135deg, #4b5563 0%, #374151 100%) !important;
+}
+
+.sortable-rubro:hover .sort-icon {
+    opacity: 1;
+}
+
+.sort-icon.asc {
+    transform: rotate(180deg);
+}
+
+.sort-icon.desc {
+    transform: rotate(0deg);
+}
+
+/* Filtros de rubros */
+.filtro-rubro {
+    padding: 6px 12px;
+    border: 2px solid #e5e7eb;
+    background: #ffffff;
+    color: #374151;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.filtro-rubro:hover {
+    border-color: #3b82f6;
+    background: #f3f4f6;
+}
+
+.filtro-rubro.activo {
+    background: #3b82f6;
+    color: #ffffff;
+    border-color: #1d4ed8;
+}
+
+/* Buscador de franquicias */
+#buscador-franquicias {
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+}
+
+#buscador-franquicias:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.15);
+}
+
+/* Filas ocultas por filtros */
+.fila-oculta {
+    display: none !important;
+}
+
 /* Columna sticky de franquicia */
 .sticky-column {
     position: sticky !important;
@@ -244,8 +370,9 @@ if ($rol !== 'supervision') {
     background: linear-gradient(135deg, #374151 0%, #1f2937 100%) !important;
     color: #ffffff !important;
     z-index: 20 !important;
-    min-width: 160px;
-    max-width: 180px;
+    width: 25% !important;
+    min-width: 160px !important;
+    max-width: 200px !important;
     text-align: left !important;
     font-weight: 600;
     border-right: 2px solid #4b5563 !important;
@@ -262,6 +389,7 @@ if ($rol !== 'supervision') {
     background: var(--fondo-claro) !important;
     color: var(--texto-principal) !important;
     font-weight: 500;
+    box-sizing: border-box;
 }
 
 /* Celda sticky de franquicia en el cuerpo */
@@ -271,28 +399,69 @@ if ($rol !== 'supervision') {
     border-right: 2px solid var(--borde-tabla) !important;
     font-weight: 600;
     font-size: 0.75rem;
+    width: 25% !important;
+    min-width: 160px !important;
+    max-width: 200px !important;
 }
 
 /* Headers de rubro con texto rotado */
 .rubro-header {
     writing-mode: vertical-rl;
     text-orientation: mixed;
-    min-width: 50px;
-    max-width: 60px;
-    height: 100px;
-    padding: 4px 2px !important;
-    font-size: 0.65rem !important;
+    min-width: 60px;
+    max-width: 70px;
+    height: 120px;
+    padding: 8px 4px !important;
+    font-size: 0.7rem !important;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 1.3;
     word-break: break-word;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Contenedor diagonal para los textos de rubro */
+.rubro-header .d-flex {
+    transform: rotate(-45deg);
+    transform-origin: center center;
+    height: 100%;
+    width: 100%;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.rubro-header .d-flex span {
+    white-space: nowrap;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+    letter-spacing: 0.5px;
+}
+
+.rubro-header .sort-icon {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 0.6rem;
+    opacity: 0.8;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    padding: 1px 2px;
 }
 
 /* Celdas de cumplimiento */
 .cumplimiento-cell {
-    width: 50px !important;
-    min-width: 50px !important;
-    max-width: 50px !important;
+    width: auto !important;
+    min-width: 60px !important;
+    max-width: 80px !important;
     padding: 4px 2px !important;
+    box-sizing: border-box;
 }
 
 /* Estados de cumplimiento */
@@ -310,12 +479,14 @@ if ($rol !== 'supervision') {
 
 /* Estado general */
 .estado-general {
-    min-width: 90px;
-    max-width: 100px;
+    width: 12% !important;
+    min-width: 90px !important;
+    max-width: 110px !important;
     font-weight: 600 !important;
     background: var(--fondo-claro) !important;
     color: var(--texto-principal) !important;
     font-size: 0.75rem;
+    box-sizing: border-box;
 }
 
 /* Badges en la tabla */
@@ -606,6 +777,14 @@ class ReportesCumplimientoManager {
     constructor() {
         this.periodoActual = this.obtenerPeriodoActual();
         this.datosReporte = null;
+        this.datosOriginales = null;
+        this.filtrosBusqueda = {
+            texto: '',
+            rubrosActivos: [],
+            ordenFranquicia: 'default', // 'default', 'asc', 'desc'
+            ordenEstadoGeneral: 'default', // 'default', 'informed', 'notinformed'
+            ordenRubros: {} // {nombreRubro: 'default'|'loaded'|'notloaded'}
+        };
         
         this.init();
     }
@@ -624,11 +803,43 @@ class ReportesCumplimientoManager {
             });
         }
         
-        // Eventos configurados
+        // Buscador de franquicias
+        const buscadorFranquicias = document.getElementById('buscador-franquicias');
+        if (buscadorFranquicias) {
+            buscadorFranquicias.addEventListener('input', (e) => {
+                this.filtrosBusqueda.texto = e.target.value.toLowerCase();
+                this.aplicarFiltros();
+            });
+        }
+        
+        // Eventos de ordenamiento
+        document.addEventListener('click', (e) => {
+            // Ordenamiento de franquicias
+            if (e.target.closest('.sortable-column[data-column="franquicia"]')) {
+                this.alternarOrdenFranquicia();
+            }
+            
+            // Ordenamiento de estado general
+            if (e.target.closest('.sortable-column[data-column="estado"]')) {
+                this.alternarOrdenEstadoGeneral();
+            }
+            
+            // Ordenamiento de rubros
+            if (e.target.closest('.sortable-rubro')) {
+                const rubro = e.target.closest('.sortable-rubro').dataset.rubro;
+                this.alternarOrdenRubro(rubro);
+            }
+        });
     }
     
     async cargarPeriodosDisponibles() {
         try {
+            // Nombres de meses en español
+            const mesesEspañol = [
+                'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+            ];
+            
             // Generar últimos 12 períodos
             const periodos = [];
             const fechaActual = new Date();
@@ -639,9 +850,12 @@ class ReportesCumplimientoManager {
                 const año = fecha.getFullYear();
                 const periodo = `${mes}-${año}`;
                 
+                const nombreMes = mesesEspañol[fecha.getMonth()];
+                const textoMostrar = i === 0 ? `${nombreMes} ${año} (Actual)` : `${nombreMes} ${año}`;
+                
                 periodos.push({
                     valor: periodo,
-                    texto: fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+                    texto: textoMostrar
                 });
             }
             
@@ -709,16 +923,20 @@ class ReportesCumplimientoManager {
             return;
         }
         
-        // Usar todas las franquicias (sin filtro)
-        const datos = this.datosReporte.franquicias;
+        // Guardar datos originales
+        this.datosOriginales = JSON.parse(JSON.stringify(this.datosReporte));
+        
+        // Inicializar filtros de rubros
+        this.inicializarFiltrosRubros(this.datosReporte.rubros);
         
         // Crear headers
         this.crearHeadersTabla(this.datosReporte.rubros);
         
         // Crear filas
-        this.crearFilasTabla(datos, this.datosReporte.rubros);
+        this.crearFilasTabla(this.datosReporte.franquicias, this.datosReporte.rubros);
         
-        // Mostrar tabla
+        // Mostrar filtros y tabla
+        document.getElementById('filtros-reporte').style.display = 'block';
         document.getElementById('contenedor-tabla-reporte').style.display = 'block';
         document.getElementById('reporte-vacio').style.display = 'none';
         
@@ -728,47 +946,126 @@ class ReportesCumplimientoManager {
             btnExportarDetalle.style.display = 'inline-block';
         }
         
-        console.log('Datos cargados exitosamente:', datos);
+        console.log('Datos cargados exitosamente:', this.datosReporte.franquicias);
+    }
+    
+    procesarNombreRubro(nombreCompleto) {
+        // Quitar la palabra "DE" intermedia (no al inicio ni al final)
+        let nombreProcesado = nombreCompleto.replace(/\s+DE\s+/gi, ' ').trim();
+        
+        // Si después del procesamiento sigue siendo muy largo, usar el original
+        if (nombreProcesado.length === 0) {
+            nombreProcesado = nombreCompleto;
+        }
+        
+        return {
+            nombreMostrar: nombreProcesado,
+            esLargo: nombreProcesado.length > 12,
+            nombreOriginal: nombreCompleto
+        };
     }
     
     crearHeadersTabla(rubros) {
         const headerRow = document.getElementById('header-rubros');
+        
+        // Calcular ancho para rubros visibles
+        const rubrosVisibles = this.filtrosBusqueda.rubrosActivos.length;
+        const anchoRubroPorcentaje = rubrosVisibles > 0 ? Math.max(63 / rubrosVisibles, 4) : 4;
+        
+        // Aplicar anchos fijos a las columnas existentes
+        const franquiciaHeader = headerRow.querySelector('th:nth-child(1)');
+        const estadoHeader = headerRow.querySelector('th:nth-child(2)');
+        
+        if (franquiciaHeader) {
+            franquiciaHeader.style.width = '25%';
+            franquiciaHeader.style.minWidth = '160px';
+            franquiciaHeader.style.maxWidth = '200px';
+        }
+        
+        if (estadoHeader) {
+            estadoHeader.style.width = '12%';
+            estadoHeader.style.minWidth = '90px';
+            estadoHeader.style.maxWidth = '110px';
+        }
         
         // Limpiar headers existentes (excepto los primeros 2)
         while (headerRow.children.length > 2) {
             headerRow.removeChild(headerRow.lastChild);
         }
         
-        // Agregar headers de rubros
+        // Agregar headers de rubros con ordenamiento y anchos
         rubros.forEach(rubro => {
             const th = document.createElement('th');
-            th.className = 'rubro-header cumplimiento-cell';
-            th.textContent = rubro.nombre;
-            th.title = rubro.nombre; // Tooltip para móviles
+            th.className = 'rubro-header cumplimiento-cell sortable-rubro';
+            th.dataset.rubro = rubro.nombre;
+            th.title = rubro.nombre; // Tooltip para móviles con nombre completo
+            
+            // Procesar nombre del rubro
+            const rubroInfo = this.procesarNombreRubro(rubro.nombre);
+            
+            // Aplicar ancho y visibilidad basado en filtros
+            const esVisible = this.filtrosBusqueda.rubrosActivos.includes(rubro.nombre);
+            
+            if (esVisible) {
+                th.style.display = '';
+                th.style.width = `${anchoRubroPorcentaje}%`;
+                th.style.minWidth = '60px';
+                th.style.maxWidth = '80px';
+            } else {
+                th.style.display = 'none';
+            }
+            
+            // Determinar tamaño de fuente
+            const fontSize = rubroInfo.esLargo ? '0.55rem' : '0.65rem';
+            
+            th.innerHTML = `
+                <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                    <span style="font-size: ${fontSize};">${rubroInfo.nombreMostrar}</span>
+                    <i class="bi bi-arrow-down-up sort-icon" style="cursor: pointer; font-size: 0.7rem;"></i>
+                </div>
+            `;
+            
             headerRow.appendChild(th);
         });
+        
+        // Asegurar que la tabla mantenga el layout fijo
+        const tabla = document.getElementById('tabla-cumplimiento-rubros');
+        if (tabla) {
+            tabla.style.tableLayout = 'fixed';
+            tabla.style.width = '100%';
+        }
     }
     
     crearFilasTabla(franquicias, rubros) {
         const tbody = document.getElementById('tbody-cumplimiento-rubros');
         tbody.innerHTML = '';
         
+        // Calcular ancho para rubros visibles
+        const rubrosVisibles = this.filtrosBusqueda.rubrosActivos.length;
+        const anchoRubroPorcentaje = rubrosVisibles > 0 ? Math.max(63 / rubrosVisibles, 4) : 4;
+        
         franquicias.forEach(franquicia => {
             const fila = document.createElement('tr');
             
-            // Columna de franquicia (sticky)
-            const tdFranquicia = document.createElement('td');  
+            // Columna de franquicia (sticky) con ancho fijo
+            const tdFranquicia = document.createElement('td');
+            tdFranquicia.style.width = '25%';
+            tdFranquicia.style.minWidth = '160px';
+            tdFranquicia.style.maxWidth = '200px';
             tdFranquicia.innerHTML = `
                 <div class="d-flex flex-column">
                     <strong style="font-size: 0.75rem;">${franquicia.nombre}</strong>
-                    <small class="text-muted" style="font-size: 0.65rem;">${franquicia.codigo}</small>
+                    <small class="text-muted" style="font-size: 0.65rem;">${franquicia.nro_sucurs}</small>
                 </div>
             `;
             fila.appendChild(tdFranquicia);
             
-            // Columna de estado general
+            // Columna de estado general con ancho fijo
             const tdEstado = document.createElement('td');
             tdEstado.className = 'estado-general';
+            tdEstado.style.width = '12%';
+            tdEstado.style.minWidth = '90px';
+            tdEstado.style.maxWidth = '110px';
             const informoAlgunRubro = franquicia.rubros_informados && franquicia.rubros_informados.length > 0;
             tdEstado.innerHTML = `
                 <span class="badge ${informoAlgunRubro ? 'bg-success' : 'bg-danger'}">
@@ -777,10 +1074,21 @@ class ReportesCumplimientoManager {
             `;
             fila.appendChild(tdEstado);
             
-            // Columnas de rubros
+            // Columnas de rubros con ancho distribuido
             rubros.forEach(rubro => {
                 const tdRubro = document.createElement('td');
                 tdRubro.className = 'cumplimiento-cell';
+                
+                // Aplicar ancho y visibilidad basado en filtros
+                const esVisible = this.filtrosBusqueda.rubrosActivos.includes(rubro.nombre);
+                if (esVisible) {
+                    tdRubro.style.display = '';
+                    tdRubro.style.width = `${anchoRubroPorcentaje}%`;
+                    tdRubro.style.minWidth = '60px';
+                    tdRubro.style.maxWidth = '80px';
+                } else {
+                    tdRubro.style.display = 'none';
+                }
                 
                 const informoRubro = franquicia.rubros_informados && 
                                    franquicia.rubros_informados.includes(rubro.nombre);
@@ -800,6 +1108,356 @@ class ReportesCumplimientoManager {
             
             tbody.appendChild(fila);
         });
+        
+        // Asegurar que la tabla mantenga el layout fijo
+        const tabla = document.getElementById('tabla-cumplimiento-rubros');
+        if (tabla) {
+            tabla.style.tableLayout = 'fixed';
+            tabla.style.width = '100%';
+        }
+    }
+    
+    inicializarFiltrosRubros(rubros) {
+        const contenedorFiltros = document.getElementById('filtros-rubros');
+        if (!contenedorFiltros) return;
+        
+        contenedorFiltros.innerHTML = '';
+        
+        // Inicializar todos los rubros como activos
+        this.filtrosBusqueda.rubrosActivos = rubros.map(r => r.nombre);
+        
+        rubros.forEach(rubro => {
+            const botonFiltro = document.createElement('button');
+            botonFiltro.type = 'button';
+            botonFiltro.className = 'filtro-rubro activo';
+            botonFiltro.dataset.rubro = rubro.nombre;
+            botonFiltro.textContent = rubro.nombre;
+            
+            botonFiltro.addEventListener('click', () => {
+                this.alternarFiltroRubro(rubro.nombre);
+            });
+            
+            contenedorFiltros.appendChild(botonFiltro);
+        });
+    }
+    
+    alternarFiltroRubro(nombreRubro) {
+        const botonFiltro = document.querySelector(`.filtro-rubro[data-rubro="${nombreRubro}"]`);
+        if (!botonFiltro) return;
+        
+        const indice = this.filtrosBusqueda.rubrosActivos.indexOf(nombreRubro);
+        
+        if (indice > -1) {
+            // Desactivar filtro
+            this.filtrosBusqueda.rubrosActivos.splice(indice, 1);
+            botonFiltro.classList.remove('activo');
+        } else {
+            // Activar filtro
+            this.filtrosBusqueda.rubrosActivos.push(nombreRubro);
+            botonFiltro.classList.add('activo');
+        }
+        
+        this.aplicarFiltros();
+    }
+    
+    alternarOrdenFranquicia() {
+        const estados = ['asc', 'desc', 'default']; // Cambiar el orden: primero A-Z, luego Z-A, luego default
+        const indiceActual = estados.indexOf(this.filtrosBusqueda.ordenFranquicia);
+        const siguienteIndice = (indiceActual + 1) % estados.length;
+        
+        this.filtrosBusqueda.ordenFranquicia = estados[siguienteIndice];
+        
+        // Actualizar icono
+        const icono = document.querySelector('.sortable-column[data-column="franquicia"] .sort-icon');
+        if (icono) {
+            icono.classList.remove('asc', 'desc');
+            if (this.filtrosBusqueda.ordenFranquicia === 'asc') {
+                icono.classList.add('asc');
+            } else if (this.filtrosBusqueda.ordenFranquicia === 'desc') {
+                icono.classList.add('desc');
+            }
+        }
+        
+        this.aplicarFiltros();
+    }
+    
+    alternarOrdenEstadoGeneral() {
+        const estados = ['informed', 'notinformed', 'default']; // Informaron primero, No informaron primero, default
+        const indiceActual = estados.indexOf(this.filtrosBusqueda.ordenEstadoGeneral);
+        const siguienteIndice = (indiceActual + 1) % estados.length;
+        
+        this.filtrosBusqueda.ordenEstadoGeneral = estados[siguienteIndice];
+        
+        // Actualizar icono
+        const icono = document.querySelector('.sortable-column[data-column="estado"] .sort-icon');
+        if (icono) {
+            icono.classList.remove('asc', 'desc');
+            if (this.filtrosBusqueda.ordenEstadoGeneral === 'informed') {
+                icono.classList.add('asc'); // Informaron primero
+            } else if (this.filtrosBusqueda.ordenEstadoGeneral === 'notinformed') {
+                icono.classList.add('desc'); // No informaron primero
+            }
+        }
+        
+        this.aplicarFiltros();
+    }
+    
+    alternarOrdenRubro(nombreRubro) {
+        const estados = ['default', 'loaded', 'notloaded'];
+        const estadoActual = this.filtrosBusqueda.ordenRubros[nombreRubro] || 'default';
+        const indiceActual = estados.indexOf(estadoActual);
+        const siguienteIndice = (indiceActual + 1) % estados.length;
+        
+        // Resetear todos los otros ordenamientos de rubros
+        this.filtrosBusqueda.ordenRubros = {};
+        this.filtrosBusqueda.ordenRubros[nombreRubro] = estados[siguienteIndice];
+        
+        // Resetear iconos de todos los rubros
+        document.querySelectorAll('.sortable-rubro .sort-icon').forEach(icono => {
+            icono.classList.remove('asc', 'desc');
+        });
+        
+        // Actualizar icono del rubro actual
+        const icono = document.querySelector(`.sortable-rubro[data-rubro="${nombreRubro}"] .sort-icon`);
+        if (icono) {
+            if (this.filtrosBusqueda.ordenRubros[nombreRubro] === 'loaded') {
+                icono.classList.add('asc'); // Cargados primero
+            } else if (this.filtrosBusqueda.ordenRubros[nombreRubro] === 'notloaded') {
+                icono.classList.add('desc'); // No cargados primero
+            }
+        }
+        
+        this.aplicarFiltros();
+    }
+    
+    aplicarFiltros() {
+        if (!this.datosOriginales) return;
+        
+        let franquiciasFiltradas = [...this.datosOriginales.franquicias];
+        
+        // Aplicar filtro de texto
+        if (this.filtrosBusqueda.texto) {
+            franquiciasFiltradas = franquiciasFiltradas.filter(franquicia => 
+                franquicia.nombre.toLowerCase().includes(this.filtrosBusqueda.texto) ||
+                franquicia.nro_sucurs.toString().includes(this.filtrosBusqueda.texto) ||
+                `sucursal ${franquicia.nro_sucurs}`.toLowerCase().includes(this.filtrosBusqueda.texto)
+            );
+        }
+        
+        // Aplicar ordenamiento de franquicias
+        if (this.filtrosBusqueda.ordenFranquicia === 'asc') {
+            franquiciasFiltradas.sort((a, b) => a.nombre.localeCompare(b.nombre));
+        } else if (this.filtrosBusqueda.ordenFranquicia === 'desc') {
+            franquiciasFiltradas.sort((a, b) => b.nombre.localeCompare(a.nombre));
+        }
+        
+        // Aplicar ordenamiento por estado general
+        if (this.filtrosBusqueda.ordenEstadoGeneral === 'informed') {
+            franquiciasFiltradas.sort((a, b) => {
+                const aInformo = a.rubros_informados && a.rubros_informados.length > 0;
+                const bInformo = b.rubros_informados && b.rubros_informados.length > 0;
+                
+                if (aInformo && !bInformo) return -1; // a informó, b no -> a primero
+                if (!aInformo && bInformo) return 1;  // a no informó, b sí -> b primero
+                return 0; // ambos iguales
+            });
+        } else if (this.filtrosBusqueda.ordenEstadoGeneral === 'notinformed') {
+            franquiciasFiltradas.sort((a, b) => {
+                const aInformo = a.rubros_informados && a.rubros_informados.length > 0;
+                const bInformo = b.rubros_informados && b.rubros_informados.length > 0;
+                
+                if (!aInformo && bInformo) return -1; // a no informó, b sí -> a primero
+                if (aInformo && !bInformo) return 1;  // a informó, b no -> b primero
+                return 0; // ambos iguales
+            });
+        }
+        
+        // Aplicar ordenamiento por rubros
+        const ordenRubroActivo = Object.entries(this.filtrosBusqueda.ordenRubros)
+            .find(([rubro, orden]) => orden !== 'default');
+        
+        if (ordenRubroActivo) {
+            const [nombreRubro, tipoOrden] = ordenRubroActivo;
+            franquiciasFiltradas.sort((a, b) => {
+                const aInformo = a.rubros_informados && a.rubros_informados.includes(nombreRubro);
+                const bInformo = b.rubros_informados && b.rubros_informados.includes(nombreRubro);
+                
+                if (tipoOrden === 'loaded') {
+                    // Cargados primero
+                    if (aInformo && !bInformo) return -1;
+                    if (!aInformo && bInformo) return 1;
+                } else if (tipoOrden === 'notloaded') {
+                    // No cargados primero
+                    if (!aInformo && bInformo) return -1;
+                    if (aInformo && !bInformo) return 1;
+                }
+                
+                return 0;
+            });
+        }
+        
+        // Recrear tabla con datos filtrados
+        this.crearFilasTabla(franquiciasFiltradas, this.datosOriginales.rubros);
+        
+        // Actualizar headers para reflejar cambios en filtros de rubros
+        this.crearHeadersTabla(this.datosOriginales.rubros);
+    }
+    
+    aplicarFiltrosColumnas() {
+        if (!this.datosOriginales) return;
+        
+        const tabla = document.getElementById('tabla-cumplimiento-rubros');
+        if (!tabla) return;
+        
+        // Calcular ancho disponible para rubros
+        const rubrosVisibles = this.filtrosBusqueda.rubrosActivos.length;
+        const anchoRubroPorcentaje = rubrosVisibles > 0 ? Math.max(63 / rubrosVisibles, 4) : 4; // Mínimo 4%, máximo proporcional
+        
+        // Aplicar estilos a las columnas fijas
+        const franquiciaHeader = tabla.querySelector('thead tr th:nth-child(1)');
+        const estadoHeader = tabla.querySelector('thead tr th:nth-child(2)');
+        
+        if (franquiciaHeader) {
+            franquiciaHeader.style.width = '25%';
+            franquiciaHeader.style.minWidth = '160px';
+            franquiciaHeader.style.maxWidth = '200px';
+        }
+        
+        if (estadoHeader) {
+            estadoHeader.style.width = '12%';
+            estadoHeader.style.minWidth = '90px';
+            estadoHeader.style.maxWidth = '110px';
+        }
+        
+        // Aplicar las mismas medidas a las celdas del cuerpo
+        const filasCuerpo = tabla.querySelectorAll('tbody tr');
+        filasCuerpo.forEach(fila => {
+            const celdaFranquicia = fila.querySelector('td:nth-child(1)');
+            const celdaEstado = fila.querySelector('td:nth-child(2)');
+            
+            if (celdaFranquicia) {
+                celdaFranquicia.style.width = '25%';
+                celdaFranquicia.style.minWidth = '160px';
+                celdaFranquicia.style.maxWidth = '200px';
+            }
+            
+            if (celdaEstado) {
+                celdaEstado.style.width = '12%';
+                celdaEstado.style.minWidth = '90px';
+                celdaEstado.style.maxWidth = '110px';
+            }
+        });
+        
+        // Obtener todas las columnas de rubros
+        this.datosOriginales.rubros.forEach((rubro, indice) => {
+            const indiceColumna = indice + 2; // +2 porque las primeras dos son franquicia y estado
+            const esVisible = this.filtrosBusqueda.rubrosActivos.includes(rubro.nombre);
+            
+            // Header
+            const header = tabla.querySelector(`thead tr th:nth-child(${indiceColumna + 1})`);
+            if (header) {
+                if (esVisible) {
+                    header.style.display = '';
+                    header.style.width = `${anchoRubroPorcentaje}%`;
+                    header.style.minWidth = '60px';
+                    header.style.maxWidth = '80px';
+                } else {
+                    header.style.display = 'none';
+                }
+            }
+            
+            // Celdas del cuerpo
+            const celdas = tabla.querySelectorAll(`tbody tr td:nth-child(${indiceColumna + 1})`);
+            celdas.forEach(celda => {
+                if (esVisible) {
+                    celda.style.display = '';
+                    celda.style.width = `${anchoRubroPorcentaje}%`;
+                    celda.style.minWidth = '60px';
+                    celda.style.maxWidth = '80px';
+                } else {
+                    celda.style.display = 'none';
+                }
+            });
+        });
+        
+        // Aplicar table-layout fixed para mejor control de anchos
+        tabla.style.tableLayout = 'fixed';
+        tabla.style.width = '100%';
+    }
+    
+    obtenerDatosFiltrados() {
+        if (!this.datosOriginales) return null;
+        
+        let franquiciasFiltradas = [...this.datosOriginales.franquicias];
+        
+        // Aplicar filtro de texto
+        if (this.filtrosBusqueda.texto) {
+            franquiciasFiltradas = franquiciasFiltradas.filter(franquicia => 
+                franquicia.nombre.toLowerCase().includes(this.filtrosBusqueda.texto) ||
+                franquicia.nro_sucurs.toString().includes(this.filtrosBusqueda.texto) ||
+                `sucursal ${franquicia.nro_sucurs}`.toLowerCase().includes(this.filtrosBusqueda.texto)
+            );
+        }
+        
+        // Aplicar ordenamiento actual
+        if (this.filtrosBusqueda.ordenFranquicia === 'asc') {
+            franquiciasFiltradas.sort((a, b) => a.nombre.localeCompare(b.nombre));
+        } else if (this.filtrosBusqueda.ordenFranquicia === 'desc') {
+            franquiciasFiltradas.sort((a, b) => b.nombre.localeCompare(a.nombre));
+        }
+        
+        // Aplicar ordenamiento por estado general
+        if (this.filtrosBusqueda.ordenEstadoGeneral === 'informed') {
+            franquiciasFiltradas.sort((a, b) => {
+                const aInformo = a.rubros_informados && a.rubros_informados.length > 0;
+                const bInformo = b.rubros_informados && b.rubros_informados.length > 0;
+                
+                if (aInformo && !bInformo) return -1;
+                if (!aInformo && bInformo) return 1;
+                return 0;
+            });
+        } else if (this.filtrosBusqueda.ordenEstadoGeneral === 'notinformed') {
+            franquiciasFiltradas.sort((a, b) => {
+                const aInformo = a.rubros_informados && a.rubros_informados.length > 0;
+                const bInformo = b.rubros_informados && b.rubros_informados.length > 0;
+                
+                if (!aInformo && bInformo) return -1;
+                if (aInformo && !bInformo) return 1;
+                return 0;
+            });
+        }
+        
+        // Aplicar ordenamiento por rubros
+        const ordenRubroActivo = Object.entries(this.filtrosBusqueda.ordenRubros)
+            .find(([rubro, orden]) => orden !== 'default');
+        
+        if (ordenRubroActivo) {
+            const [nombreRubro, tipoOrden] = ordenRubroActivo;
+            franquiciasFiltradas.sort((a, b) => {
+                const aInformo = a.rubros_informados && a.rubros_informados.includes(nombreRubro);
+                const bInformo = b.rubros_informados && b.rubros_informados.includes(nombreRubro);
+                
+                if (tipoOrden === 'loaded') {
+                    if (aInformo && !bInformo) return -1;
+                    if (!aInformo && bInformo) return 1;
+                } else if (tipoOrden === 'notloaded') {
+                    if (!aInformo && bInformo) return -1;
+                    if (aInformo && !bInformo) return 1;
+                }
+                
+                return 0;
+            });
+        }
+        
+        // Filtrar rubros activos
+        const rubrosActivos = this.datosOriginales.rubros.filter(rubro => 
+            this.filtrosBusqueda.rubrosActivos.includes(rubro.nombre)
+        );
+        
+        return {
+            franquicias: franquiciasFiltradas,
+            rubros: rubrosActivos
+        };
     }
     
     async exportarReporte() {
@@ -809,24 +1467,31 @@ class ReportesCumplimientoManager {
         }
         
         try {
+            // Obtener datos filtrados y ordenados
+            const datosFiltrados = this.obtenerDatosFiltrados();
+            if (!datosFiltrados) {
+                this.mostrarAlerta('Error al obtener datos filtrados', 'danger');
+                return;
+            }
+            
             // Crear datos para Excel
             const headers = ['Franquicia', 'Código', 'Estado General'];
-            this.datosReporte.rubros.forEach(rubro => {
+            datosFiltrados.rubros.forEach(rubro => {
                 headers.push(rubro.nombre);
             });
 
             const datos = [];
             datos.push(headers);
             
-            this.datosReporte.franquicias.forEach(franquicia => {
+            datosFiltrados.franquicias.forEach(franquicia => {
                 const informoAlgunRubro = franquicia.rubros_informados && franquicia.rubros_informados.length > 0;
                 const fila = [
                     franquicia.nombre,
-                    franquicia.codigo,
+                    `SUCURSAL ${franquicia.nro_sucurs}`,
                     informoAlgunRubro ? 'INFORMÓ' : 'NO INFORMÓ'
                 ];
                 
-                this.datosReporte.rubros.forEach(rubro => {
+                datosFiltrados.rubros.forEach(rubro => {
                     const informoRubro = franquicia.rubros_informados && 
                                        franquicia.rubros_informados.includes(rubro.nombre);
                     fila.push(informoRubro ? 'SÍ' : 'NO');
@@ -834,6 +1499,39 @@ class ReportesCumplimientoManager {
                 
                 datos.push(fila);
             });
+            
+            // Agregar información de filtros aplicados
+            if (this.filtrosBusqueda.texto || 
+                this.filtrosBusqueda.rubrosActivos.length !== this.datosOriginales.rubros.length ||
+                this.filtrosBusqueda.ordenFranquicia !== 'default' ||
+                Object.values(this.filtrosBusqueda.ordenRubros).some(orden => orden !== 'default')) {
+                
+                datos.push([]); // Fila vacía
+                datos.push(['FILTROS APLICADOS:']);
+                
+                if (this.filtrosBusqueda.texto) {
+                    datos.push(['Búsqueda:', this.filtrosBusqueda.texto]);
+                }
+                
+                if (this.filtrosBusqueda.rubrosActivos.length !== this.datosOriginales.rubros.length) {
+                    datos.push(['Rubros activos:', this.filtrosBusqueda.rubrosActivos.join(', ')]);
+                }
+                
+                if (this.filtrosBusqueda.ordenFranquicia !== 'default') {
+                    const ordenTexto = this.filtrosBusqueda.ordenFranquicia === 'asc' ? 'A-Z' : 'Z-A';
+                    datos.push(['Orden franquicias:', ordenTexto]);
+                }
+                
+                const ordenesRubro = Object.entries(this.filtrosBusqueda.ordenRubros)
+                    .filter(([rubro, orden]) => orden !== 'default');
+                
+                if (ordenesRubro.length > 0) {
+                    ordenesRubro.forEach(([rubro, orden]) => {
+                        const ordenTexto = orden === 'loaded' ? 'Cargados primero' : 'No cargados primero';
+                        datos.push([`Orden ${rubro}:`, ordenTexto]);
+                    });
+                }
+            }
             
             // Exportar a Excel usando la función global
             this.exportarAExcel(datos, `reporte_cumplimiento_${this.periodoActual}`, 'Reporte de Cumplimiento');
