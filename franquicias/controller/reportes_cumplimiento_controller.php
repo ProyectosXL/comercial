@@ -122,7 +122,13 @@ class ReportesCumplimientoController {
                 'success' => true,
                 'data' => $matrizCumplimiento,
                 'resumen' => $resumen,
-                'periodo' => $periodo
+                'periodo' => $periodo,
+                'debug_info' => [
+                    'total_franquicias_obtenidas' => count($franquicias),
+                    'total_franquicias_matriz' => count($matrizCumplimiento['franquicias']),
+                    'franquicia_812_en_consulta' => false, // se actualiza en obtenerTodasLasFranquicias
+                    'franquicia_812_en_matriz' => false    // se actualiza en crearMatrizCumplimiento
+                ]
             ];
             
         } catch (Exception $e) {
@@ -141,17 +147,41 @@ class ReportesCumplimientoController {
             }
             
             $sql = "SELECT 
-                        NOMBRE as codigo,
-                        DESCRIPCION as nombre,
-                        NRO_SUCURS as nro_sucurs
-                    FROM SOF_USUARIOS 
-                    WHERE TIPO = 'FRANQUICIA'
-                    AND NRO_SUCURS IS NOT NULL
-                    ORDER BY DESCRIPCION";
+                        u.NOMBRE as codigo,
+                        u.DESCRIPCION as nombre,
+                        u.NRO_SUCURS as nro_sucurs
+                    FROM SOF_USUARIOS u
+                    WHERE u.TIPO = 'FRANQUICIA'
+                    AND u.NRO_SUCURS IS NOT NULL
+                    AND u.NRO_SUCURS IN (
+                        SELECT s.NRO_SUCURSAL 
+                        FROM [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s 
+                        WHERE s.CANAL = 'FRANQUICIAS' 
+                        AND s.HABILITADO = 1 
+                        AND s.NRO_SUC_MADRE IS NULL
+                    )
+                    ORDER BY u.DESCRIPCION";
             
-            $stmt = sqlsrv_query($this->laker_conn, $sql);
+            error_log("DEBUG REPORTES: Ejecutando consulta SQL: " . $sql);
             
-            $franquicias = [];
+            // También vamos a verificar qué devuelve la subconsulta sola
+            $subQuery = "SELECT s.NRO_SUCURSAL FROM [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s WHERE s.CANAL = 'FRANQUICIAS' AND s.HABILITADO = 1 AND s.NRO_SUC_MADRE IS NULL";
+            $subStmt = sqlsrv_query($this->laker_conn, $subQuery);
+            $sucursalesValidas = [];
+            if ($subStmt) {
+                while ($row = sqlsrv_fetch_array($subStmt, SQLSRV_FETCH_ASSOC)) {
+                    $sucursalesValidas[] = $row['NRO_SUCURSAL'];
+                }
+                sqlsrv_free_stmt($subStmt);
+            }
+            error_log("DEBUG REPORTES: Subconsulta devuelve " . count($sucursalesValidas) . " sucursales válidas");
+            if (in_array(812, $sucursalesValidas)) {
+                error_log("DEBUG REPORTES: ¡La sucursal 812 SÍ está en la subconsulta!");
+            } else {
+                error_log("DEBUG REPORTES: La sucursal 812 NO está en la subconsulta");
+            }
+
+            $stmt = sqlsrv_query($this->laker_conn, $sql);            $franquicias = [];
             if ($stmt) {
                 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                     $franquicias[] = [
@@ -160,13 +190,27 @@ class ReportesCumplimientoController {
                         'nombre' => $row['nombre'],
                         'nro_sucurs' => $row['nro_sucurs']
                     ];
+                    error_log("DEBUG REPORTES: Franquicia obtenida - ID: " . $row['nro_sucurs'] . " - " . $row['nombre']);
                 }
                 sqlsrv_free_stmt($stmt);
             } else {
                 error_log("Error SQL obtener franquicias de LAKER_SA: " . print_r(sqlsrv_errors(), true));
             }
             
-            error_log("DEBUG REPORTES: Obtenidas " . count($franquicias) . " franquicias desde SOF_USUARIOS");
+            error_log("DEBUG REPORTES: Obtenidas " . count($franquicias) . " franquicias habilitadas desde SOF_USUARIOS + SUCURSALES_LAKERS");
+            
+            // Debug específico: verificar si la 812 está en la lista
+            $encontrada812 = false;
+            foreach ($franquicias as $f) {
+                if ($f['id'] == 812) {
+                    $encontrada812 = true;
+                    error_log("DEBUG REPORTES: ¡ENCONTRADA! Franquicia 812 obtenida de la consulta SQL: " . $f['nombre']);
+                }
+            }
+            if (!$encontrada812) {
+                error_log("DEBUG REPORTES: Franquicia 812 NO está en la consulta SQL");
+            }
+            
             return $franquicias;
             
         } catch (Exception $e) {
@@ -267,6 +311,8 @@ class ReportesCumplimientoController {
     private function crearMatrizCumplimiento($franquicias, $rubros, $stockData) {
         $matrizFranquicias = [];
         
+        error_log("DEBUG REPORTES: Procesando " . count($franquicias) . " franquicias filtradas en crearMatrizCumplimiento");
+        
         foreach ($franquicias as $franquicia) {
             $franquiciaId = $franquicia['id'];
             $rubrosInformados = [];
@@ -280,12 +326,27 @@ class ReportesCumplimientoController {
                 'id' => $franquicia['id'],
                 'nombre' => $franquicia['nombre'],
                 'codigo' => $franquicia['codigo'],
+                'nro_sucurs' => $franquicia['nro_sucurs'],
                 'activa' => $franquicia['activa'],
                 'rubros_informados' => $rubrosInformados,
                 'total_rubros_informados' => count($rubrosInformados)
             ];
         }
         
+        error_log("DEBUG REPORTES: Matriz creada con " . count($matrizFranquicias) . " franquicias");
+        
+        // Debug: verificar si alguna franquicia específica está en la matriz
+        $encontrada812 = false;
+        foreach ($matrizFranquicias as $f) {
+            if ($f['id'] == 812) {
+                $encontrada812 = true;
+                error_log("DEBUG REPORTES: ¡ENCONTRADA! Franquicia 812 está en la matriz final: " . $f['nombre']);
+            }
+        }
+        if (!$encontrada812) {
+            error_log("DEBUG REPORTES: Franquicia 812 NO está en la matriz final");
+        }
+
         return [
             'franquicias' => $matrizFranquicias,
             'rubros' => $rubros
