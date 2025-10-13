@@ -139,6 +139,7 @@ class ReportesCumplimientoController {
     
     /**
      * Obtener TODAS las franquicias del sistema desde SOF_USUARIOS
+     * Modificado para hacer dos consultas separadas como se solicitó
      */
     private function obtenerTodasLasFranquicias() {
         try {
@@ -146,75 +147,109 @@ class ReportesCumplimientoController {
                 throw new Exception('No hay conexión a la base LAKER_SA');
             }
             
-            $sql = "SELECT 
-                        u.NOMBRE as codigo,
-                        u.DESCRIPCION as nombre,
-                        u.NRO_SUCURS as nro_sucurs
-                    FROM SOF_USUARIOS u
-                    WHERE u.TIPO = 'FRANQUICIA'
-                    AND u.NRO_SUCURS IS NOT NULL
-                    AND u.NRO_SUCURS IN (
-                        SELECT s.NRO_SUCURSAL 
-                        FROM [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s 
-                        WHERE s.CANAL = 'FRANQUICIAS' 
-                        AND s.HABILITADO = 1 
-                        AND s.NRO_SUC_MADRE IS NULL
-                    )
-                    ORDER BY u.DESCRIPCION";
+            // PRIMERA CONSULTA: Obtener las sucursales reales de franquicias
+            $sqlSucursalesReales = "SELECT NRO_SUCURSAL 
+                                   FROM [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS 
+                                   WHERE HABILITADO = 1 
+                                   AND CANAL = 'FRANQUICIAS' 
+                                   AND NRO_SUC_MADRE IS NULL AND NRO_SUCURSAL NOT IN (812, 912)";
             
-            error_log("DEBUG REPORTES: Ejecutando consulta SQL: " . $sql);
+            error_log("DEBUG REPORTES: Ejecutando PRIMERA consulta para obtener sucursales reales: " . $sqlSucursalesReales);
             
-            // También vamos a verificar qué devuelve la subconsulta sola
-            $subQuery = "SELECT s.NRO_SUCURSAL FROM [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s WHERE s.CANAL = 'FRANQUICIAS' AND s.HABILITADO = 1 AND s.NRO_SUC_MADRE IS NULL";
-            $subStmt = sqlsrv_query($this->laker_conn, $subQuery);
+            $stmtSucursales = sqlsrv_query($this->laker_conn, $sqlSucursalesReales);
             $sucursalesValidas = [];
-            if ($subStmt) {
-                while ($row = sqlsrv_fetch_array($subStmt, SQLSRV_FETCH_ASSOC)) {
-                    $sucursalesValidas[] = $row['NRO_SUCURSAL'];
+            
+            if ($stmtSucursales) {
+                while ($row = sqlsrv_fetch_array($stmtSucursales, SQLSRV_FETCH_ASSOC)) {
+                    $sucursalesValidas[] = intval($row['NRO_SUCURSAL']);
                 }
-                sqlsrv_free_stmt($subStmt);
-            }
-            error_log("DEBUG REPORTES: Subconsulta devuelve " . count($sucursalesValidas) . " sucursales válidas");
-            if (in_array(812, $sucursalesValidas)) {
-                error_log("DEBUG REPORTES: ¡La sucursal 812 SÍ está en la subconsulta!");
+                sqlsrv_free_stmt($stmtSucursales);
             } else {
-                error_log("DEBUG REPORTES: La sucursal 812 NO está en la subconsulta");
+                error_log("Error SQL obtener sucursales válidas: " . print_r(sqlsrv_errors(), true));
+                throw new Exception("No se pudieron obtener las sucursales válidas");
             }
-
-            $stmt = sqlsrv_query($this->laker_conn, $sql);            $franquicias = [];
-            if ($stmt) {
-                while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                    $franquicias[] = [
-                        'id' => $row['nro_sucurs'], // Usamos NRO_SUCURS como ID para que coincida con franquicia_historial_stock
+            
+            error_log("DEBUG REPORTES: Primera consulta devuelve " . count($sucursalesValidas) . " sucursales válidas");
+            error_log("DEBUG REPORTES: Sucursales válidas: " . implode(', ', array_slice($sucursalesValidas, 0, 10)) . (count($sucursalesValidas) > 10 ? '...' : ''));
+            
+            // Verificar si sucursales específicas están incluidas
+            if (in_array(812, $sucursalesValidas)) {
+                error_log("DEBUG REPORTES: ¡La sucursal 812 SÍ está en la lista de sucursales válidas!");
+            } else {
+                error_log("DEBUG REPORTES: La sucursal 812 NO está en la lista de sucursales válidas");
+            }
+            
+            // Si no hay sucursales válidas, retornar array vacío
+            if (empty($sucursalesValidas)) {
+                error_log("DEBUG REPORTES: No se encontraron sucursales válidas, retornando array vacío");
+                return [];
+            }
+            
+            // SEGUNDA CONSULTA: Obtener todas las franquicias de SOF_USUARIOS
+            $sqlTodasFranquicias = "SELECT 
+                                       u.NOMBRE as codigo,
+                                       u.DESCRIPCION as nombre,
+                                       u.NRO_SUCURS as nro_sucurs
+                                   FROM SOF_USUARIOS u
+                                   WHERE u.TIPO = 'FRANQUICIA'
+                                   AND u.NRO_SUCURS IS NOT NULL
+                                   ORDER BY u.DESCRIPCION";
+            
+            error_log("DEBUG REPORTES: Ejecutando SEGUNDA consulta para obtener todas las franquicias: " . $sqlTodasFranquicias);
+            
+            $stmtFranquicias = sqlsrv_query($this->laker_conn, $sqlTodasFranquicias);
+            $todasLasFranquicias = [];
+            
+            if ($stmtFranquicias) {
+                while ($row = sqlsrv_fetch_array($stmtFranquicias, SQLSRV_FETCH_ASSOC)) {
+                    $todasLasFranquicias[] = [
                         'codigo' => $row['codigo'],
                         'nombre' => $row['nombre'],
-                        'nro_sucurs' => $row['nro_sucurs']
+                        'nro_sucurs' => intval($row['nro_sucurs'])
                     ];
-                    error_log("DEBUG REPORTES: Franquicia obtenida - ID: " . $row['nro_sucurs'] . " - " . $row['nombre']);
                 }
-                sqlsrv_free_stmt($stmt);
+                sqlsrv_free_stmt($stmtFranquicias);
             } else {
-                error_log("Error SQL obtener franquicias de LAKER_SA: " . print_r(sqlsrv_errors(), true));
+                error_log("Error SQL obtener todas las franquicias: " . print_r(sqlsrv_errors(), true));
+                throw new Exception("No se pudieron obtener las franquicias de SOF_USUARIOS");
             }
             
-            error_log("DEBUG REPORTES: Obtenidas " . count($franquicias) . " franquicias habilitadas desde SOF_USUARIOS + SUCURSALES_LAKERS");
+            error_log("DEBUG REPORTES: Segunda consulta devuelve " . count($todasLasFranquicias) . " franquicias totales de SOF_USUARIOS");
             
-            // Debug específico: verificar si la 812 está en la lista
+            // FILTRADO: Conservar solo las franquicias cuyo nro_sucurs esté en la lista de sucursales válidas
+            $franquiciasFiltradas = [];
+            foreach ($todasLasFranquicias as $franquicia) {
+                if (in_array($franquicia['nro_sucurs'], $sucursalesValidas)) {
+                    $franquiciasFiltradas[] = [
+                        'id' => $franquicia['nro_sucurs'], // Usamos NRO_SUCURS como ID para que coincida con franquicia_historial_stock
+                        'codigo' => $franquicia['codigo'],
+                        'nombre' => $franquicia['nombre'],
+                        'nro_sucurs' => $franquicia['nro_sucurs']
+                    ];
+                    error_log("DEBUG REPORTES: Franquicia INCLUIDA - ID: " . $franquicia['nro_sucurs'] . " - " . $franquicia['nombre']);
+                } else {
+                    error_log("DEBUG REPORTES: Franquicia EXCLUIDA (no es franquicia real) - ID: " . $franquicia['nro_sucurs'] . " - " . $franquicia['nombre']);
+                }
+            }
+            
+            error_log("DEBUG REPORTES: Filtrado completado - " . count($franquiciasFiltradas) . " franquicias reales de " . count($todasLasFranquicias) . " usuarios tipo FRANQUICIA");
+            
+            // Debug específico: verificar si franquicias específicas están en la lista final
             $encontrada812 = false;
-            foreach ($franquicias as $f) {
+            foreach ($franquiciasFiltradas as $f) {
                 if ($f['id'] == 812) {
                     $encontrada812 = true;
-                    error_log("DEBUG REPORTES: ¡ENCONTRADA! Franquicia 812 obtenida de la consulta SQL: " . $f['nombre']);
+                    error_log("DEBUG REPORTES: ¡ENCONTRADA! Franquicia 812 está en la lista final: " . $f['nombre']);
                 }
             }
             if (!$encontrada812) {
-                error_log("DEBUG REPORTES: Franquicia 812 NO está en la consulta SQL");
+                error_log("DEBUG REPORTES: Franquicia 812 NO está en la lista final");
             }
             
-            return $franquicias;
+            return $franquiciasFiltradas;
             
         } catch (Exception $e) {
-            error_log("Error obtener franquicias desde SOF_USUARIOS: " . $e->getMessage());
+            error_log("Error obtener franquicias desde SOF_USUARIOS con filtrado por sucursales reales: " . $e->getMessage());
             return [];
         }
     }
