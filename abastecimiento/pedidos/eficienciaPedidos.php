@@ -2,9 +2,12 @@
 session_start();
 
 // Establecer entorno por defecto a ARG (central) si no existe
-if (!isset($_SESSION['entorno'])) {
+if (!isset($_SESSION['entorno']) || empty($_SESSION['entorno'])) {
     $_SESSION['entorno'] = 'central';
 }
+
+// Debug: registrar el entorno actual
+error_log("Entorno actual en sesión: " . $_SESSION['entorno']);
 
 require_once '../class/Pedido.php';
 $pedido = new Pedido();
@@ -28,6 +31,9 @@ if (isset($_GET['buscar']) && $_GET['buscar'] == '1') {
 // Configuración del toggle - por defecto ARG
 $checkedValue = $_SESSION['entorno'];
 $isARG = ($checkedValue === 'central');
+
+// Debug: mostrar estado del toggle
+error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 'false'));
 ?>
 
 <!DOCTYPE html>
@@ -348,6 +354,6 @@ $isARG = ($checkedValue === 'central');
     <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
     
     <!-- Custom JS -->
-    <script src="js/eficienciaPedidos.js"></script>
+    <script src="js/eficienciaPedidos.js?v=<?= time() ?>"></script>
 </body>
 </html>

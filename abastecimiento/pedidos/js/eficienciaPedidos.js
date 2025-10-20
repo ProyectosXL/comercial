@@ -45,7 +45,9 @@ function inicializarComponentes() {
     
     // Event listener para cambio de entorno
     $('#checkEntorno').change(function() {
-        cambiarEntorno($(this).prop('checked'));
+        const isChecked = $(this).prop('checked');
+        console.log('Toggle cambiado. Estado:', isChecked ? 'ARG (central)' : 'UY');
+        cambiarEntorno(isChecked);
     });
     
     // Event listener para el formulario
@@ -168,6 +170,8 @@ function cambiarEntorno(checked) {
     
     const entorno = checked ? 'central' : 'uy';
     
+    console.log('Cambiando entorno a:', entorno);
+    
     // Realizar petición AJAX para cambiar el entorno
     $.ajax({
         url: '../../assets/ajax/cambiarEntorno.php', // Ajusta la ruta según tu estructura
@@ -175,7 +179,9 @@ function cambiarEntorno(checked) {
         data: { entorno: entorno },
         dataType: 'json',
         success: function(response) {
+            console.log('Respuesta del servidor:', response);
             if (response.success) {
+                console.log('Entorno cambiado exitosamente. Recargando página...');
                 // Recargar la página para aplicar el cambio de entorno
                 location.reload();
             } else {
@@ -186,16 +192,22 @@ function cambiarEntorno(checked) {
                     text: 'No se pudo cambiar el entorno. Por favor, intente nuevamente.'
                 });
                 ocultarSpinner();
+                // Revertir el toggle al estado anterior
+                $('#checkEntorno').bootstrapToggle(checked ? 'off' : 'on');
             }
         },
         error: function(xhr, status, error) {
             console.error('Error AJAX al cambiar entorno:', error);
+            console.error('Status:', status);
+            console.error('Response:', xhr.responseText);
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
                 text: 'Ocurrió un error al cambiar el entorno.'
             });
             ocultarSpinner();
+            // Revertir el toggle al estado anterior
+            $('#checkEntorno').bootstrapToggle(checked ? 'off' : 'on');
         }
     });
 }
