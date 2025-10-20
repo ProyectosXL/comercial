@@ -12,7 +12,12 @@ class Pedido
 
         require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
         $this->cid = new Conexion();
-        session_start();
+        
+        // Iniciar sesión solo si no está iniciada
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
         $db = isset($_SESSION['entorno']) ? $_SESSION['entorno'] : 'central';
         $this->cid_central = $this->cid->conectar($db);
 

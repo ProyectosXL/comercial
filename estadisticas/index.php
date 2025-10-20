@@ -287,6 +287,14 @@ if (!isset($_SESSION['username'])) {
                                             <a href="https://app.powerbi.com/groups/10151113-0ef1-4fea-87ad-3360c85ddc8d/reports/11b704b2-513e-4d18-8e0b-f22300250d2f/5179d119d583647200c9?experience=power-bi&clientSideAuth=0" class="btn btn-success btn-card" target="_blank">Ver Dashboard</a>
                                         </div>
                                     </div>
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <i class="bi bi-megaphone card-icon color-info"></i>
+                                            <h5 class="card-title">Campaña de Ventas</h5>
+                                            <p class="card-subtitle">Seguimiento de campañas comerciales</p>
+                                            <a href="https://app.powerbi.com/groups/10151113-0ef1-4fea-87ad-3360c85ddc8d/reports/dbea17fa-17ec-48d0-8e20-9ac8eb76c1c8/57083f6306141d232526?experience=power-bi" class="btn btn-info btn-card" target="_blank">Ver Dashboard</a>
+                                        </div>
+                                    </div>
                                 </div>
                             </section>
                         </div>

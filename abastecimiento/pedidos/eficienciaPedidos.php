@@ -1,269 +1,353 @@
 <?php 
+session_start();
+
+// Establecer entorno por defecto a ARG (central) si no existe
+if (!isset($_SESSION['entorno'])) {
+    $_SESSION['entorno'] = 'central';
+}
 
 require_once '../class/Pedido.php';
 $pedido = new Pedido();
 $clientes = $pedido->traerClientes();
 
-$desde = isset($_GET['desde']) ? $_GET['desde'] : date('Y-m-d', strtotime('-30 day'));
+$desde = isset($_GET['desde']) ? $_GET['desde'] : date('Y-m-d', strtotime('-10 day'));
 $hasta = isset($_GET['hasta']) ? $_GET['hasta'] : date('Y-m-d');
-$canal = isset($_GET['selectCanal']) ? $_GET['selectCanal'] : '';
-$selectCliente = isset($_GET['selectCliente']) ?  $_GET['selectCliente'] : '';
-$estado = isset($_GET['selectEstado']) ? $_GET['selectEstado'] : '';
+$canal = isset($_GET['selectCanal']) ? $_GET['selectCanal'] : '%';
+$selectCliente = isset($_GET['selectCliente']) ? $_GET['selectCliente'] : '%';
+$estado = isset($_GET['selectEstado']) ? $_GET['selectEstado'] : '%';
 
 $data = [];
+$busquedaRealizada = false;
 
-if( $selectCliente != '' && $estado != ''){
-    
+// Solo cargar datos si se ha realizado una búsqueda (se envió el formulario)
+if (isset($_GET['buscar']) && $_GET['buscar'] == '1') {
     $data = $pedido->traePedido($desde, $hasta, $canal, $selectCliente, $estado);
+    $busquedaRealizada = true;
 }
 
-
-$checkedValue = isset($_SESSION['entorno']) ? $_SESSION['entorno'] : 'central';
-$dataOnValue = ($checkedValue === 'uy') ? 'UY' : 'ARG';
-$dataOffValue = ($checkedValue === 'uy') ? 'ARG' : 'UY';
-$imageOn = ($checkedValue === 'central') ? '../css/bandera_con_sol__55757_std.jpg' : '../css/UY.png';
-$imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_con_sol__55757_std.jpg';
-
+// Configuración del toggle - por defecto ARG
+$checkedValue = $_SESSION['entorno'];
+$isARG = ($checkedValue === 'central');
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta Pedidos por Canal</title>
 
-    <head>
-        <meta charset="UTF-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Consulta pedidos por canal</title>
-
- 
-        
-             <!-- INCLUDES CSS -->
-             <?php
-            require_once $_SERVER['DOCUMENT_ROOT'] .'/comercial/assets/css/css.php';
-            ?>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-   
-
-    <style>
-        .toggle-on {
-            background-image: url('<?= $imageOn ?>');
-            background-size: contain;
-            background-repeat: no-repeat;
-            height: 60px;
-            width: 60px;
-        }
-
-        .toggle-off {
-            background-image: url('<?= $imageOff ?>');
-            background-size: contain;
-            background-repeat: no-repeat;
-            height: 60px;
-            width: 60px;
-        }
-        #selectCliente + .select2-container .select2-selection {
-            height: 40px; /* Ajusta el valor según tus necesidades */
-        }
-        thead th {
-            position: sticky;
-            top: 0;
-            background-color: #f2f2f2;
-            z-index: 1;
-        }
-        .loading {
-            position: fixed;
-            left: 0px;
-            top: 0px;
-            width: 100%;
-            height: 100%;
-            z-index: 9999;
-            background: url('../css/g0R9.gif') 50% 50% no-repeat rgb(0, 0, 0);
-            opacity: .8;
-        }
-
-    </style>
-    </head>
-
-    <body>
-        
-      
-        <input type="file" name="archivos[]" id="archivos" multiple accept=".pdf, .jpg, .png" style="display: none;" />
-        <div id="carruselImagenes" class="modal fade" tabindex="-1" aria-hidden="true" style="margin-left:10%;max-width:80%"></div>
-        <div id="nroSucursal" hidden></div>
+    <!-- CSS Includes -->
+    <?php require_once $_SERVER['DOCUMENT_ROOT'] . '/comercial/assets/css/css.php'; ?>
     
-        <div class="alert alert-secondary">
-            <div class="page-wrapper bg-secondary p-b-100 pt-2 font-robo">
+    <!-- External CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.bootstrap4.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/eficienciaPedidos.css">
+</head>
 
-                <div class="wrapper wrapper--w880"><div style="color:white;text-align:center  "><h6 style="margin-left:1rem">Consulta pedidos por canal</h6></div>
-                <div id="boxLoading" class="boxLoading loading"></div>
-                    <div class="card card-1">
-                        <div  style="margin-left: 3px;margin-right: 3px;margin-top: 3px;margin-bottom: 3px;" id="tablaPedidosContainer" >
-                            <div id="periodo" hidden></div>
-                            <div class="row" style="margin-left:50px; margin-top:30px">
-                                <div class="col-11">
+<body>
+    <!-- Loading Spinner -->
+    <div id="boxLoading" class="loading-overlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Cargando...</span>
+        </div>
+    </div>
 
-                                <a href="http://192.168.0.13:8000/" style="display:inline-block;">
-                                    <img src="../../image/home-button.png" style="width:50px;height:45px;margin-left:-3rem;transition: transform 0.3s;" title="Menú" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-                                </a>
-                                    <h3><strong><i class="bi bi-cart-fill" style="margin-right:20px;font-size:40px"></i>Consulta pedidos por canal</strong></h3>
-                                </div>
-                                <div class="col-1">
-                                    <!-- <input type="checkbox" checked data-toggle="toggle" data-on="ARG" data-off="UY" class="custom-toggle" style="color:black; font-size: 0;" onchange="cambiarEntorno(this)" id="checkEntorno" <?= $_SESSION['CHECKED']  ?>> -->
-                                    <input type="checkbox" checked data-toggle="toggle" data-on="<?= $dataOnValue ?>" data-off="<?= $dataOffValue ?>" class="custom-toggle" style="color:black; font-size: 0;" onchange="cambiarEntorno(this)" id="checkEntorno" >
+    <!-- Main Container -->
+    <div class="container-fluid py-3">
+        <div class="card shadow-sm">
+            <!-- Header -->
+            <div class="card-header bg-primary text-white">
+                <div class="row align-items-center">
+                    <div class="col-auto">
+                        <a href="http://192.168.0.13:8000/" class="btn btn-light btn-sm" title="Ir al menú principal">
+                            <i class="fas fa-home"></i>
+                        </a>
+                    </div>
+                    <div class="col">
+                        <h5 class="mb-0">
+                            <i class="bi bi-cart-fill me-2"></i>
+                            Consulta Pedidos por Canal
+                        </h5>
+                    </div>
+                    <div class="col-auto">
+                        <input type="checkbox" 
+                               <?= $isARG ? 'checked' : '' ?> 
+                               data-toggle="toggle" 
+                               data-on="ARG" 
+                               data-off="UY" 
+                               data-onstyle="success" 
+                               data-offstyle="info"
+                               data-size="small"
+                               id="checkEntorno">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="card-body">
+                <form method="GET" id="formFiltros">
+                    <input type="hidden" name="buscar" value="1">
+                    <div class="row g-3 align-items-end mb-3">
+                        <div class="col-md-6 col-lg-2">
+                            <label for="desde" class="form-label">Desde:</label>
+                            <input type="date" 
+                                   id="desde" 
+                                   name="desde" 
+                                   class="form-control form-control-sm" 
+                                   value="<?= $desde ?>">
+                        </div>
+                        
+                        <div class="col-md-6 col-lg-2">
+                            <label for="hasta" class="form-label">Hasta:</label>
+                            <input type="date" 
+                                   id="hasta" 
+                                   name="hasta" 
+                                   class="form-control form-control-sm" 
+                                   value="<?= $hasta ?>">
+                        </div>
+
+                        <div class="col-md-6 col-lg-2">
+                            <label for="selectCanal" class="form-label">Canal:</label>
+                            <select name="selectCanal" 
+                                    id="selectCanal" 
+                                    class="form-select form-select-sm">
+                                <option value="%" <?= ($canal == '%') ? 'selected' : '' ?>>TODOS</option>
+                                <option value="PROPIOS" <?= ($canal == 'PROPIOS') ? 'selected' : '' ?>>PROPIOS</option>
+                                <option value="FRANQUICIAS" <?= ($canal == 'FRANQUICIAS') ? 'selected' : '' ?>>FRANQUICIAS</option>
+                                <option value="MAYORISTAS" <?= ($canal == 'MAYORISTAS') ? 'selected' : '' ?>>MAYORISTAS</option>
+                                <option value="ECOMMERCE" <?= ($canal == 'ECOMMERCE') ? 'selected' : '' ?>>ECOMMERCE</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 col-lg-3">
+                            <label for="selectCliente" class="form-label">Cliente:</label>
+                            <select name="selectCliente" 
+                                    id="selectCliente" 
+                                    class="form-select form-select-sm">
+                                <option value="%">TODOS</option>
+                                <?php 
+                                foreach ($clientes as $cliente) {
+                                    $selected = ($cliente['COD_CLIENT'] == $selectCliente) ? 'selected' : '';
+                                    echo "<option value='{$cliente['COD_CLIENT']}' {$selected}>";
+                                    echo htmlspecialchars($cliente['COD_CLIENT'] . " - " . $cliente['RAZON_SOCI']);
+                                    echo "</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 col-lg-2">
+                            <label for="selectEstado" class="form-label">Estado:</label>
+                            <select name="selectEstado" 
+                                    id="selectEstado" 
+                                    class="form-select form-select-sm">
+                                <option value="%" <?= ($estado == '%') ? 'selected' : '' ?>>TODOS</option>
+                                <option value="ABIERTO" <?= ($estado == 'ABIERTO') ? 'selected' : '' ?>>ABIERTO</option>
+                                <option value="CERRADO" <?= ($estado == 'CERRADO') ? 'selected' : '' ?>>CERRADO</option>
+                                <option value="CUMPLIDO" <?= ($estado == 'CUMPLIDO') ? 'selected' : '' ?>>CUMPLIDO</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-lg-1">
+                            <button type="submit" 
+                                    class="btn btn-primary btn-sm w-100">
+                                <i class="bi bi-search"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <button type="button" 
+                                    class="btn btn-success btn-sm" 
+                                    id="btnExportar"
+                                    <?= !$busquedaRealizada ? 'disabled' : '' ?>>
+                                <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- KPIs Cards -->
+                <?php if ($busquedaRealizada && count($data) > 0): 
+                    // Calcular KPIs
+                    $totalPedidos = count(array_unique(array_column($data, 'NRO_PEDIDO')));
+                    $totalUnidadesPedido = array_sum(array_column($data, 'CANT_PEDIDO'));
+                    $totalUnidadesRemitidas = array_sum(array_column($data, 'REMITIDO'));
+                    $porcentajeCumplimiento = $totalUnidadesPedido > 0 ? ($totalUnidadesRemitidas / $totalUnidadesPedido) * 100 : 0;
+                ?>
+                <div class="row mb-3 g-2">
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card kpi-card">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="kpi-icon bg-primary">
+                                        <i class="bi bi-file-text"></i>
+                                    </div>
+                                    <div class="kpi-content">
+                                        <div class="kpi-label">Cantidad de Pedidos</div>
+                                        <div class="kpi-value"><?= number_format($totalPedidos, 0, ',', '.') ?></div>
+                                    </div>
                                 </div>
                             </div>
-                            <form action="">
-                                <div class="form-row mb-3  contenedor">
-                                    <div class="col mt-2 form-inline" id="divFiltros" style="margin-left:3%">
-                                        <label for="fechaDesde" class="mr-2">Desde:</label>
-                                        <input type="date" id="desde" name="desde" class="mr-2" value='<?= $desde ?>' style="height:40px">
-                                        
-                                        <label for="fechaHasta" class="mr-2">Hasta:</label>
-                                        <input type="date" id="hasta" name="hasta" class="mr-2"  value='<?= $hasta ?>' style="height:40px">
-
-                                        <label for="canal" class="mr-2">Canal:</label>
-                                        <select name="selectCanal" id="selectCanal"  class="mr-2" style="height:40px">
-                                        <option value="%"  <?= ($canal == '' ) ? 'selected' : '' ?>>TODOS</option>
-                                            <option value="PROPIOS"  <?= ($canal == 'PROPIOS' ) ? 'selected' : '' ?>>PROPIOS</option>
-                                            <option value="FRANQUICIAS" <?= ($canal == 'FRANQUICIAS' ) ? 'selected' : '' ?>>FRANQUICIAS</option>
-                                            <option value="MAYORISTAS" <?= ($canal == 'MAYORISTAS' ) ? 'selected' : '' ?>>MAYORISTAS</option>
-                                            <option value="ECOMMERCE" <?= ($canal == 'ECOMMERCE' ) ? 'selected' : '' ?>>ECOMMERCE</option>
-                                        </select>
-
-                                        <label for="canal" class="mr-2">Cliente:</label>
-                                        <select name="selectCliente" id="selectCliente" class="mr-2" style="width: 202px;height:40px">
-                                            <option value="%">TODOS</option>
-                                            <?php 
-                                                foreach ($clientes as $cliente) {
-                                                    $selected = ($cliente['COD_CLIENT'] == $selectCliente) ? 'selected' : '';
-                    
-
-                                                    echo "<option value='".$cliente['COD_CLIENT']."'".$selected.">".$cliente['COD_CLIENT']."-".$cliente['RAZON_SOCI']."</option>";
-                                                }
-                                            ?>
-                                        </select>
-
-                                        <label for="canal" class="mr-2 ml-2">Estado:</label>
-                                        <select name="selectEstado" id="selectEstado" class="mr-2" style="height:40px">
-                                            <option value="%">TODOS</option>
-                                            <option value="ABIERTO" <?= ($estado == 'ABIERTO' ) ? 'selected' : '' ?> >ABIERTO</option>
-                                            <option value="CERRADO" <?= ($estado == 'CERRADO' ) ? 'selected' : '' ?> >CERRADO</option>
-                                            <option value="CUMPLIDO" <?= ($estado == 'CUMPLIDO' ) ? 'selected' : '' ?> >CUMPLIDO</option>
-                                        </select>
-
-                                        <button class="btn btn-primary" type="submit" onclick="mostrarSpinner()">Buscar <i class="bi bi-search"></i></button>
-                                        <button class="btn btn-success" type="button" onclick="exportar()" style="margin-left:10px">Exportar <i class="bi bi-file-earmark-text"></i></button>
-                                    </div>
-
-                    
-                                </div>
-                            </form>
                         </div>
-                        <table class="table table-striped table-bordered table-sm table-hover dataTable no-footer" id="tableMaestro" >
-                            <thead class="thead-dark" style="">
-                                <tr>
-                                    <th style="text-align:center;width:10%" >FECHA PEDIDO</th>
-                                    <th style="text-align:center;width:10%" >NRO. PEDIDO</th>
-                                    <th style="text-align:center;width:5%" >TALON_PED</th>
-                                    <th style="text-align:center;width:5%">DEPOSITO</th>
-                                    <th style="text-align:center;width:5%" >COD. CLIENTE</th>
-                                    <th style="text-align:center;width:10%" >NOMBRE CLIENTE</th>
-                                    <th style="text-align:center;width:5%" >CANAL</th>
-                                    <th style="text-align:center;width:5%" >TIPO</th>
-                                    <th style="text-align:center;width:10%" >COD. ARTICULO</th>
-                                    <th style="text-align:center;width:10%" >DESCRIPCION</th>
-                                    <th style="text-align:center;width:5%" >PEDIDO</th>
-                                    <th style="text-align:center;width:5%" >REMITIDO</th>
-                                    <th style="text-align:center;width:10%" >RUBRO</th>
-                                    <th style="text-align:center;width:10%" >ESTADO</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tableBody">
-                                <?php 
-                                    foreach ($data as $key => $pedido) {
-                                            
-                                ?>
-                                        <tr>
-                                            <td><?= $pedido['FECHA_PEDIDO']->format('Y-m-d') ?></td>
-                                            <td><?= $pedido['NRO_PEDIDO'] ?></td>
-                                            <td><?= $pedido['TALON_PED'] ?></td>
-                                            <td><?= $pedido['DEPOSITO'] ?></td>
-                                            <td><?= $pedido['COD_CLIENT'] ?></td>
-                                            <td><?= $pedido['NOMBRE_CLIENTE'] ?></td>
-                                            <td><?= $pedido['CANAL'] ?></td>
-                                            <td><?= $pedido['TIPO'] ?></td>
-                                            <td><?= $pedido['COD_ARTICU'] ?></td>
-                                            <td><?= $pedido['DESCRIPCIO'] ?></td>
-                                            <td><?= $pedido['CANT_PEDIDO'] ?></td>
-                                            <td><?= $pedido['REMITIDO'] ?></td>
-                                            <td><?= $pedido['RUBRO'] ?></td>
-                                            <td><?= $pedido['ESTADO'] ?></td>
-                                        </tr>
-                                <?php 
-                                    }
-                                ?>
-                            </tbody>
-                              
-            
-                        </table>
                     </div>
-                    <table>
-                        
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card kpi-card">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="kpi-icon bg-info">
+                                        <i class="bi bi-box-seam"></i>
+                                    </div>
+                                    <div class="kpi-content">
+                                        <div class="kpi-label">Total Unidades Pedido</div>
+                                        <div class="kpi-value"><?= number_format($totalUnidadesPedido, 0, ',', '.') ?></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card kpi-card">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="kpi-icon bg-success">
+                                        <i class="bi bi-check-circle"></i>
+                                    </div>
+                                    <div class="kpi-content">
+                                        <div class="kpi-label">Total Unidades Remitidas</div>
+                                        <div class="kpi-value"><?= number_format($totalUnidadesRemitidas, 0, ',', '.') ?></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="card kpi-card">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="kpi-icon <?= $porcentajeCumplimiento >= 90 ? 'bg-success' : ($porcentajeCumplimiento >= 70 ? 'bg-warning' : 'bg-danger') ?>">
+                                        <i class="bi bi-percent"></i>
+                                    </div>
+                                    <div class="kpi-content">
+                                        <div class="kpi-label">% Unidades Cumplidas</div>
+                                        <div class="kpi-value"><?= number_format($porcentajeCumplimiento, 1, ',', '.') ?>%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Table -->
+                <div class="table-responsive">
+                    <?php if (!$busquedaRealizada): ?>
+                    <!-- Mensaje inicial antes de buscar -->
+                    <div class="empty-state-container">
+                        <div class="empty-state-icon">
+                            <i class="bi bi-calendar-range"></i>
+                        </div>
+                        <h4 class="empty-state-title">Seleccione un rango de fechas para comenzar</h4>
+                        <p class="empty-state-text">Elija las fechas desde y hasta para visualizar el reporte consolidado de pedidos por canal</p>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <table id="tablePedidos" 
+                           class="table table-sm table-striped table-bordered table-hover nowrap" 
+                           style="width:100%; <?= !$busquedaRealizada ? 'display:none;' : '' ?>">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Nro. Pedido</th>
+                                <th>Talón</th>
+                                <th>Depósito</th>
+                                <th>Cód. Cliente</th>
+                                <th>Cliente</th>
+                                <th>Canal</th>
+                                <th>Tipo</th>
+                                <th>Cód. Artículo</th>
+                                <th>Descripción</th>
+                                <th>Pedido</th>
+                                <th>Remitido</th>
+                                <th>Rubro</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($data as $row): ?>
+                            <tr>
+                                <td><?= $row['FECHA_PEDIDO']->format('d/m/Y') ?></td>
+                                <td><?= htmlspecialchars($row['NRO_PEDIDO']) ?></td>
+                                <td><?= htmlspecialchars($row['TALON_PED']) ?></td>
+                                <td><?= htmlspecialchars($row['DEPOSITO']) ?></td>
+                                <td><?= htmlspecialchars($row['COD_CLIENT']) ?></td>
+                                <td><?= htmlspecialchars($row['NOMBRE_CLIENTE']) ?></td>
+                                <td><?= htmlspecialchars($row['CANAL']) ?></td>
+                                <td><?= htmlspecialchars($row['TIPO']) ?></td>
+                                <td><?= htmlspecialchars($row['COD_ARTICU']) ?></td>
+                                <td><?= htmlspecialchars($row['DESCRIPCIO']) ?></td>
+                                <td class="text-end"><?= number_format($row['CANT_PEDIDO'], 0, ',', '.') ?></td>
+                                <td class="text-end"><?= number_format($row['REMITIDO'], 0, ',', '.') ?></td>
+                                <td><?= htmlspecialchars($row['RUBRO']) ?></td>
+                                <td class="text-center">
+                                    <?php 
+                                    $estado_badge = '';
+                                    switch($row['ESTADO']) {
+                                        case 'CUMPLIDO':
+                                            $estado_badge = 'bg-success';
+                                            break;
+                                        case 'ABIERTO':
+                                            $estado_badge = 'bg-warning text-dark';
+                                            break;
+                                        case 'CERRADO':
+                                            $estado_badge = 'bg-secondary';
+                                            break;
+                                        default:
+                                            $estado_badge = 'bg-info';
+                                    }
+                                    ?>
+                                    <span class="badge <?= $estado_badge ?>">
+                                        <?= htmlspecialchars($row['ESTADO']) ?>
+                                    </span>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
                     </table>
                 </div>
             </div>
         </div>
-        <?php  require_once $_SERVER['DOCUMENT_ROOT'] .'/comercial/assets/js/js.php'; ?>
-        <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
-        <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
-        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    </body>
+    </div>
 
-</html>
-
-<script>
+    <!-- JS Includes -->
+    <?php require_once $_SERVER['DOCUMENT_ROOT'] . '/comercial/assets/js/js.php'; ?>
     
-    const buttonExportar = document.querySelector("#btnExport")
-    let spinner = document.querySelector('.boxLoading')
-
-
-
-    $(document).ready( function () {
-        
-        document.querySelector(".toggle").style.width="40px"
-        document.querySelector(".toggle-on").style.fontSize="0"
-        document.querySelector(".toggle-off").style.fontSize="0"
-
-        let spinner = document.querySelector('.boxLoading')
-        spinner.classList.remove('loading')
-        
-    })
-    const mostrarSpinner = () => {
-     
-        let spinner = document.querySelector('.boxLoading')
-        spinner.classList.add('loading')
-    }
-
-    $(document).ready(function() {
-        $('[data-toggle="tooltip"]').tooltip()
-        document.querySelector("#tableMaestro_length").hidden = true 
-        $('#selectCliente').select2();
-
-        
-        let filtro = document.querySelector(".dataTables_filter")
-        filtro.style.marginLeft = "10px"
-        let nuevoLugar = document.querySelector("#divFiltros")
-        nuevoLugar.appendChild(filtro)
-   
-
-    })
-
-    activarDatatable();
-
-
-      
-
-</script>
-<!-- <script src="js/gastosTesoreria.js"></script> -->
-
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- External JS -->
+    <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap4.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap4.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.bootstrap4.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="js/eficienciaPedidos.js"></script>
+</body>
+</html>
