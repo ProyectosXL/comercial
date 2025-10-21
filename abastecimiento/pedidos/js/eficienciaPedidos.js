@@ -104,7 +104,12 @@ function inicializarDataTable() {
     
     // Configurar e inicializar DataTable
     const table = $('#tablePedidos').DataTable({
-        responsive: true,
+        responsive: {
+            details: {
+                type: 'column',
+                target: 'tr'
+            }
+        },
         language: {
             url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json',
             emptyTable: "No hay datos disponibles",
@@ -125,16 +130,38 @@ function inicializarDataTable() {
         order: [[0, 'desc']], // Ordenar por fecha descendente
         columnDefs: [
             {
-                targets: [10, 11], // Columnas Pedido y Remitido
-                className: 'text-end'
+                // Columna Fecha - Prioridad máxima (siempre visible)
+                targets: 0,
+                responsivePriority: 1,
+                className: 'nowrap all'
             },
             {
-                targets: 13, // Columna Estado
+                // Columna Nro. Pedido - Alta prioridad
+                targets: 1,
+                responsivePriority: 2,
+                className: 'nowrap'
+            },
+            {
+                // Columna Cliente - Alta prioridad
+                targets: 5,
+                responsivePriority: 3
+            },
+            {
+                // Columna Estado - Alta prioridad
+                targets: 13,
+                responsivePriority: 4,
                 className: 'text-center'
             },
             {
-                targets: [0, 1, 2, 3, 4, 7, 8], // Columnas que no deben ajustar el tamaño
-                className: 'nowrap'
+                // Columnas Pedido y Remitido
+                targets: [10, 11],
+                responsivePriority: 5,
+                className: 'text-end'
+            },
+            {
+                // Columnas menos importantes (se ocultarán primero en pantallas pequeñas)
+                targets: [2, 3, 4, 6, 7, 8, 9, 12],
+                responsivePriority: 10
             }
         ],
         initComplete: function() {

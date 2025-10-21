@@ -337,6 +337,92 @@
 }
 
 /* ===================================
+   DATATABLES RESPONSIVE CONTROL
+   =================================== */
+/* Mover el botón de control responsive al final de la fila */
+#tablePedidos tbody td.dtr-control {
+    position: relative;
+    cursor: pointer;
+}
+
+/* Estilo del botón + responsive */
+#tablePedidos tbody td.dtr-control:before {
+    position: static;
+    display: inline-block;
+    box-sizing: content-box;
+    text-align: center;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    line-height: 1em;
+    content: '+';
+    background-color: #007bff;
+    color: white;
+    border: 2px solid #007bff;
+    border-radius: 0.25rem;
+    box-shadow: 0 0 3px rgba(0, 123, 255, 0.5);
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+    padding: 0;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
+
+/* Estilo cuando está expandido */
+#tablePedidos tbody td.dtr-control.parent:before {
+    content: '-';
+    background-color: #dc3545;
+    border-color: #dc3545;
+    box-shadow: 0 0 3px rgba(220, 53, 69, 0.5);
+}
+
+/* Evitar que el control interfiera con el contenido de la celda */
+#tablePedidos tbody td.dtr-control {
+    white-space: nowrap;
+}
+
+/* Asegurar que la columna de fecha tenga suficiente espacio */
+#tablePedidos tbody td:first-child {
+    min-width: 90px;
+}
+
+/* Mejora visual de las filas expandidas */
+#tablePedidos tbody tr.child {
+    background-color: #f8f9fa !important;
+}
+
+#tablePedidos tbody tr.child ul.dtr-details {
+    display: table;
+    width: 100%;
+    margin: 0;
+    padding: 0.5rem 0;
+}
+
+#tablePedidos tbody tr.child ul.dtr-details > li {
+    display: table-row;
+    border: none;
+    padding: 0.25rem 0;
+}
+
+#tablePedidos tbody tr.child ul.dtr-details > li:hover {
+    background-color: #e9ecef;
+}
+
+#tablePedidos tbody tr.child ul.dtr-details > li .dtr-title {
+    display: table-cell;
+    font-weight: 600;
+    color: #495057;
+    padding: 0.25rem 0.5rem;
+    width: 30%;
+}
+
+#tablePedidos tbody tr.child ul.dtr-details > li .dtr-data {
+    display: table-cell;
+    padding: 0.25rem 0.5rem;
+    color: #212529;
+}
+
+/* ===================================
    BADGE STYLES
    =================================== */
 .badge {
