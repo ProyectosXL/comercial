@@ -240,7 +240,7 @@ function cambiarEntorno(checked) {
 }
 
 /**
- * Exporta la tabla actual a Excel
+ * Exporta la tabla actual a Excel (XLSX)
  */
 function exportarAExcel() {
     const table = $('#tablePedidos').DataTable();
@@ -267,11 +267,14 @@ function exportarAExcel() {
         return;
     }
     
-    // Crear un array con los datos a exportar
-    let exportData = [];
+    // Mostrar spinner
+    mostrarSpinner();
+    
+    // Preparar los datos para exportar
+    const exportData = [];
     
     // Agregar encabezados
-    exportData.push([
+    const headers = [
         'Fecha',
         'Nro. Pedido',
         'Talón',
@@ -286,47 +289,66 @@ function exportarAExcel() {
         'Remitido',
         'Rubro',
         'Estado'
-    ]);
+    ];
+    exportData.push(headers);
     
-    // Agregar datos
+    // Agregar datos (limpiar HTML de las celdas)
     data.each(function(row) {
         const rowData = [];
         $(row).each(function(index, cell) {
             // Limpiar el contenido de badges y otros elementos HTML
             const $cell = $('<div>').html(cell);
             let cellText = $cell.text().trim();
+            
+            // Convertir números de texto a números para Excel
+            if (index === 10 || index === 11) { // Columnas Pedido y Remitido
+                cellText = cellText.replace(/\./g, '').replace(/,/g, '.');
+                cellText = parseFloat(cellText) || 0;
+            }
+            
             rowData.push(cellText);
         });
         exportData.push(rowData);
     });
     
-    // Crear el archivo CSV
-    let csv = '';
-    exportData.forEach(function(row) {
-        csv += row.map(function(cell) {
-            // Escapar comillas dobles
-            return '"' + (cell ? cell.toString().replace(/"/g, '""') : '') + '"';
-        }).join(',') + '\n';
-    });
+    // Crear el libro de trabajo (workbook)
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(exportData);
     
-    // Crear blob y descargar
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
+    // Configurar anchos de columnas
+    const colWidths = [
+        { wch: 12 },  // Fecha
+        { wch: 15 },  // Nro. Pedido
+        { wch: 10 },  // Talón
+        { wch: 12 },  // Depósito
+        { wch: 12 },  // Cód. Cliente
+        { wch: 30 },  // Cliente
+        { wch: 15 },  // Canal
+        { wch: 12 },  // Tipo
+        { wch: 15 },  // Cód. Artículo
+        { wch: 35 },  // Descripción
+        { wch: 10 },  // Pedido
+        { wch: 10 },  // Remitido
+        { wch: 20 },  // Rubro
+        { wch: 12 }   // Estado
+    ];
+    ws['!cols'] = colWidths;
     
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'pedidos_' + obtenerFechaActual() + '.csv');
-    link.style.visibility = 'hidden';
+    // Agregar la hoja al libro
+    XLSX.utils.book_append_sheet(wb, ws, 'Pedidos');
     
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Generar el archivo y descargarlo
+    const fileName = 'pedidos_' + obtenerFechaActual() + '.xlsx';
+    XLSX.writeFile(wb, fileName);
+    
+    // Ocultar spinner
+    ocultarSpinner();
     
     // Mostrar mensaje de éxito
     Swal.fire({
         icon: 'success',
         title: 'Exportado',
-        text: 'Los datos se han exportado correctamente.',
+        text: 'Los datos se han exportado correctamente en formato Excel.',
         timer: 2000,
         showConfirmButton: false
     });

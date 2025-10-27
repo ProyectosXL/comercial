@@ -353,6 +353,9 @@ error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
     
+    <!-- SheetJS para exportar a XLSX -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <!-- Custom JS -->
     <script src="js/eficienciaPedidos.js?v=<?= time() ?>"></script>
 </body>
