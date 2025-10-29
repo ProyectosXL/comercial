@@ -117,7 +117,8 @@ try {
                 categoria_padre varchar(100) NULL,
                 cantidad int NOT NULL,
                 fecha_carga datetime DEFAULT GETDATE(),
-                usuario_carga varchar(50) NULL
+                usuario_carga varchar(50) NULL,
+                fecha DATE NULL
             )
         END
         
@@ -143,6 +144,12 @@ try {
         BEGIN
             ALTER TABLE ventas_franquicias_sin_tango ADD categoria_padre varchar(100) NULL
         END
+        
+        -- Agregar columna fecha si no existe (para carga individual mes actual)
+        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'fecha')
+        BEGIN
+            ALTER TABLE ventas_franquicias_sin_tango ADD fecha DATE NULL
+        END
     ";
     $conexionSistemas->exec($sqlCrearTabla);
 
@@ -152,9 +159,10 @@ try {
     $stmtEliminar->execute([$nroSucursal, $periodoActual]);
 
     // Preparar query para insertar nuevos datos - usar solo las columnas que sabemos que existen
+    // NOTA: fecha = NULL para carga individual (mes anterior)
     $sqlInsertar = "INSERT INTO ventas_franquicias_sin_tango 
-                    (nro_sucursal, periodo, codigo_articulo, cantidad, fecha_carga, rubro, categoria_padre, usuario_carga) 
-                    VALUES (?, ?, ?, ?, GETDATE(), ?, ?, ?)";
+                    (nro_sucursal, periodo, codigo_articulo, cantidad, fecha_carga, rubro, categoria_padre, usuario_carga, fecha) 
+                    VALUES (?, ?, ?, ?, GETDATE(), ?, ?, ?, NULL)";
     $stmtInsertar = $conexionSistemas->prepare($sqlInsertar);
 
     $procesados = 0;

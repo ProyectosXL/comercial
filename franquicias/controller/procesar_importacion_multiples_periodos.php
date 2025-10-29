@@ -361,7 +361,8 @@ try {
                 categoria_padre varchar(100) NULL,
                 cantidad int NOT NULL,
                 fecha_carga datetime DEFAULT GETDATE(),
-                usuario_carga varchar(50) NULL
+                usuario_carga varchar(50) NULL,
+                fecha DATE NULL
             )
         END
         
@@ -379,6 +380,12 @@ try {
         IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'categoria_padre')
         BEGIN
             ALTER TABLE ventas_franquicias_sin_tango ADD categoria_padre varchar(100) NULL
+        END
+        
+        -- Agregar columna fecha si no existe (para carga individual mes actual)
+        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'fecha')
+        BEGIN
+            ALTER TABLE ventas_franquicias_sin_tango ADD fecha DATE NULL
         END
         
         -- Asegurar que fecha_carga tenga valor por defecto
@@ -693,16 +700,17 @@ try {
     }
 
     // Preparar query de inserción (MISMA ESTRUCTURA QUE EL ARCHIVO INDIVIDUAL)
+    // NOTA: fecha = NULL para carga múltiples períodos (trabaja con columna periodo)
     $sqlInsertar = "INSERT INTO ventas_franquicias_sin_tango 
-                    (nro_sucursal, periodo, codigo_articulo, cantidad, fecha_carga, rubro, categoria_padre, usuario_carga) 
-                    VALUES (?, ?, ?, ?, GETDATE(), ?, ?, ?)";
+                    (nro_sucursal, periodo, codigo_articulo, cantidad, fecha_carga, rubro, categoria_padre, usuario_carga, fecha) 
+                    VALUES (?, ?, ?, ?, GETDATE(), ?, ?, ?, NULL)";
     
     // DEBUGGING: Contar placeholders manualmente
     $placeholdersEnInsert = substr_count($sqlInsertar, '?');
     error_log("🔍 SQL INSERT preparación:");
     error_log("  SQL: $sqlInsertar");
     error_log("  Placeholders encontrados: $placeholdersEnInsert");
-    error_log("  Placeholders esperados: 7");
+    error_log("  Placeholders esperados: 8");
     
     try {
         $stmtInsertar = $conexionSistemas->prepare($sqlInsertar);
@@ -836,7 +844,8 @@ try {
                                    // fecha_carga usa GETDATE() - NO es placeholder
                 $rubro,            // placeholder 5: rubro
                 $categoria,        // placeholder 6: categoria_padre
-                $usuario           // placeholder 7: usuario_carga
+                $usuario,          // placeholder 7: usuario_carga
+                                   // fecha = NULL - NO es placeholder (valor literal NULL)
             ];
             
             // Validar que ningún parámetro sea null antes de ejecutar
@@ -850,7 +859,7 @@ try {
             error_log("🔥 ANTES DE EJECUTAR INSERT - Item $index:");
             error_log("  SQL: $sqlInsertar");
             error_log("  Parámetros (" . count($parametros) . "): " . print_r($parametros, true));
-            error_log("  Placeholders esperados: 7");
+            error_log("  Placeholders esperados: 8");
             
             // Verificar estado de la conexión antes de ejecutar
             try {

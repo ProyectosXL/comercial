@@ -420,9 +420,14 @@ if (!class_exists('FranquiciaStockController')) {
             // Transformar datos para que coincidan con lo que espera el frontend
             $resumenTransformado = $this->transformarResumenStock($resumen);
             
+            // Determinar si tiene stock del período actual
+            $periodoActual = date('Ym'); // Formato YYYYMM
+            $tieneStockActual = $this->verificarStockPeriodoActual($franquicia_id, $periodoActual);
+            
             return [
                 'success' => true,
-                'stock' => $resumenTransformado
+                'stock' => $resumenTransformado,
+                'tiene_stock' => $tieneStockActual
             ];
             
         } catch (Exception $e) {
@@ -433,6 +438,42 @@ if (!class_exists('FranquiciaStockController')) {
             } catch (Exception $e2) {
                 throw new Exception("Error al obtener resumen de stock: " . $e->getMessage());
             }
+        }
+    }
+    
+    /**
+     * Verificar si hay stock cargado para el período actual
+     */
+    private function verificarStockPeriodoActual($franquicia_id, $periodo) {
+        try {
+            if (!$this->sistemas_conn) {
+                return false;
+            }
+            
+            $nroSucurs = $this->obtenerNroSucursUsuario($franquicia_id);
+            
+            // Convertir periodo YYYYMM a mes y año
+            $año = substr($periodo, 0, 4);
+            $mes = substr($periodo, 4, 2);
+            
+            $sql = "SELECT COUNT(*) as total
+                    FROM franquicia_historial_stock
+                    WHERE franquicia_id = ?
+                    AND YEAR(fecha_movimiento) = ?
+                    AND MONTH(fecha_movimiento) = ?";
+            
+            $stmt = sqlsrv_query($this->sistemas_conn, $sql, array($nroSucurs, $año, $mes));
+            
+            if ($stmt) {
+                $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+                sqlsrv_free_stmt($stmt);
+                return ($row && $row['total'] > 0);
+            }
+            
+            return false;
+        } catch (Exception $e) {
+            error_log("Error verificando stock del período actual: " . $e->getMessage());
+            return false;
         }
     }
     
@@ -516,9 +557,14 @@ if (!class_exists('FranquiciaStockController')) {
             // Transformar datos
             $resumenTransformado = $this->transformarResumenStock($resumen);
             
+            // Determinar si tiene stock del período actual
+            $periodoActual = date('Ym'); // Formato YYYYMM
+            $tieneStockActual = $this->verificarStockPeriodoActual($franquicia_id, $periodoActual);
+            
             return [
                 'success' => true,
-                'stock' => $resumenTransformado
+                'stock' => $resumenTransformado,
+                'tiene_stock' => $tieneStockActual
             ];
             
         } catch (Exception $e) {

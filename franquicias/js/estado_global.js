@@ -55,15 +55,29 @@ async function verificarEstadoPeriodoGlobal() {
                 tieneStock = data.tiene_stock;
                 console.log('Estado desde servidor - Tiene stock:', tieneStock);
             } else if (vistaActual === 'historial') {
-                // Fallback para compatibilidad
+                // En historial, verificar si existe el período actual en los datos
                 const datosHistorial = data.data || [];
                 tieneStock = datosHistorial.some(item => item.periodo === periodoActual);
                 console.log('Estado desde historial - Período actual:', periodoActual, 'Tiene stock:', tieneStock);
             } else {
-                // Fallback para otras vistas
+                // En vista de carga, verificar que el stock sea del período actual
+                // Obtener período actual en formato YYYYMM
+                const fecha = new Date();
+                const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                const año = fecha.getFullYear();
+                const periodoActualYYYYMM = `${año}${mes}`;
+                
                 const stockData = data.stock || data.data || [];
-                tieneStock = stockData.length > 0;
-                console.log('Estado desde stock - Tiene stock:', tieneStock);
+                
+                // Verificar si algún item tiene periodo igual al actual
+                if (stockData.length > 0 && stockData[0].periodo) {
+                    tieneStock = stockData.some(item => item.periodo === periodoActualYYYYMM);
+                    console.log('Estado desde stock - Verificando período:', periodoActualYYYYMM, 'Tiene stock:', tieneStock);
+                } else {
+                    // Si los datos no tienen periodo, asumir que son del período actual
+                    tieneStock = stockData.length > 0;
+                    console.log('Estado desde stock (sin período) - Tiene stock:', tieneStock);
+                }
             }
             
             actualizarEstadoSidebar(tieneStock);
@@ -154,6 +168,57 @@ function actualizarEstadoSidebar(tieneStock) {
     }
 }
 
+// Función para verificar estado de ventas (solo para franquicias sin Tango)
+async function verificarEstadoVentas() {
+    const badgeVentas = document.getElementById('badge-estado-ventas');
+    
+    // Si no existe el badge de ventas, no hacer nada (usuario sin acceso)
+    if (!badgeVentas) {
+        console.log('No existe badge-estado-ventas, omitiendo verificación de ventas');
+        return;
+    }
+    
+    try {
+        // Obtener período en formato YYYYMM (que es como está en la BD)
+        const fecha = new Date();
+        const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+        const año = fecha.getFullYear();
+        const periodoActual = `${año}${mes}`; // Formato: 202510
+        
+        console.log('Verificando ventas para período:', periodoActual);
+        
+        // Consultar si existen ventas para el período actual
+        const response = await fetch('controller/verificar_estado_ventas.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `periodo=${encodeURIComponent(periodoActual)}`
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Estado de ventas:', data);
+        
+        if (data.success) {
+            if (data.tiene_ventas) {
+                badgeVentas.className = 'estado-badge informo';
+                badgeVentas.innerHTML = '<i class="bi bi-check-circle me-1"></i>Informó';
+            } else {
+                badgeVentas.className = 'estado-badge no-informo';
+                badgeVentas.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Pendiente';
+            }
+        }
+    } catch (error) {
+        console.error('Error al verificar estado de ventas:', error);
+        badgeVentas.className = 'estado-badge verificando';
+        badgeVentas.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Error';
+    }
+}
+
 // Función para obtener período actual
 function obtenerPeriodoActual() {
     const fecha = new Date();
@@ -189,12 +254,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!modalLoading || !modalLoading.classList.contains('show')) {
             console.log('Ejecutando verificación automática del estado...');
             await verificarEstadoPeriodoGlobal();
+            
+            // Verificar también estado de ventas si el badge existe
+            await verificarEstadoVentas();
         } else {
             console.log('Modal de loading visible, posponiendo verificación...');
             // Si hay modal, esperar a que termine y luego verificar
-            setTimeout(() => {
+            setTimeout(async () => {
                 if (!modalLoading.classList.contains('show')) {
-                    verificarEstadoPeriodoGlobal();
+                    await verificarEstadoPeriodoGlobal();
+                    await verificarEstadoVentas();
                 }
             }, 2000);
         }
@@ -206,10 +275,11 @@ document.addEventListener('visibilitychange', function() {
     if (!document.hidden) {
         console.log('Página visible de nuevo, verificando estado...');
         // Verificar estado después de un pequeño delay
-        setTimeout(() => {
+        setTimeout(async () => {
             const modalLoading = document.getElementById('modalLoading');
             if (!modalLoading || !modalLoading.classList.contains('show')) {
-                verificarEstadoPeriodoGlobal();
+                await verificarEstadoPeriodoGlobal();
+                await verificarEstadoVentas();
             }
         }, 500);
     }

@@ -76,13 +76,22 @@ try {
                         <small class="text-muted"><?= fecha_espanol('F Y') ?></small>
                     </div>
                     <div id="estado-carga">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted fw-bold">Estado:</small>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted fw-bold">Estado Stock:</small>
                             <span class="estado-badge verificando" id="badge-estado">
                                 <i class="bi bi-hourglass-split me-1"></i>
                                 Verificando...
                             </span>
                         </div>
+                        <?php if (AuthFranquicia::verificarAccesoEspecial()): ?>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted fw-bold">Estado Ventas:</small>
+                            <span class="estado-badge verificando" id="badge-estado-ventas">
+                                <i class="bi bi-hourglass-split me-1"></i>
+                                Verificando...
+                            </span>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
