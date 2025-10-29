@@ -13,4 +13,5 @@ CHARACTER=UTF-8
 ENV=DEV
 HOST_EMAIL=smtp.gmail.com
 USER_EMAIL=sistemas@xl.com.ar
-PASS_EMAIL=Admin$$2024. 
+PASS_EMAIL=Admin$$2024.
+PASS_EMAIL2=jtqsyinemganedce
