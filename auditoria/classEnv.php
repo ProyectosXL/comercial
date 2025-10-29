@@ -1,9 +1,9 @@
 <?php
 // classEnv.php
+// VERSIÓN FINAL Y ROBUSTA - Compatible con diferentes configuraciones de servidor
 
 class Env {
-    protected static $data;
-
+    
     public static function load($path) {
         if (!file_exists($path)) {
             throw new InvalidArgumentException(sprintf('%s does not exist', $path));
@@ -19,14 +19,30 @@ class Env {
             $name = trim($name);
             $value = trim($value);
 
-            putenv(sprintf('%s=%s', $name, $value));
-            $_ENV[$name] = $value;
-            $_SERVER[$name] = $value;
+            // Cargamos la variable en todos los lugares posibles para máxima compatibilidad
+            if (!array_key_exists($name, $_SERVER) && !array_key_exists($name, $_ENV)) {
+                putenv(sprintf('%s=%s', $name, $value));
+                $_ENV[$name] = $value;
+                $_SERVER[$name] = $value;
+            }
         }
     }
 
+    /**
+     * MÉTODO CORREGIDO: Busca la variable en múltiples lugares para máxima compatibilidad.
+     * Esto evita problemas si getenv() está deshabilitado en el servidor.
+     */
     public static function get($key, $default = null) {
+        if (isset($_ENV[$key])) {
+            return $_ENV[$key];
+        }
+
+        if (isset($_SERVER[$key])) {
+            return $_SERVER[$key];
+        }
+
         $value = getenv($key);
+
         return $value === false ? $default : $value;
     }
 }
