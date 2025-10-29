@@ -85,7 +85,7 @@ try {
                         </div>
                         <?php if (AuthFranquicia::verificarAccesoEspecial()): ?>
                         <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted fw-bold">Estado Ventas:</small>
+                            <small class="text-muted fw-bold">Estado Venta:</small>
                             <span class="estado-badge verificando" id="badge-estado-ventas">
                                 <i class="bi bi-hourglass-split me-1"></i>
                                 Verificando...
