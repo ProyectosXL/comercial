@@ -1,64 +1,43 @@
 <?php
 /**
  * Configuración centralizada de conexiones de base de datos
- * para el sistema de franquicias - Usa variables del .env principal
+ * para el sistema de franquicias - Usa la clase Conexion del proyecto
  */
 
 class DatabaseConfig {
     
+    private static $conexion = null;
     private static $envVars = null;
     
     /**
-     * Obtener configuración desde .env principal
+     * Inicializar la clase Conexion del proyecto
+     */
+    private static function initConexion() {
+        if (self::$conexion === null) {
+            // Usar la clase Conexion que está en /Class (fuera de franquicias)
+            require_once __DIR__ . '/../../Class/Conexion.php';
+            self::$conexion = new Conexion();
+        }
+        return self::$conexion;
+    }
+    
+    /**
+     * Obtener variables de entorno usando la clase DotEnv del proyecto
      */
     private static function getEnvConfig() {
         if (self::$envVars === null) {
             try {
-                // Usar ruta relativa desde franquicias/class/ hacia la raíz del proyecto
-                $envPath = __DIR__ . '/../../.env';
-                
-                // Resolver la ruta completa para debugging
-                $envPathResolved = realpath($envPath);
-                if (!$envPathResolved) {
-                    throw new Exception("No se pudo resolver la ruta del archivo .env desde: " . $envPath);
-                }
-                
-                if (!file_exists($envPathResolved)) {
-                    throw new Exception("Archivo .env no encontrado en: " . $envPathResolved);
-                }
-                
-                self::$envVars = self::parseEnvFile($envPathResolved);
+                // Usar la clase DotEnv del proyecto
+                require_once __DIR__ . '/../../Class/classEnv.php';
+                $dotenv = new DotEnv(__DIR__ . '/../../.env');
+                self::$envVars = $dotenv->listVars();
+                error_log("DatabaseConfig: Variables de entorno cargadas exitosamente usando DotEnv");
             } catch (Exception $e) {
-                error_log("Error cargando .env: " . $e->getMessage());
-                throw new Exception("No se pudo cargar la configuración del .env principal: " . $e->getMessage());
+                error_log("DatabaseConfig ERROR: No se pudieron cargar variables de entorno: " . $e->getMessage());
+                throw new Exception("No se pudo cargar la configuración de base de datos: " . $e->getMessage());
             }
         }
         return self::$envVars;
-    }
-    
-    /**
-     * Parse del archivo .env de forma manual
-     */
-    private static function parseEnvFile($filePath) {
-        $lines = file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        $vars = [];
-        
-        foreach ($lines as $line) {
-            $line = trim($line);
-            
-            // Saltar comentarios
-            if (strpos($line, '#') === 0 || empty($line)) {
-                continue;
-            }
-            
-            // Separar clave=valor
-            if (strpos($line, '=') !== false) {
-                list($key, $value) = explode('=', $line, 2);
-                $vars[trim($key)] = trim($value);
-            }
-        }
-        
-        return $vars;
     }
     
     private static function getLakerSAConfig() {
