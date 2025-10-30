@@ -196,13 +196,13 @@ try {
         if ($cantidad > 0) { // Solo insertar cantidades positivas
             $codigoArticulo = $item['articulo'];
             
-            // Obtener rubro y categoría de sistemas
+            // Obtener rubro y categoría de sistemas (con esquema dbo explícito)
             $rubro = 'Sin rubro';
             $categoria = 'Sin categoría';
             
             try {
                 $sqlRubroCategoria = "SELECT RUBRO, CATEGORIA_PADRE 
-                                     FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
+                                     FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
                                      WHERE COD_ARTICU = ?";
                 $stmtRubroCategoria = $conexionSistemas->prepare($sqlRubroCategoria);
                 $stmtRubroCategoria->execute([$codigoArticulo]);
@@ -214,6 +214,7 @@ try {
                 }
             } catch (Exception $e) {
                 error_log("Error obteniendo rubro/categoría para $codigoArticulo: " . $e->getMessage());
+                // Continuar con valores por defecto
             }
             
             // Insertar el registro

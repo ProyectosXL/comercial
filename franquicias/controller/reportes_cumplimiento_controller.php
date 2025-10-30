@@ -261,7 +261,7 @@ class ReportesCumplimientoController {
         try {
             // Obtener todos los rubros de la tabla maestra de artículos
             $sql = "SELECT DISTINCT RUBRO as nombre
-                    FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
+                    FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
                     WHERE CATEGORIA_PADRE != '' 
                     AND RUBRO IS NOT NULL 
                     AND RUBRO NOT LIKE '%OUTLET'

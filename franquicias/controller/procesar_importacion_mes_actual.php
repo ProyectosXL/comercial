@@ -361,7 +361,7 @@ try {
         $placeholdersRC = str_repeat('?,', count($batch) - 1) . '?';
         
         $sqlRubroCategoria = "SELECT COD_ARTICU, RUBRO, CATEGORIA_PADRE 
-                             FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
+                             FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
                              WHERE COD_ARTICU IN ($placeholdersRC)";
         $stmtRubroCategoria = $conexionSistemas->prepare($sqlRubroCategoria);
         $stmtRubroCategoria->execute($batch);

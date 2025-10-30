@@ -109,7 +109,7 @@ try {
         try {
             // Primero buscar coincidencia exacta
             $sqlSistemas = "SELECT RUBRO, CATEGORIA_PADRE 
-                            FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
+                            FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
                             WHERE COD_ARTICU = ?";
             
             $stmtSistemas = $conexionSistemas->prepare($sqlSistemas);
@@ -119,7 +119,7 @@ try {
             // Si no encuentra coincidencia exacta, buscar por prefijo
             if (!$datosAdicionales && strlen($codigo) >= 8) {
                 $sqlSistemasPrefijo = "SELECT TOP 1 RUBRO, CATEGORIA_PADRE 
-                                       FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
+                                       FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
                                        WHERE COD_ARTICU LIKE ? 
                                        ORDER BY LEN(COD_ARTICU)";
                 

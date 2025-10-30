@@ -261,7 +261,7 @@ if (!class_exists('FranquiciaStockController')) {
             if ($this->sistemas_conn) {
                 // Obtener de SQL Server sistemas - usando la query específica
                 $query = "SELECT DISTINCT RUBRO 
-                         FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
+                         FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
                          WHERE CATEGORIA_PADRE != '' AND RUBRO IS NOT NULL AND RUBRO NOT LIKE '%OUTLET'
                          ORDER BY RUBRO";
                 
@@ -344,7 +344,7 @@ if (!class_exists('FranquiciaStockController')) {
             if ($this->sistemas_conn) {
                 // Obtener de SQL Server sistemas - usando la query específica
                 $query = "SELECT DISTINCT CATEGORIA_PADRE 
-                         FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
+                         FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
                          WHERE CATEGORIA_PADRE != '' AND RUBRO IS NOT NULL AND RUBRO NOT LIKE '%OUTLET'
                          AND RUBRO = ?
                          ORDER BY CATEGORIA_PADRE";
@@ -1229,7 +1229,7 @@ if (!class_exists('FranquiciaStockController')) {
             if ($this->sistemas_conn) {
                 // Buscar por código o descripción
                 $query = "SELECT TOP 50 COD_ARTICU, DESCRIPCION, RUBRO, CATEGORIA_PADRE 
-                        FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
+                        FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
                         WHERE CATEGORIA_PADRE != '' AND RUBRO IS NOT NULL AND RUBRO NOT LIKE '%OUTLET'
                         AND (COD_ARTICU LIKE ? OR DESCRIPCION LIKE ?)
                         ORDER BY COD_ARTICU";
