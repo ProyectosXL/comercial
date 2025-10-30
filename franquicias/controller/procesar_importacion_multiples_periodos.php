@@ -8,6 +8,11 @@
 error_reporting(0);
 ini_set('display_errors', '0');
 
+// **OPTIMIZACIÓN: Aumentar límites para archivos grandes**
+set_time_limit(300); // 5 minutos máximo de ejecución
+ini_set('max_execution_time', '300');
+ini_set('memory_limit', '512M'); // Aumentar memoria disponible
+
 // Limpiar cualquier output previo
 if (ob_get_level()) {
     ob_clean();
@@ -294,35 +299,57 @@ try {
     
     error_log("🔍 DEBUG: Preparando consulta de validación");
     
-    $placeholders = str_repeat('?,', count($articulosUnicos) - 1) . '?';
+    // **SOLUCIÓN: Procesar en lotes para evitar límite de 2100 parámetros de SQL Server**
+    $batchSize = 2000; // Límite seguro (2100 - margen de seguridad)
+    $totalCodigos = count($articulosUnicos);
     
-    $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
-    error_log("  SQL de validación: $sqlValidar");
-    error_log("  Placeholders count: " . substr_count($sqlValidar, '?') . " vs parámetros: " . count($articulosUnicos));
+    if ($totalCodigos > $batchSize) {
+        error_log("⚠️ VALIDACION POR LOTES: Procesando $totalCodigos artículos únicos en lotes de $batchSize");
+    }
+    
+    $articulosValidos = [];
     
     error_log("🔍 DEBUG: Antes de try de validación");
     
     try {
-        error_log("🔍 DEBUG: Preparando statement de validación");
-        $stmtValidar = $conexionLaker->prepare($sqlValidar);
-        if (!$stmtValidar) {
-            $errorInfo = $conexionLaker->errorInfo();
-            throw new Exception("Error preparando validación de artículos: " . implode(" ", $errorInfo));
+        // Dividir en lotes y procesar
+        for ($i = 0; $i < $totalCodigos; $i += $batchSize) {
+            $batch = array_slice($articulosUnicos, $i, $batchSize);
+            $batchNum = floor($i / $batchSize) + 1;
+            $totalBatches = ceil($totalCodigos / $batchSize);
+            
+            error_log("📦 Validando lote $batchNum de $totalBatches (" . count($batch) . " artículos)");
+            
+            // Crear placeholders para este lote
+            $placeholders = str_repeat('?,', count($batch) - 1) . '?';
+            
+            $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
+            
+            error_log("🔍 DEBUG: Preparando statement de validación para lote $batchNum");
+            $stmtValidar = $conexionLaker->prepare($sqlValidar);
+            if (!$stmtValidar) {
+                $errorInfo = $conexionLaker->errorInfo();
+                throw new Exception("Error preparando validación de artículos (lote $batchNum): " . implode(" ", $errorInfo));
+            }
+            
+            error_log("🔍 DEBUG: Ejecutando statement de validación para lote $batchNum");
+            $ejecutadoValidar = $stmtValidar->execute($batch);
+            if (!$ejecutadoValidar) {
+                $errorInfo = $stmtValidar->errorInfo();
+                throw new Exception("Error ejecutando validación de artículos (lote $batchNum): " . $errorInfo[2] . " (SQLSTATE: " . $errorInfo[0] . ")");
+            }
+            
+            error_log("🔍 DEBUG: Obteniendo resultados de validación para lote $batchNum");
+            $articulosValidosLote = $stmtValidar->fetchAll(PDO::FETCH_COLUMN);
+            
+            // Agregar resultados de este lote al array general
+            $articulosValidos = array_merge($articulosValidos, $articulosValidosLote);
+            
+            error_log("✅ Lote $batchNum completado: " . count($articulosValidosLote) . " artículos válidos encontrados");
         }
         
-        error_log("🔍 DEBUG: Ejecutando statement de validación");
-        error_log("🔍 DEBUG: Parámetros a pasar: " . json_encode($articulosUnicos));
-        error_log("🔍 DEBUG: Tipo de array: " . gettype($articulosUnicos) . " - Count: " . count($articulosUnicos));
-        $ejecutadoValidar = $stmtValidar->execute($articulosUnicos);
-        if (!$ejecutadoValidar) {
-            $errorInfo = $stmtValidar->errorInfo();
-            throw new Exception("Error ejecutando validación de artículos: " . $errorInfo[2] . " (SQLSTATE: " . $errorInfo[0] . ")");
-        }
-        
-        error_log("🔍 DEBUG: Obteniendo resultados de validación");
-        $articulosValidos = $stmtValidar->fetchAll(PDO::FETCH_COLUMN);
-        error_log("✅ Validación exitosa - Artículos válidos encontrados: " . count($articulosValidos));
-        error_log("  Artículos válidos: " . json_encode($articulosValidos));
+        error_log("✅ Validación exitosa - Total artículos válidos encontrados: " . count($articulosValidos));
+        error_log("  Primeros artículos válidos: " . json_encode(array_slice($articulosValidos, 0, 5)));
         
     } catch (Exception $e) {
         error_log("❌ Error en validación de artículos: " . $e->getMessage());
@@ -596,12 +623,35 @@ try {
         case 'solo_faltantes':
             // Obtener períodos existentes para esta sucursal
             error_log("📋 MODO AGREGAR: Verificando períodos existentes");
-            $placeholdersPerio = str_repeat('?,', count($periodosAfectados) - 1) . '?';
-            $sqlPeriodosExist = "SELECT DISTINCT periodo FROM ventas_franquicias_sin_tango 
-                                WHERE nro_sucursal = ? AND periodo IN ($placeholdersPerio)";
-            $stmtPeriodosExist = $conexionSistemas->prepare($sqlPeriodosExist);
-            $stmtPeriodosExist->execute(array_merge([$nroSucursal], $periodosAfectados));
-            $periodosExistentes = $stmtPeriodosExist->fetchAll(PDO::FETCH_COLUMN);
+            
+            // **SOLUCIÓN: Procesar en lotes si hay muchos períodos (poco probable pero seguro)**
+            $batchSize = 2000;
+            $totalPeriodos = count($periodosAfectados);
+            $periodosExistentes = [];
+            
+            if ($totalPeriodos > $batchSize) {
+                error_log("⚠️ Verificando períodos en lotes: $totalPeriodos períodos");
+                
+                for ($i = 0; $i < $totalPeriodos; $i += $batchSize) {
+                    $batch = array_slice($periodosAfectados, $i, $batchSize);
+                    $placeholdersPerio = str_repeat('?,', count($batch) - 1) . '?';
+                    
+                    $sqlPeriodosExist = "SELECT DISTINCT periodo FROM ventas_franquicias_sin_tango 
+                                        WHERE nro_sucursal = ? AND periodo IN ($placeholdersPerio)";
+                    $stmtPeriodosExist = $conexionSistemas->prepare($sqlPeriodosExist);
+                    $stmtPeriodosExist->execute(array_merge([$nroSucursal], $batch));
+                    $periodosExistentesLote = $stmtPeriodosExist->fetchAll(PDO::FETCH_COLUMN);
+                    
+                    $periodosExistentes = array_merge($periodosExistentes, $periodosExistentesLote);
+                }
+            } else {
+                $placeholdersPerio = str_repeat('?,', count($periodosAfectados) - 1) . '?';
+                $sqlPeriodosExist = "SELECT DISTINCT periodo FROM ventas_franquicias_sin_tango 
+                                    WHERE nro_sucursal = ? AND periodo IN ($placeholdersPerio)";
+                $stmtPeriodosExist = $conexionSistemas->prepare($sqlPeriodosExist);
+                $stmtPeriodosExist->execute(array_merge([$nroSucursal], $periodosAfectados));
+                $periodosExistentes = $stmtPeriodosExist->fetchAll(PDO::FETCH_COLUMN);
+            }
             
             error_log("Períodos existentes encontrados: " . json_encode($periodosExistentes));
             
@@ -646,16 +696,51 @@ try {
                 }
             }
             
-            $placeholdersPerio = str_repeat('?,', count($periodosAfectados) - 1) . '?';
-            $sqlEliminarPeriodos = "DELETE FROM ventas_franquicias_sin_tango 
-                                   WHERE nro_sucursal = ? AND periodo IN ($placeholdersPerio)";
-            error_log("SQL de eliminación: $sqlEliminarPeriodos");
+            // **SOLUCIÓN: Procesar en lotes si hay muchos períodos**
+            $batchSize = 2000;
+            $totalPeriodos = count($periodosAfectados);
             
-            $parametrosEliminar = array_merge([$nroSucursal], $periodosAfectados);
-            error_log("Parámetros eliminación: " . json_encode($parametrosEliminar));
-            error_log("Cantidad parámetros: " . count($parametrosEliminar) . " (debe ser " . (1 + count($periodosAfectados)) . ")");
-            
-            try {
+            if ($totalPeriodos > $batchSize) {
+                error_log("⚠️ Eliminando períodos en lotes: $totalPeriodos períodos");
+                
+                for ($i = 0; $i < $totalPeriodos; $i += $batchSize) {
+                    $batch = array_slice($periodosAfectados, $i, $batchSize);
+                    $batchNum = floor($i / $batchSize) + 1;
+                    $totalBatches = ceil($totalPeriodos / $batchSize);
+                    
+                    error_log("📦 Eliminando lote $batchNum de $totalBatches (" . count($batch) . " períodos)");
+                    
+                    $placeholdersPerio = str_repeat('?,', count($batch) - 1) . '?';
+                    $sqlEliminarPeriodos = "DELETE FROM ventas_franquicias_sin_tango 
+                                           WHERE nro_sucursal = ? AND periodo IN ($placeholdersPerio)";
+                    
+                    $parametrosEliminar = array_merge([$nroSucursal], $batch);
+                    
+                    $stmtEliminarPeriodos = $conexionSistemas->prepare($sqlEliminarPeriodos);
+                    if (!$stmtEliminarPeriodos) {
+                        throw new Exception("Error preparando statement de eliminación (lote $batchNum): " . implode(" ", $conexionSistemas->errorInfo()));
+                    }
+                    
+                    $ejecutadoEliminar = $stmtEliminarPeriodos->execute($parametrosEliminar);
+                    if (!$ejecutadoEliminar) {
+                        $errorInfo = $stmtEliminarPeriodos->errorInfo();
+                        throw new Exception("Error ejecutando eliminación (lote $batchNum): " . $errorInfo[2] . " (SQLSTATE: " . $errorInfo[0] . ")");
+                    }
+                    
+                    error_log("✅ Lote $batchNum eliminado");
+                }
+                
+                error_log("✅ Eliminación de todos los lotes completada");
+            } else {
+                $placeholdersPerio = str_repeat('?,', count($periodosAfectados) - 1) . '?';
+                $sqlEliminarPeriodos = "DELETE FROM ventas_franquicias_sin_tango 
+                                       WHERE nro_sucursal = ? AND periodo IN ($placeholdersPerio)";
+                error_log("SQL de eliminación: $sqlEliminarPeriodos");
+                
+                $parametrosEliminar = array_merge([$nroSucursal], $periodosAfectados);
+                error_log("Parámetros eliminación: " . json_encode($parametrosEliminar));
+                error_log("Cantidad parámetros: " . count($parametrosEliminar) . " (debe ser " . (1 + count($periodosAfectados)) . ")");
+                
                 $stmtEliminarPeriodos = $conexionSistemas->prepare($sqlEliminarPeriodos);
                 if (!$stmtEliminarPeriodos) {
                     throw new Exception("Error preparando statement de eliminación: " . implode(" ", $conexionSistemas->errorInfo()));
@@ -668,9 +753,6 @@ try {
                 }
                 
                 error_log("✅ Eliminación de períodos exitosa");
-            } catch (Exception $e) {
-                error_log("❌ Error en eliminación: " . $e->getMessage());
-                throw new Exception("Error en eliminación de períodos: " . $e->getMessage());
             }
             break;
     }
@@ -733,13 +815,48 @@ try {
     error_log("📋 INICIO PROCESAMIENTO - Total items: " . count($datos));
     error_log("📋 MODO OPERACIÓN: $modo");
     error_log("📋 ELIMINAR AL FINAL: " . ($eliminarTodoAlFinal ? 'SÍ' : 'NO'));
-    error_log("📋 PRIMER ITEM: " . print_r($datos[0] ?? 'NO HAY ITEMS', true));
 
-    foreach ($datos as $index => $item) {
-        if ($modo === 'reemplazar' || $modo === 'reemplazar_todo') {
-            error_log("🔄 MODO REEMPLAZAR - PROCESANDO ITEM $index: " . print_r($item, true));
-        }
+    // **OPTIMIZACIÓN CRÍTICA: Pre-cargar TODOS los rubros/categorías en una sola consulta**
+    error_log("� PRE-CARGANDO rubros y categorías para optimización...");
+    $articulosUnicos = array_values(array_unique(array_column($datos, 'articulo')));
+    $rubrosCategoriasCache = [];
+    
+    // Cargar rubros/categorías en lotes
+    $batchSize = 2000;
+    $totalArticulos = count($articulosUnicos);
+    
+    for ($i = 0; $i < $totalArticulos; $i += $batchSize) {
+        $batch = array_slice($articulosUnicos, $i, $batchSize);
+        $placeholdersRC = str_repeat('?,', count($batch) - 1) . '?';
         
+        $sqlRubroCategoria = "SELECT COD_ARTICU, RUBRO, CATEGORIA_PADRE 
+                             FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
+                             WHERE COD_ARTICU IN ($placeholdersRC)";
+        $stmtRubroCategoria = $conexionSistemas->prepare($sqlRubroCategoria);
+        $stmtRubroCategoria->execute($batch);
+        $resultadosRC = $stmtRubroCategoria->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($resultadosRC as $row) {
+            $rubrosCategoriasCache[trim($row['COD_ARTICU'])] = [
+                'rubro' => trim($row['RUBRO']) ?: 'Sin rubro',
+                'categoria' => trim($row['CATEGORIA_PADRE']) ?: 'Sin categoría'
+            ];
+        }
+    }
+    
+    error_log("✅ Pre-carga completada: " . count($rubrosCategoriasCache) . " artículos con rubro/categoría");
+
+    // Asegurar que usuario tenga un valor válido
+    $usuario = $usuario ?? 'Sistema';
+    if (strlen($usuario) > 50) {
+        $usuario = substr($usuario, 0, 50);
+    }
+
+    // Procesar en lotes para logs menos verbosos
+    $totalItems = count($datos);
+    $logEach = max(1, floor($totalItems / 20)); // Log cada 5%
+    
+    foreach ($datos as $index => $item) {
         try {
             $cantidad = intval($item['cantidad']);
             if ($cantidad <= 0) {
@@ -752,166 +869,61 @@ try {
             
             // Validar que el período convertido sea numérico y tenga formato correcto
             if (!preg_match('/^[0-9]{6}$/', $periodoDb)) {
-                error_log("❌ PERÍODO INVÁLIDO: '{$item['periodo']}' -> '$periodoDb'");
                 throw new Exception("Período convertido inválido: {$item['periodo']} -> $periodoDb");
             }
             
-            // **SANITIZACIÓN ESPECÍFICA PARA SQL SERVER**
-            // SQL Server puede tener problemas con ciertos caracteres Unicode
+            // Sanitización del código de artículo
             $codigoArticulo = trim($item['articulo']);
             
-            // Sanitización segura (verificar disponibilidad de funciones)
             if (function_exists('mb_convert_encoding')) {
-                // Convertir a UTF-8 limpio y remover caracteres problemáticos
                 $codigoArticulo = mb_convert_encoding($codigoArticulo, 'UTF-8', 'UTF-8');
             }
             
-            // Remover caracteres de control y caracteres problemáticos para SQL Server
             $codigoArticulo = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $codigoArticulo);
-            
-            // Asegurar que solo contenga caracteres ASCII seguros para SQL Server
             $codigoArticulo = preg_replace('/[^\x20-\x7E]/', '', $codigoArticulo);
-            
-            // Re-aplicar trim después de la limpieza
             $codigoArticulo = trim($codigoArticulo);
             
-            // Verificar que el artículo no quedó vacío después de la sanitización
             if (empty($codigoArticulo)) {
                 throw new Exception("Código de artículo vacío después de sanitización para item $index");
             }
             
-            error_log("🧹 Artículo sanitizado para item $index: '{$item['articulo']}' -> '$codigoArticulo'");
-            
-            // VALIDACIÓN BÁSICA (sin funciones que puedan no estar disponibles)
-            // Validar longitudes y asegurar valores no null
             if (strlen($codigoArticulo) > 50) {
                 throw new Exception("Código de artículo muy largo: " . $codigoArticulo);
             }
             
-            if (strlen($nroSucursal) > 10) {
-                throw new Exception("Número de sucursal muy largo: " . $nroSucursal);
+            // **OPTIMIZACIÓN: Usar cache pre-cargado en lugar de consultas individuales**
+            if (isset($rubrosCategoriasCache[$codigoArticulo])) {
+                $rubro = $rubrosCategoriasCache[$codigoArticulo]['rubro'];
+                $categoria = $rubrosCategoriasCache[$codigoArticulo]['categoria'];
+            } else {
+                $rubro = 'Sin rubro';
+                $categoria = 'Sin categoría';
             }
             
-            // Asegurar que usuario no sea null y tenga una longitud válida
-            $usuario = $usuario ?? 'Sistema';  // Valor por defecto si es null
-            if (strlen($usuario) > 50) {
-                $usuario = substr($usuario, 0, 50); // Truncar si es necesario
+            // Limitar longitud de campos
+            if (strlen($rubro) > 100) {
+                $rubro = substr($rubro, 0, 97) . '...';
             }
-            
-            // Obtener rubro y categoría
-            $rubro = 'Sin rubro';
-            $categoria = 'Sin categoría';
-            
-            try {
-                $sqlRubroCategoria = "SELECT RUBRO, CATEGORIA_PADRE 
-                                     FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
-                                     WHERE COD_ARTICU = ?";
-                $stmtRubroCategoria = $conexionSistemas->prepare($sqlRubroCategoria);
-                $stmtRubroCategoria->execute([$codigoArticulo]);
-                $datosAdicionales = $stmtRubroCategoria->fetch(PDO::FETCH_ASSOC);
-                
-                if ($datosAdicionales) {
-                    $rubro = trim($datosAdicionales['RUBRO']) ?: 'Sin rubro';
-                    $categoria = trim($datosAdicionales['CATEGORIA_PADRE']) ?: 'Sin categoría';
-                    
-                    // Limitar longitud de campos y asegurar que no sean null
-                    if (strlen($rubro) > 100) {
-                        $rubro = substr($rubro, 0, 97) . '...';
-                    }
-                    if (strlen($categoria) > 100) {
-                        $categoria = substr($categoria, 0, 97) . '...';
-                    }
-                }
-            } catch (Exception $e) {
-                error_log("Error obteniendo rubro/categoría para $codigoArticulo: " . $e->getMessage());
-                // Mantener valores por defecto
+            if (strlen($categoria) > 100) {
+                $categoria = substr($categoria, 0, 97) . '...';
             }
-            
-            // Validación final: asegurar que ningún campo crítico sea null
-            $rubro = $rubro ?? 'Sin rubro';
-            $categoria = $categoria ?? 'Sin categoría';
-            $codigoArticulo = $codigoArticulo ?? '';
-            $periodoDb = $periodoDb ?? '';
-            $nroSucursal = $nroSucursal ?? '';
-            $usuario = $usuario ?? 'Sistema';
             
             // Insertar registro
             $parametros = [
-                $nroSucursal,      // placeholder 1: nro_sucursal
-                $periodoDb,        // placeholder 2: periodo
-                $codigoArticulo,   // placeholder 3: codigo_articulo
-                $cantidad,         // placeholder 4: cantidad
-                                   // fecha_carga usa GETDATE() - NO es placeholder
-                $rubro,            // placeholder 5: rubro
-                $categoria,        // placeholder 6: categoria_padre
-                $usuario,          // placeholder 7: usuario_carga
-                                   // fecha = NULL - NO es placeholder (valor literal NULL)
+                $nroSucursal,
+                $periodoDb,
+                $codigoArticulo,
+                $cantidad,
+                $rubro,
+                $categoria,
+                $usuario,
             ];
-            
-            // Validar que ningún parámetro sea null antes de ejecutar
-            foreach ($parametros as $idx => $param) {
-                if ($param === null) {
-                    error_log("❌ PARÁMETRO NULL en posición $idx para item $index");
-                    throw new Exception("Parámetro null detectado en posición $idx para item $index");
-                }
-            }
-            
-            error_log("🔥 ANTES DE EJECUTAR INSERT - Item $index:");
-            error_log("  SQL: $sqlInsertar");
-            error_log("  Parámetros (" . count($parametros) . "): " . print_r($parametros, true));
-            error_log("  Placeholders esperados: 8");
-            
-            // Verificar estado de la conexión antes de ejecutar
-            try {
-                $conexionSistemas->query("SELECT 1");
-                error_log("✅ Conexión verificada para item $index");
-            } catch (Exception $e) {
-                error_log("❌ CONEXIÓN PERDIDA antes del item $index: " . $e->getMessage());
-                throw new Exception("Conexión a base de datos perdida: " . $e->getMessage());
-            }
-            
-            // Contar manualmente los placeholders en el SQL
-            $placeholdersEnSQL = substr_count($sqlInsertar, '?');
-            error_log("  Placeholders encontrados en SQL: $placeholdersEnSQL");
-            
-            if (count($parametros) !== $placeholdersEnSQL) {
-                throw new Exception("MISMATCH: SQL tiene $placeholdersEnSQL placeholders pero se proporcionan " . count($parametros) . " parámetros");
-            }
             
             $ejecutado = $stmtInsertar->execute($parametros);
             
-            if ($modo === 'reemplazar' || $modo === 'reemplazar_todo') {
-                error_log("🔥 MODO REEMPLAZAR - RESULTADO INSERT item $index: " . ($ejecutado ? 'EXITOSO' : 'FALLIDO'));
-            }
-            
             if (!$ejecutado) {
                 $errorInfo = $stmtInsertar->errorInfo();
-                error_log("❌ ERROR EN EXECUTE - Item $index: " . print_r($errorInfo, true));
-                
-                // Si el error es relacionado con el statement, intentar recrearlo
-                if ($errorInfo[0] === '07002' || strpos($errorInfo[2], 'COUNT field') !== false) {
-                    error_log("🔄 Intentando recrear statement por error COUNT field...");
-                    try {
-                        $stmtInsertar = $conexionSistemas->prepare($sqlInsertar);
-                        $ejecutado = $stmtInsertar->execute($parametros);
-                        if ($ejecutado) {
-                            error_log("✅ Statement recreado y ejecutado exitosamente");
-                        } else {
-                            $errorInfo2 = $stmtInsertar->errorInfo();
-                            throw new Exception("Error persistente después de recrear statement: " . $errorInfo2[2] . " (SQLSTATE: " . $errorInfo2[0] . ")");
-                        }
-                    } catch (Exception $e) {
-                        throw new Exception("Error recreando statement: " . $e->getMessage());
-                    }
-                } else {
-                    throw new Exception("Error ejecutando inserción: " . $errorInfo[2] . " (SQLSTATE: " . $errorInfo[0] . ")");
-                }
-            }
-            
-            error_log("✅ INSERT EXITOSO - Item $index");
-            
-            if ($modo === 'reemplazar' || $modo === 'reemplazar_todo') {
-                error_log("🔥 MODO REEMPLAZAR - Item $index insertado exitosamente");
+                throw new Exception("Error ejecutando inserción: " . $errorInfo[2] . " (SQLSTATE: " . $errorInfo[0] . ")");
             }
             
             $procesados++;
@@ -922,11 +934,19 @@ try {
             }
             $resumenPeriodos[$item['periodo']]++;
             
+            // Log de progreso cada 5% (menos verboso)
+            if ($index % $logEach === 0 || $index === $totalItems - 1) {
+                $porcentaje = round(($index + 1) / $totalItems * 100);
+                error_log("� Progreso: $porcentaje% ($procesados/$totalItems registros procesados)");
+            }
+            
         } catch (Exception $e) {
             $erroresProcesamiento[] = "Fila " . ($index + 1) . ": " . $e->getMessage();
-            error_log("Error procesando fila $index: " . $e->getMessage());
+            error_log("❌ Error procesando fila $index: " . $e->getMessage());
         }
     }
+    
+    error_log("✅ PROCESAMIENTO COMPLETADO - Total procesados: $procesados de " . count($datos));
 
     // **NOTA: La eliminación en modo reemplazar ahora se hace ANTES de insertar**
     // Esta sección ya no es necesaria porque eliminamos primero

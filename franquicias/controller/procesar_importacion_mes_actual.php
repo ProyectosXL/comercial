@@ -8,6 +8,11 @@
 error_reporting(0);
 ini_set('display_errors', '0');
 
+// **OPTIMIZACIÓN: Aumentar límites para archivos grandes**
+set_time_limit(300); // 5 minutos máximo de ejecución
+ini_set('max_execution_time', '300');
+ini_set('memory_limit', '512M'); // Aumentar memoria disponible
+
 // Limpiar cualquier output previo
 if (ob_get_level()) {
     ob_clean();
@@ -209,24 +214,50 @@ try {
         throw new Exception("No hay artículos para validar");
     }
     
-    $placeholders = str_repeat('?,', count($articulosUnicos) - 1) . '?';
-    $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
+    // **SOLUCIÓN: Procesar en lotes para evitar límite de 2100 parámetros de SQL Server**
+    $batchSize = 2000; // Límite seguro (2100 - margen de seguridad)
+    $totalCodigos = count($articulosUnicos);
+    
+    if ($totalCodigos > $batchSize) {
+        error_log("⚠️ VALIDACION POR LOTES: Procesando $totalCodigos artículos únicos en lotes de $batchSize");
+    }
+    
+    $articulosValidos = [];
     
     try {
-        $stmtValidar = $conexionLaker->prepare($sqlValidar);
-        if (!$stmtValidar) {
-            $errorInfo = $conexionLaker->errorInfo();
-            throw new Exception("Error preparando validación de artículos: " . implode(" ", $errorInfo));
+        // Dividir en lotes y procesar
+        for ($i = 0; $i < $totalCodigos; $i += $batchSize) {
+            $batch = array_slice($articulosUnicos, $i, $batchSize);
+            $batchNum = floor($i / $batchSize) + 1;
+            $totalBatches = ceil($totalCodigos / $batchSize);
+            
+            error_log("📦 Validando lote $batchNum de $totalBatches (" . count($batch) . " artículos)");
+            
+            // Crear placeholders para este lote
+            $placeholders = str_repeat('?,', count($batch) - 1) . '?';
+            $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
+            
+            $stmtValidar = $conexionLaker->prepare($sqlValidar);
+            if (!$stmtValidar) {
+                $errorInfo = $conexionLaker->errorInfo();
+                throw new Exception("Error preparando validación de artículos (lote $batchNum): " . implode(" ", $errorInfo));
+            }
+            
+            $ejecutadoValidar = $stmtValidar->execute($batch);
+            if (!$ejecutadoValidar) {
+                $errorInfo = $stmtValidar->errorInfo();
+                throw new Exception("Error ejecutando validación de artículos (lote $batchNum): " . $errorInfo[2]);
+            }
+            
+            $articulosValidosLote = $stmtValidar->fetchAll(PDO::FETCH_COLUMN);
+            
+            // Agregar resultados de este lote al array general
+            $articulosValidos = array_merge($articulosValidos, $articulosValidosLote);
+            
+            error_log("✅ Lote $batchNum completado: " . count($articulosValidosLote) . " artículos válidos encontrados");
         }
         
-        $ejecutadoValidar = $stmtValidar->execute($articulosUnicos);
-        if (!$ejecutadoValidar) {
-            $errorInfo = $stmtValidar->errorInfo();
-            throw new Exception("Error ejecutando validación de artículos: " . $errorInfo[2]);
-        }
-        
-        $articulosValidos = $stmtValidar->fetchAll(PDO::FETCH_COLUMN);
-        error_log("✅ Validación exitosa - Artículos válidos encontrados: " . count($articulosValidos));
+        error_log("✅ Validación exitosa - Total artículos válidos encontrados: " . count($articulosValidos));
         
     } catch (Exception $e) {
         error_log("❌ Error en validación de artículos: " . $e->getMessage());
@@ -315,6 +346,46 @@ try {
     $resumenFechas = [];
 
     error_log("📋 INICIO PROCESAMIENTO - Total items: " . count($datos));
+    
+    // **OPTIMIZACIÓN CRÍTICA: Pre-cargar TODOS los rubros/categorías en una sola consulta**
+    error_log("🚀 PRE-CARGANDO rubros y categorías para optimización...");
+    $articulosUnicos = array_values(array_unique(array_column($datos, 'articulo')));
+    $rubrosCategoriasCache = [];
+    
+    // Cargar rubros/categorías en lotes
+    $batchSize = 2000;
+    $totalArticulos = count($articulosUnicos);
+    
+    for ($i = 0; $i < $totalArticulos; $i += $batchSize) {
+        $batch = array_slice($articulosUnicos, $i, $batchSize);
+        $placeholdersRC = str_repeat('?,', count($batch) - 1) . '?';
+        
+        $sqlRubroCategoria = "SELECT COD_ARTICU, RUBRO, CATEGORIA_PADRE 
+                             FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
+                             WHERE COD_ARTICU IN ($placeholdersRC)";
+        $stmtRubroCategoria = $conexionSistemas->prepare($sqlRubroCategoria);
+        $stmtRubroCategoria->execute($batch);
+        $resultadosRC = $stmtRubroCategoria->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($resultadosRC as $row) {
+            $rubrosCategoriasCache[trim($row['COD_ARTICU'])] = [
+                'rubro' => trim($row['RUBRO']) ?: 'Sin rubro',
+                'categoria' => trim($row['CATEGORIA_PADRE']) ?: 'Sin categoría'
+            ];
+        }
+    }
+    
+    error_log("✅ Pre-carga completada: " . count($rubrosCategoriasCache) . " artículos con rubro/categoría");
+
+    // Asegurar que usuario tenga un valor válido
+    $usuario = $usuario ?? 'Sistema';
+    if (strlen($usuario) > 50) {
+        $usuario = substr($usuario, 0, 50);
+    }
+
+    // Procesar en lotes para logs menos verbosos
+    $totalItems = count($datos);
+    $logEach = max(1, floor($totalItems / 20)); // Log cada 5%
 
     foreach ($datos as $index => $item) {
         try {
@@ -337,74 +408,46 @@ try {
                 throw new Exception("Código de artículo vacío después de sanitización para item $index");
             }
             
-            // Obtener rubro y categoría
-            $rubro = 'Sin rubro';
-            $categoria = 'Sin categoría';
-            
-            try {
-                $sqlRubroCategoria = "SELECT RUBRO, CATEGORIA_PADRE 
-                                     FROM SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
-                                     WHERE COD_ARTICU = ?";
-                $stmtRubroCategoria = $conexionSistemas->prepare($sqlRubroCategoria);
-                $stmtRubroCategoria->execute([$codigoArticulo]);
-                $datosAdicionales = $stmtRubroCategoria->fetch(PDO::FETCH_ASSOC);
-                
-                if ($datosAdicionales) {
-                    $rubro = trim($datosAdicionales['RUBRO']) ?: 'Sin rubro';
-                    $categoria = trim($datosAdicionales['CATEGORIA_PADRE']) ?: 'Sin categoría';
-                    
-                    if (strlen($rubro) > 100) {
-                        $rubro = substr($rubro, 0, 97) . '...';
-                    }
-                    if (strlen($categoria) > 100) {
-                        $categoria = substr($categoria, 0, 97) . '...';
-                    }
-                }
-            } catch (Exception $e) {
-                error_log("Error obteniendo rubro/categoría para $codigoArticulo: " . $e->getMessage());
+            // **OPTIMIZACIÓN: Usar cache pre-cargado en lugar de consultas individuales**
+            if (isset($rubrosCategoriasCache[$codigoArticulo])) {
+                $rubro = $rubrosCategoriasCache[$codigoArticulo]['rubro'];
+                $categoria = $rubrosCategoriasCache[$codigoArticulo]['categoria'];
+            } else {
+                $rubro = 'Sin rubro';
+                $categoria = 'Sin categoría';
             }
             
-            // Validación final de parámetros
-            $rubro = $rubro ?? 'Sin rubro';
-            $categoria = $categoria ?? 'Sin categoría';
-            $usuario = $usuario ?? 'Sistema';
+            // Limitar longitud de campos
+            if (strlen($rubro) > 100) {
+                $rubro = substr($rubro, 0, 97) . '...';
+            }
+            if (strlen($categoria) > 100) {
+                $categoria = substr($categoria, 0, 97) . '...';
+            }
             
             // Insertar registro
             $parametros = [
-                $nroSucursal,       // placeholder 1: nro_sucursal
-                $periodoMesActual,  // placeholder 2: periodo (YYYYMM del mes actual)
-                $codigoArticulo,    // placeholder 3: codigo_articulo
-                $cantidad,          // placeholder 4: cantidad
-                                    // fecha_carga usa GETDATE() - NO es placeholder
-                $rubro,             // placeholder 5: rubro
-                $categoria,         // placeholder 6: categoria_padre
-                $usuario,           // placeholder 7: usuario_carga
-                $fechaSql           // placeholder 8: fecha (YYYY-MM-DD del Excel)
+                $nroSucursal,
+                $periodoMesActual,
+                $codigoArticulo,
+                $cantidad,
+                $rubro,
+                $categoria,
+                $usuario,
+                $fechaSql
             ];
-            
-            // Validar que ningún parámetro sea null
-            foreach ($parametros as $idx => $param) {
-                if ($param === null) {
-                    error_log("❌ PARÁMETRO NULL en posición $idx para item $index");
-                    throw new Exception("Parámetro null detectado en posición $idx para item $index");
-                }
-            }
             
             $ejecutado = $stmtInsertar->execute($parametros);
             
             if (!$ejecutado) {
                 $errorInfo = $stmtInsertar->errorInfo();
-                error_log("❌ ERROR EN EXECUTE - Item $index - Artículo: $codigoArticulo, Fecha: {$item['fecha']}: " . print_r($errorInfo, true));
                 throw new Exception("Error ejecutando inserción para $codigoArticulo en {$item['fecha']}: " . $errorInfo[2]);
             }
             
             $rowCount = $stmtInsertar->rowCount();
             if ($rowCount === 0) {
-                error_log("⚠️ INSERT ejecutado pero 0 filas afectadas - Item $index - Artículo: $codigoArticulo, Fecha: {$item['fecha']}");
                 throw new Exception("No se insertó ninguna fila para $codigoArticulo en {$item['fecha']} - Posible violación de constraint UNIQUE");
             }
-            
-            error_log("✅ INSERT EXITOSO - Item $index - Artículo: $codigoArticulo, Fecha: {$item['fecha']} -> $fechaSql, Filas afectadas: $rowCount");
             
             $procesados++;
             
@@ -414,11 +457,19 @@ try {
             }
             $resumenFechas[$item['fecha']]++;
             
+            // Log de progreso cada 5% (menos verboso)
+            if ($index % $logEach === 0 || $index === $totalItems - 1) {
+                $porcentaje = round(($index + 1) / $totalItems * 100);
+                error_log("📊 Progreso: $porcentaje% ($procesados/$totalItems registros procesados)");
+            }
+            
         } catch (Exception $e) {
             $erroresProcesamiento[] = "Fila " . ($index + 1) . ": " . $e->getMessage();
-            error_log("Error procesando fila $index: " . $e->getMessage());
+            error_log("❌ Error procesando fila $index: " . $e->getMessage());
         }
     }
+    
+    error_log("✅ PROCESAMIENTO COMPLETADO - Total procesados: $procesados de " . count($datos));
 
     // Confirmar transacción
     $conexionSistemas->commit();

@@ -90,12 +90,37 @@ try {
     $conexionSistemas->beginTransaction();
 
     $articulosValidar = array_column($datos, 'articulo');
-    $placeholders = str_repeat('?,', count($articulosValidar) - 1) . '?';
     
-    $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
-    $stmtValidar = $conexionLaker->prepare($sqlValidar);
-    $stmtValidar->execute($articulosValidar);
-    $articulosValidos = $stmtValidar->fetchAll(PDO::FETCH_COLUMN);
+    // **SOLUCIÓN: Procesar en lotes para evitar límite de 2100 parámetros de SQL Server**
+    $batchSize = 2000; // Límite seguro (2100 - margen de seguridad)
+    $totalCodigos = count($articulosValidar);
+    
+    if ($totalCodigos > $batchSize) {
+        error_log("⚠️ VALIDACION POR LOTES: Procesando $totalCodigos artículos en lotes de $batchSize");
+    }
+    
+    $articulosValidos = [];
+    
+    // Dividir en lotes y procesar
+    for ($i = 0; $i < $totalCodigos; $i += $batchSize) {
+        $batch = array_slice($articulosValidar, $i, $batchSize);
+        $batchNum = floor($i / $batchSize) + 1;
+        $totalBatches = ceil($totalCodigos / $batchSize);
+        
+        error_log("📦 Validando lote $batchNum de $totalBatches (" . count($batch) . " artículos)");
+        
+        $placeholders = str_repeat('?,', count($batch) - 1) . '?';
+        
+        $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
+        $stmtValidar = $conexionLaker->prepare($sqlValidar);
+        $stmtValidar->execute($batch);
+        $articulosValidosLote = $stmtValidar->fetchAll(PDO::FETCH_COLUMN);
+        
+        // Agregar resultados de este lote
+        $articulosValidos = array_merge($articulosValidos, $articulosValidosLote);
+        
+        error_log("✅ Lote $batchNum completado: " . count($articulosValidosLote) . " artículos válidos");
+    }
 
     // Verificar que todos los artículos sean válidos
     foreach ($datos as $item) {

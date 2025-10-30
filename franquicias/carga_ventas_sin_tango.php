@@ -149,15 +149,24 @@ if (!function_exists('es_modo_desarrollo')) {
 
         /* Select2 custom styles para modales */
         .select2-dropdown-modal {
-            z-index: 9999 !important;
+            z-index: 1050 !important;
         }
         
         .modal .select2-container--bootstrap-5 .select2-dropdown {
-            z-index: 9999 !important;
+            z-index: 1050 !important;
         }
         
         .modal .select2-container {
-            z-index: 9998 !important;
+            z-index: 1049 !important;
+        }
+        
+        /* Select2 ABIERTO - debe estar por ENCIMA del sticky header */
+        .modal .select2-container--open {
+            z-index: 1065 !important;
+        }
+        
+        .modal .select2-container--open .select2-dropdown {
+            z-index: 1065 !important;
         }
         
         .select2-container--bootstrap-5 .select2-selection {
@@ -191,11 +200,40 @@ if (!function_exists('es_modo_desarrollo')) {
 
         /* Select2 en modales - Fix z-index */
         .select2-container--open {
-            z-index: 9999 !important;
+            z-index: 1065 !important; /* Por ENCIMA del header cuando está abierto */
         }
         
         .select2-dropdown {
-            z-index: 9999 !important;
+            z-index: 1065 !important; /* Por ENCIMA del header cuando está abierto */
+        }
+        
+        /* Modal body con altura controlada para evitar scroll excesivo */
+        #modalImportarMultiple .modal-body,
+        #modalImportarMesActual .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        /* Contenedor de tabla con scroll interno */
+        .table-responsive {
+            position: relative;
+            max-height: 400px !important;
+            overflow-y: auto !important;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        
+        /* Sticky header para tablas - z-index MAYOR que Select2 */
+        .table thead.sticky-top {
+            position: sticky;
+            top: 0;
+            z-index: 1060 !important;
+        }
+        
+        .table thead.sticky-top th {
+            background-color: #343a40 !important;
         }
         
         /* Asegurar que Select2 sea visible en tabla */
@@ -1307,6 +1345,23 @@ if (!function_exists('es_modo_desarrollo')) {
                             <p class="mb-0"><small>Debe corregir todos los errores antes de confirmar la importación.</small></p>
                         </div>
                         
+                        <!-- Botones de Navegación de Errores -->
+                        <div class="mb-3 d-flex gap-2 align-items-center justify-content-center flex-wrap" id="nav-errores-multiple" style="display: none;">
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMultiple('primero')" title="Ir al primer error">
+                                <i class="bi bi-skip-backward-fill"></i> Primer Error
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMultiple('anterior')" title="Ir al error anterior">
+                                <i class="bi bi-arrow-left"></i> Anterior
+                            </button>
+                            <span class="badge bg-danger px-3 py-2" id="posicionErrorMultiple" style="font-size: 0.9rem;">Sin errores</span>
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMultiple('siguiente')" title="Ir al siguiente error">
+                                Siguiente <i class="bi bi-arrow-right"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMultiple('ultimo')" title="Ir al último error">
+                                Último Error <i class="bi bi-skip-forward-fill"></i>
+                            </button>
+                        </div>
+                        
                         <!-- Área para mensajes de estado de validación múltiples -->
                         <div id="mensajeValidacionMultiple" class="alert" style="display: none;">
                         </div>
@@ -1350,9 +1405,19 @@ if (!function_exists('es_modo_desarrollo')) {
                         </div>
                         <h5>Procesando importación múltiples períodos...</h5>
                         <p class="text-muted">Por favor espere mientras se procesan los datos de múltiples períodos.</p>
-                        <div class="progress mt-3">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                                 id="progreso-multiple" role="progressbar" style="width: 0%"></div>
+                        <div class="progress mt-3" style="height: 30px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                                 id="progreso-multiple" 
+                                 role="progressbar" 
+                                 style="width: 0%; font-size: 14px; font-weight: bold; line-height: 30px;"
+                                 aria-valuenow="0" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">0%</div>
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted" id="tiempo-estimado-multiple">
+                                <i class="bi bi-clock me-1"></i>Estimando tiempo restante...
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -1437,6 +1502,23 @@ if (!function_exists('es_modo_desarrollo')) {
                             <p class="mb-0"><small>Debe corregir todos los errores antes de confirmar la importación.</small></p>
                         </div>
                         
+                        <!-- Botones de Navegación de Errores -->
+                        <div class="mb-3 d-flex gap-2 align-items-center justify-content-center flex-wrap" id="nav-errores-mes-actual" style="display: none;">
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMesActual('primero')" title="Ir al primer error">
+                                <i class="bi bi-skip-backward-fill"></i> Primer Error
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMesActual('anterior')" title="Ir al error anterior">
+                                <i class="bi bi-arrow-left"></i> Anterior
+                            </button>
+                            <span class="badge bg-danger px-3 py-2" id="posicionErrorMesActual" style="font-size: 0.9rem;">Sin errores</span>
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMesActual('siguiente')" title="Ir al siguiente error">
+                                Siguiente <i class="bi bi-arrow-right"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMesActual('ultimo')" title="Ir al último error">
+                                Último Error <i class="bi bi-skip-forward-fill"></i>
+                            </button>
+                        </div>
+                        
                         <!-- Área para mensajes de estado de validación -->
                         <div id="mensajeValidacionMesActual" class="alert" style="display: none;">
                         </div>
@@ -1499,9 +1581,19 @@ if (!function_exists('es_modo_desarrollo')) {
                         </div>
                         <h5>Procesando importación mes actual...</h5>
                         <p class="text-muted">Por favor espere mientras se procesan los datos del mes actual.</p>
-                        <div class="progress mt-3">
+                        <div class="progress mt-3" style="height: 30px;">
                             <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
-                                 id="progreso-mes-actual" role="progressbar" style="width: 0%"></div>
+                                 id="progreso-mes-actual" 
+                                 role="progressbar" 
+                                 style="width: 0%; font-size: 14px; font-weight: bold; line-height: 30px;"
+                                 aria-valuenow="0" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">0%</div>
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted" id="tiempo-estimado-mes-actual">
+                                <i class="bi bi-clock me-1"></i>Estimando tiempo restante...
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -3671,7 +3763,23 @@ if (!function_exists('es_modo_desarrollo')) {
             }
 
             try {
-                mostrarPasoMultiple(3); // Mostrar loading
+                // Mostrar mensaje de procesamiento en paso 1
+                const paso1 = document.getElementById('paso1-multiple');
+                const mensajeProcesando = document.createElement('div');
+                mensajeProcesando.id = 'mensaje-procesando-multiple';
+                mensajeProcesando.className = 'alert alert-info mt-3';
+                mensajeProcesando.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm text-primary me-3" role="status">
+                            <span class="visually-hidden">Procesando...</span>
+                        </div>
+                        <div>
+                            <strong>Procesando archivo Excel...</strong><br>
+                            <small>Leyendo y agrupando datos. Por favor espere.</small>
+                        </div>
+                    </div>
+                `;
+                paso1.appendChild(mensajeProcesando);
 
                 const datosOriginales = await leerArchivoExcel(window.archivoSeleccionadoMultiple);
                 console.log('📊 Datos múltiples períodos leídos originales:', datosOriginales);
@@ -3690,9 +3798,44 @@ if (!function_exists('es_modo_desarrollo')) {
                     throw new Error('El archivo debe tener exactamente 3 columnas: ARTICULO, CANTIDAD, PERIODO');
                 }
 
-                // Validar períodos y artículos
-                await validarDatosMultiplesPeriodos(datos);
+                // Remover mensaje de procesamiento
+                const mensajeProc = document.getElementById('mensaje-procesando-multiple');
+                if (mensajeProc) mensajeProc.remove();
+
+                // Ir al paso 2 INMEDIATAMENTE
                 mostrarPasoMultiple(2);
+                
+                // Mostrar mensaje de carga EN LA TABLA
+                const tabla = document.getElementById('tablaVistaPreviaMultiple');
+                const tbody = tabla.querySelector('tbody');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status">
+                                <span class="visually-hidden">Validando...</span>
+                            </div>
+                            <h5>Validando ${datos.length} registros...</h5>
+                            <p class="text-muted">Verificando ${[...new Set(datos.map(d => d.articulo))].length} códigos de artículos únicos.<br>
+                            Esto puede tardar unos minutos. Por favor espere...</p>
+                        </td>
+                    </tr>
+                `;
+                
+                // Validar en segundo plano
+                try {
+                    await validarDatosMultiplesPeriodos(datos);
+                } catch (errorValidacion) {
+                    console.error('❌ Error en validación:', errorValidacion);
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="text-center text-danger py-4">
+                                <i class="bi bi-exclamation-triangle fs-1"></i>
+                                <h5 class="mt-3">Error en validación</h5>
+                                <p>${errorValidacion.message}</p>
+                            </td>
+                        </tr>
+                    `;
+                }
 
             } catch (error) {
                 console.error('Error procesando archivo múltiple:', error);
@@ -4240,6 +4383,9 @@ if (!function_exists('es_modo_desarrollo')) {
             // Actualizar resumen
             actualizarResumenValidacionMultiple(validosActuales, erroresActuales, fueraRangoActuales);
             
+            // Actualizar navegación de errores
+            actualizarNavegacionErroresMultiple(erroresActuales);
+            
             // Actualizar estado del botón
             const btnConfirmar = document.getElementById('btnConfirmarImportacionMultiple');
             if (btnConfirmar) {
@@ -4307,6 +4453,129 @@ if (!function_exists('es_modo_desarrollo')) {
                     </div>
                 </div>
             `;
+            
+            // Actualizar navegación de errores
+            actualizarNavegacionErroresMultiple(errores);
+        }
+
+        // ============ NAVEGACIÓN DE ERRORES - MÚLTIPLES PERÍODOS ============
+        let indiceErrorActualMultiple = -1;
+        let filasConErrorMultiple = [];
+
+        function actualizarNavegacionErroresMultiple(totalErrores) {
+            const navErrores = document.getElementById('nav-errores-multiple');
+            const posicionError = document.getElementById('posicionErrorMultiple');
+            
+            if (totalErrores > 0) {
+                // Obtener todas las filas con error (table-danger)
+                filasConErrorMultiple = Array.from(document.querySelectorAll('#tablaVistaPreviaMultiple tbody tr.table-danger'));
+                
+                // Mostrar navegación
+                navErrores.style.display = 'flex';
+                posicionError.textContent = `${filasConErrorMultiple.length} error(es) encontrado(s)`;
+                indiceErrorActualMultiple = -1; // Resetear índice
+                
+                console.log(`🔍 Navegación errores: ${filasConErrorMultiple.length} errores encontrados`);
+            } else {
+                // Ocultar navegación
+                navErrores.style.display = 'none';
+                posicionError.textContent = 'Sin errores'; // Resetear texto
+                filasConErrorMultiple = [];
+                indiceErrorActualMultiple = -1;
+                
+                console.log(`✅ No hay errores - navegación oculta`);
+            }
+        }
+
+        function irAlErrorMultiple(direccion) {
+            if (filasConErrorMultiple.length === 0) return;
+            
+            // Calcular nuevo índice
+            if (direccion === 'primero') {
+                indiceErrorActualMultiple = 0;
+            } else if (direccion === 'ultimo') {
+                indiceErrorActualMultiple = filasConErrorMultiple.length - 1;
+            } else if (direccion === 'siguiente') {
+                indiceErrorActualMultiple = (indiceErrorActualMultiple + 1) % filasConErrorMultiple.length;
+            } else if (direccion === 'anterior') {
+                indiceErrorActualMultiple = (indiceErrorActualMultiple - 1 + filasConErrorMultiple.length) % filasConErrorMultiple.length;
+            }
+            
+            // Scroll a la fila
+            const filaError = filasConErrorMultiple[indiceErrorActualMultiple];
+            filaError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight temporal
+            filaError.style.boxShadow = '0 0 15px 3px rgba(220, 53, 69, 0.6)';
+            setTimeout(() => {
+                filaError.style.boxShadow = '';
+            }, 2000);
+            
+            // Actualizar posición
+            document.getElementById('posicionErrorMultiple').textContent = 
+                `Error ${indiceErrorActualMultiple + 1} de ${filasConErrorMultiple.length}`;
+            
+            console.log(`📍 Navegando a error ${indiceErrorActualMultiple + 1}/${filasConErrorMultiple.length}`);
+        }
+
+        // ============ NAVEGACIÓN DE ERRORES - MES ACTUAL ============
+        let indiceErrorActualMesActual = -1;
+        let filasConErrorMesActual = [];
+
+        function actualizarNavegacionErroresMesActual(totalErrores) {
+            const navErrores = document.getElementById('nav-errores-mes-actual');
+            const posicionError = document.getElementById('posicionErrorMesActual');
+            
+            if (totalErrores > 0) {
+                // Obtener todas las filas con error (table-danger)
+                filasConErrorMesActual = Array.from(document.querySelectorAll('#tablaVistaPreviaMesActual tbody tr.table-danger'));
+                
+                // Mostrar navegación
+                navErrores.style.display = 'flex';
+                posicionError.textContent = `${filasConErrorMesActual.length} error(es) encontrado(s)`;
+                indiceErrorActualMesActual = -1; // Resetear índice
+                
+                console.log(`🔍 Navegación errores mes actual: ${filasConErrorMesActual.length} errores encontrados`);
+            } else {
+                // Ocultar navegación
+                navErrores.style.display = 'none';
+                posicionError.textContent = 'Sin errores'; // Resetear texto
+                filasConErrorMesActual = [];
+                indiceErrorActualMesActual = -1;
+                
+                console.log(`✅ No hay errores mes actual - navegación oculta`);
+            }
+        }
+
+        function irAlErrorMesActual(direccion) {
+            if (filasConErrorMesActual.length === 0) return;
+            
+            // Calcular nuevo índice
+            if (direccion === 'primero') {
+                indiceErrorActualMesActual = 0;
+            } else if (direccion === 'ultimo') {
+                indiceErrorActualMesActual = filasConErrorMesActual.length - 1;
+            } else if (direccion === 'siguiente') {
+                indiceErrorActualMesActual = (indiceErrorActualMesActual + 1) % filasConErrorMesActual.length;
+            } else if (direccion === 'anterior') {
+                indiceErrorActualMesActual = (indiceErrorActualMesActual - 1 + filasConErrorMesActual.length) % filasConErrorMesActual.length;
+            }
+            
+            // Scroll a la fila
+            const filaError = filasConErrorMesActual[indiceErrorActualMesActual];
+            filaError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight temporal
+            filaError.style.boxShadow = '0 0 15px 3px rgba(220, 53, 69, 0.6)';
+            setTimeout(() => {
+                filaError.style.boxShadow = '';
+            }, 2000);
+            
+            // Actualizar posición
+            document.getElementById('posicionErrorMesActual').textContent = 
+                `Error ${indiceErrorActualMesActual + 1} de ${filasConErrorMesActual.length}`;
+            
+            console.log(`📍 Navegando a error ${indiceErrorActualMesActual + 1}/${filasConErrorMesActual.length}`);
         }
 
         async function confirmarImportacionMultiple() {
@@ -4318,13 +4587,93 @@ if (!function_exists('es_modo_desarrollo')) {
             }
             
             try {
+                console.log('🎯 Mostrando paso 3...');
                 mostrarPasoMultiple(3); // Mostrar loading
                 
-                console.log('🔍 Datos originales antes de procesar:', window.datosImportadosMultiple);
+                // Esperar a que el DOM se actualice completamente - timeout más largo
+                await new Promise(resolve => setTimeout(resolve, 300));
                 
-                // Preparar datos para envío con validación exhaustiva
+                // **BARRA DE PROGRESO SIMULADA MIENTRAS SE PROCESA**
+                const barraProgreso = document.getElementById('progreso-multiple');
+                const totalItems = window.datosImportadosMultiple.length;
+                const tiempoEstimadoElem = document.getElementById('tiempo-estimado-multiple');
+                
+                console.log('📊 Inicializando barra de progreso...', {
+                    barraProgreso: !!barraProgreso,
+                    barraVisible: barraProgreso ? barraProgreso.offsetParent !== null : false,
+                    barraDisplay: barraProgreso ? window.getComputedStyle(barraProgreso.parentElement).display : 'N/A',
+                    paso3Visible: document.getElementById('paso3-multiple').style.display,
+                    tiempoEstimadoElem: !!tiempoEstimadoElem,
+                    totalItems
+                });
+                
+                if (!barraProgreso) {
+                    console.error('❌ No se encontró la barra de progreso');
+                    throw new Error('No se encontró la barra de progreso');
+                }
+                
+                // Resetear barra de progreso CON FORZAR REFLOW
+                barraProgreso.style.width = '0%';
+                barraProgreso.offsetHeight; // Forzar reflow
+                
+                // Iniciar en 5% de inmediato
+                requestAnimationFrame(() => {
+                    barraProgreso.style.width = '5%';
+                    barraProgreso.textContent = '5%';
+                    barraProgreso.className = 'progress-bar progress-bar-striped progress-bar-animated bg-primary';
+                    barraProgreso.setAttribute('aria-valuenow', 5);
+                    console.log('✅ Barra de progreso reseteada al 5%');
+                });
+                
+                // Función para simular progreso
+                let progresoSimulado = 5;
+                const inicioTiempo = Date.now();
+                
+                // Estimar tiempo basado en cantidad de registros (más conservador para 6000+ registros)
+                const tiempoEstimadoSegundos = Math.max(20, Math.ceil(totalItems / 100));
+                
+                console.log(`⏱️ Tiempo estimado: ${tiempoEstimadoSegundos} segundos para ${totalItems} registros`);
+                
+                const intervaloProgreso = setInterval(() => {
+                    if (progresoSimulado < 85) {
+                        // Progreso MUY lento para dar tiempo al servidor
+                        if (progresoSimulado < 15) {
+                            progresoSimulado += 0.5;
+                        } else if (progresoSimulado < 40) {
+                            progresoSimulado += 0.8;
+                        } else if (progresoSimulado < 65) {
+                            progresoSimulado += 0.5;
+                        } else {
+                            progresoSimulado += 0.2;
+                        }
+                        
+                        barraProgreso.style.width = progresoSimulado + '%';
+                        barraProgreso.textContent = Math.round(progresoSimulado) + '%';
+                        barraProgreso.setAttribute('aria-valuenow', Math.round(progresoSimulado));
+                        
+                        // Actualizar tiempo estimado
+                        const tiempoTranscurrido = Math.floor((Date.now() - inicioTiempo) / 1000);
+                        const tiempoRestante = Math.max(0, tiempoEstimadoSegundos - tiempoTranscurrido);
+                        
+                        if (tiempoEstimadoElem) {
+                            if (tiempoRestante > 0) {
+                                tiempoEstimadoElem.innerHTML = `<i class="bi bi-clock me-1"></i>Tiempo estimado restante: ${tiempoRestante} segundos`;
+                            } else {
+                                tiempoEstimadoElem.innerHTML = `<i class="bi bi-hourglass-split me-1"></i>Finalizando procesamiento...`;
+                            }
+                        }
+                        
+                        // Solo loguear cada 10% para no saturar consola
+                        if (Math.round(progresoSimulado) % 10 === 0) {
+                            console.log(`📊 Progreso: ${Math.round(progresoSimulado)}% - Tiempo restante: ${tiempoRestante}s`);
+                        }
+                    }
+                }, 500); // Actualizar cada 500ms para progreso más lento
+                
+                console.log(`📊 Total de registros a procesar: ${totalItems}`);
+                
+                // Preparar datos para envío con validación (SIN LOGUEAR CADA ITEM)
                 const datosParaEnvio = window.datosImportadosMultiple.map((item, index) => {
-                    console.log(`🔍 Procesando item ${index}:`, item);
                     
                     // Validar estructura del item
                     if (!item || typeof item !== 'object') {
@@ -4352,21 +4701,30 @@ if (!function_exists('es_modo_desarrollo')) {
                         throw new Error(`Item ${index} tiene período inválido: ${item.periodo}`);
                     }
                     
-                    console.log(`✅ Item ${index} procesado:`, itemProcesado);
+                    // Solo loguear cada 1000 items para no saturar
+                    if (index % 1000 === 0) {
+                        console.log(`✅ Procesando items... ${index}/${totalItems}`);
+                    }
+                    
                     return itemProcesado;
                 });
                 
-                console.log('📤 Enviando datos múltiples validados:', datosParaEnvio);
+                console.log(`✅ ${datosParaEnvio.length} registros validados y listos para enviar`);
                 
                 const payload = {
                     datos: datosParaEnvio,
                     modo: window.currentMultipleAction || 'nueva' // Usar la acción seleccionada por el usuario
                 };
                 
-                console.log('� DEBUG FRONTEND - Modo enviado:');
-                console.log('  window.currentMultipleAction:', window.currentMultipleAction);
-                console.log('  Modo final en payload:', payload.modo);
-                console.log('�📤 Payload completo:', JSON.stringify(payload, null, 2));
+                console.log('🔍 DEBUG FRONTEND - Modo enviado:', payload.modo);
+                
+                // Actualizar texto de progreso
+                const textoProgreso = document.querySelector('#paso3-multiple p.text-muted');
+                if (textoProgreso) {
+                    textoProgreso.innerHTML = `Procesando <strong>${totalItems}</strong> registros...<br><small>Esto puede tomar algunos minutos dependiendo del tamaño del archivo.</small>`;
+                }
+                
+                console.log('🚀 Enviando petición al servidor...');
                 
                 const response = await fetch('controller/procesar_importacion_multiples_periodos.php', {
                     method: 'POST',
@@ -4376,17 +4734,36 @@ if (!function_exists('es_modo_desarrollo')) {
                     body: JSON.stringify(payload)
                 });
                 
+                // Detener simulación de progreso
+                clearInterval(intervaloProgreso);
+                
                 console.log('📥 Response status:', response.status);
                 
                 if (!response.ok) {
+                    barraProgreso.style.width = '100%';
+                    barraProgreso.textContent = 'Error';
+                    barraProgreso.classList.add('bg-danger');
                     throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
                 }
+                
+                // Completar barra de progreso
+                barraProgreso.style.width = '95%';
+                barraProgreso.textContent = '95% - Finalizando...';
                 
                 const result = await response.json();
                 console.log('📥 Response data:', result);
                 
                 if (result.success) {
+                    // Progreso al 100%
+                    barraProgreso.style.width = '100%';
+                    barraProgreso.textContent = '100% - ¡Completado!';
+                    barraProgreso.classList.remove('progress-bar-striped', 'progress-bar-animated');
+                    barraProgreso.classList.add('bg-success');
+                    
                     console.log('✅ Importación múltiple exitosa:', result);
+                    
+                    // Esperar un momento para que el usuario vea el 100%
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                     
                     // Cerrar modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('modalImportarMultiple'));
@@ -4417,11 +4794,22 @@ if (!function_exists('es_modo_desarrollo')) {
                     }, 500);
                     
                 } else {
+                    // Error en el resultado
+                    clearInterval(intervaloProgreso);
+                    barraProgreso.style.width = '100%';
+                    barraProgreso.textContent = 'Error en procesamiento';
+                    barraProgreso.classList.add('bg-danger');
                     throw new Error(result.message || 'Error en la importación');
                 }
                 
             } catch (error) {
                 console.error('❌ Error en importación múltiple:', error);
+                
+                // Asegurar que se detenga el intervalo en caso de error
+                if (typeof intervaloProgreso !== 'undefined') {
+                    clearInterval(intervaloProgreso);
+                }
+                
                 alert('❌ Error en la importación: ' + error.message);
                 mostrarPasoMultiple(2); // Volver al paso anterior
             }
@@ -5443,6 +5831,9 @@ if (!function_exists('es_modo_desarrollo')) {
                     document.getElementById('countErroresMesActual').textContent = errores;
                     document.getElementById('btnConfirmarImportacionMesActual').disabled = errores > 0;
                     
+                    // Actualizar navegación de errores
+                    actualizarNavegacionErroresMesActual(errores);
+                    
                     // Inicializar Select2 para correcciones
                     if (errores > 0 && typeof $ !== 'undefined' && $.fn.select2) {
                         setTimeout(() => {
@@ -5614,24 +6005,133 @@ if (!function_exists('es_modo_desarrollo')) {
             document.getElementById('countErroresMesActual').textContent = errores;
             document.getElementById('btnConfirmarImportacionMesActual').disabled = errores > 0;
             
+            // Actualizar navegación de errores
+            actualizarNavegacionErroresMesActual(errores);
+            
             if (errores === 0) {
                 console.log('✅ Todos los artículos válidos - confirmación habilitada');
             }
         }
 
         async function confirmarImportacionMesActual() {
+            console.log('🚀 Confirmando importación mes actual...');
             mostrarPasoMesActual(3);
+            
+            // Esperar a que el DOM se actualice completamente - timeout más largo
+            await new Promise(resolve => setTimeout(resolve, 300));
 
             try {
+                // **BARRA DE PROGRESO SIMULADA MIENTRAS SE PROCESA**
+                const barraProgreso = document.getElementById('progreso-mes-actual');
+                const totalItems = datosImportadosMesActual.length;
+                const tiempoEstimadoElem = document.getElementById('tiempo-estimado-mes-actual');
+                
+                console.log('📊 Inicializando barra de progreso mes actual...', {
+                    barraProgreso: !!barraProgreso,
+                    barraVisible: barraProgreso ? barraProgreso.offsetParent !== null : false,
+                    barraDisplay: barraProgreso ? window.getComputedStyle(barraProgreso.parentElement).display : 'N/A',
+                    paso3Visible: document.getElementById('paso3-mes-actual').style.display,
+                    tiempoEstimadoElem: !!tiempoEstimadoElem,
+                    totalItems
+                });
+                
+                if (!barraProgreso) {
+                    console.error('❌ No se encontró la barra de progreso mes actual');
+                    throw new Error('No se encontró la barra de progreso');
+                }
+                
+                // Resetear barra de progreso CON FORZAR REFLOW
+                barraProgreso.style.width = '0%';
+                barraProgreso.offsetHeight; // Forzar reflow
+                
+                // Iniciar en 5% de inmediato
+                requestAnimationFrame(() => {
+                    barraProgreso.style.width = '5%';
+                    barraProgreso.textContent = '5%';
+                    barraProgreso.className = 'progress-bar progress-bar-striped progress-bar-animated bg-success';
+                    barraProgreso.setAttribute('aria-valuenow', 5);
+                    console.log('✅ Barra de progreso mes actual reseteada al 5%');
+                });
+                
+                // Función para simular progreso
+                let progresoSimulado = 5;
+                const inicioTiempo = Date.now();
+                
+                // Estimar tiempo basado en cantidad de registros (más conservador)
+                const tiempoEstimadoSegundos = Math.max(20, Math.ceil(totalItems / 100));
+                
+                console.log(`⏱️ Tiempo estimado mes actual: ${tiempoEstimadoSegundos} segundos para ${totalItems} registros`);
+                
+                const intervaloProgreso = setInterval(() => {
+                    if (progresoSimulado < 85) {
+                        // Progreso MUY lento para dar tiempo al servidor
+                        if (progresoSimulado < 15) {
+                            progresoSimulado += 0.5;
+                        } else if (progresoSimulado < 40) {
+                            progresoSimulado += 0.8;
+                        } else if (progresoSimulado < 65) {
+                            progresoSimulado += 0.5;
+                        } else {
+                            progresoSimulado += 0.2;
+                        }
+                        
+                        barraProgreso.style.width = progresoSimulado + '%';
+                        barraProgreso.textContent = Math.round(progresoSimulado) + '%';
+                        barraProgreso.setAttribute('aria-valuenow', Math.round(progresoSimulado));
+                        
+                        // Actualizar tiempo estimado
+                        const tiempoTranscurrido = Math.floor((Date.now() - inicioTiempo) / 1000);
+                        const tiempoRestante = Math.max(0, tiempoEstimadoSegundos - tiempoTranscurrido);
+                        
+                        if (tiempoEstimadoElem) {
+                            if (tiempoRestante > 0) {
+                                tiempoEstimadoElem.innerHTML = `<i class="bi bi-clock me-1"></i>Tiempo estimado restante: ${tiempoRestante} segundos`;
+                            } else {
+                                tiempoEstimadoElem.innerHTML = `<i class="bi bi-hourglass-split me-1"></i>Finalizando procesamiento...`;
+                            }
+                        }
+                        
+                        // Solo loguear cada 10% para no saturar consola
+                        if (Math.round(progresoSimulado) % 10 === 0) {
+                            console.log(`📊 Progreso mes actual: ${Math.round(progresoSimulado)}% - Tiempo restante: ${tiempoRestante}s`);
+                        }
+                    }
+                }, 500); // Actualizar cada 500ms para progreso más lento
+                
+                // Actualizar texto de progreso
+                const textoProgreso = document.querySelector('#paso3-mes-actual p.text-muted');
+                if (textoProgreso) {
+                    textoProgreso.innerHTML = `Procesando <strong>${totalItems}</strong> registros del mes actual...<br><small>Esto puede tomar algunos minutos dependiendo del tamaño del archivo.</small>`;
+                }
+                
                 const response = await fetch('controller/procesar_importacion_mes_actual.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ datos: datosImportadosMesActual })
                 });
+                
+                // Detener simulación de progreso
+                clearInterval(intervaloProgreso);
+                
+                if (!response.ok) {
+                    barraProgreso.style.width = '100%';
+                    barraProgreso.textContent = 'Error';
+                    barraProgreso.classList.add('bg-danger');
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+                
+                // Completar barra de progreso
+                barraProgreso.style.width = '95%';
+                barraProgreso.textContent = '95% - Finalizando...';
 
                 const result = await response.json();
 
                 if (result.success) {
+                    // Progreso al 100%
+                    barraProgreso.style.width = '100%';
+                    barraProgreso.textContent = '100% - ¡Completado!';
+                    barraProgreso.classList.remove('progress-bar-striped', 'progress-bar-animated');
+                    
                     let mensaje = `✅ Importación completada!\n\nRegistros procesados: ${result.procesados}`;
                     
                     // Mostrar errores si los hay
@@ -5642,16 +6142,29 @@ if (!function_exists('es_modo_desarrollo')) {
                         });
                     }
                     
+                    // Esperar un momento para que el usuario vea el 100%
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
                     alert(mensaje);
                     const modal = bootstrap.Modal.getInstance(document.getElementById('modalImportarMesActual'));
                     modal.hide();
                     verificarDatosMesActual();
                 } else {
+                    clearInterval(intervaloProgreso);
+                    barraProgreso.style.width = '100%';
+                    barraProgreso.textContent = 'Error en procesamiento';
+                    barraProgreso.classList.add('bg-danger');
                     alert('❌ Error: ' + result.message);
                     mostrarPasoMesActual(2);
                 }
             } catch (error) {
                 console.error('Error en importación:', error);
+                
+                // Asegurar que se detenga el intervalo en caso de error
+                if (typeof intervaloProgreso !== 'undefined') {
+                    clearInterval(intervaloProgreso);
+                }
+                
                 alert('❌ Error al procesar la importación');
                 mostrarPasoMesActual(2);
             }

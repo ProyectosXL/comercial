@@ -51,12 +51,40 @@ try {
     $resultados = [];
     $articulosEncontrados = [];
 
-    // Buscar información en la base comercial
-    $placeholders = str_repeat('?,', count($codigosAValidar) - 1) . '?';
-    $sqlComercial = "SELECT codigo, descripcion FROM productos WHERE codigo IN ($placeholders)";
-    $stmtComercial = $conexionComercial->prepare($sqlComercial);
-    $stmtComercial->execute($codigosAValidar);
-    $articulos = $stmtComercial->fetchAll(PDO::FETCH_ASSOC);
+    // **SOLUCIÓN: Procesar en lotes para evitar límite de 2100 parámetros de SQL Server**
+    $batchSize = 2000; // Límite seguro (2100 - margen de seguridad)
+    $totalCodigos = count($codigosAValidar);
+    
+    if ($totalCodigos > $batchSize) {
+        error_log("⚠️ VALIDACION RAPIDA POR LOTES: Procesando $totalCodigos códigos en lotes de $batchSize");
+    }
+    
+    $articulos = [];
+    
+    // Dividir en lotes y procesar
+    for ($i = 0; $i < $totalCodigos; $i += $batchSize) {
+        $batch = array_slice($codigosAValidar, $i, $batchSize);
+        $batchNum = floor($i / $batchSize) + 1;
+        $totalBatches = ceil($totalCodigos / $batchSize);
+        
+        error_log("📦 Procesando lote $batchNum de $totalBatches (" . count($batch) . " códigos)");
+        
+        // Crear placeholders para este lote
+        $placeholders = str_repeat('?,', count($batch) - 1) . '?';
+        
+        // Buscar información en la base comercial
+        $sqlComercial = "SELECT codigo, descripcion FROM productos WHERE codigo IN ($placeholders)";
+        $stmtComercial = $conexionComercial->prepare($sqlComercial);
+        $stmtComercial->execute($batch);
+        $articulosLote = $stmtComercial->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Agregar resultados de este lote
+        $articulos = array_merge($articulos, $articulosLote);
+        
+        error_log("✅ Lote $batchNum completado: " . count($articulosLote) . " artículos encontrados en comercial");
+    }
+    
+    error_log("DEBUG VALIDACION RAPIDA: Total artículos encontrados en comercial: " . count($articulos));
 
     foreach ($articulos as $articulo) {
         $codigo = trim($articulo['codigo']);

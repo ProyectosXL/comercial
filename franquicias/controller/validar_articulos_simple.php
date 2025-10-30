@@ -55,21 +55,44 @@ try {
     $pdo = DatabaseConfig::conectarLakerSA();
     $conexionSistemas = DatabaseConfig::conectarSistemas();
 
-    // Crear placeholders para la consulta IN
-    $placeholders = str_repeat('?,', count($codigosAValidar) - 1) . '?';
+    // **SOLUCIÓN: Procesar en lotes para evitar límite de 2100 parámetros de SQL Server**
+    $resultadosDB = [];
+    $batchSize = 2000; // Límite seguro (2100 - margen de seguridad)
+    $totalCodigos = count($codigosAValidar);
     
-    // Buscar artículos en LAKER_SA con filtro específico para franquicias
-    $sql = "SELECT COD_ARTICU as codigo, DESCRIPCIO as descripcion 
-            FROM STA11 
-            WHERE COD_ARTICU IN ($placeholders) 
-            AND COD_ARTICU LIKE '[XO]%'
-            ORDER BY COD_ARTICU";
+    if ($totalCodigos > $batchSize) {
+        error_log("⚠️ VALIDACION POR LOTES: Procesando $totalCodigos códigos en lotes de $batchSize");
+    }
+    
+    // Dividir en lotes y procesar
+    for ($i = 0; $i < $totalCodigos; $i += $batchSize) {
+        $batch = array_slice($codigosAValidar, $i, $batchSize);
+        $batchNum = floor($i / $batchSize) + 1;
+        $totalBatches = ceil($totalCodigos / $batchSize);
+        
+        error_log("📦 Procesando lote $batchNum de $totalBatches (" . count($batch) . " códigos)");
+        
+        // Crear placeholders para este lote
+        $placeholders = str_repeat('?,', count($batch) - 1) . '?';
+        
+        // Buscar artículos en LAKER_SA con filtro específico para franquicias
+        $sql = "SELECT COD_ARTICU as codigo, DESCRIPCIO as descripcion 
+                FROM STA11 
+                WHERE COD_ARTICU IN ($placeholders) 
+                AND COD_ARTICU LIKE '[XO]%'
+                ORDER BY COD_ARTICU";
 
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($codigosAValidar);
-    $resultadosDB = $stmt->fetchAll();
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($batch);
+        $resultadosLote = $stmt->fetchAll();
+        
+        // Agregar resultados de este lote al array general
+        $resultadosDB = array_merge($resultadosDB, $resultadosLote);
+        
+        error_log("✅ Lote $batchNum completado: " . count($resultadosLote) . " artículos encontrados");
+    }
 
-    error_log("DEBUG VALIDACION SIMPLE: Encontrados " . count($resultadosDB) . " artículos en LAKER_SA");
+    error_log("DEBUG VALIDACION SIMPLE: Encontrados " . count($resultadosDB) . " artículos en LAKER_SA (total de todos los lotes)");
 
     // Procesar resultados
     $articulos = [];
