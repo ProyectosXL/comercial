@@ -21,10 +21,10 @@
 
 <!-- KPIs -->
 <div class="row mb-4">
-    <div class="col-lg-3 col-md-6 mb-3"><div class="card text-white bg-primary h-100"><div class="card-body"><div class="d-flex justify-content-between"><h5 class="card-title">Total Incidentes</h5><i class="fas fa-clipboard-list fa-2x"></i></div><p class="card-text display-4"><?php echo $stats['total'] ?? 0; ?></p></div></div></div>
-    <div class="col-lg-3 col-md-6 mb-3"><div class="card text-white bg-info h-100"><div class="card-body"><div class="d-flex justify-content-between"><h5 class="card-title">Abiertos</h5><i class="fas fa-folder-open fa-2x"></i></div><p class="card-text display-4"><?php echo $stats['abiertos'] ?? 0; ?></p></div></div></div>
-    <div class="col-lg-3 col-md-6 mb-3"><div class="card text-white bg-warning h-100"><div class="card-body"><div class="d-flex justify-content-between"><h5 class="card-title">En Curso</h5><i class="fas fa-cogs fa-2x"></i></div><p class="card-text display-4"><?php echo $stats['en_curso'] ?? 0; ?></p></div></div></div>
-    <div class="col-lg-3 col-md-6 mb-3"><div class="card text-white bg-success h-100"><div class="card-body"><div class="d-flex justify-content-between"><h5 class="card-title">Tiempo Prom. Res. (días)</h5><i class="fas fa-hourglass-half fa-2x"></i></div><p class="card-text display-4"><?php echo number_format($stats['tiempo_promedio_resolucion'] ?? 0, 1, ',', '.'); ?></p></div></div></div>
+    <div class="col-lg-3 col-md-6 mb-3"><div class="card text-white bg-primary h-100"><div class="card-body"><h5 class="card-title">Pendientes (Nuevos)</h5><p class="card-text display-4"><?php echo $stats['abiertos'] ?? 0; ?></p></div></div></div>
+    <div class="col-lg-3 col-md-6 mb-3"><div class="card text-white bg-warning h-100"><div class="card-body"><h5 class="card-title">Derivados (a Gerencia)</h5><p class="card-text display-4"><?php echo $stats['derivados'] ?? 0; ?></p></div></div></div>
+    <div class="col-lg-3 col-md-6 mb-3"><div class="card text-white bg-success h-100"><div class="card-body"><h5 class="card-title">Aprobados</h5><p class="card-text display-4"><?php echo $stats['aprobados'] ?? 0; ?></p></div></div></div>
+    <div class="col-lg-3 col-md-6 mb-3"><div class="card text-white bg-danger h-100"><div class="card-body"><h5 class="card-title">Rechazados</h5><p class="card-text display-4"><?php echo $stats['rechazados'] ?? 0; ?></p></div></div></div>
 </div>
 
 <!-- Tabla de Datos -->

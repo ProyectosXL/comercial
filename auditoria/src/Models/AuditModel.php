@@ -38,51 +38,43 @@ class AuditModel {
     }
 
     private function applyFilters(&$sql, &$params, $filters) {
-        if (!empty($filters['sucursal'])) { 
-            $sql .= " AND a.nro_sucursal = ? "; 
-            $params[] = $filters['sucursal']; 
-        }
-        if (!empty($filters['estado'])) { 
-            $sql .= " AND a.estado = ? "; 
-            $params[] = $filters['estado']; 
-        }
-        if (!empty($filters['fecha_desde'])) { 
-            $sql .= " AND a.fecha_creacion >= ? "; 
-            $params[] = $filters['fecha_desde']; 
-        }
-        if (!empty($filters['fecha_hasta'])) { 
-            $sql .= " AND a.fecha_creacion <= ? "; 
-            $params[] = $filters['fecha_hasta']; 
-        }
+        if (!empty($filters['sucursal'])) { $sql .= " AND a.nro_sucursal = ? "; $params[] = $filters['sucursal']; }
+        if (!empty($filters['estado'])) { $sql .= " AND a.estado = ? "; $params[] = $filters['estado']; }
+        if (!empty($filters['fecha_desde'])) { $sql .= " AND a.fecha_creacion >= ? "; $params[] = $filters['fecha_desde']; }
+        if (!empty($filters['fecha_hasta'])) { $sql .= " AND a.fecha_creacion <= ? "; $params[] = $filters['fecha_hasta']; }
     }
 
     public function getAllAudits($filters = []) {
         $params = [];
         $sql = "SELECT a.id, a.fecha_creacion, a.n_comp, a.motivo, a.estado, a.nro_sucursal FROM FP_AUDITORIA_DIF_PRECIO a WHERE 1=1";
+        
         $this->applyFilters($sql, $params, $filters);
+        
         $sql .= " ORDER BY a.fecha_creacion DESC;";
+        
         try {
             $pdo = Database::getConnectionSistemas();
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) { 
-            die("Error al obtener las auditorías: " . $e->getMessage()); 
-        }
+        } catch (PDOException $e) { die("Error al obtener las auditorías: " . $e->getMessage()); }
     }
     
-    public function getDashboardStats($filters = []) {
-        $params = [];
-        $sql = "SELECT COUNT(*) AS total, SUM(CASE WHEN a.estado = 'Pendiente' THEN 1 ELSE 0 END) AS abiertos, SUM(CASE WHEN a.estado = 'Autorizado N1' THEN 1 ELSE 0 END) AS en_curso, SUM(CASE WHEN a.estado IN ('Autorizado N2', 'Rechazado') THEN 1 ELSE 0 END) AS finalizados, AVG(CAST(DATEDIFF(day, a.fecha_creacion, a.fecha_actualizacion) AS FLOAT)) as tiempo_promedio_resolucion FROM FP_AUDITORIA_DIF_PRECIO a WHERE 1=1";
-        $this->applyFilters($sql, $params, $filters);
+    public function getDashboardStats() {
+        $sql = "SELECT
+                    COUNT(*) AS total,
+                    SUM(CASE WHEN estado = 'Pendiente' THEN 1 ELSE 0 END) AS abiertos,
+                    SUM(CASE WHEN estado = 'Derivado a Gerencia' THEN 1 ELSE 0 END) AS derivados,
+                    SUM(CASE WHEN estado = 'Aprobado' THEN 1 ELSE 0 END) AS aprobados,
+                    SUM(CASE WHEN estado = 'Rechazado' THEN 1 ELSE 0 END) AS rechazados,
+                    AVG(CAST(DATEDIFF(day, a.fecha_creacion, a.fecha_actualizacion) AS FLOAT)) as tiempo_promedio_resolucion
+                FROM FP_AUDITORIA_DIF_PRECIO a";
         try {
             $pdo = Database::getConnectionSistemas();
             $stmt = $pdo->prepare($sql);
-            $stmt->execute($params);
+            $stmt->execute();
             return $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) { 
-            die("Error al calcular las estadísticas: " . $e->getMessage()); 
-        }
+        } catch (PDOException $e) { die("Error al calcular las estadísticas: " . $e->getMessage()); }
     }
 
     public function getAuditById($id) {

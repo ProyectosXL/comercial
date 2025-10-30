@@ -76,7 +76,7 @@ class SucursalController extends BaseController {
         $sucursales = $ventaModel->getSucursales();
         $nroSucursal = $operacion['NRO_SUCURS'];
         $operacion['DESC_SUCURSAL'] = $sucursales[$nroSucursal] ?? 'Desconocida';
-        $motivos = ['Compra anterior a rebaja', 'Etiqueta mal colocada', 'No aplicó descuento', 'Compra Ecommerce'];
+        $motivos = ['Compra anterior a rebaja', 'Precio mal colocado', 'No aplicó descuento', 'Compra Ecommerce'];
         require_once __DIR__ . '/../Views/sucursal/justificar.php';
     }
 

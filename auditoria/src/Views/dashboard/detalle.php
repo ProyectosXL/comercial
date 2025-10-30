@@ -44,8 +44,8 @@
                     $badgeClass = 'badge-secondary';
                     switch ($estado) {
                         case 'Pendiente': $badgeClass = 'badge-info'; break;
-                        case 'Autorizado N1': $badgeClass = 'badge-success'; break;
-                        case 'Autorizado N2': $badgeClass = 'badge-primary'; break;
+                        case 'Derivado a Gerencia': $badgeClass = 'badge-warning'; break;
+                        case 'Aprobado': $badgeClass = 'badge-success'; break;
                         case 'Rechazado': $badgeClass = 'badge-danger'; break;
                     }
                 ?>
@@ -58,36 +58,57 @@
                 $auditStatus = $auditoria['estado'];
                 ?>
 
-                <?php if ($auditStatus === 'Pendiente'): ?>
-                    <?php if (in_array($userRole, ['asistente', 'gerencia'])): ?>
-                        <!-- Form Actions -->
+                <?php // --- Lógica para el Asistente Comercial --- ?>
+                <?php if ($userRole === 'asistente'): ?>
+                    <?php if ($auditStatus === 'Pendiente'): ?>
+                        <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline">
+                            <input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>">
+                            <input type="hidden" name="estado" value="Aprobado">
+                            <button type="submit" class="btn btn-success mb-2 w-100"><i class="fas fa-check"></i> Aprobar Directo</button>
+                        </form>
+                        <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline">
+                            <input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>">
+                            <input type="hidden" name="estado" value="Derivado a Gerencia">
+                            <button type="submit" class="btn btn-warning w-100"><i class="fas fa-share-square"></i> Derivar a Gerencia</button>
+                        </form>
                     <?php endif; ?>
-                <?php elseif ($auditStatus === 'Autorizado N1'): ?>
-                    <?php if ($userRole === 'gerencia'): ?>
-                       <!-- Form Actions -->
-                    <?php else: ?>
-                        <div class="alert alert-warning" role="alert">Esperando aprobación de Nivel 2 (Gerencia).</div>
-                    <?php endif; ?>
-                <?php else: ?>
-                    <div class="alert alert-light" role="alert">Esta auditoría ya ha sido finalizada.</div>
-                <?php endif; ?>
-                
-                <!-- This part is duplicated inside the IFs, but I'll add the forms here for clarity -->
-                <?php if ($auditStatus === 'Pendiente' && in_array($userRole, ['asistente', 'gerencia'])) : ?>
-                    <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline"><input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>"><input type="hidden" name="estado" value="Autorizado N1"><button type="submit" class="btn btn-success mb-2 w-100"><i class="fas fa-check"></i> Autorizar N1</button></form>
-                    <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline"><input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>"><input type="hidden" name="estado" value="Rechazado"><button type="submit" class="btn btn-danger w-100"><i class="fas fa-times"></i> Rechazar</button></form>
-                <?php endif; ?>
-                <?php if ($auditStatus === 'Autorizado N1' && $userRole === 'gerencia') : ?>
-                    <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline"><input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>"><input type="hidden" name="estado" value="Autorizado N2"><button type="submit" class="btn btn-primary mb-2 w-100"><i class="fas fa-check-double"></i> Autorizar N2</button></form>
-                    <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline"><input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>"><input type="hidden" name="estado" value="Rechazado"><button type="submit" class="btn btn-danger w-100"><i class="fas fa-times"></i> Rechazar</button></form>
                 <?php endif; ?>
 
+                <?php // --- Lógica para la Gerencia Comercial --- ?>
+                <?php if ($userRole === 'gerencia'): ?>
+                    <?php if ($auditStatus === 'Derivado a Gerencia'): ?>
+                        <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline">
+                            <input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>">
+                            <input type="hidden" name="estado" value="Aprobado">
+                            <button type="submit" class="btn btn-success mb-2 w-100"><i class="fas fa-check"></i> Aprobar</button>
+                        </form>
+                        <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline">
+                            <input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>">
+                            <input type="hidden" name="estado" value="Rechazado">
+                            <button type="submit" class="btn btn-danger w-100"><i class="fas fa-times"></i> Rechazar</button>
+                        </form>
+                    <?php endif; ?>
+                <?php endif; ?>
+
+                <?php // --- Mensaje para estados donde no hay acciones o ya están finalizados --- ?>
+                <?php if (
+                    in_array($auditStatus, ['Aprobado', 'Rechazado']) ||
+                    ($userRole === 'asistente' && $auditStatus !== 'Pendiente') ||
+                    ($userRole === 'gerencia' && $auditStatus !== 'Derivado a Gerencia')
+                ): ?>
+                     <div class="alert alert-light" role="alert">
+                        <?php if (in_array($auditStatus, ['Aprobado', 'Rechazado'])): ?>
+                            Esta auditoría ya ha sido finalizada.
+                        <?php else: ?>
+                            No hay acciones disponibles para usted en este estado.
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
-</div> <!-- Cierre del primer <div class="row"> -->
+</div>
 
-<!-- NUEVO: Fila para el historial -->
 <div class="row mt-4">
     <div class="col-12">
         <div class="card">

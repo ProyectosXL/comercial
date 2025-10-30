@@ -12,23 +12,20 @@ class DashboardController extends BaseController {
         $auditModel = new AuditModel();
         $ventaModel = new VentaModel();
 
-        // 1. Recoger todos los filtros de la URL
         $filters = [
             'sucursal' => $_GET['sucursal'] ?? null,
             'estado' => $_GET['estado'] ?? null,
             'fecha_desde' => $_GET['fecha_desde'] ?? null,
             'fecha_hasta' => $_GET['fecha_hasta'] ?? null,
         ];
-
-        // 2. Obtener datos y estadísticas CON los filtros aplicados
-        $auditorias = $auditModel->getAllAudits($filters);
-        $stats = $auditModel->getDashboardStats($filters);
-
-        // 3. Obtener datos para los dropdowns de los filtros
-        $sucursales = $ventaModel->getSucursales();
-        $estadosPosibles = ['Pendiente', 'Autorizado N1', 'Autorizado N2', 'Rechazado'];
         
-        // Combinar con nombre de sucursal
+        // El modelo ya no necesita saber el rol para obtener los datos
+        $auditorias = $auditModel->getAllAudits($filters);
+        $stats = $auditModel->getDashboardStats(); // Los stats son siempre globales
+
+        $sucursales = $ventaModel->getSucursales();
+        $estadosPosibles = ['Pendiente', 'Derivado a Gerencia', 'Aprobado', 'Rechazado'];
+        
         foreach ($auditorias as $key => $audit) {
             $nroSucursal = $audit['nro_sucursal'];
             $auditorias[$key]['DESC_SUCURSAL'] = $sucursales[$nroSucursal] ?? 'Desconocida';
@@ -36,7 +33,6 @@ class DashboardController extends BaseController {
         
         require_once __DIR__ . '/../Views/dashboard/index.php';
     }
-
 
     public function detalle($id) {
         $pageTitle = "Detalle de Auditoría";
@@ -58,43 +54,52 @@ class DashboardController extends BaseController {
     }
 
     public function actualizarEstado() {
-        // Cargar modelos y servicios necesarios
-        require_once __DIR__ . '/../Models/AuditModel.php';
         require_once __DIR__ . '/../Models/AuditHistoryModel.php';
         require_once __DIR__ . '/../Services/NotificationService.php';
+        require_once __DIR__ . '/../Models/VentaModel.php';
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $_POST['id'];
             $nuevoEstado = $_POST['estado'];
-
             $auditModel = new AuditModel();
-            if ($auditModel->updateAuditStatus($id, $nuevoEstado)) {
 
-                // 1. Registrar en el historial
+            if ($auditModel->updateAuditStatus($id, $nuevoEstado)) {
                 $historyModel = new AuditHistoryModel();
                 $usuario = $_SESSION['user']['name'];
-                $accion = "Cambio de estado a: " . $nuevoEstado;
-                $historyModel->registrarAccion($id, $usuario, $accion);
+                $historyModel->registrarAccion($id, $usuario, "Cambio de estado a: " . $nuevoEstado);
 
-                // 2. Preparar y enviar emails
                 $notificationService = new NotificationService();
                 $auditoria = $auditModel->getAuditById($id);
+                $ventaModel = new VentaModel();
+                $sucursales = $ventaModel->getSucursales();
+                $nombreSucursal = $sucursales[$auditoria['nro_sucursal']] ?? 'Desconocida';
 
-                $emailSucursal = 'franco.pertus@xl.com.ar'; 
-                $emailRRHH = 'franco.pertus@xl.com.ar'; 
+                $emailSucursal = 'sucursal.prueba@example.com';
+                $emailRRHH = 'rrhh.prueba@example.com';
+                $emailGerencia = 'gerente.comercial@xl.com.ar';
 
-                // Construir el cuerpo del email
-                $asunto = "Actualización Auditoría #{$id} - {$auditoria['n_comp']}";
-                $cuerpo = "La solicitud de auditoría #{$id} para el comprobante <strong>{$auditoria['n_comp']}</strong> ha cambiado su estado a: <strong>{$nuevoEstado}</strong>.<br><br>Atentamente,<br>Sistema de Auditorías.";
-
-                // Enviar email a la sucursal ante CUALQUIER cambio
-                $notificationService->sendEmail($emailSucursal, $asunto, $cuerpo);
-
-                // Enviar email a RRHH SOLO si es Rechazado
-                if ($nuevoEstado === 'Rechazado') {
-                    $notificationService->sendEmail($emailRRHH, $asunto, $cuerpo);
+                // --- LÓGICA DE NOTIFICACIONES CORREGIDA ---
+                // Si el estado es final (Aprobado o Rechazado), notificar a la sucursal.
+                if ($nuevoEstado === 'Aprobado' || $nuevoEstado === 'Rechazado') {
+                    $asuntoSucursal = "Resolución Auditoría #{$id} - {$auditoria['n_comp']}";
+                    $cuerpoSucursal = "Su solicitud de auditoría #{$id} ha sido resuelta con el estado: <strong>{$nuevoEstado}</strong>.";
+                    $notificationService->sendEmail($emailSucursal, $asuntoSucursal, $cuerpoSucursal);
                 }
-                // --- FIN DE LÓGICA DE NOTIFICACIONES ---
+
+                // Notificar a RRHH si es Rechazado
+                if ($nuevoEstado === 'Rechazado') {
+                    $asuntoRRHH = "Auditoría Rechazada - #" . $id;
+                    $cuerpoRRHH = "La auditoría #{$id} de la sucursal {$nombreSucursal} ha sido rechazada.";
+                    $notificationService->sendEmail($emailRRHH, $asuntoRRHH, $cuerpoRRHH);
+                }
+
+                // Notificar a Gerencia si es Derivado
+                if ($nuevoEstado === 'Derivado a Gerencia') {
+                    $asuntoGerencia = "Auditoría Derivada para su Revisión - #" . $id;
+                    $cuerpoGerencia = "El Asistente Comercial ha derivado la auditoría #{$id} para su revisión final.<br><br><strong>Sucursal:</strong> {$nombreSucursal}<br><strong>Motivo:</strong> {$auditoria['motivo']}";
+                    $notificationService->sendEmail($emailGerencia, $asuntoGerencia, $cuerpoGerencia);
+                }
+                
                 header('Location: /comercial/auditoria/public/dashboard');
                 exit();
             } else {
