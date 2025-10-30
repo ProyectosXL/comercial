@@ -149,15 +149,24 @@ if (!function_exists('es_modo_desarrollo')) {
 
         /* Select2 custom styles para modales */
         .select2-dropdown-modal {
-            z-index: 9999 !important;
+            z-index: 1050 !important;
         }
         
         .modal .select2-container--bootstrap-5 .select2-dropdown {
-            z-index: 9999 !important;
+            z-index: 1050 !important;
         }
         
         .modal .select2-container {
-            z-index: 9998 !important;
+            z-index: 1049 !important;
+        }
+        
+        /* Select2 ABIERTO - debe estar por ENCIMA del sticky header */
+        .modal .select2-container--open {
+            z-index: 1065 !important;
+        }
+        
+        .modal .select2-container--open .select2-dropdown {
+            z-index: 1065 !important;
         }
         
         .select2-container--bootstrap-5 .select2-selection {
@@ -191,11 +200,40 @@ if (!function_exists('es_modo_desarrollo')) {
 
         /* Select2 en modales - Fix z-index */
         .select2-container--open {
-            z-index: 9999 !important;
+            z-index: 1065 !important; /* Por ENCIMA del header cuando está abierto */
         }
         
         .select2-dropdown {
-            z-index: 9999 !important;
+            z-index: 1065 !important; /* Por ENCIMA del header cuando está abierto */
+        }
+        
+        /* Modal body con altura controlada para evitar scroll excesivo */
+        #modalImportarMultiple .modal-body,
+        #modalImportarMesActual .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        /* Contenedor de tabla con scroll interno */
+        .table-responsive {
+            position: relative;
+            max-height: 400px !important;
+            overflow-y: auto !important;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        
+        /* Sticky header para tablas - z-index MAYOR que Select2 */
+        .table thead.sticky-top {
+            position: sticky;
+            top: 0;
+            z-index: 1060 !important;
+        }
+        
+        .table thead.sticky-top th {
+            background-color: #343a40 !important;
         }
         
         /* Asegurar que Select2 sea visible en tabla */
@@ -403,8 +441,8 @@ if (!function_exists('es_modo_desarrollo')) {
                                     data-bs-target="#contenido-individual" type="button" role="tab" 
                                     aria-controls="contenido-individual" aria-selected="true">
                                 <i class="bi bi-calendar-month me-2"></i>
-                                Carga Individual
-                                <small class="d-block text-muted">Mes anterior</small>
+                                Carga Individual Mes Pasado
+                                <small class="d-block text-muted">Sin Fechas Específicas</small>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -412,8 +450,17 @@ if (!function_exists('es_modo_desarrollo')) {
                                     data-bs-target="#contenido-multiples" type="button" role="tab" 
                                     aria-controls="contenido-multiples" aria-selected="false">
                                 <i class="bi bi-calendar-range me-2"></i>
-                                Carga Múltiples Períodos
+                                Carga Múltiples Períodos Pasados
                                 <small class="d-block text-muted">Rango personalizado</small>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-mes-actual" data-bs-toggle="tab" 
+                                    data-bs-target="#contenido-mes-actual" type="button" role="tab" 
+                                    aria-controls="contenido-mes-actual" aria-selected="false">
+                                <i class="bi bi-calendar-day me-2"></i>
+                                Carga Individual Mes Actual
+                                <small class="d-block text-muted">Con Fechas específicas</small>
                             </button>
                         </li>
                     </ul>
@@ -441,13 +488,13 @@ if (!function_exists('es_modo_desarrollo')) {
                     </div>
                 </div>
 
-                <!-- Mensaje informativo -->
+                <!-- Mensaje informativo para carga individual mes anterior -->
                 <div class="alert alert-info border-0 shadow-sm" role="alert">
                     <div class="d-flex align-items-center">
-                        <i class="bi bi-info-circle me-3 fs-4"></i>
+                        <i class="bi bi-calendar-check me-3 fs-4"></i>
                         <div>
-                            <strong>Acceso autorizado para franquicias sin Tango (MES ANTERIOR)</strong><br>
-                            <small>Este entorno está diseñado para franquicias que no utilizan el sistema Tango. En esta pestaña se pueden cargar las ventas del mes anterior al actual, para cargar las ventas de otro u otros períodos, utilice la pestaña correspondiente.</small>
+                            <strong>Carga de Ventas del Mes Anterior</strong><br>
+                            <small>Importe las ventas del período anterior utilizando un archivo Excel o CSV con los artículos y cantidades vendidas.</small>
                         </div>
                     </div>
                 </div>
@@ -471,20 +518,6 @@ if (!function_exists('es_modo_desarrollo')) {
                             <span class="visually-hidden">Verificando ventas existentes...</span>
                         </div>
                         <p class="mt-2 text-muted">Verificando ventas del período anterior...</p>
-                    </div>
-                </div>
-
-                <!-- Mensaje adicional para período sin cargar -->
-                <div class="alert alert-warning border-0 shadow-sm d-none" role="alert" id="mensaje-periodo-faltante">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-exclamation-triangle fs-4 me-3"></i>
-                        <div>
-                            <h6 class="alert-heading mb-1">Carga Pendiente</h6>
-                            <p class="mb-0">
-                                <strong>Falta cargar las ventas para el período anterior.</strong>
-                                Utilice el formulario a continuación para importar los datos de ventas.
-                            </p>
-                        </div>
                     </div>
                 </div>
 
@@ -542,52 +575,6 @@ if (!function_exists('es_modo_desarrollo')) {
                 <!-- Contenedor original para carga nueva -->
                 <div id="contenedor-carga-nueva">
 
-                <!-- Información de la franquicia -->
-                <div class="row">
-                    <div class="col-md-8 mx-auto">
-                        <div class="card carga-ventas-card">
-                            <div class="card-header text-center">
-                                <h5 class="card-title mb-0">
-                                    <i class="bi bi-building me-2"></i>
-                                    Información de la Franquicia
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row text-center">
-                                    <div class="col-md-3 mb-3">
-                                        <div class="p-2">
-                                            <i class="bi bi-person-circle text-primary fs-4 d-block mb-1"></i>
-                                            <small class="text-muted d-block">Usuario</small>
-                                            <strong><?= htmlspecialchars($usuario) ?></strong>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <div class="p-2">
-                                            <i class="bi bi-shop text-success fs-4 d-block mb-1"></i>
-                                            <small class="text-muted d-block">Tipo</small>
-                                            <span class="badge bg-warning text-dark">Sin Tango</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <div class="p-2">
-                                            <i class="bi bi-shield-check text-success fs-4 d-block mb-1"></i>
-                                            <small class="text-muted d-block">Estado</small>
-                                            <span class="badge bg-success">Autorizado</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <div class="p-2">
-                                            <i class="bi bi-clock text-info fs-4 d-block mb-1"></i>
-                                            <small class="text-muted d-block">Acceso</small>
-                                            <small><?= date('d/m/Y') ?></small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Módulo de carga de ventas -->
                 <div class="row mt-4">
                     <div class="col-12">
@@ -605,6 +592,22 @@ if (!function_exists('es_modo_desarrollo')) {
                                             <h6><i class="bi bi-calendar3 me-2"></i>Período de Carga</h6>
                                             <p class="text-muted mb-4">
                                                 <?= fecha_espanol('F Y', strtotime('-1 month')) ?> - Período abierto para carga de ventas
+                                            </p>
+                                        </div>
+                                        
+                                        <!-- Información del formato requerido -->
+                                        <div class="alert alert-warning border-0 shadow-sm" role="alert">
+                                            <h6><i class="bi bi-file-earmark-spreadsheet me-2"></i>Formato de Archivo Requerido</h6>
+                                            <p class="mb-2">El archivo debe contener exactamente <strong>2 columnas</strong>:</p>
+                                            <ul class="mb-2">
+                                                <li><strong>ARTICULO:</strong> Código del artículo (debe empezar con X u O)</li>
+                                                <li><strong>CANTIDAD:</strong> Cantidad vendida (número entero)</li>
+                                            </ul>
+                                            <p class="mb-0">
+                                                <button class="btn btn-sm btn-outline-warning" id="btnDescargarEjemplo">
+                                                    <i class="bi bi-download me-1"></i>
+                                                    Descargar ejemplo.xlsx
+                                                </button>
                                             </p>
                                         </div>
                                         
@@ -626,11 +629,7 @@ if (!function_exists('es_modo_desarrollo')) {
                                 </div>
                                 
                                 <hr>
-                                
-                                <div class="text-center py-3 text-muted">
-                                    <i class="bi bi-info-circle me-2"></i>
-                                    <strong>Información:</strong> Este módulo está diseñado específicamente para franquicias que no utilizan el sistema Tango.
-                                </div>
+                          
                             </div>
                         </div>
                     </div>
@@ -667,7 +666,7 @@ if (!function_exists('es_modo_desarrollo')) {
                         </div>
 
                         <!-- Mensaje informativo para múltiples períodos -->
-                        <div class="alert alert-primary border-0 shadow-sm" role="alert" id="mensaje-info-multiples">
+                        <div class="alert alert-info border-0 shadow-sm" role="alert" id="mensaje-info-multiples">
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-calendar-range me-3 fs-4"></i>
                                 <div>
@@ -916,16 +915,226 @@ if (!function_exists('es_modo_desarrollo')) {
                                         
                                         <hr>
                                         
-                                        <div class="text-center py-3 text-muted">
-                                            <i class="bi bi-info-circle me-2"></i>
-                                            <strong>Información:</strong> Esta funcionalidad permite cargar ventas para múltiples períodos en una sola importación.
-                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
                     </div> <!-- Fin de la pestaña múltiples períodos -->
+                    
+                    <!-- Pestaña 3: Carga Individual Mes Actual -->
+                    <div class="tab-pane fade" id="contenido-mes-actual" role="tabpanel" 
+                         aria-labelledby="tab-mes-actual">
+                        
+                        <!-- Header para mes actual -->
+                        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                            <h1 class="h2" id="titulo-mes-actual-tab">
+                                <i class="bi bi-calendar-day text-success me-2"></i>
+                                <span id="titulo-mes-actual-texto">Carga de Ventas Mes Actual 2025 - Franquicias sin Tango</span>
+                            </h1>
+                            <div class="btn-toolbar mb-2 mb-md-0">
+                                <div class="btn-group me-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-person-circle me-1"></i>
+                                        <?= htmlspecialchars($usuario) ?>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mensaje informativo para mes actual -->
+                        <div class="alert alert-info border-0 shadow-sm" role="alert">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-calendar-check me-3 fs-4"></i>
+                                <div>
+                                    <strong>Carga de ventas del mes actual por fechas específicas</strong><br>
+                                    <small>Importe ventas para fechas exactas del mes <?= fecha_espanol('F Y') ?>. Use la estructura de archivo con columna FECHA en formato DD/MM/YYYY.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mensaje informativo sobre agrupación automática -->
+                        <div class="alert alert-success border-0 shadow-sm" role="alert">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-collection me-3 fs-4"></i>
+                                <div>
+                                    <strong>Agrupación automática de duplicados</strong><br>
+                                    <small>Si su archivo contiene el mismo artículo en la misma fecha repetido, el sistema automáticamente sumará las cantidades.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Selector de rango de fechas -->
+                        <div class="row">
+                            <div class="col-md-10 mx-auto">
+                                <div class="card carga-ventas-card">
+                                    <div class="card-header text-center">
+                                        <h5 class="card-title mb-0">
+                                            <i class="bi bi-calendar-event me-2"></i>
+                                            Seleccionar Rango de Fechas
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row justify-content-center">
+                                            <div class="col-md-8">
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label for="fecha-desde-mes-actual" class="form-label">
+                                                            <i class="bi bi-calendar-minus me-1"></i>
+                                                            Fecha Desde
+                                                        </label>
+                                                        <input type="date" class="form-control" id="fecha-desde-mes-actual">
+                                                        <small class="text-muted">Formato: DD/MM/YYYY</small>
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label for="fecha-hasta-mes-actual" class="form-label">
+                                                            <i class="bi bi-calendar-plus me-1"></i>
+                                                            Fecha Hasta
+                                                        </label>
+                                                        <input type="date" class="form-control" id="fecha-hasta-mes-actual">
+                                                        <small class="text-muted">Formato: DD/MM/YYYY</small>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Información del rango seleccionado -->
+                                                <div class="alert alert-light border d-none" id="info-rango-mes-actual">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="bi bi-info-circle text-primary me-2"></i>
+                                                        <div>
+                                                            <strong>Rango seleccionado:</strong>
+                                                            <span id="texto-rango-mes-actual"></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Mensaje de validación -->
+                                                <div class="alert alert-danger d-none" id="error-rango-mes-actual">
+                                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                                    <span id="mensaje-error-rango-mes-actual"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Área de importación mes actual -->
+                        <div class="row mt-4" id="area-modulo-importacion-mes-actual">
+                            <div class="col-12">
+                                <div class="card carga-ventas-card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">
+                                            <i class="bi bi-upload me-2"></i>
+                                            Módulo de Importación Mes Actual
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-8 mx-auto">
+                                                
+                                                <!-- Información del formato requerido -->
+                                                <div class="alert alert-warning border-0 shadow-sm" role="alert">
+                                                    <h6><i class="bi bi-file-earmark-spreadsheet me-2"></i>Formato de Archivo Requerido</h6>
+                                                    <p class="mb-2">El archivo debe contener exactamente <strong>3 columnas</strong>:</p>
+                                                    <ul class="mb-2">
+                                                        <li><strong>ARTICULO:</strong> Código del artículo (debe empezar con X u O)</li>
+                                                        <li><strong>CANTIDAD:</strong> Cantidad vendida (número entero)</li>
+                                                        <li><strong>FECHA:</strong> Fecha en formato DD/MM/YYYY (ej: 15/10/2025)</li>
+                                                    </ul>
+                                                    <p class="mb-0">
+                                                        <button class="btn btn-sm btn-outline-warning" id="btnDescargarEjemploMesActual">
+                                                            <i class="bi bi-download me-1"></i>
+                                                            Descargar ejemplo_mes_actual.xlsx
+                                                        </button>
+                                                    </p>
+                                                </div>
+                                                
+                                                <div class="row">
+                                                    <div class="col-md-8 mx-auto mb-3">
+                                                        <div class="d-grid">
+                                                            <button class="btn btn-outline-success btn-lg" type="button" 
+                                                                    id="btnImportarMesActual" 
+                                                                    data-bs-toggle="modal" 
+                                                                    data-bs-target="#modalImportarMesActual"
+                                                                    disabled>
+                                                                <i class="bi bi-upload me-2"></i>
+                                                                Importar Ventas Mes Actual
+                                                            </button>
+                                                            <small class="text-muted text-center mt-2">
+                                                                Seleccione el rango de fechas antes de importar
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <hr>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tabla de resumen de fechas cargadas (se muestra cuando hay datos) -->
+                        <div class="row mt-4 d-none" id="area-resumen-fechas-cargadas">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header bg-success text-white">
+                                        <h5 class="mb-0">
+                                            <i class="bi bi-calendar-check me-2"></i>
+                                            Fechas Cargadas - Resumen
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="alert alert-success">
+                                            <i class="bi bi-check-circle me-2"></i>
+                                            <strong>Datos cargados exitosamente.</strong>
+                                            Las siguientes fechas ya tienen ventas registradas.
+                                        </div>
+                                        
+                                        <!-- Tabla de resumen -->
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover" id="tabla-resumen-fechas">
+                                                <thead class="table-dark">
+                                                    <tr>
+                                                        <th>Fecha</th>
+                                                        <th>Código</th>
+                                                        <th>Descripción</th>
+                                                        <th>Rubro</th>
+                                                        <th>Categoría</th>
+                                                        <th>Cantidad</th>
+                                                        <th>Fecha Carga</th>
+                                                        <th>Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="tbody-resumen-fechas">
+                                                    <!-- Se llenará dinámicamente -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        
+                                        <!-- Footer con botón de recarga -->
+                                        <div class="card-footer bg-light">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <button type="button" class="btn btn-warning" id="btn-recargar-mes-actual">
+                                                        <i class="bi bi-arrow-clockwise me-1"></i>
+                                                        Eliminar todo y Recargar Período Completo
+                                                    </button>
+                                                </div>
+                                                <div class="col-md-6 text-end">
+                                                    <span class="text-muted">Total registros: <span id="total-registros-mes-actual">0</span></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div> <!-- Fin de la pestaña mes actual -->
                 </div> <!-- Fin del contenido de pestañas -->
             </div> <!-- Fin del container-fluid -->
         </main> <!-- Fin del main-content -->
@@ -1136,6 +1345,23 @@ if (!function_exists('es_modo_desarrollo')) {
                             <p class="mb-0"><small>Debe corregir todos los errores antes de confirmar la importación.</small></p>
                         </div>
                         
+                        <!-- Botones de Navegación de Errores -->
+                        <div class="mb-3 d-flex gap-2 align-items-center justify-content-center flex-wrap" id="nav-errores-multiple" style="display: none;">
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMultiple('primero')" title="Ir al primer error">
+                                <i class="bi bi-skip-backward-fill"></i> Primer Error
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMultiple('anterior')" title="Ir al error anterior">
+                                <i class="bi bi-arrow-left"></i> Anterior
+                            </button>
+                            <span class="badge bg-danger px-3 py-2" id="posicionErrorMultiple" style="font-size: 0.9rem;">Sin errores</span>
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMultiple('siguiente')" title="Ir al siguiente error">
+                                Siguiente <i class="bi bi-arrow-right"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMultiple('ultimo')" title="Ir al último error">
+                                Último Error <i class="bi bi-skip-forward-fill"></i>
+                            </button>
+                        </div>
+                        
                         <!-- Área para mensajes de estado de validación múltiples -->
                         <div id="mensajeValidacionMultiple" class="alert" style="display: none;">
                         </div>
@@ -1179,14 +1405,200 @@ if (!function_exists('es_modo_desarrollo')) {
                         </div>
                         <h5>Procesando importación múltiples períodos...</h5>
                         <p class="text-muted">Por favor espere mientras se procesan los datos de múltiples períodos.</p>
-                        <div class="progress mt-3">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                                 id="progreso-multiple" role="progressbar" style="width: 0%"></div>
+                        <div class="progress mt-3" style="height: 30px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
+                                 id="progreso-multiple" 
+                                 role="progressbar" 
+                                 style="width: 0%; font-size: 14px; font-weight: bold; line-height: 30px;"
+                                 aria-valuenow="0" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">0%</div>
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted" id="tiempo-estimado-multiple">
+                                <i class="bi bi-clock me-1"></i>Estimando tiempo restante...
+                            </small>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="btnCerrarModalMultiple">
+                        <i class="bi bi-x-circle me-1"></i>
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Importación Mes Actual -->
+    <div class="modal fade" id="modalImportarMesActual" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-calendar-day me-2"></i>
+                        Importar Ventas Mes Actual
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Información del rango seleccionado -->
+                    <div class="alert alert-success mb-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-calendar-range me-3 fs-5"></i>
+                            <div>
+                                <h6 class="mb-1">Rango de fechas seleccionado:</h6>
+                                <span id="rango-seleccionado-modal-mes-actual" class="fw-bold"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Paso 1: Selección de archivo mes actual -->
+                    <div id="paso1-mes-actual" class="import-step">
+                        <div class="alert alert-warning">
+                            <h6><i class="bi bi-info-circle me-2"></i>Formato requerido del archivo para mes actual</h6>
+                            <p class="mb-2">El archivo debe contener exactamente <strong>3 columnas</strong>:</p>
+                            <ul class="mb-2">
+                                <li><strong>ARTICULO:</strong> Código del artículo (debe empezar con X u O)</li>
+                                <li><strong>CANTIDAD:</strong> Cantidad vendida (número entero)</li>
+                                <li><strong>FECHA:</strong> Fecha en formato DD/MM/YYYY (ej: 15/10/2025)</li>
+                            </ul>
+                            <p class="mb-0">
+                                <button class="btn btn-sm btn-outline-warning" id="btnDescargarEjemploMesActualModal">
+                                    <i class="bi bi-download me-1"></i>
+                                    Descargar ejemplo_mes_actual.xlsx
+                                </button>
+                            </p>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="archivoMesActual" class="form-label">Seleccionar archivo Excel/CSV</label>
+                                    <input type="file" class="form-control" id="archivoMesActual" accept=".xlsx,.xls,.csv">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-grid">
+                                    <button class="btn btn-success" id="btnProcesarArchivoMesActual" disabled>
+                                        <i class="bi bi-gear me-1"></i>
+                                        Procesar Archivo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Paso 2: Vista previa y validación mes actual -->
+                    <div id="paso2-mes-actual" class="import-step" style="display: none;">
+                        <div class="alert alert-warning">
+                            <h6><i class="bi bi-exclamation-triangle me-2"></i>Validación de datos mes actual</h6>
+                            <p class="mb-1">
+                                <span class="badge bg-success me-2">Verde</span> Fecha y artículo válidos - 
+                                <span class="badge bg-danger me-2">Rojo</span> Error en fecha o artículo - 
+                                <span class="badge bg-warning me-2">Amarillo</span> Fecha fuera de rango
+                            </p>
+                            <p class="mb-0"><small>Debe corregir todos los errores antes de confirmar la importación.</small></p>
+                        </div>
+                        
+                        <!-- Botones de Navegación de Errores -->
+                        <div class="mb-3 d-flex gap-2 align-items-center justify-content-center flex-wrap" id="nav-errores-mes-actual" style="display: none;">
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMesActual('primero')" title="Ir al primer error">
+                                <i class="bi bi-skip-backward-fill"></i> Primer Error
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMesActual('anterior')" title="Ir al error anterior">
+                                <i class="bi bi-arrow-left"></i> Anterior
+                            </button>
+                            <span class="badge bg-danger px-3 py-2" id="posicionErrorMesActual" style="font-size: 0.9rem;">Sin errores</span>
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMesActual('siguiente')" title="Ir al siguiente error">
+                                Siguiente <i class="bi bi-arrow-right"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="irAlErrorMesActual('ultimo')" title="Ir al último error">
+                                Último Error <i class="bi bi-skip-forward-fill"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Área para mensajes de estado de validación -->
+                        <div id="mensajeValidacionMesActual" class="alert" style="display: none;">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <h6>Vista previa de datos importados (mes actual):</h6>
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-sm table-bordered" id="tablaVistaPreviaMesActual">
+                                    <thead class="table-dark sticky-top">
+                                        <tr>
+                                            <th style="width: 12%;">Fecha</th>
+                                            <th style="width: 13%;">Artículo</th>
+                                            <th style="width: 25%;">Descripción</th>
+                                            <th style="width: 8%;">Cantidad</th>
+                                            <th style="width: 13%;">Rubro</th>
+                                            <th style="width: 13%;">Categoría</th>
+                                            <th style="width: 16%;">Corrección</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Se llena dinámicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div id="resumenValidacionMesActual" class="card bg-light">
+                                    <div class="card-body">
+                                        <h6>Resumen de validación:</h6>
+                                        <p class="mb-1">
+                                            <span class="text-success">✓ Válidos: <span id="countValidosMesActual">0</span></span>
+                                        </p>
+                                        <p class="mb-0">
+                                            <span class="text-danger">✗ Errores: <span id="countErroresMesActual">0</span></span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-secondary" id="btnVolverPaso1MesActual">
+                                        <i class="bi bi-arrow-left me-1"></i>
+                                        Volver
+                                    </button>
+                                    <button class="btn btn-success" id="btnConfirmarImportacionMesActual" disabled>
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        Confirmar Importación
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Paso 3: Procesando mes actual -->
+                    <div id="paso3-mes-actual" class="import-step text-center" style="display: none;">
+                        <div class="spinner-border text-success mb-3" role="status">
+                            <span class="visually-hidden">Procesando...</span>
+                        </div>
+                        <h5>Procesando importación mes actual...</h5>
+                        <p class="text-muted">Por favor espere mientras se procesan los datos del mes actual.</p>
+                        <div class="progress mt-3" style="height: 30px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                 id="progreso-mes-actual" 
+                                 role="progressbar" 
+                                 style="width: 0%; font-size: 14px; font-weight: bold; line-height: 30px;"
+                                 aria-valuenow="0" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">0%</div>
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted" id="tiempo-estimado-mes-actual">
+                                <i class="bi bi-clock me-1"></i>Estimando tiempo restante...
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="btnCerrarModalMesActual">
                         <i class="bi bi-x-circle me-1"></i>
                         Cerrar
                     </button>
@@ -1227,15 +1639,21 @@ if (!function_exists('es_modo_desarrollo')) {
             
             datos.forEach((item, index) => {
                 // Crear clave única según el modo
-                const clave = modo === 'multiple' 
-                    ? `${item.articulo}_${item.periodo}` // Artículo + Período para múltiples
-                    : item.articulo; // Solo artículo para individual
+                let clave;
+                if (modo === 'multiple') {
+                    clave = `${item.articulo}_${item.periodo}`; // Artículo + Período para múltiples
+                } else if (modo === 'mes_actual') {
+                    clave = `${item.articulo}_${item.fecha}`; // Artículo + Fecha para mes actual
+                } else {
+                    clave = item.articulo; // Solo artículo para individual
+                }
                 
                 if (agrupados[clave]) {
                     // Es un duplicado - sumar cantidad
                     agrupados[clave].cantidad += item.cantidad;
                     duplicadosEncontrados++;
-                    console.log(`🔀 Duplicado encontrado: ${item.articulo} ${modo === 'multiple' ? `(${item.periodo})` : ''} - Suma total: ${agrupados[clave].cantidad}`);
+                    const sufijo = modo === 'multiple' ? `(${item.periodo})` : (modo === 'mes_actual' ? `(${item.fecha})` : '');
+                    console.log(`🔀 Duplicado encontrado: ${item.articulo} ${sufijo} - Suma total: ${agrupados[clave].cantidad}`);
                 } else {
                     // Primera ocurrencia - crear nueva entrada
                     agrupados[clave] = {
@@ -1246,6 +1664,11 @@ if (!function_exists('es_modo_desarrollo')) {
                     // Para múltiples períodos, incluir también el período
                     if (modo === 'multiple' && item.periodo) {
                         agrupados[clave].periodo = item.periodo;
+                    }
+                    
+                    // Para mes actual, incluir también la fecha
+                    if (modo === 'mes_actual' && item.fecha) {
+                        agrupados[clave].fecha = item.fecha;
                     }
                 }
             });
@@ -2592,18 +3015,19 @@ if (!function_exists('es_modo_desarrollo')) {
             }
             
             // Ocultar contenedor de ventas existentes
-            document.getElementById('contenedor-ventas-existentes').classList.add('d-none');
+            const contenedorExistentes = document.getElementById('contenedor-ventas-existentes');
+            if (contenedorExistentes) {
+                contenedorExistentes.classList.add('d-none');
+            }
             
             // Mostrar contenedor de carga nueva
-            document.getElementById('contenedor-carga-nueva').classList.remove('d-none');
-            
-            // Mostrar mensaje de período faltante si es apropiado
-            if (data.mensaje) {
-                const mensajePeriodo = document.getElementById('mensaje-periodo-faltante');
-                mensajePeriodo.classList.remove('d-none');
-                mensajePeriodo.querySelector('p').innerHTML = 
-                    `<strong>${data.mensaje}</strong> Utilice el formulario a continuación para importar los datos de ventas.`;
+            const contenedorNueva = document.getElementById('contenedor-carga-nueva');
+            if (contenedorNueva) {
+                contenedorNueva.classList.remove('d-none');
             }
+            
+            // Nota: El mensaje de período faltante fue eliminado en las modificaciones de frontend
+            // Si se necesita mostrar algún mensaje, usar una alternativa
         }
 
         function configurarEdicionVentas() {
@@ -3339,7 +3763,23 @@ if (!function_exists('es_modo_desarrollo')) {
             }
 
             try {
-                mostrarPasoMultiple(3); // Mostrar loading
+                // Mostrar mensaje de procesamiento en paso 1
+                const paso1 = document.getElementById('paso1-multiple');
+                const mensajeProcesando = document.createElement('div');
+                mensajeProcesando.id = 'mensaje-procesando-multiple';
+                mensajeProcesando.className = 'alert alert-info mt-3';
+                mensajeProcesando.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm text-primary me-3" role="status">
+                            <span class="visually-hidden">Procesando...</span>
+                        </div>
+                        <div>
+                            <strong>Procesando archivo Excel...</strong><br>
+                            <small>Leyendo y agrupando datos. Por favor espere.</small>
+                        </div>
+                    </div>
+                `;
+                paso1.appendChild(mensajeProcesando);
 
                 const datosOriginales = await leerArchivoExcel(window.archivoSeleccionadoMultiple);
                 console.log('📊 Datos múltiples períodos leídos originales:', datosOriginales);
@@ -3358,9 +3798,44 @@ if (!function_exists('es_modo_desarrollo')) {
                     throw new Error('El archivo debe tener exactamente 3 columnas: ARTICULO, CANTIDAD, PERIODO');
                 }
 
-                // Validar períodos y artículos
-                await validarDatosMultiplesPeriodos(datos);
+                // Remover mensaje de procesamiento
+                const mensajeProc = document.getElementById('mensaje-procesando-multiple');
+                if (mensajeProc) mensajeProc.remove();
+
+                // Ir al paso 2 INMEDIATAMENTE
                 mostrarPasoMultiple(2);
+                
+                // Mostrar mensaje de carga EN LA TABLA
+                const tabla = document.getElementById('tablaVistaPreviaMultiple');
+                const tbody = tabla.querySelector('tbody');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status">
+                                <span class="visually-hidden">Validando...</span>
+                            </div>
+                            <h5>Validando ${datos.length} registros...</h5>
+                            <p class="text-muted">Verificando ${[...new Set(datos.map(d => d.articulo))].length} códigos de artículos únicos.<br>
+                            Esto puede tardar unos minutos. Por favor espere...</p>
+                        </td>
+                    </tr>
+                `;
+                
+                // Validar en segundo plano
+                try {
+                    await validarDatosMultiplesPeriodos(datos);
+                } catch (errorValidacion) {
+                    console.error('❌ Error en validación:', errorValidacion);
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="text-center text-danger py-4">
+                                <i class="bi bi-exclamation-triangle fs-1"></i>
+                                <h5 class="mt-3">Error en validación</h5>
+                                <p>${errorValidacion.message}</p>
+                            </td>
+                        </tr>
+                    `;
+                }
 
             } catch (error) {
                 console.error('Error procesando archivo múltiple:', error);
@@ -3908,6 +4383,9 @@ if (!function_exists('es_modo_desarrollo')) {
             // Actualizar resumen
             actualizarResumenValidacionMultiple(validosActuales, erroresActuales, fueraRangoActuales);
             
+            // Actualizar navegación de errores
+            actualizarNavegacionErroresMultiple(erroresActuales);
+            
             // Actualizar estado del botón
             const btnConfirmar = document.getElementById('btnConfirmarImportacionMultiple');
             if (btnConfirmar) {
@@ -3975,6 +4453,129 @@ if (!function_exists('es_modo_desarrollo')) {
                     </div>
                 </div>
             `;
+            
+            // Actualizar navegación de errores
+            actualizarNavegacionErroresMultiple(errores);
+        }
+
+        // ============ NAVEGACIÓN DE ERRORES - MÚLTIPLES PERÍODOS ============
+        let indiceErrorActualMultiple = -1;
+        let filasConErrorMultiple = [];
+
+        function actualizarNavegacionErroresMultiple(totalErrores) {
+            const navErrores = document.getElementById('nav-errores-multiple');
+            const posicionError = document.getElementById('posicionErrorMultiple');
+            
+            if (totalErrores > 0) {
+                // Obtener todas las filas con error (table-danger)
+                filasConErrorMultiple = Array.from(document.querySelectorAll('#tablaVistaPreviaMultiple tbody tr.table-danger'));
+                
+                // Mostrar navegación
+                navErrores.style.display = 'flex';
+                posicionError.textContent = `${filasConErrorMultiple.length} error(es) encontrado(s)`;
+                indiceErrorActualMultiple = -1; // Resetear índice
+                
+                console.log(`🔍 Navegación errores: ${filasConErrorMultiple.length} errores encontrados`);
+            } else {
+                // Ocultar navegación
+                navErrores.style.display = 'none';
+                posicionError.textContent = 'Sin errores'; // Resetear texto
+                filasConErrorMultiple = [];
+                indiceErrorActualMultiple = -1;
+                
+                console.log(`✅ No hay errores - navegación oculta`);
+            }
+        }
+
+        function irAlErrorMultiple(direccion) {
+            if (filasConErrorMultiple.length === 0) return;
+            
+            // Calcular nuevo índice
+            if (direccion === 'primero') {
+                indiceErrorActualMultiple = 0;
+            } else if (direccion === 'ultimo') {
+                indiceErrorActualMultiple = filasConErrorMultiple.length - 1;
+            } else if (direccion === 'siguiente') {
+                indiceErrorActualMultiple = (indiceErrorActualMultiple + 1) % filasConErrorMultiple.length;
+            } else if (direccion === 'anterior') {
+                indiceErrorActualMultiple = (indiceErrorActualMultiple - 1 + filasConErrorMultiple.length) % filasConErrorMultiple.length;
+            }
+            
+            // Scroll a la fila
+            const filaError = filasConErrorMultiple[indiceErrorActualMultiple];
+            filaError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight temporal
+            filaError.style.boxShadow = '0 0 15px 3px rgba(220, 53, 69, 0.6)';
+            setTimeout(() => {
+                filaError.style.boxShadow = '';
+            }, 2000);
+            
+            // Actualizar posición
+            document.getElementById('posicionErrorMultiple').textContent = 
+                `Error ${indiceErrorActualMultiple + 1} de ${filasConErrorMultiple.length}`;
+            
+            console.log(`📍 Navegando a error ${indiceErrorActualMultiple + 1}/${filasConErrorMultiple.length}`);
+        }
+
+        // ============ NAVEGACIÓN DE ERRORES - MES ACTUAL ============
+        let indiceErrorActualMesActual = -1;
+        let filasConErrorMesActual = [];
+
+        function actualizarNavegacionErroresMesActual(totalErrores) {
+            const navErrores = document.getElementById('nav-errores-mes-actual');
+            const posicionError = document.getElementById('posicionErrorMesActual');
+            
+            if (totalErrores > 0) {
+                // Obtener todas las filas con error (table-danger)
+                filasConErrorMesActual = Array.from(document.querySelectorAll('#tablaVistaPreviaMesActual tbody tr.table-danger'));
+                
+                // Mostrar navegación
+                navErrores.style.display = 'flex';
+                posicionError.textContent = `${filasConErrorMesActual.length} error(es) encontrado(s)`;
+                indiceErrorActualMesActual = -1; // Resetear índice
+                
+                console.log(`🔍 Navegación errores mes actual: ${filasConErrorMesActual.length} errores encontrados`);
+            } else {
+                // Ocultar navegación
+                navErrores.style.display = 'none';
+                posicionError.textContent = 'Sin errores'; // Resetear texto
+                filasConErrorMesActual = [];
+                indiceErrorActualMesActual = -1;
+                
+                console.log(`✅ No hay errores mes actual - navegación oculta`);
+            }
+        }
+
+        function irAlErrorMesActual(direccion) {
+            if (filasConErrorMesActual.length === 0) return;
+            
+            // Calcular nuevo índice
+            if (direccion === 'primero') {
+                indiceErrorActualMesActual = 0;
+            } else if (direccion === 'ultimo') {
+                indiceErrorActualMesActual = filasConErrorMesActual.length - 1;
+            } else if (direccion === 'siguiente') {
+                indiceErrorActualMesActual = (indiceErrorActualMesActual + 1) % filasConErrorMesActual.length;
+            } else if (direccion === 'anterior') {
+                indiceErrorActualMesActual = (indiceErrorActualMesActual - 1 + filasConErrorMesActual.length) % filasConErrorMesActual.length;
+            }
+            
+            // Scroll a la fila
+            const filaError = filasConErrorMesActual[indiceErrorActualMesActual];
+            filaError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight temporal
+            filaError.style.boxShadow = '0 0 15px 3px rgba(220, 53, 69, 0.6)';
+            setTimeout(() => {
+                filaError.style.boxShadow = '';
+            }, 2000);
+            
+            // Actualizar posición
+            document.getElementById('posicionErrorMesActual').textContent = 
+                `Error ${indiceErrorActualMesActual + 1} de ${filasConErrorMesActual.length}`;
+            
+            console.log(`📍 Navegando a error ${indiceErrorActualMesActual + 1}/${filasConErrorMesActual.length}`);
         }
 
         async function confirmarImportacionMultiple() {
@@ -3986,13 +4587,93 @@ if (!function_exists('es_modo_desarrollo')) {
             }
             
             try {
+                console.log('🎯 Mostrando paso 3...');
                 mostrarPasoMultiple(3); // Mostrar loading
                 
-                console.log('🔍 Datos originales antes de procesar:', window.datosImportadosMultiple);
+                // Esperar a que el DOM se actualice completamente - timeout más largo
+                await new Promise(resolve => setTimeout(resolve, 300));
                 
-                // Preparar datos para envío con validación exhaustiva
+                // **BARRA DE PROGRESO SIMULADA MIENTRAS SE PROCESA**
+                const barraProgreso = document.getElementById('progreso-multiple');
+                const totalItems = window.datosImportadosMultiple.length;
+                const tiempoEstimadoElem = document.getElementById('tiempo-estimado-multiple');
+                
+                console.log('📊 Inicializando barra de progreso...', {
+                    barraProgreso: !!barraProgreso,
+                    barraVisible: barraProgreso ? barraProgreso.offsetParent !== null : false,
+                    barraDisplay: barraProgreso ? window.getComputedStyle(barraProgreso.parentElement).display : 'N/A',
+                    paso3Visible: document.getElementById('paso3-multiple').style.display,
+                    tiempoEstimadoElem: !!tiempoEstimadoElem,
+                    totalItems
+                });
+                
+                if (!barraProgreso) {
+                    console.error('❌ No se encontró la barra de progreso');
+                    throw new Error('No se encontró la barra de progreso');
+                }
+                
+                // Resetear barra de progreso CON FORZAR REFLOW
+                barraProgreso.style.width = '0%';
+                barraProgreso.offsetHeight; // Forzar reflow
+                
+                // Iniciar en 5% de inmediato
+                requestAnimationFrame(() => {
+                    barraProgreso.style.width = '5%';
+                    barraProgreso.textContent = '5%';
+                    barraProgreso.className = 'progress-bar progress-bar-striped progress-bar-animated bg-primary';
+                    barraProgreso.setAttribute('aria-valuenow', 5);
+                    console.log('✅ Barra de progreso reseteada al 5%');
+                });
+                
+                // Función para simular progreso
+                let progresoSimulado = 5;
+                const inicioTiempo = Date.now();
+                
+                // Estimar tiempo basado en cantidad de registros (más conservador para 6000+ registros)
+                const tiempoEstimadoSegundos = Math.max(20, Math.ceil(totalItems / 100));
+                
+                console.log(`⏱️ Tiempo estimado: ${tiempoEstimadoSegundos} segundos para ${totalItems} registros`);
+                
+                const intervaloProgreso = setInterval(() => {
+                    if (progresoSimulado < 85) {
+                        // Progreso MUY lento para dar tiempo al servidor
+                        if (progresoSimulado < 15) {
+                            progresoSimulado += 0.5;
+                        } else if (progresoSimulado < 40) {
+                            progresoSimulado += 0.8;
+                        } else if (progresoSimulado < 65) {
+                            progresoSimulado += 0.5;
+                        } else {
+                            progresoSimulado += 0.2;
+                        }
+                        
+                        barraProgreso.style.width = progresoSimulado + '%';
+                        barraProgreso.textContent = Math.round(progresoSimulado) + '%';
+                        barraProgreso.setAttribute('aria-valuenow', Math.round(progresoSimulado));
+                        
+                        // Actualizar tiempo estimado
+                        const tiempoTranscurrido = Math.floor((Date.now() - inicioTiempo) / 1000);
+                        const tiempoRestante = Math.max(0, tiempoEstimadoSegundos - tiempoTranscurrido);
+                        
+                        if (tiempoEstimadoElem) {
+                            if (tiempoRestante > 0) {
+                                tiempoEstimadoElem.innerHTML = `<i class="bi bi-clock me-1"></i>Tiempo estimado restante: ${tiempoRestante} segundos`;
+                            } else {
+                                tiempoEstimadoElem.innerHTML = `<i class="bi bi-hourglass-split me-1"></i>Finalizando procesamiento...`;
+                            }
+                        }
+                        
+                        // Solo loguear cada 10% para no saturar consola
+                        if (Math.round(progresoSimulado) % 10 === 0) {
+                            console.log(`📊 Progreso: ${Math.round(progresoSimulado)}% - Tiempo restante: ${tiempoRestante}s`);
+                        }
+                    }
+                }, 500); // Actualizar cada 500ms para progreso más lento
+                
+                console.log(`📊 Total de registros a procesar: ${totalItems}`);
+                
+                // Preparar datos para envío con validación (SIN LOGUEAR CADA ITEM)
                 const datosParaEnvio = window.datosImportadosMultiple.map((item, index) => {
-                    console.log(`🔍 Procesando item ${index}:`, item);
                     
                     // Validar estructura del item
                     if (!item || typeof item !== 'object') {
@@ -4020,21 +4701,30 @@ if (!function_exists('es_modo_desarrollo')) {
                         throw new Error(`Item ${index} tiene período inválido: ${item.periodo}`);
                     }
                     
-                    console.log(`✅ Item ${index} procesado:`, itemProcesado);
+                    // Solo loguear cada 1000 items para no saturar
+                    if (index % 1000 === 0) {
+                        console.log(`✅ Procesando items... ${index}/${totalItems}`);
+                    }
+                    
                     return itemProcesado;
                 });
                 
-                console.log('📤 Enviando datos múltiples validados:', datosParaEnvio);
+                console.log(`✅ ${datosParaEnvio.length} registros validados y listos para enviar`);
                 
                 const payload = {
                     datos: datosParaEnvio,
                     modo: window.currentMultipleAction || 'nueva' // Usar la acción seleccionada por el usuario
                 };
                 
-                console.log('� DEBUG FRONTEND - Modo enviado:');
-                console.log('  window.currentMultipleAction:', window.currentMultipleAction);
-                console.log('  Modo final en payload:', payload.modo);
-                console.log('�📤 Payload completo:', JSON.stringify(payload, null, 2));
+                console.log('🔍 DEBUG FRONTEND - Modo enviado:', payload.modo);
+                
+                // Actualizar texto de progreso
+                const textoProgreso = document.querySelector('#paso3-multiple p.text-muted');
+                if (textoProgreso) {
+                    textoProgreso.innerHTML = `Procesando <strong>${totalItems}</strong> registros...<br><small>Esto puede tomar algunos minutos dependiendo del tamaño del archivo.</small>`;
+                }
+                
+                console.log('🚀 Enviando petición al servidor...');
                 
                 const response = await fetch('controller/procesar_importacion_multiples_periodos.php', {
                     method: 'POST',
@@ -4044,17 +4734,36 @@ if (!function_exists('es_modo_desarrollo')) {
                     body: JSON.stringify(payload)
                 });
                 
+                // Detener simulación de progreso
+                clearInterval(intervaloProgreso);
+                
                 console.log('📥 Response status:', response.status);
                 
                 if (!response.ok) {
+                    barraProgreso.style.width = '100%';
+                    barraProgreso.textContent = 'Error';
+                    barraProgreso.classList.add('bg-danger');
                     throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
                 }
+                
+                // Completar barra de progreso
+                barraProgreso.style.width = '95%';
+                barraProgreso.textContent = '95% - Finalizando...';
                 
                 const result = await response.json();
                 console.log('📥 Response data:', result);
                 
                 if (result.success) {
+                    // Progreso al 100%
+                    barraProgreso.style.width = '100%';
+                    barraProgreso.textContent = '100% - ¡Completado!';
+                    barraProgreso.classList.remove('progress-bar-striped', 'progress-bar-animated');
+                    barraProgreso.classList.add('bg-success');
+                    
                     console.log('✅ Importación múltiple exitosa:', result);
+                    
+                    // Esperar un momento para que el usuario vea el 100%
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                     
                     // Cerrar modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('modalImportarMultiple'));
@@ -4085,11 +4794,22 @@ if (!function_exists('es_modo_desarrollo')) {
                     }, 500);
                     
                 } else {
+                    // Error en el resultado
+                    clearInterval(intervaloProgreso);
+                    barraProgreso.style.width = '100%';
+                    barraProgreso.textContent = 'Error en procesamiento';
+                    barraProgreso.classList.add('bg-danger');
                     throw new Error(result.message || 'Error en la importación');
                 }
                 
             } catch (error) {
                 console.error('❌ Error en importación múltiple:', error);
+                
+                // Asegurar que se detenga el intervalo en caso de error
+                if (typeof intervaloProgreso !== 'undefined') {
+                    clearInterval(intervaloProgreso);
+                }
+                
                 alert('❌ Error en la importación: ' + error.message);
                 mostrarPasoMultiple(2); // Volver al paso anterior
             }
@@ -4585,6 +5305,986 @@ if (!function_exists('es_modo_desarrollo')) {
             </div>
         </div>
     </div>
+
+    <script>
+        // ==============================================
+        // JAVASCRIPT PARA PESTAÑA MES ACTUAL
+        // ==============================================
+        
+        // Variables globales para mes actual
+        let rangoFechasMesActual = {
+            desde: null,
+            hasta: null,
+            valido: false
+        };
+        
+        let datosImportadosMesActual = [];
+
+        // Inicializar funcionalidad mes actual
+        document.addEventListener('DOMContentLoaded', function() {
+            initMesActual();
+        });
+
+        function initMesActual() {
+            console.log('🔄 Inicializando funcionalidad mes actual...');
+            
+            // Actualizar título con el mes actual en español
+            const mesesEspanol = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                                  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            const hoy = new Date();
+            const mesActual = mesesEspanol[hoy.getMonth()].toUpperCase();
+            const anoActual = hoy.getFullYear();
+            
+            const tituloElement = document.getElementById('titulo-mes-actual-texto');
+            if (tituloElement) {
+                tituloElement.textContent = `Carga de Ventas ${mesActual} ${anoActual} - Franquicias sin Tango`;
+            }
+            
+            // Event listeners para selectores de fecha
+            const fechaDesde = document.getElementById('fecha-desde-mes-actual');
+            const fechaHasta = document.getElementById('fecha-hasta-mes-actual');
+            
+            if (fechaDesde && fechaHasta) {
+                fechaDesde.addEventListener('change', validarRangoFechasMesActual);
+                fechaHasta.addEventListener('change', validarRangoFechasMesActual);
+            }
+
+            // Event listener para botón de importar
+            const btnImportarMesActual = document.getElementById('btnImportarMesActual');
+            if (btnImportarMesActual) {
+                btnImportarMesActual.addEventListener('click', function() {
+                    if (rangoFechasMesActual.valido) {
+                        // Mostrar rango en el modal
+                        const rangoTexto = document.getElementById('rango-seleccionado-modal-mes-actual');
+                        if (rangoTexto) {
+                            rangoTexto.textContent = `${rangoFechasMesActual.desde} - ${rangoFechasMesActual.hasta}`;
+                        }
+                    }
+                });
+            }
+
+            // Event listeners para modal
+            initModalMesActual();
+            
+            // Event listeners para descarga de ejemplo
+            const btnsDescargar = ['btnDescargarEjemploMesActual', 'btnDescargarEjemploMesActualModal'];
+            btnsDescargar.forEach(btnId => {
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    btn.addEventListener('click', descargarEjemploMesActual);
+                }
+            });
+
+            // Event listener para pestaña mes actual
+            const tabMesActual = document.getElementById('tab-mes-actual');
+            if (tabMesActual) {
+                tabMesActual.addEventListener('shown.bs.tab', function() {
+                    console.log('📅 Pestaña Mes Actual activada');
+                    verificarDatosMesActual();
+                });
+            }
+
+            // Event listener para botón de recargar período completo
+            const btnRecargarMesActual = document.getElementById('btn-recargar-mes-actual');
+            if (btnRecargarMesActual) {
+                btnRecargarMesActual.addEventListener('click', recargarPeriodoCompletoMesActual);
+            }
+        }
+
+        function initModalMesActual() {
+            const archivoMesActual = document.getElementById('archivoMesActual');
+            const btnProcesar = document.getElementById('btnProcesarArchivoMesActual');
+            const btnVolver = document.getElementById('btnVolverPaso1MesActual');
+            const btnConfirmar = document.getElementById('btnConfirmarImportacionMesActual');
+
+            if (archivoMesActual) {
+                archivoMesActual.addEventListener('change', (e) => {
+                    btnProcesar.disabled = !e.target.files.length;
+                });
+            }
+
+            if (btnProcesar) {
+                btnProcesar.addEventListener('click', procesarArchivoMesActual);
+            }
+
+            if (btnVolver) {
+                btnVolver.addEventListener('click', () => {
+                    mostrarPasoMesActual(1);
+                    if (archivoMesActual) archivoMesActual.value = '';
+                    btnProcesar.disabled = true;
+                });
+            }
+
+            if (btnConfirmar) {
+                btnConfirmar.addEventListener('click', confirmarImportacionMesActual);
+            }
+        }
+
+        async function validarRangoFechasMesActual() {
+            const fechaDesde = document.getElementById('fecha-desde-mes-actual').value;
+            const fechaHasta = document.getElementById('fecha-hasta-mes-actual').value;
+            const infoRango = document.getElementById('info-rango-mes-actual');
+            const errorRango = document.getElementById('error-rango-mes-actual');
+            const btnImportar = document.getElementById('btnImportarMesActual');
+            const textoRango = document.getElementById('texto-rango-mes-actual');
+            const mensajeError = document.getElementById('mensaje-error-rango-mes-actual');
+
+            // Limpiar estados previos
+            infoRango.classList.add('d-none');
+            errorRango.classList.add('d-none');
+            btnImportar.disabled = true;
+            rangoFechasMesActual.valido = false;
+
+            if (!fechaDesde || !fechaHasta) {
+                return; // Sin validación si faltan campos
+            }
+
+            // Convertir a objetos Date (formato YYYY-MM-DD del input date)
+            // Usar split para evitar problemas de zona horaria
+            const [anoDesde, mesDesde, diaDesde] = fechaDesde.split('-').map(Number);
+            const [anoHasta, mesHasta, diaHasta] = fechaHasta.split('-').map(Number);
+            
+            const desde = new Date(anoDesde, mesDesde - 1, diaDesde); // mes es 0-indexed
+            const hasta = new Date(anoHasta, mesHasta - 1, diaHasta);
+            const hoy = new Date();
+            const mesActual = hoy.getMonth();
+            const anoActual = hoy.getFullYear();
+
+            // Validar que las fechas sean del mes actual
+            if (desde.getMonth() !== mesActual || desde.getFullYear() !== anoActual ||
+                hasta.getMonth() !== mesActual || hasta.getFullYear() !== anoActual) {
+                mensajeError.textContent = 'Las fechas deben estar en el mes actual (' + 
+                    (mesActual + 1) + '/' + anoActual + ')';
+                errorRango.classList.remove('d-none');
+                return;
+            }
+
+            // Validar que desde sea menor o igual que hasta
+            if (desde > hasta) {
+                mensajeError.textContent = 'La fecha desde debe ser menor o igual a la fecha hasta';
+                errorRango.classList.remove('d-none');
+                return;
+            }
+
+            // Formatear fechas para mostrar DD/MM/YYYY
+            const formatearFecha = (fecha) => {
+                const dia = String(fecha.getDate()).padStart(2, '0');
+                const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                const ano = fecha.getFullYear();
+                return `${dia}/${mes}/${ano}`;
+            };
+
+            rangoFechasMesActual.desde = formatearFecha(desde);
+            rangoFechasMesActual.hasta = formatearFecha(hasta);
+
+            // Verificar overlap con fechas ya cargadas
+            try {
+                const response = await fetch('controller/verificar_fechas_cargadas_mes_actual.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        accion: 'verificar_rango',
+                        fecha_desde: rangoFechasMesActual.desde,
+                        fecha_hasta: rangoFechasMesActual.hasta
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.tiene_overlap) {
+                    mensajeError.innerHTML = `Ya existen datos cargados para las siguientes fechas:<br>` +
+                        result.fechas_existentes.join(', ');
+                    errorRango.classList.remove('d-none');
+                    return;
+                }
+
+                // Rango válido
+                textoRango.textContent = `${rangoFechasMesActual.desde} - ${rangoFechasMesActual.hasta}`;
+                infoRango.classList.remove('d-none');
+                btnImportar.disabled = false;
+                rangoFechasMesActual.valido = true;
+
+            } catch (error) {
+                console.error('Error verificando overlap:', error);
+                mensajeError.textContent = 'Error al verificar fechas existentes';
+                errorRango.classList.remove('d-none');
+            }
+        }
+
+        async function verificarDatosMesActual() {
+            try {
+                console.log('🔍 Verificando datos mes actual existentes...');
+                const response = await fetch('controller/verificar_fechas_cargadas_mes_actual.php?accion=verificar_existentes');
+                const result = await response.json();
+
+                if (result.success && result.tiene_datos) {
+                    mostrarTablaDatosMesActual(result.registros);
+                }
+            } catch (error) {
+                console.error('Error verificando datos mes actual:', error);
+            }
+        }
+
+        function mostrarTablaDatosMesActual(registros) {
+            const area = document.getElementById('area-resumen-fechas-cargadas');
+            const tbody = document.getElementById('tbody-resumen-fechas');
+
+            if (!area || !tbody) return;
+
+            tbody.innerHTML = '';
+
+            registros.forEach(reg => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${reg.fecha_formatted}</strong></td>
+                    <td><code>${reg.codigo_articulo}</code></td>
+                    <td>${reg.descripcion || 'N/A'}</td>
+                    <td>${reg.rubro || 'Sin rubro'}</td>
+                    <td>${reg.categoria_padre || 'Sin categoría'}</td>
+                    <td class="cantidad-editable-mes-actual" data-codigo="${reg.codigo_articulo}" data-fecha="${reg.fecha_formatted}" data-original="${reg.cantidad}">
+                        <span class="cantidad-display">${reg.cantidad}</span>
+                        <input type="number" class="form-control cantidad-input d-none" value="${reg.cantidad}" min="0">
+                    </td>
+                    <td><small>${new Date(reg.fecha_carga).toLocaleString()}</small></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary editar-cantidad-mes-actual" data-codigo="${reg.codigo_articulo}" data-fecha="${reg.fecha_formatted}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            area.classList.remove('d-none');
+            
+            // Actualizar contador de registros
+            const totalSpan = document.getElementById('total-registros-mes-actual');
+            if (totalSpan) {
+                totalSpan.textContent = registros.length;
+            }
+            
+            // Configurar eventos de edición
+            configurarEdicionVentasMesActual();
+        }
+        
+        function configurarEdicionVentasMesActual() {
+            // Celdas de cantidad editables
+            document.querySelectorAll('.cantidad-editable-mes-actual').forEach(celda => {
+                celda.addEventListener('click', function() {
+                    const display = this.querySelector('.cantidad-display');
+                    const input = this.querySelector('.cantidad-input');
+                    
+                    display.classList.add('d-none');
+                    input.classList.remove('d-none');
+                    input.focus();
+                    input.select();
+                });
+            });
+            
+            // Inputs de cantidad
+            document.querySelectorAll('.cantidad-editable-mes-actual .cantidad-input').forEach(input => {
+                input.addEventListener('blur', guardarCantidadMesActual);
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        guardarCantidadMesActual.call(this);
+                    }
+                });
+            });
+            
+            // Botones de edición
+            document.querySelectorAll('.editar-cantidad-mes-actual').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const codigo = this.dataset.codigo;
+                    const fecha = this.dataset.fecha;
+                    const celda = document.querySelector(`.cantidad-editable-mes-actual[data-codigo="${codigo}"][data-fecha="${fecha}"]`);
+                    if (celda) celda.click();
+                });
+            });
+        }
+        
+        async function guardarCantidadMesActual() {
+            const celda = this.closest('.cantidad-editable-mes-actual');
+            const display = celda.querySelector('.cantidad-display');
+            const input = this;
+            const codigoArticulo = celda.dataset.codigo;
+            const fecha = celda.dataset.fecha;
+            const valorOriginal = parseInt(celda.dataset.original);
+            const valorNuevo = parseInt(input.value);
+            
+            if (valorNuevo === valorOriginal) {
+                // Sin cambios
+                display.classList.remove('d-none');
+                input.classList.add('d-none');
+                return;
+            }
+            
+            try {
+                const response = await fetch('controller/actualizar_venta_mes_actual.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        codigo_articulo: codigoArticulo,
+                        fecha: fecha,
+                        cantidad: valorNuevo 
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.accion === 'eliminado') {
+                        // Eliminar fila
+                        celda.closest('tr').remove();
+                        console.log(`🗑️ Registro eliminado: ${result.codigo_articulo} - ${result.fecha}`);
+                    } else {
+                        // Actualizar valor
+                        display.textContent = valorNuevo;
+                        celda.dataset.original = valorNuevo;
+                        console.log(`✅ Cantidad actualizada: ${result.codigo_articulo} - ${result.fecha} - ${valorNuevo}`);
+                    }
+                } else {
+                    alert('Error: ' + result.message);
+                    input.value = valorOriginal; // Revertir
+                }
+            } catch (error) {
+                console.error('Error actualizando cantidad:', error);
+                alert('Error al actualizar la cantidad');
+                input.value = valorOriginal; // Revertir
+            }
+            
+            display.classList.remove('d-none');
+            input.classList.add('d-none');
+        }
+
+        function mostrarPasoMesActual(numero) {
+            ['paso1-mes-actual', 'paso2-mes-actual', 'paso3-mes-actual'].forEach(id => {
+                const paso = document.getElementById(id);
+                if (paso) paso.style.display = 'none';
+            });
+
+            const pasoActivo = document.getElementById(`paso${numero}-mes-actual`);
+            if (pasoActivo) pasoActivo.style.display = 'block';
+        }
+
+        async function procesarArchivoMesActual() {
+            const archivo = document.getElementById('archivoMesActual').files[0];
+            if (!archivo) return;
+
+            mostrarPasoMesActual(2);
+
+            try {
+                const datos = await leerArchivoExcelMesActual(archivo);
+                console.log('📊 Datos leídos:', datos);
+
+                // Agrupar duplicados (modo mes_actual)
+                const datosAgrupados = agruparArticulosDuplicados(datos, 'mes_actual');
+                datosImportadosMesActual = datosAgrupados;
+
+                await validarYMostrarDatosMesActual(datosAgrupados);
+            } catch (error) {
+                console.error('Error procesando archivo:', error);
+                alert('Error al procesar el archivo: ' + error.message);
+                mostrarPasoMesActual(1);
+            }
+        }
+
+        function leerArchivoExcelMesActual(archivo) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        
+                        const datos = [];
+                        const startRow = jsonData[0] && String(jsonData[0][0]).toUpperCase().includes('ARTICULO') ? 1 : 0;
+
+                        for (let i = startRow; i < jsonData.length; i++) {
+                            const row = jsonData[i];
+                            if (row && row[0] && row[1] && row[2]) {
+                                datos.push({
+                                    articulo: String(row[0]).trim().toUpperCase(),
+                                    cantidad: parseInt(row[1]) || 0,
+                                    fecha: String(row[2]).trim()
+                                });
+                            }
+                        }
+                        
+                        resolve(datos);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                
+                reader.onerror = () => reject(new Error('Error leyendo el archivo'));
+                reader.readAsArrayBuffer(archivo);
+            });
+        }
+
+        async function validarYMostrarDatosMesActual(datos) {
+            // Similar a la validación de otras pestañas pero para fechas
+            console.log('🔍 Validando datos mes actual...');
+            
+            const tbody = document.querySelector('#tablaVistaPreviaMesActual tbody');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">Validando...</td></tr>';
+
+            try {
+                // Obtener rango de fechas seleccionado
+                const fechaDesde = document.getElementById('fecha-desde-mes-actual').value;
+                const fechaHasta = document.getElementById('fecha-hasta-mes-actual').value;
+                
+                // Convertir rango a objetos Date
+                const [anoDesde, mesDesde, diaDesde] = fechaDesde.split('-').map(Number);
+                const [anoHasta, mesHasta, diaHasta] = fechaHasta.split('-').map(Number);
+                const rangoDesde = new Date(anoDesde, mesDesde - 1, diaDesde);
+                const rangoHasta = new Date(anoHasta, mesHasta - 1, diaHasta);
+                
+                // Función para convertir DD/MM/YYYY a Date
+                const parsearFechaDD_MM_YYYY = (fechaStr) => {
+                    const partes = fechaStr.split('/');
+                    if (partes.length !== 3) return null;
+                    const dia = parseInt(partes[0]);
+                    const mes = parseInt(partes[1]);
+                    const ano = parseInt(partes[2]);
+                    return new Date(ano, mes - 1, dia);
+                };
+                
+                // Validar artículos y fechas
+                const codigosAValidar = [...new Set(datos.map(item => item.articulo))];
+                
+                const response = await fetch('controller/validar_articulos_simple.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ codigos: codigosAValidar })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const descripciones = {};
+                    const rubros = {};
+                    const categorias = {};
+                    const articulosValidos = new Set();
+
+                    result.articulos.forEach(a => {
+                        if (a.descripcion !== 'Artículo no encontrado') {
+                            articulosValidos.add(a.codigo.trim().toUpperCase());
+                        }
+                        descripciones[a.codigo.trim().toUpperCase()] = a.descripcion;
+                        rubros[a.codigo.trim().toUpperCase()] = a.rubro || 'Sin rubro';
+                        categorias[a.codigo.trim().toUpperCase()] = a.categoria || 'Sin categoría';
+                    });
+
+                    tbody.innerHTML = '';
+                    let validos = 0;
+                    let errores = 0;
+
+                    datos.forEach((item, index) => {
+                        const esArticuloValido = articulosValidos.has(item.articulo);
+                        const descripcion = descripciones[item.articulo] || 'No encontrado';
+                        const rubro = rubros[item.articulo] || 'Sin rubro';
+                        const categoria = categorias[item.articulo] || 'Sin categoría';
+                        
+                        // Validar que la fecha esté dentro del rango
+                        const fechaItem = parsearFechaDD_MM_YYYY(item.fecha);
+                        const esFechaValida = fechaItem && fechaItem >= rangoDesde && fechaItem <= rangoHasta;
+                        
+                        // El registro es válido solo si el artículo Y la fecha son válidos
+                        const esValido = esArticuloValido && esFechaValida;
+                        
+                        if (esValido) validos++;
+                        else errores++;
+
+                        const tr = document.createElement('tr');
+                        tr.className = esValido ? 'table-success' : 'table-danger';
+                        tr.setAttribute('data-index', index);
+                        tr.innerHTML = `
+                            <td>${item.fecha}</td>
+                            <td><code>${item.articulo}</code></td>
+                            <td class="descripcion-cell">${descripcion}</td>
+                            <td class="text-center">${item.cantidad}</td>
+                            <td class="rubro-cell">${rubro}</td>
+                            <td class="categoria-cell">${categoria}</td>
+                            <td class="correccion-cell">
+                                ${!esFechaValida ? 
+                                    '<span class="badge bg-danger"><i class="bi bi-exclamation-triangle"></i> Fecha Fuera de Rango</span>' :
+                                    (!esArticuloValido ? `
+                                        <select class="form-select form-select-sm articulo-select-mes-actual" 
+                                                data-index="${index}" 
+                                                id="select-mes-actual-${index}">
+                                            <option value="">Seleccionar artículo...</option>
+                                        </select>
+                                    ` : 
+                                    '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Válido</span>')
+                                }
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    document.getElementById('countValidosMesActual').textContent = validos;
+                    document.getElementById('countErroresMesActual').textContent = errores;
+                    document.getElementById('btnConfirmarImportacionMesActual').disabled = errores > 0;
+                    
+                    // Actualizar navegación de errores
+                    actualizarNavegacionErroresMesActual(errores);
+                    
+                    // Inicializar Select2 para correcciones
+                    if (errores > 0 && typeof $ !== 'undefined' && $.fn.select2) {
+                        setTimeout(() => {
+                            inicializarSelect2MesActual();
+                        }, 100);
+                    }
+                }
+            } catch (error) {
+                console.error('Error validando datos:', error);
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error en validación</td></tr>';
+            }
+        }
+        
+        function inicializarSelect2MesActual() {
+            console.log('🔧 Inicializando Select2 para mes actual...');
+            
+            const selectores = document.querySelectorAll('.articulo-select-mes-actual');
+            console.log(`🔍 Encontrados ${selectores.length} selectores para mes actual`);
+            
+            if (selectores.length === 0) {
+                console.warn('⚠️ No se encontraron selectores de artículos inválidos');
+                return;
+            }
+            
+            // Destruir cualquier Select2 existente de manera segura
+            $('.articulo-select-mes-actual').each(function() {
+                const $this = $(this);
+                if ($this.hasClass('select2-hidden-accessible')) {
+                    try {
+                        $this.select2('destroy');
+                        console.log('🗑️ Select2 destruido correctamente');
+                    } catch (e) {
+                        console.warn('⚠️ Error al destruir Select2:', e.message);
+                    }
+                }
+            });
+            
+            // Inicializar Select2 con AJAX igual que las otras pestañas
+            $('.articulo-select-mes-actual').each(function(idx) {
+                const $select = $(this);
+                const index = $select.data('index');
+                const selectId = $select.attr('id');
+                
+                console.log(`🔧 Inicializando Select2 ${idx + 1}/${selectores.length} - ID: ${selectId}, index: ${index}`);
+                
+                try {
+                    const $modalContent = $select.closest('.modal-content');
+                    
+                    $select.select2({
+                        theme: 'bootstrap-5',
+                        placeholder: 'Buscar código de artículo...',
+                        allowClear: true,
+                        width: '100%',
+                        dropdownParent: $modalContent.length ? $modalContent : $('body'),
+                        dropdownCssClass: 'select2-dropdown-modal',
+                        minimumInputLength: 1,
+                        language: {
+                            noResults: function() {
+                                return "No se encontraron artículos";
+                            },
+                            searching: function() {
+                                return "Buscando...";
+                            },
+                            inputTooShort: function() {
+                                return "Escriba al menos 1 caracter";
+                            }
+                        },
+                        ajax: {
+                            url: 'controller/buscar_articulos_select2.php',
+                            dataType: 'json',
+                            delay: 250,
+                            data: function (params) {
+                                console.log(`🔍 Búsqueda Select2 mes actual fila ${index} (${selectId}):`, params.term);
+                                return {
+                                    q: params.term || '',
+                                    page: params.page || 1
+                                };
+                            },
+                            processResults: function (data) {
+                                console.log(`📊 Resultados Select2 mes actual fila ${index} (${selectId}):`, data);
+                                
+                                if (!data || !Array.isArray(data.results)) {
+                                    console.error(`❌ Estructura de respuesta inválida para fila ${index}:`, data);
+                                    return { results: [] };
+                                }
+                                
+                                console.log(`✅ ${data.results.length} resultados procesados para fila ${index}`);
+                                
+                                return {
+                                    results: data.results,
+                                    pagination: data.pagination || { more: false }
+                                };
+                            },
+                            cache: true,
+                            error: function(xhr, status, error) {
+                                console.error(`❌ Error AJAX Select2 mes actual fila ${index} (${selectId}):`, { 
+                                    xhr: xhr.responseText, 
+                                    status, 
+                                    error 
+                                });
+                            }
+                        },
+                        escapeMarkup: function (markup) {
+                            return markup;
+                        }
+                    }).on('select2:open', function() {
+                        console.log(`📖 Select2 mes actual abierto para fila ${index} (${selectId})`);
+                    }).on('select2:close', function() {
+                        console.log(`📖 Select2 mes actual cerrado para fila ${index} (${selectId})`);
+                    }).on('select2:select', function(e) {
+                        const data = e.params.data;
+                        console.log(`✅ Artículo seleccionado en fila ${index} (${selectId}):`, data);
+                        
+                        // Actualizar el objeto en datosImportadosMesActual
+                        if (datosImportadosMesActual[index]) {
+                            const articuloAnterior = datosImportadosMesActual[index].articulo;
+                            datosImportadosMesActual[index].articulo = data.id;
+                            
+                            console.log(`🔄 Artículo actualizado en índice ${index}: ${articuloAnterior} → ${data.id}`);
+                            
+                            // Actualizar visualización en la tabla
+                            const fila = this.closest('tr');
+                            fila.querySelector('.descripcion-cell').textContent = data.descripcion || data.text.split(' - ')[1];
+                            fila.querySelector('.rubro-cell').textContent = data.rubro || 'Sin rubro';
+                            fila.querySelector('.categoria-cell').textContent = data.categoria || 'Sin categoría';
+                            fila.className = 'table-success';
+                            
+                            // Reemplazar selector por badge de éxito
+                            const correccionCell = fila.querySelector('.correccion-cell');
+                            correccionCell.innerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Corregido</span>';
+                            
+                            // Actualizar código en la columna 2
+                            fila.querySelector('code').textContent = data.id;
+                            
+                            // Actualizar contadores
+                            actualizarContadoresMesActual();
+                            
+                            console.log(`✅ Corrección aplicada exitosamente en fila ${index}`);
+                        } else {
+                            console.error(`❌ No se encontró el índice ${index} en datosImportadosMesActual`);
+                        }
+                    });
+                    
+                    console.log(`✅ Select2 inicializado para ${selectId}`);
+                    
+                } catch (error) {
+                    console.error(`❌ Error inicializando Select2 en selector ${idx}:`, error);
+                }
+            });
+            
+            console.log('✅ Select2 inicializado para todos los selectores mes actual');
+        }
+        
+        function actualizarContadoresMesActual() {
+            const tbody = document.querySelector('#tablaVistaPreviaMesActual tbody');
+            const filas = tbody.querySelectorAll('tr');
+            let validos = 0;
+            let errores = 0;
+            
+            filas.forEach(fila => {
+                if (fila.classList.contains('table-success')) {
+                    validos++;
+                } else if (fila.classList.contains('table-danger')) {
+                    errores++;
+                }
+            });
+            
+            document.getElementById('countValidosMesActual').textContent = validos;
+            document.getElementById('countErroresMesActual').textContent = errores;
+            document.getElementById('btnConfirmarImportacionMesActual').disabled = errores > 0;
+            
+            // Actualizar navegación de errores
+            actualizarNavegacionErroresMesActual(errores);
+            
+            if (errores === 0) {
+                console.log('✅ Todos los artículos válidos - confirmación habilitada');
+            }
+        }
+
+        async function confirmarImportacionMesActual() {
+            console.log('🚀 Confirmando importación mes actual...');
+            mostrarPasoMesActual(3);
+            
+            // Esperar a que el DOM se actualice completamente - timeout más largo
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            try {
+                // **BARRA DE PROGRESO SIMULADA MIENTRAS SE PROCESA**
+                const barraProgreso = document.getElementById('progreso-mes-actual');
+                const totalItems = datosImportadosMesActual.length;
+                const tiempoEstimadoElem = document.getElementById('tiempo-estimado-mes-actual');
+                
+                console.log('📊 Inicializando barra de progreso mes actual...', {
+                    barraProgreso: !!barraProgreso,
+                    barraVisible: barraProgreso ? barraProgreso.offsetParent !== null : false,
+                    barraDisplay: barraProgreso ? window.getComputedStyle(barraProgreso.parentElement).display : 'N/A',
+                    paso3Visible: document.getElementById('paso3-mes-actual').style.display,
+                    tiempoEstimadoElem: !!tiempoEstimadoElem,
+                    totalItems
+                });
+                
+                if (!barraProgreso) {
+                    console.error('❌ No se encontró la barra de progreso mes actual');
+                    throw new Error('No se encontró la barra de progreso');
+                }
+                
+                // Resetear barra de progreso CON FORZAR REFLOW
+                barraProgreso.style.width = '0%';
+                barraProgreso.offsetHeight; // Forzar reflow
+                
+                // Iniciar en 5% de inmediato
+                requestAnimationFrame(() => {
+                    barraProgreso.style.width = '5%';
+                    barraProgreso.textContent = '5%';
+                    barraProgreso.className = 'progress-bar progress-bar-striped progress-bar-animated bg-success';
+                    barraProgreso.setAttribute('aria-valuenow', 5);
+                    console.log('✅ Barra de progreso mes actual reseteada al 5%');
+                });
+                
+                // Función para simular progreso
+                let progresoSimulado = 5;
+                const inicioTiempo = Date.now();
+                
+                // Estimar tiempo basado en cantidad de registros (más conservador)
+                const tiempoEstimadoSegundos = Math.max(20, Math.ceil(totalItems / 100));
+                
+                console.log(`⏱️ Tiempo estimado mes actual: ${tiempoEstimadoSegundos} segundos para ${totalItems} registros`);
+                
+                const intervaloProgreso = setInterval(() => {
+                    if (progresoSimulado < 85) {
+                        // Progreso MUY lento para dar tiempo al servidor
+                        if (progresoSimulado < 15) {
+                            progresoSimulado += 0.5;
+                        } else if (progresoSimulado < 40) {
+                            progresoSimulado += 0.8;
+                        } else if (progresoSimulado < 65) {
+                            progresoSimulado += 0.5;
+                        } else {
+                            progresoSimulado += 0.2;
+                        }
+                        
+                        barraProgreso.style.width = progresoSimulado + '%';
+                        barraProgreso.textContent = Math.round(progresoSimulado) + '%';
+                        barraProgreso.setAttribute('aria-valuenow', Math.round(progresoSimulado));
+                        
+                        // Actualizar tiempo estimado
+                        const tiempoTranscurrido = Math.floor((Date.now() - inicioTiempo) / 1000);
+                        const tiempoRestante = Math.max(0, tiempoEstimadoSegundos - tiempoTranscurrido);
+                        
+                        if (tiempoEstimadoElem) {
+                            if (tiempoRestante > 0) {
+                                tiempoEstimadoElem.innerHTML = `<i class="bi bi-clock me-1"></i>Tiempo estimado restante: ${tiempoRestante} segundos`;
+                            } else {
+                                tiempoEstimadoElem.innerHTML = `<i class="bi bi-hourglass-split me-1"></i>Finalizando procesamiento...`;
+                            }
+                        }
+                        
+                        // Solo loguear cada 10% para no saturar consola
+                        if (Math.round(progresoSimulado) % 10 === 0) {
+                            console.log(`📊 Progreso mes actual: ${Math.round(progresoSimulado)}% - Tiempo restante: ${tiempoRestante}s`);
+                        }
+                    }
+                }, 500); // Actualizar cada 500ms para progreso más lento
+                
+                // Actualizar texto de progreso
+                const textoProgreso = document.querySelector('#paso3-mes-actual p.text-muted');
+                if (textoProgreso) {
+                    textoProgreso.innerHTML = `Procesando <strong>${totalItems}</strong> registros del mes actual...<br><small>Esto puede tomar algunos minutos dependiendo del tamaño del archivo.</small>`;
+                }
+                
+                const response = await fetch('controller/procesar_importacion_mes_actual.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ datos: datosImportadosMesActual })
+                });
+                
+                // Detener simulación de progreso
+                clearInterval(intervaloProgreso);
+                
+                if (!response.ok) {
+                    barraProgreso.style.width = '100%';
+                    barraProgreso.textContent = 'Error';
+                    barraProgreso.classList.add('bg-danger');
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+                
+                // Completar barra de progreso
+                barraProgreso.style.width = '95%';
+                barraProgreso.textContent = '95% - Finalizando...';
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Progreso al 100%
+                    barraProgreso.style.width = '100%';
+                    barraProgreso.textContent = '100% - ¡Completado!';
+                    barraProgreso.classList.remove('progress-bar-striped', 'progress-bar-animated');
+                    
+                    let mensaje = `✅ Importación completada!\n\nRegistros procesados: ${result.procesados}`;
+                    
+                    // Mostrar errores si los hay
+                    if (result.errores_procesamiento && result.errores_procesamiento.length > 0) {
+                        mensaje += `\n\n⚠️ ATENCIÓN: Se encontraron ${result.errores_procesamiento.length} error(es):\n\n`;
+                        result.errores_procesamiento.forEach((error, idx) => {
+                            mensaje += `${idx + 1}. ${error}\n`;
+                        });
+                    }
+                    
+                    // Esperar un momento para que el usuario vea el 100%
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    alert(mensaje);
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalImportarMesActual'));
+                    modal.hide();
+                    verificarDatosMesActual();
+                } else {
+                    clearInterval(intervaloProgreso);
+                    barraProgreso.style.width = '100%';
+                    barraProgreso.textContent = 'Error en procesamiento';
+                    barraProgreso.classList.add('bg-danger');
+                    alert('❌ Error: ' + result.message);
+                    mostrarPasoMesActual(2);
+                }
+            } catch (error) {
+                console.error('Error en importación:', error);
+                
+                // Asegurar que se detenga el intervalo en caso de error
+                if (typeof intervaloProgreso !== 'undefined') {
+                    clearInterval(intervaloProgreso);
+                }
+                
+                alert('❌ Error al procesar la importación');
+                mostrarPasoMesActual(2);
+            }
+        }
+
+        async function descargarEjemploMesActual() {
+            try {
+                const response = await fetch('controller/generar_ejemplo_mes_actual.php');
+                const result = await response.json();
+
+                if (result.success && typeof XLSX !== 'undefined') {
+                    const wb = XLSX.utils.book_new();
+                    const ws = XLSX.utils.aoa_to_sheet(result.data);
+                    XLSX.utils.book_append_sheet(wb, ws, result.sheetName);
+                    XLSX.writeFile(wb, result.filename);
+                }
+            } catch (error) {
+                console.error('Error generando ejemplo:', error);
+                alert('Error al generar el archivo de ejemplo');
+            }
+        }
+
+        // Actualizar función de agrupación para soportar mes_actual
+        const agruparOriginal = window.agruparArticulosDuplicados;
+        window.agruparArticulosDuplicados = function(datos, modo = 'individual') {
+            if (modo === 'mes_actual') {
+                // Agrupar por artículo + fecha para mes actual
+                const agrupados = {};
+                let duplicados = 0;
+
+                datos.forEach(item => {
+                    const clave = `${item.articulo}_${item.fecha}`;
+                    if (agrupados[clave]) {
+                        agrupados[clave].cantidad += item.cantidad;
+                        duplicados++;
+                    } else {
+                        agrupados[clave] = { ...item };
+                    }
+                });
+
+                return Object.values(agrupados);
+            }
+            return agruparOriginal(datos, modo);
+        };
+
+        // ==========================================
+        // FUNCIÓN PARA RECARGAR PERÍODO COMPLETO MES ACTUAL
+        // ==========================================
+        
+        async function recargarPeriodoCompletoMesActual() {
+            // Confirmar acción
+            if (!confirm('¿Está seguro que desea eliminar todas las ventas del mes actual y volver a cargar? Esta acción no se puede deshacer.')) {
+                return;
+            }
+
+            try {
+                // Mostrar loading
+                const btnRecargar = document.getElementById('btn-recargar-mes-actual');
+                const textoOriginal = btnRecargar.innerHTML;
+                btnRecargar.disabled = true;
+                btnRecargar.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Eliminando...';
+
+                // Llamar al controlador para eliminar ventas del mes actual
+                const response = await fetch('controller/eliminar_ventas_mes_actual.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Ocultar área de resumen
+                    document.getElementById('area-resumen-fechas-cargadas').classList.add('d-none');
+                    
+                    // Limpiar rango de fechas
+                    document.getElementById('fecha-desde-mes-actual').value = '';
+                    document.getElementById('fecha-hasta-mes-actual').value = '';
+                    
+                    // Resetear estado del rango
+                    rangoFechasMesActual = {
+                        desde: null,
+                        hasta: null,
+                        valido: false
+                    };
+                    
+                    // Deshabilitar botón de importar
+                    document.getElementById('btnImportarMesActual').disabled = true;
+                    
+                    // Limpiar info y mostrar área de módulo
+                    document.getElementById('info-rango-mes-actual').classList.add('d-none');
+                    document.getElementById('area-modulo-importacion-mes-actual').classList.remove('d-none');
+                    
+                    // Mostrar mensaje de éxito
+                    alert(`Se eliminaron ${result.registros_eliminados} registros correctamente. Puede cargar nuevas ventas seleccionando un rango de fechas.`);
+                    
+                    // Actualizar estado en el sidebar
+                    if (typeof verificarEstadoVentas === 'function') {
+                        await verificarEstadoVentas();
+                    }
+                } else {
+                    throw new Exception(result.message || 'Error al eliminar ventas');
+                }
+
+                // Restaurar botón
+                btnRecargar.disabled = false;
+                btnRecargar.innerHTML = textoOriginal;
+
+            } catch (error) {
+                console.error('Error eliminando ventas del mes actual:', error);
+                alert('Error al eliminar ventas del mes actual: ' + error.message);
+                
+                // Restaurar botón en caso de error
+                const btnRecargar = document.getElementById('btn-recargar-mes-actual');
+                if (btnRecargar) {
+                    btnRecargar.disabled = false;
+                    btnRecargar.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Eliminar todo y Recargar Período Completo';
+                }
+            }
+        }
+    </script>
 
 </body>
 </html>

@@ -90,12 +90,37 @@ try {
     $conexionSistemas->beginTransaction();
 
     $articulosValidar = array_column($datos, 'articulo');
-    $placeholders = str_repeat('?,', count($articulosValidar) - 1) . '?';
     
-    $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
-    $stmtValidar = $conexionLaker->prepare($sqlValidar);
-    $stmtValidar->execute($articulosValidar);
-    $articulosValidos = $stmtValidar->fetchAll(PDO::FETCH_COLUMN);
+    // **SOLUCIÓN: Procesar en lotes para evitar límite de 2100 parámetros de SQL Server**
+    $batchSize = 2000; // Límite seguro (2100 - margen de seguridad)
+    $totalCodigos = count($articulosValidar);
+    
+    if ($totalCodigos > $batchSize) {
+        error_log("⚠️ VALIDACION POR LOTES: Procesando $totalCodigos artículos en lotes de $batchSize");
+    }
+    
+    $articulosValidos = [];
+    
+    // Dividir en lotes y procesar
+    for ($i = 0; $i < $totalCodigos; $i += $batchSize) {
+        $batch = array_slice($articulosValidar, $i, $batchSize);
+        $batchNum = floor($i / $batchSize) + 1;
+        $totalBatches = ceil($totalCodigos / $batchSize);
+        
+        error_log("📦 Validando lote $batchNum de $totalBatches (" . count($batch) . " artículos)");
+        
+        $placeholders = str_repeat('?,', count($batch) - 1) . '?';
+        
+        $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
+        $stmtValidar = $conexionLaker->prepare($sqlValidar);
+        $stmtValidar->execute($batch);
+        $articulosValidosLote = $stmtValidar->fetchAll(PDO::FETCH_COLUMN);
+        
+        // Agregar resultados de este lote
+        $articulosValidos = array_merge($articulosValidos, $articulosValidosLote);
+        
+        error_log("✅ Lote $batchNum completado: " . count($articulosValidosLote) . " artículos válidos");
+    }
 
     // Verificar que todos los artículos sean válidos
     foreach ($datos as $item) {
@@ -117,7 +142,8 @@ try {
                 categoria_padre varchar(100) NULL,
                 cantidad int NOT NULL,
                 fecha_carga datetime DEFAULT GETDATE(),
-                usuario_carga varchar(50) NULL
+                usuario_carga varchar(50) NULL,
+                fecha DATE NULL
             )
         END
         
@@ -143,6 +169,12 @@ try {
         BEGIN
             ALTER TABLE ventas_franquicias_sin_tango ADD categoria_padre varchar(100) NULL
         END
+        
+        -- Agregar columna fecha si no existe (para carga individual mes actual)
+        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'fecha')
+        BEGIN
+            ALTER TABLE ventas_franquicias_sin_tango ADD fecha DATE NULL
+        END
     ";
     $conexionSistemas->exec($sqlCrearTabla);
 
@@ -152,9 +184,10 @@ try {
     $stmtEliminar->execute([$nroSucursal, $periodoActual]);
 
     // Preparar query para insertar nuevos datos - usar solo las columnas que sabemos que existen
+    // NOTA: fecha = NULL para carga individual (mes anterior)
     $sqlInsertar = "INSERT INTO ventas_franquicias_sin_tango 
-                    (nro_sucursal, periodo, codigo_articulo, cantidad, fecha_carga, rubro, categoria_padre, usuario_carga) 
-                    VALUES (?, ?, ?, ?, GETDATE(), ?, ?, ?)";
+                    (nro_sucursal, periodo, codigo_articulo, cantidad, fecha_carga, rubro, categoria_padre, usuario_carga, fecha) 
+                    VALUES (?, ?, ?, ?, GETDATE(), ?, ?, ?, NULL)";
     $stmtInsertar = $conexionSistemas->prepare($sqlInsertar);
 
     $procesados = 0;

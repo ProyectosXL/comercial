@@ -59,11 +59,27 @@ try {
         $codigosArticulos = array_column($ventasExistentes, 'codigo_articulo');
         
         if (!empty($codigosArticulos)) {
-            $placeholders = str_repeat('?,', count($codigosArticulos) - 1) . '?';
-            $sqlDescripciones = "SELECT COD_ARTICU, DESCRIPCIO FROM STA11 WHERE COD_ARTICU IN ($placeholders)";
-            $stmtDescripciones = $conexionLaker->prepare($sqlDescripciones);
-            $stmtDescripciones->execute($codigosArticulos);
-            $descripciones = $stmtDescripciones->fetchAll(PDO::FETCH_KEY_PAIR);
+            // **SOLUCIÓN: Procesar en lotes para evitar límite de 2100 parámetros**
+            $batchSize = 2000;
+            $totalCodigos = count($codigosArticulos);
+            $descripciones = [];
+            
+            if ($totalCodigos > $batchSize) {
+                error_log("⚠️ Obteniendo descripciones en lotes: $totalCodigos códigos");
+            }
+            
+            for ($i = 0; $i < $totalCodigos; $i += $batchSize) {
+                $batch = array_slice($codigosArticulos, $i, $batchSize);
+                
+                $placeholders = str_repeat('?,', count($batch) - 1) . '?';
+                $sqlDescripciones = "SELECT COD_ARTICU, DESCRIPCIO FROM STA11 WHERE COD_ARTICU IN ($placeholders)";
+                $stmtDescripciones = $conexionLaker->prepare($sqlDescripciones);
+                $stmtDescripciones->execute($batch);
+                $descripcionesLote = $stmtDescripciones->fetchAll(PDO::FETCH_KEY_PAIR);
+                
+                // Combinar resultados
+                $descripciones = array_merge($descripciones, $descripcionesLote);
+            }
             
             // Agregar descripciones a los datos
             foreach ($ventasExistentes as &$venta) {
