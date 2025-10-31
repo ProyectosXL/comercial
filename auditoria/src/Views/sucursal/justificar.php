@@ -22,7 +22,9 @@
         <strong>Formulario de Justificación</strong>
     </div>
     <div class="card-body">
-        <form action="/comercial/auditoria/public/sucursal/guardar" method="POST">
+        <!-- ¡IMPORTANTE! Se añade enctype="multipart/form-data" para permitir la subida de archivos -->
+        <form action="/comercial/auditoria/public/sucursal/guardar" method="POST" enctype="multipart/form-data">
+            
             <!-- Campos ocultos con la info de la operación que necesitamos guardar -->
             <input type="hidden" name="n_comp" value="<?php echo htmlspecialchars($operacion['N_COMP']); ?>">
             <input type="hidden" name="nro_sucursal" value="<?php echo htmlspecialchars($operacion['NRO_SUCURS']); ?>">
@@ -44,6 +46,20 @@
                 <textarea class="form-control" id="observaciones" name="observaciones" rows="4" placeholder="Añada cualquier detalle relevante aquí..."></textarea>
             </div>
 
+            <!-- Nuevos campos para la aprobación de la supervisora y el adjunto -->
+            <div class="form-group">
+                <label for="aprobado_supervisora"><strong>¿Aprobado por supervisora?</strong></label>
+                <select class="form-control" id="aprobado_supervisora" name="aprobado_supervisora">
+                    <option value="No">No</option>
+                    <option value="Sí">Sí</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="adjunto_container" style="display: none;">
+                <label for="adjunto"><strong>Adjuntar comprobante (foto, PDF, etc.)</strong></label>
+                <input type="file" class="form-control-file" id="adjunto" name="adjunto">
+            </div>
+
             <a href="/comercial/auditoria/public/sucursal/pendientes" class="btn btn-secondary">
                 <i class="fas fa-arrow-left"></i> Cancelar
             </a>
@@ -54,4 +70,24 @@
     </div>
 </div>
 
-<?php require_once __DIR__ . '/../layouts/footer.php'; ?>
+<?php
+// Definimos los scripts específicos para esta página ANTES de llamar al footer
+$pageScripts = "
+<script>
+$(document).ready(function() {
+    // Lógica para mostrar/ocultar el campo de adjunto
+    $('#aprobado_supervisora').on('change', function() {
+        if (this.value === 'Sí') {
+            $('#adjunto_container').slideDown();
+        } else {
+            $('#adjunto_container').slideUp();
+            // Limpiamos el valor del input de archivo si el usuario cambia a 'No'
+            $('#adjunto').val(''); 
+        }
+    });
+});
+</script>
+";
+?>
+
+<?php require_once __DIR__ . '/../layouts/footer.php'; // Ahora el footer se incluye AL FINAL y usará la variable $pageScripts. ?>

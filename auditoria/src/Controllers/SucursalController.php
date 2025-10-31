@@ -5,6 +5,7 @@ require_once 'BaseController.php';
 require_once __DIR__ . '/../Models/VentaModel.php';
 require_once __DIR__ . '/../Models/AuditModel.php';
 require_once __DIR__ . '/../Models/AuditHistoryModel.php';
+require_once __DIR__ . '/../Services/NotificationService.php';
 
 class SucursalController extends BaseController {
 
@@ -13,61 +14,47 @@ class SucursalController extends BaseController {
         $ventaModel = new VentaModel();
         $auditModel = new AuditModel(); 
 
-        $selectedSucursal = isset($_GET['sucursal']) && !empty($_GET['sucursal']) ? (int)$_GET['sucursal'] : null;
+        // --- INICIO DE LA LÓGICA DINÁMICA ---
+
+        // 1. Verificamos que el usuario sea del rol 'sucursal' y tenga un nro_sucursal asignado.
+        if ($_SESSION['user']['role'] !== 'sucursal' || empty($_SESSION['user']['nro_sucursal'])) {
+            die('Acceso no autorizado para este rol.');
+        }
+
+        // 2. Obtenemos el N° de sucursal del usuario directamente desde SU sesión.
+        $nroSucursalUsuario = $_SESSION['user']['nro_sucursal'];
+
+        // 3. Leemos los filtros opcionales de fecha.
         $fecha_desde = isset($_GET['fecha_desde']) && !empty($_GET['fecha_desde']) ? $_GET['fecha_desde'] : null;
         $fecha_hasta = isset($_GET['fecha_hasta']) && !empty($_GET['fecha_hasta']) ? $_GET['fecha_hasta'] : null;
 
         $justificadosNComp = $auditModel->getJustificadosNComp();
         
+        // 4. Obtenemos las operaciones, que ya vienen filtradas por fecha.
         $todasLasOperaciones = $ventaModel->getOperacionesDifPrecio($fecha_desde, $fecha_hasta);
         
-        $operaciones = array_filter($todasLasOperaciones, function($op) use ($justificadosNComp, $selectedSucursal) {
-            $estaPendiente = !in_array($op['N_COMP'], $justificadosNComp);
-            if ($selectedSucursal !== null) {
-                return $estaPendiente && $op['NRO_SUCURS'] == $selectedSucursal;
-            }
-            return $estaPendiente;
+        // 5. Filtramos en PHP para quedarnos solo con las de nuestra sucursal y que estén pendientes.
+        $operaciones = array_filter($todasLasOperaciones, function($op) use ($justificadosNComp, $nroSucursalUsuario) {
+            return !in_array($op['N_COMP'], $justificadosNComp) && $op['NRO_SUCURS'] == $nroSucursalUsuario;
         });
 
+        // Obtenemos los nombres de todas las sucursales para el mapeo.
         $sucursales = $ventaModel->getSucursales();
-        
         foreach ($operaciones as $key => $op) {
             $nroSucursal = $op['NRO_SUCURS'];
             $operaciones[$key]['DESC_SUCURSAL'] = $sucursales[$nroSucursal] ?? 'Desconocida';
         }
 
-        $stats = $ventaModel->getStatsSucursal($selectedSucursal, $justificadosNComp, $fecha_desde, $fecha_hasta);
-        
-        // Datos para el gráfico mensual
-        $chartRawData = $ventaModel->getPendientesPorFecha($selectedSucursal, $justificadosNComp, $fecha_desde, $fecha_hasta);
+        // 6. Calculamos los KPIs y gráficos SOLO para nuestra sucursal.
+        $stats = $ventaModel->getStatsSucursal($nroSucursalUsuario, $justificadosNComp, $fecha_desde, $fecha_hasta);
+        $chartRawData = $ventaModel->getPendientesPorFecha($nroSucursalUsuario, $justificadosNComp, $fecha_desde, $fecha_hasta);
         $chartLabels = json_encode(array_column($chartRawData, 'mes'));
         $chartValues = json_encode(array_column($chartRawData, 'cantidad'));
 
-        // --- ESTA ES LA PARTE QUE FALTABA ---
-        // Datos para el gráfico de ranking (solo se muestra si no hay filtro de sucursal)
-        $rankingLabels = '[]';
-        $rankingValues = '[]';
-        if ($selectedSucursal === null) {
-            $rankingRawData = $ventaModel->getRankingPorSucursal($justificadosNComp, $fecha_desde, $fecha_hasta);
-            
-            $translatedLabels = [];
-            foreach ($rankingRawData as $rankItem) {
-                $translatedLabels[] = $sucursales[$rankItem['NRO_SUCURS']] ?? 'Desconocida';
-            }
-
-            $rankingLabels = json_encode($translatedLabels);
-            $rankingValues = json_encode(array_column($rankingRawData, 'cantidad'));
-        }
-        // ------------------------------------
-
-        $panelTitle = "Panel de Operaciones Pendientes";
-        if ($selectedSucursal !== null && isset($sucursales[$selectedSucursal])) {
-            $panelTitle .= " - " . $sucursales[$selectedSucursal];
-        }
+        $panelTitle = "Panel de Operaciones Pendientes - " . ($_SESSION['user']['name'] ?? 'Mi Sucursal');
 
         require_once __DIR__ . '/../Views/sucursal/pendientes.php';
     }
-
     public function justificar($n_comp) {
         $pageTitle = "Justificar Operación";
         $ventaModel = new VentaModel();
@@ -81,15 +68,38 @@ class SucursalController extends BaseController {
     }
 
     public function guardar() {
-        // Incluimos los servicios y modelos necesarios
-        require_once __DIR__ . '/../Services/NotificationService.php';
-        require_once __DIR__ . '/../Models/VentaModel.php';
-
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $path_adjunto = null; // Valor por defecto
+
+            // --- LÓGICA DE SUBIDA DE ARCHIVO ---
+            if (isset($_POST['aprobado_supervisora']) && $_POST['aprobado_supervisora'] === 'Sí' && isset($_FILES['adjunto']) && $_FILES['adjunto']['error'] === UPLOAD_ERR_OK) {
+                
+                $uploadDir = __DIR__ . '/../../public/uploads/';
+                // Crear el directorio si no existe
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0777, true);
+                }
+                
+                // Crear un nombre de archivo único para evitar sobreescrituras
+                $fileName = time() . '_' . basename($_FILES['adjunto']['name']);
+                $targetFile = $uploadDir . $fileName;
+
+                // Mover el archivo desde la ubicación temporal a nuestro directorio
+                if (move_uploaded_file($_FILES['adjunto']['tmp_name'], $targetFile)) {
+                    // Guardamos la ruta relativa para la base de datos y el acceso web
+                    $path_adjunto = 'uploads/' . $fileName;
+                }
+            }
+            
             $datos = [
-                'n_comp' => $_POST['n_comp'], 'nro_sucursal' => $_POST['nro_sucursal'],
-                'fecha_operacion' => $_POST['fecha_operacion'], 'importe' => $_POST['importe'],
-                'motivo' => $_POST['motivo'], 'observaciones' => $_POST['observaciones'] ?? ''
+                'n_comp' => $_POST['n_comp'],
+                'nro_sucursal' => $_POST['nro_sucursal'],
+                'fecha_operacion' => $_POST['fecha_operacion'],
+                'importe' => $_POST['importe'],
+                'motivo' => $_POST['motivo'],
+                'observaciones' => $_POST['observaciones'] ?? '',
+                'aprobado_supervisora' => $_POST['aprobado_supervisora'] ?? 'No',
+                'path_adjunto' => $path_adjunto
             ];
 
             $auditModel = new AuditModel();

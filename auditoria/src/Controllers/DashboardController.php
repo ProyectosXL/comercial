@@ -61,13 +61,20 @@ class DashboardController extends BaseController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $_POST['id'];
             $nuevoEstado = $_POST['estado'];
+            // --- INICIO DE CÓDIGO NUEVO ---
+            // Capturamos el comentario de derivación si existe.
+            $detalleComentario = isset($_POST['comentario_derivacion']) ? trim($_POST['comentario_derivacion']) : null;
+            // --- FIN DE CÓDIGO NUEVO ---
+
             $auditModel = new AuditModel();
 
             if ($auditModel->updateAuditStatus($id, $nuevoEstado)) {
                 $historyModel = new AuditHistoryModel();
                 $usuario = $_SESSION['user']['name'];
-                $historyModel->registrarAccion($id, $usuario, "Cambio de estado a: " . $nuevoEstado);
+                $accion = "Cambio de estado a: " . $nuevoEstado;
 
+                // Guardamos la acción en el historial, AHORA CON EL COMENTARIO
+                $historyModel->registrarAccion($id, $usuario, $accion, $detalleComentario);
                 $notificationService = new NotificationService();
                 $auditoria = $auditModel->getAuditById($id);
                 $ventaModel = new VentaModel();

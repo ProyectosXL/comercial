@@ -8,10 +8,18 @@
     <div class="card-body">
         <form action="" method="GET">
             <div class="row align-items-end">
-                <div class="col-md-3"><label for="sucursal"><strong>Filtrar por Sucursal:</strong></label><select name="sucursal" id="sucursal" class="form-control"><option value="">-- Todas --</option><?php foreach ($sucursales as $nro => $desc): ?><option value="<?php echo $nro; ?>" <?php echo (isset($_GET['sucursal']) && $_GET['sucursal'] == $nro) ? 'selected' : ''; ?>><?php echo htmlspecialchars($desc); ?></option><?php endforeach; ?></select></div>
-                <div class="col-md-3"><label for="fecha_desde"><strong>Desde:</strong></label><input type="date" name="fecha_desde" id="fecha_desde" class="form-control" value="<?php echo $_GET['fecha_desde'] ?? ''; ?>"></div>
-                <div class="col-md-3"><label for="fecha_hasta"><strong>Hasta:</strong></label><input type="date" name="fecha_hasta" id="fecha_hasta" class="form-control" value="<?php echo $_GET['fecha_hasta'] ?? ''; ?>"></div>
-                <div class="col-md-3 d-flex align-items-end"><button type="submit" class="btn btn-primary mr-2 w-100"><i class="fas fa-filter mr-1"></i>Filtrar</button><a href="/comercial/auditoria/public/sucursal/pendientes" class="btn btn-secondary w-100 mt-2">Limpiar Filtro</a></div>
+                <div class="col-md-4">
+                    <label for="fecha_desde"><strong>Filtrar desde:</strong></label>
+                    <input type="date" name="fecha_desde" id="fecha_desde" class="form-control" value="<?php echo $_GET['fecha_desde'] ?? ''; ?>">
+                </div>
+                <div class="col-md-4">
+                    <label for="fecha_hasta"><strong>Filtrar hasta:</strong></label>
+                    <input type="date" name="fecha_hasta" id="fecha_hasta" class="form-control" value="<?php echo $_GET['fecha_hasta'] ?? ''; ?>">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary mr-2 w-100"><i class="fas fa-filter mr-1"></i>Filtrar</button>
+                    <a href="/comercial/auditoria/public/sucursal/pendientes" class="btn btn-secondary w-100 mt-2">Limpiar</a>
+                </div>
             </div>
         </form>
     </div>
@@ -32,12 +40,8 @@
     </div>
     <div class="card-body">
         <div class="tab-content" id="managementTabContent">
-            <div class="tab-pane fade show active" id="chart" role="tabpanel" aria-labelledby="chart-tab">
-                <div style="height: 400px;"><canvas id="pendientesChart"></canvas></div>
-                <?php if ($selectedSucursal === null): ?>
-                <hr class="my-4"><h5 class="text-center mb-3">Ranking de Sucursales con más Pendientes (Top 10)</h5>
-                <div style="height: 400px;"><canvas id="rankingChart"></canvas></div>
-                <?php endif; ?>
+            <div class="tab-pane fade show active" id="chart" role="tabpanel" aria-labelledby="chart-tab" style="height: 400px;">
+                <canvas id="pendientesChart"></canvas>
             </div>
             <div class="tab-pane fade" id="table" role="tabpanel" aria-labelledby="table-tab">
                 <table id="operacionesTable" class="table table-hover w-100">
@@ -69,7 +73,6 @@
 $pageScripts = "
 <script>
 $(document).ready(function() {
-    // Lógica para inicializar DataTables solo cuando su pestaña se muestra
     var table = null;
     $('a[data-toggle=\"tab\"]').on('shown.bs.tab', function (e) {
         if (e.target.hash == '#table' && !$.fn.DataTable.isDataTable('#operacionesTable')) {
@@ -80,7 +83,6 @@ $(document).ready(function() {
         }
     });
 
-    // Código de los gráficos (se ejecuta siempre al cargar la página)
     if (document.getElementById('pendientesChart')) {
         var ctx = document.getElementById('pendientesChart').getContext('2d');
         new Chart(ctx, {
@@ -98,29 +100,6 @@ $(document).ready(function() {
             options: {
                 scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
                 responsive: true, maintainAspectRatio: false
-            }
-        });
-    }
-
-    if (document.getElementById('rankingChart')) {
-        var ctxRanking = document.getElementById('rankingChart').getContext('2d');
-        new Chart(ctxRanking, {
-            type: 'bar',
-            data: {
-                labels: " . ($rankingLabels ?? '[]') . ",
-                datasets: [{
-                    label: 'N° de Pendientes',
-                    data: " . ($rankingValues ?? '[]') . ",
-                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } }
             }
         });
     }

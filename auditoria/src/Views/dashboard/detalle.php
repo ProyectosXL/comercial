@@ -26,6 +26,17 @@
                 <blockquote class="blockquote">
                     <p class="mb-0"><?php echo nl2br(htmlspecialchars($auditoria['observaciones'])); ?></p>
                 </blockquote>
+                                <!-- INICIO DE INFORMACIÓN DE SUPERVISORA -->
+                <hr>
+                <p><strong>¿Aprobado por supervisora?:</strong> <?php echo htmlspecialchars($auditoria['aprobado_supervisora']); ?></p>
+                <?php if (!empty($auditoria['path_adjunto'])): ?>
+                    <p><strong>Comprobante Adjunto:</strong> 
+                        <a href="/comercial/auditoria/public/<?php echo htmlspecialchars($auditoria['path_adjunto']); ?>" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-download mr-1"></i> Descargar Adjunto
+                        </a>
+                    </p>
+                <?php endif; ?>
+                <!-- FIN DE INFORMACIÓN DE SUPERVISORA -->
                  <hr>
                 <p><strong>Fecha de Solicitud:</strong> <?php echo date('d/m/Y H:i:s', strtotime($auditoria['fecha_creacion'])); ?></p>
             </div>
@@ -59,35 +70,31 @@
                 ?>
 
                 <?php // --- Lógica para el Asistente Comercial --- ?>
-                <?php if ($userRole === 'asistente'): ?>
-                    <?php if ($auditStatus === 'Pendiente'): ?>
-                        <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline">
-                            <input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>">
-                            <input type="hidden" name="estado" value="Aprobado">
-                            <button type="submit" class="btn btn-success mb-2 w-100"><i class="fas fa-check"></i> Aprobar Directo</button>
-                        </form>
-                        <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline">
-                            <input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>">
-                            <input type="hidden" name="estado" value="Derivado a Gerencia">
-                            <button type="submit" class="btn btn-warning w-100"><i class="fas fa-share-square"></i> Derivar a Gerencia</button>
-                        </form>
-                    <?php endif; ?>
+                <?php if ($userRole === 'asistente' && $auditStatus === 'Pendiente'): ?>
+                    <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline">
+                        <input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>">
+                        <input type="hidden" name="estado" value="Aprobado">
+                        <button type="submit" class="btn btn-success mb-2 w-100"><i class="fas fa-check"></i> Aprobar Directo</button>
+                    </form>
+                    
+                    <!-- Botón que abre la ventana modal -->
+                    <button type="button" class="btn btn-warning w-100" data-toggle="modal" data-target="#derivarModal">
+                        <i class="fas fa-share-square"></i> Derivar a Gerencia...
+                    </button>
                 <?php endif; ?>
 
                 <?php // --- Lógica para la Gerencia Comercial --- ?>
-                <?php if ($userRole === 'gerencia'): ?>
-                    <?php if ($auditStatus === 'Derivado a Gerencia'): ?>
-                        <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline">
-                            <input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>">
-                            <input type="hidden" name="estado" value="Aprobado">
-                            <button type="submit" class="btn btn-success mb-2 w-100"><i class="fas fa-check"></i> Aprobar</button>
-                        </form>
-                        <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline">
-                            <input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>">
-                            <input type="hidden" name="estado" value="Rechazado">
-                            <button type="submit" class="btn btn-danger w-100"><i class="fas fa-times"></i> Rechazar</button>
-                        </form>
-                    <?php endif; ?>
+                <?php if ($userRole === 'gerencia' && $auditStatus === 'Derivado a Gerencia'): ?>
+                    <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline">
+                        <input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>">
+                        <input type="hidden" name="estado" value="Aprobado">
+                        <button type="submit" class="btn btn-success mb-2 w-100"><i class="fas fa-check"></i> Aprobar</button>
+                    </form>
+                    <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST" class="d-inline">
+                        <input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>">
+                        <input type="hidden" name="estado" value="Rechazado">
+                        <button type="submit" class="btn btn-danger w-100"><i class="fas fa-times"></i> Rechazar</button>
+                    </form>
                 <?php endif; ?>
 
                 <?php // --- Mensaje para estados donde no hay acciones o ya están finalizados --- ?>
@@ -125,6 +132,13 @@
                                 <strong><?php echo date('d/m/Y H:i', strtotime($evento['fecha'])); ?></strong> - 
                                 <span class="text-primary"><?php echo htmlspecialchars($evento['usuario']); ?></span>: 
                                 <?php echo htmlspecialchars($evento['accion']); ?>
+                                
+                                <!-- Mostrar el comentario si existe -->
+                                <?php if (!empty($evento['detalle'])): ?>
+                                    <blockquote class="blockquote blockquote-sm mt-2 mb-0 border-left pl-3 bg-light">
+                                        <p class="mb-0 small font-italic p-2"><?php echo htmlspecialchars($evento['detalle']); ?></p>
+                                    </blockquote>
+                                <?php endif; ?>
                             </li>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -132,6 +146,34 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Ventana Modal para Derivar -->
+<div class="modal fade" id="derivarModal" tabindex="-1" role="dialog" aria-labelledby="derivarModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="derivarModalLabel">Derivar Auditoría a Gerencia</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST">
+          <div class="modal-body">
+                <input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>">
+                <input type="hidden" name="estado" value="Derivado a Gerencia">
+                <div class="form-group">
+                    <label for="comentario_derivacion"><strong>Comentario para Gerencia (Opcional):</strong></label>
+                    <textarea class="form-control" id="comentario_derivacion" name="comentario_derivacion" rows="4" placeholder="Ej: El descuento es muy alto, requiere supervisión..."></textarea>
+                </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-warning"><i class="fas fa-share-square"></i> Confirmar Derivación</button>
+          </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>
