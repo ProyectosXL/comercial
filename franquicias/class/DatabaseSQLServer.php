@@ -16,17 +16,78 @@ class DatabaseSQLServer {
     private function getEnvConfig() {
         if ($this->envVars === null) {
             try {
-                // Usar la clase DotEnv del proyecto que maneja tanto .env como variables de entorno del servidor
-                require_once __DIR__ . '/../../Class/classEnv.php';
-                $dotenv = new DotEnv(__DIR__ . '/../../.env');
-                $this->envVars = $dotenv->listVars();
-                error_log("DatabaseSQLServer: Variables de entorno cargadas exitosamente usando DotEnv");
+                // La ruta correcta al .env desde franquicias/class/ es ../../.env
+                $envPath = realpath(__DIR__ . '/../../.env');
+                
+                if (!$envPath || !file_exists($envPath)) {
+                    error_log("DatabaseSQLServer ERROR: Archivo .env no encontrado. Buscado en: " . __DIR__ . '/../../.env');
+                    throw new Exception("Archivo .env no encontrado en la ruta esperada");
+                }
+                
+                error_log("DatabaseSQLServer: Cargando .env desde: " . $envPath);
+                
+                // Cargar el archivo .env directamente sin usar listVars() que tiene ruta hardcodeada
+                $this->loadEnvFile($envPath);
+                
+                // Obtener las variables que necesitamos
+                $this->envVars = [
+                    'HOST_CENTRAL' => getenv('HOST_CENTRAL'),
+                    'HOST_LOCALES' => getenv('HOST_LOCALES'),
+                    'DATABASE_CENTRAL' => getenv('DATABASE_CENTRAL'),
+                    'DATABASE_LOCALES' => getenv('DATABASE_LOCALES'),
+                    'DATABASE_UY' => getenv('DATABASE_UY'),
+                    'DATABASE_TANGOBIS' => getenv('DATABASE_TANGOBIS'),
+                    'DATABASE_SUC_UY' => getenv('DATABASE_SUC_UY'),
+                    'HOST_APPS' => getenv('HOST_APPS'),
+                    'DATABASE_APPS' => getenv('DATABASE_APPS'),
+                    'DATABASE_POWER' => getenv('DATABASE_POWER'),
+                    'USER' => getenv('USER'),
+                    'PASS' => getenv('PASS'),
+                    'PASS_LOCALES' => getenv('PASS_LOCALES'),
+                    'CHARACTER' => getenv('CHARACTER'),
+                    'ENV' => getenv('ENV'),
+                    'HOST_EMAIL' => getenv('HOST_EMAIL'),
+                    'USER_EMAIL' => getenv('USER_EMAIL'),
+                    'PASS_EMAIL' => getenv('PASS_EMAIL'),
+                ];
+                
+                error_log("DatabaseSQLServer: Variables de entorno cargadas exitosamente");
             } catch (Exception $e) {
                 error_log("DatabaseSQLServer ERROR: No se pudieron cargar variables de entorno: " . $e->getMessage());
                 throw new Exception("No se pudo cargar la configuración de base de datos: " . $e->getMessage());
             }
         }
         return $this->envVars;
+    }
+    
+    /**
+     * Cargar archivo .env
+     */
+    private function loadEnvFile($path) {
+        if (!is_readable($path)) {
+            throw new Exception("El archivo .env no es legible: $path");
+        }
+
+        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            if (strpos(trim($line), '#') === 0) {
+                continue;
+            }
+
+            if (strpos($line, '=') === false) {
+                continue;
+            }
+
+            list($name, $value) = explode('=', $line, 2);
+            $name = trim($name);
+            $value = trim($value);
+
+            if (!array_key_exists($name, $_SERVER) && !array_key_exists($name, $_ENV)) {
+                putenv(sprintf('%s=%s', $name, $value));
+                $_ENV[$name] = $value;
+                $_SERVER[$name] = $value;
+            }
+        }
     }
     
     /**

@@ -302,7 +302,7 @@ if (!class_exists('FranquiciaStockController')) {
                     error_log("DEBUG: No se encontraron rubros en la base de datos");
                 }
             } else {
-                error_log("DEBUG: No hay conexión a sistemas para rubros, usando datos de prueba");
+                error_log("DEBUG: No hay conexión a sistemas para rubros");
                 error_log("DEBUG: Estado de conexión: " . ($this->sistemas_conn ? 'Conectado' : 'No conectado'));
                 error_log("DEBUG: Variables de conexión: " . json_encode([
                     'sistemas_conn' => !empty($this->sistemas_conn),
@@ -311,20 +311,14 @@ if (!class_exists('FranquiciaStockController')) {
                 ]));
             }
             
-            // Datos de prueba si no hay conexión
-            // $rubros_prueba = [
-            //     ['RUBRO' => 'CALZADO'],
-            //     ['RUBRO' => 'INDUMENTARIA'],
-            //     ['RUBRO' => 'ACCESORIOS'],
-            //     ['RUBRO' => 'MARROQUINERIA'],
-            //     ['RUBRO' => 'DEPORTES']
-            // ];
-            
+            // Si llegamos aquí, no hay rubros disponibles
+            error_log("DEBUG: No se encontraron rubros - retornando array vacío");
             return [
-                'success' => true,
-                'rubros' => $rubros_prueba,
-                'source' => 'test_data',
-                'count' => count($rubros_prueba)
+                'success' => false,
+                'message' => 'No se pudieron cargar los rubros. Por favor, verifique la conexión a la base de datos.',
+                'rubros' => [],
+                'source' => 'no_data',
+                'count' => 0
             ];
             
         } catch (Exception $e) {
