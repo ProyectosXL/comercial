@@ -3,8 +3,8 @@
 class BaseController {
     public function __construct() {
         if (!isset($_SESSION['user'])) {
-            header('Location: /comercial/auditoria/public/auth');
-            exit();
+            // Si no hay un usuario en la sesión, detenemos la ejecución.
+            die('Acceso Denegado. Por favor, ingrese a través del portal XL Gestión.');
         }
     }
 }

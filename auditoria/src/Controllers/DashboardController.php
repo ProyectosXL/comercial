@@ -74,9 +74,9 @@ class DashboardController extends BaseController {
                 $sucursales = $ventaModel->getSucursales();
                 $nombreSucursal = $sucursales[$auditoria['nro_sucursal']] ?? 'Desconocida';
 
-                $emailSucursal = 'sucursal.prueba@example.com';
-                $emailRRHH = 'rrhh.prueba@example.com';
-                $emailGerencia = 'gerente.comercial@xl.com.ar';
+                $emailSucursal = 'franco.pertus@xl.com.ar';
+                $emailRRHH = 'franco.pertus@xl.com.ar';
+                $emailGerencia = 'franco.pertus@xl.com.ar';
 
                 // --- LÓGICA DE NOTIFICACIONES CORREGIDA ---
                 // Si el estado es final (Aprobado o Rechazado), notificar a la sucursal.

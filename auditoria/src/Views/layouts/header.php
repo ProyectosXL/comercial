@@ -36,7 +36,7 @@
                         <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarUserDropdown">
                             <h6 class="dropdown-header">Rol: <?php echo ucwords(str_replace('_', ' ', $_SESSION['user']['role'])); ?></h6>
                             <div class="dropdown-divider"></div>
-                            <a class="dropdown-item" href="/comercial/auditoria/public/auth/logout"><i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión</a>
+                            <a class="dropdown-item" href="/comercial/auditoria/public/logout.php"><i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión</a>
                         </div>
                     </li>
                 </ul>
