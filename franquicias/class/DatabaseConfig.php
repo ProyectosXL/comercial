@@ -85,12 +85,32 @@ class DatabaseConfig {
     public static function conectarSistemas() {
         try {
             $config = self::getSistemasConfig();
+            
+            // Asegurar que tenemos los datos necesarios
+            if (empty($config['database'])) {
+                // Fallback a 'sistemas' si no se carga desde .env
+                $config['database'] = 'sistemas';
+                error_log("WARNING DB: DATABASE_APPS no configurado, usando 'sistemas' por defecto");
+            }
+            
             $dsn = "{$config['driver']}:server={$config['server']};Database={$config['database']}";
             
             $pdo = new PDO($dsn, $config['username'], $config['password']);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             
-            error_log("DEBUG DB: Conexión exitosa a base de datos APPS con servidor: {$config['server']}");
+            // **FORZAR USO DE LA BASE DE DATOS CORRECTA**
+            $pdo->exec("USE [{$config['database']}]");
+            
+            // Verificar que estamos en la base correcta
+            $stmt = $pdo->query("SELECT @@SERVERNAME as servidor, DB_NAME() as db_actual");
+            $dbActual = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($dbActual['db_actual'] !== $config['database']) {
+                error_log("ERROR DB: Se esperaba base de datos '{$config['database']}' pero está en '{$dbActual['db_actual']}'");
+                throw new Exception("No se pudo cambiar a la base de datos correcta");
+            }
+            
+            error_log("DEBUG DB: Conexión exitosa - Servidor: {$dbActual['servidor']}, DB: {$dbActual['db_actual']}");
             return $pdo;
             
         } catch (Exception $e) {

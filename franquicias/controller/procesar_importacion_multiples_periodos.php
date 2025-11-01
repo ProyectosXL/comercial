@@ -1,23 +1,42 @@
 <?php
-// **TEMPORAL: Habilitar errores para debugging**
-ini_set('display_errors', '1');
+/**
+ * Controlador para procesar importación de múltiples períodos
+ * Versión optimizada con manejo robusto de errores
+ */
+
+// Configuración inicial
+ini_set('display_errors', '0');
 ini_set('error_reporting', E_ALL);
-ini_set('html_errors', '0');
 ini_set('log_errors', '1');
-
-// Iniciar buffer de output INMEDIATAMENTE
-ob_start();
-
-// Aumentar límites
 ini_set('max_execution_time', '300');
 ini_set('memory_limit', '512M');
 set_time_limit(300);
+
+// Capturar errores fatales
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && ($error['type'] === E_ERROR || $error['type'] === E_PARSE)) {
+        error_log("FATAL ERROR: " . print_r($error, true));
+        if (!headers_sent()) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error fatal del servidor: ' . $error['message'],
+                'file' => basename($error['file']),
+                'line' => $error['line']
+            ]);
+        }
+    }
+});
+
+// Iniciar buffer de output
+ob_start();
 
 // Includes
 require_once '../config_sesiones_fixed.php';
 require_once '../class/DatabaseConfig.php';
 
-// Descartar CUALQUIER output hasta ahora
+// Descartar cualquier output previo
 $trash = ob_get_clean();
 if ($trash) {
     error_log("Output descartado: " . strlen($trash) . " bytes");
@@ -42,9 +61,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonResponse(['success' => false, 'message' => 'Método no permitido']);
 }
 
-error_log("✅ Iniciando procesamiento múltiples períodos");
-
-error_log("=== INICIO PROCESAMIENTO MÚLTIPLES PERÍODOS ===");
+error_log("╔═══════════════════════════════════════════════════════════╗");
+error_log("║   INICIO PROCESAMIENTO MÚLTIPLES PERÍODOS                ║");
+error_log("║   Timestamp: " . date('Y-m-d H:i:s') . "                        ║");
+error_log("╚═══════════════════════════════════════════════════════════╝");
 
 // Leer datos JSON del request
 $rawInput = file_get_contents('php://input');
@@ -63,9 +83,14 @@ if (empty($datos)) {
     jsonResponse(['success' => false, 'message' => 'No se encontraron datos para procesar']);
 }
 
+// Extraer modo de operación
+$modo = $input['modo'] ?? 'nueva';
+
+error_log("MODO RECIBIDO: " . $modo);
+error_log("Total de registros recibidos: " . count($datos));
+
 /**
  * Función para agrupar artículos duplicados por artículo + período
- * Suma las cantidades de registros duplicados
  */
 function agruparArticulosDuplicados($datos) {
     error_log("🔄 Iniciando agrupación de duplicados en servidor");
@@ -74,17 +99,13 @@ function agruparArticulosDuplicados($datos) {
     $agrupados = [];
     $duplicadosEncontrados = 0;
     
-    foreach ($datos as $index => $item) {
-        // Crear clave única combinando artículo + período
+    foreach ($datos as $item) {
         $clave = $item['articulo'] . '_' . $item['periodo'];
         
         if (isset($agrupados[$clave])) {
-            // Es un duplicado - sumar cantidad
             $agrupados[$clave]['cantidad'] += intval($item['cantidad']);
             $duplicadosEncontrados++;
-            error_log("🔀 Duplicado encontrado: {$item['articulo']} ({$item['periodo']}) - Suma total: {$agrupados[$clave]['cantidad']}");
         } else {
-            // Primera ocurrencia - crear nueva entrada
             $agrupados[$clave] = [
                 'articulo' => $item['articulo'],
                 'cantidad' => intval($item['cantidad']),
@@ -98,245 +119,168 @@ function agruparArticulosDuplicados($datos) {
     error_log("📊 Resultado de agrupación:");
     error_log("  - Registros originales: " . count($datos));
     error_log("  - Registros después de agrupación: " . count($datosAgrupados));
-    error_log("  - Duplicados encontrados y agrupados: $duplicadosEncontrados");
+    error_log("  - Duplicados encontrados: $duplicadosEncontrados");
     
     return $datosAgrupados;
 }
 
-// **NUEVA FUNCIONALIDAD: Agrupar artículos duplicados antes del procesamiento**
+// Agrupar artículos duplicados
 $datosOriginales = $datos;
 $datos = agruparArticulosDuplicados($datosOriginales);
 
-error_log("✅ PASO 7A: Agrupación completada - count original: " . count($datosOriginales) . " -> agrupado: " . count($datos));
+error_log("✅ Agrupación completada - count original: " . count($datosOriginales) . " -> agrupado: " . count($datos));
 
-// **VALIDACIÓN ESPECÍFICA PARA DATOS CORREGIDOS**
-// Detectar si hay datos que vinieron de correcciones JavaScript
+// Validación y sanitización de datos
 $hayDatosCorregidos = false;
 foreach ($datos as $item) {
-    // Verificar si hay caracteres que sugieren conversión de JavaScript
     if (isset($item['periodo']) && is_string($item['periodo'])) {
-        // Detectar posibles residuos de normalización JavaScript
-        if (strpos($item['periodo'], '44') === 0 && is_numeric($item['periodo'])) {
+        if (strlen($item['periodo']) > 10 && is_numeric($item['periodo'])) {
             error_log("🔍 FECHA EXCEL DETECTADA sin convertir: " . $item['periodo']);
-            $hayDatosCorregidos = true;
-        }
-        
-        // Verificar encoding del período
-        if (!mb_check_encoding($item['periodo'], 'UTF-8')) {
-            error_log("❌ ENCODING INVÁLIDO en período: " . bin2hex($item['periodo']));
             $hayDatosCorregidos = true;
         }
     }
     
     if (isset($item['articulo']) && is_string($item['articulo'])) {
-        // Verificar encoding del artículo
-        if (!mb_check_encoding($item['articulo'], 'UTF-8')) {
-            error_log("❌ ENCODING INVÁLIDO en artículo: " . bin2hex($item['articulo']));
-            $hayDatosCorregidos = true;
-        }
-        
-        // Detectar caracteres de control que pueden venir de correcciones JS
         if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $item['articulo'])) {
-            error_log("❌ CARACTERES DE CONTROL en artículo: " . bin2hex($item['articulo']));
+            error_log("❌ CARACTERES DE CONTROL en artículo");
             $hayDatosCorregidos = true;
         }
     }
 }
 
 if ($hayDatosCorregidos) {
-    error_log("⚠️ SE DETECTARON DATOS CON CORRECCIONES - Usando modo de procesamiento especial");
+    error_log("⚠️ SE DETECTARON DATOS CON CORRECCIONES - Sanitizando...");
     
-    // Sanitizar datos que vienen de correcciones JavaScript (versión simplificada)
     foreach ($datos as $index => &$item) {
-        // Limpiar período - solo trim y básico
         if (isset($item['periodo'])) {
-            $item['periodo'] = trim($item['periodo']);
+            $item['periodo'] = trim(preg_replace('/[^\x20-\x7E]/', '', $item['periodo']));
         }
         
-        // Limpiar artículo - solo trim y uppercase
         if (isset($item['articulo'])) {
-            $item['articulo'] = trim(strtoupper($item['articulo']));
+            $item['articulo'] = trim(strtoupper(preg_replace('/[^\x20-\x7E]/', '', $item['articulo'])));
         }
         
-        // Asegurar que cantidad sea integer
         if (isset($item['cantidad'])) {
             $item['cantidad'] = intval($item['cantidad']);
         }
-        
-        error_log("🧹 Item $index sanitizado: " . json_encode($item));
     }
-    unset($item); // Romper referencia
+    unset($item);
 }
-
-// Extraer modo de operación
-$modo = $input['modo'] ?? 'nueva';
-
-// **DEBUG CRÍTICO: Verificar modo recibido**
-error_log("MODO RECIBIDO: " . $modo);
-error_log("INPUT COMPLETO: " . json_encode($input));
-if ($modo === 'reemplazar') {
-    error_log("CONFIRMADO: Es modo reemplazar");
-} else {
-    error_log("ATENCION: NO es modo reemplazar, es: " . $modo);
-}
-
-error_log("📋 RESUMEN INICIAL:");
-error_log("  Input recibido: " . strlen($rawInput) . " caracteres");
-error_log("  Datos count: " . count($datos));
-error_log("  Modo: " . $modo);
-error_log("  Hay datos corregidos: " . ($hayDatosCorregidos ? 'SÍ' : 'NO'));
 
 // Obtener información de la sesión
-$usuario = $_SESSION['usuario_franquicia'] ?? '';
+$usuario = $_SESSION['usuario_franquicia'] ?? 'Sistema';
 $nroSucursal = $_SESSION['franquicia_id'] ?? '';
 
 if (empty($nroSucursal)) {
     jsonResponse(['success' => false, 'message' => 'No se pudo obtener el número de sucursal']);
 }
 
+// Limitar longitud de usuario
+if (strlen($usuario) > 50) {
+    $usuario = substr($usuario, 0, 50);
+}
+
 try {
-    error_log("🔍 DEBUG: Iniciando try principal");
+    error_log("🔍 Iniciando procesamiento principal");
+    error_log("📊 Usuario: $usuario");
+    error_log("📊 Sucursal: $nroSucursal");
+    error_log("📊 Total registros a procesar: " . count($datos));
     
-    // Variables de control
-    $eliminarTodoAlFinal = false;
-    
-    // Conectar a ambas bases de datos
-    error_log("🔍 DEBUG: Antes de conectar bases de datos");
+    // Conectar a bases de datos
+    error_log("🔌 Conectando a bases de datos...");
     $conexionLaker = DatabaseConfig::conectarLakerSA();
-    error_log("🔍 DEBUG: Conexión LAKER exitosa");
+    error_log("  ✅ Conexión LAKER_SA establecida");
     
     $conexionSistemas = DatabaseConfig::conectarSistemas();
-    error_log("🔍 DEBUG: Conexión Sistemas exitosa");
+    error_log("  ✅ Conexión sistemas establecida");
+    
+    // Verificar base de datos actual
+    $sqlCheckDB = "SELECT DB_NAME() as db_actual";
+    $stmtCheckDB = $conexionSistemas->query($sqlCheckDB);
+    $dbInfo = $stmtCheckDB->fetch(PDO::FETCH_ASSOC);
+    error_log("  📍 Base de datos actual: " . $dbInfo['db_actual']);
     
     // Iniciar transacción
-    error_log("🔍 DEBUG: Antes de iniciar transacción");
+    error_log("🔄 Iniciando transacción...");
     $conexionSistemas->beginTransaction();
-    error_log("🔍 DEBUG: Transacción iniciada");
+    error_log("  ✅ Transacción iniciada correctamente");
+    error_log("  🔍 Estado transacción: " . ($conexionSistemas->inTransaction() ? 'ACTIVA' : 'INACTIVA'));
 
-    // Validar estructura de datos para múltiples períodos
-    error_log("🔍 DEBUG: Iniciando validación de estructura");
+    // Validar estructura de datos
     $errores = [];
     $periodosValidos = [];
     $articulosValidar = [];
     
-    error_log("🔍 DEBUG: Antes del foreach de validación - datos count: " . count($datos));
-    
     foreach ($datos as $index => $item) {
-        error_log("🔍 DEBUG: Procesando item $index en foreach");
-        
-        // Debug logging
-        error_log("Procesando fila $index: " . json_encode($item));
-        
         // Validar que tenga todas las propiedades necesarias
         if (!isset($item['articulo']) || !isset($item['cantidad']) || !isset($item['periodo'])) {
             $errores[] = "Fila " . ($index + 1) . ": Datos incompletos";
             continue;
         }
         
-        error_log("🔍 DEBUG: Item $index - validación de formato de período");
-        
         // Validar formato de período (DD/MM/YYYY - primer día del mes)
         if (!preg_match('/^01\/(0[1-9]|1[0-2])\/[0-9]{4}$/', $item['periodo'])) {
-            $errores[] = "Fila " . ($index + 1) . ": Formato de período inválido (debe ser 01/MM/YYYY): " . $item['periodo'];
+            $errores[] = "Fila " . ($index + 1) . ": Formato de período inválido: " . $item['periodo'];
             continue;
         }
         
-        error_log("🔍 DEBUG: Item $index - conversión de período");
-        
-        // Convertir período DD/MM/YYYY a formato YYYYMM para base de datos
-        $partesPeriodo = explode('/', $item['periodo']); // [01, MM, YYYY]
-        $periodoDb = $partesPeriodo[2] . $partesPeriodo[1]; // YYYYMM (año + mes)
-        error_log("Período convertido: {$item['periodo']} -> $periodoDb");
+        // Convertir período DD/MM/YYYY a formato YYYYMM
+        $partesPeriodo = explode('/', $item['periodo']);
+        $periodoDb = $partesPeriodo[2] . $partesPeriodo[1];
         $periodosValidos[] = $periodoDb;
         
-        // Recopilar artículos únicos para validar
-        $articulosValidar[] = $item['articulo'];
+        // Recopilar artículos únicos (limpiar y normalizar)
+        $articuloLimpio = trim(strtoupper($item['articulo']));
+        $articulosValidar[] = $articuloLimpio;
     }
-    
-    error_log("🔍 DEBUG: Foreach completado - errores: " . count($errores));
 
     if (!empty($errores)) {
-        error_log("🔍 DEBUG: Hay errores de validación, lanzando excepción");
-        throw new Exception("Errores de validación: " . implode(', ', $errores));
+        throw new Exception("Errores de validación: " . implode(', ', array_slice($errores, 0, 5)));
     }
 
-    error_log("🔍 DEBUG: Iniciando validación de artículos");
-    
-    // Validar artículos únicos en LAKER_SA
+    // Validar artículos en LAKER_SA
     $articulosUnicos = array_values(array_unique($articulosValidar));
     
-    error_log("🔍 VALIDACIÓN DE ARTÍCULOS - Iniciando...");
-    error_log("  Artículos únicos a validar: " . json_encode($articulosUnicos));
-    error_log("  Total artículos únicos: " . count($articulosUnicos));
+    error_log("🔍 VALIDACIÓN DE ARTÍCULOS - Total únicos: " . count($articulosUnicos));
+    error_log("  Primeros 5 artículos a validar: " . implode(', ', array_slice($articulosUnicos, 0, 5)));
     
     if (empty($articulosUnicos)) {
-        error_log("🔍 DEBUG: No hay artículos para validar, lanzando excepción");
         throw new Exception("No hay artículos para validar");
     }
     
-    error_log("🔍 DEBUG: Preparando consulta de validación");
-    
-    // **SOLUCIÓN: Procesar en lotes para evitar límite de 2100 parámetros de SQL Server**
-    $batchSize = 2000; // Límite seguro (2100 - margen de seguridad)
+    // Procesar validación en lotes
+    $batchSize = 2000;
     $totalCodigos = count($articulosUnicos);
-    
-    if ($totalCodigos > $batchSize) {
-        error_log("⚠️ VALIDACION POR LOTES: Procesando $totalCodigos artículos únicos en lotes de $batchSize");
-    }
-    
     $articulosValidos = [];
     
-    error_log("🔍 DEBUG: Antes de try de validación");
-    
-    try {
-        // Dividir en lotes y procesar
-        for ($i = 0; $i < $totalCodigos; $i += $batchSize) {
-            $batch = array_slice($articulosUnicos, $i, $batchSize);
-            $batchNum = floor($i / $batchSize) + 1;
-            $totalBatches = ceil($totalCodigos / $batchSize);
-            
-            error_log("📦 Validando lote $batchNum de $totalBatches (" . count($batch) . " artículos)");
-            
-            // Crear placeholders para este lote
-            $placeholders = str_repeat('?,', count($batch) - 1) . '?';
-            
-            $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
-            
-            error_log("🔍 DEBUG: Preparando statement de validación para lote $batchNum");
-            $stmtValidar = $conexionLaker->prepare($sqlValidar);
-            if (!$stmtValidar) {
-                $errorInfo = $conexionLaker->errorInfo();
-                throw new Exception("Error preparando validación de artículos (lote $batchNum): " . implode(" ", $errorInfo));
-            }
-            
-            error_log("🔍 DEBUG: Ejecutando statement de validación para lote $batchNum");
-            $ejecutadoValidar = $stmtValidar->execute($batch);
-            if (!$ejecutadoValidar) {
-                $errorInfo = $stmtValidar->errorInfo();
-                throw new Exception("Error ejecutando validación de artículos (lote $batchNum): " . $errorInfo[2] . " (SQLSTATE: " . $errorInfo[0] . ")");
-            }
-            
-            error_log("🔍 DEBUG: Obteniendo resultados de validación para lote $batchNum");
-            $articulosValidosLote = $stmtValidar->fetchAll(PDO::FETCH_COLUMN);
-            
-            // Agregar resultados de este lote al array general
-            $articulosValidos = array_merge($articulosValidos, $articulosValidosLote);
-            
-            error_log("✅ Lote $batchNum completado: " . count($articulosValidosLote) . " artículos válidos encontrados");
+    for ($i = 0; $i < $totalCodigos; $i += $batchSize) {
+        $batch = array_slice($articulosUnicos, $i, $batchSize);
+        $batchNum = floor($i / $batchSize) + 1;
+        $totalBatches = ceil($totalCodigos / $batchSize);
+        
+        error_log("📦 Validando lote $batchNum de $totalBatches (" . count($batch) . " artículos)");
+        
+        $placeholders = str_repeat('?,', count($batch) - 1) . '?';
+        $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
+        
+        $stmtValidar = $conexionLaker->prepare($sqlValidar);
+        if (!$stmtValidar) {
+            throw new Exception("Error preparando validación: " . implode(" ", $conexionLaker->errorInfo()));
         }
         
-        error_log("✅ Validación exitosa - Total artículos válidos encontrados: " . count($articulosValidos));
-        error_log("  Primeros artículos válidos: " . json_encode(array_slice($articulosValidos, 0, 5)));
+        if (!$stmtValidar->execute($batch)) {
+            throw new Exception("Error ejecutando validación: " . implode(" ", $stmtValidar->errorInfo()));
+        }
         
-    } catch (Exception $e) {
-        error_log("❌ Error en validación de artículos: " . $e->getMessage());
-        throw new Exception("Error validando artículos: " . $e->getMessage());
+        $articulosValidosLote = $stmtValidar->fetchAll(PDO::FETCH_COLUMN);
+        $articulosValidos = array_merge($articulosValidos, $articulosValidosLote);
+        
+        error_log("✅ Lote $batchNum completado: " . count($articulosValidosLote) . " artículos válidos");
     }
-
-    error_log("🔍 DEBUG: Validación estricta de artículos");
     
-    // **VALIDACIÓN ESTRICTA COMO EL CONTROLADOR INDIVIDUAL**
-    // Verificar que todos los artículos sean válidos (no permitir inválidos)
+    error_log("✅ Validación exitosa - Total artículos válidos: " . count($articulosValidos));
+
+    // Validación estricta
     $articulosInvalidos = [];
     foreach ($articulosUnicos as $articulo) {
         if (!in_array($articulo, $articulosValidos)) {
@@ -345,14 +289,16 @@ try {
     }
     
     if (!empty($articulosInvalidos)) {
-        error_log("❌ ARTÍCULOS INVÁLIDOS DETECTADOS: " . json_encode($articulosInvalidos));
-        throw new Exception("Artículos inválidos encontrados: " . implode(', ', $articulosInvalidos) . ". Todos los artículos deben ser corregidos antes de continuar.");
+        error_log("❌ ARTÍCULOS INVÁLIDOS ENCONTRADOS:");
+        foreach (array_slice($articulosInvalidos, 0, 10) as $art) {
+            error_log("  - '{$art}' (length: " . strlen($art) . ", ord primero: " . ord($art[0]) . ")");
+        }
+        throw new Exception("Artículos inválidos: " . implode(', ', array_slice($articulosInvalidos, 0, 10)));
     }
     
-    error_log("✅ TODOS LOS ARTÍCULOS SON VÁLIDOS - Continuando procesamiento...");
-    error_log("🔍 DEBUG: Iniciando creación de tabla");
+    error_log("✅ TODOS LOS ARTÍCULOS SON VÁLIDOS");
 
-    // Crear tabla si no existe con todas las columnas necesarias
+    // Crear/verificar tabla
     $sqlCrearTabla = "
         IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='ventas_franquicias_sin_tango' AND xtype='U')
         BEGIN
@@ -370,12 +316,6 @@ try {
             )
         END
         
-        -- Verificar y agregar columnas faltantes
-        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'usuario_carga')
-        BEGIN
-            ALTER TABLE ventas_franquicias_sin_tango ADD usuario_carga varchar(50) NULL
-        END
-        
         IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'rubro')
         BEGIN
             ALTER TABLE ventas_franquicias_sin_tango ADD rubro varchar(100) NULL
@@ -386,432 +326,139 @@ try {
             ALTER TABLE ventas_franquicias_sin_tango ADD categoria_padre varchar(100) NULL
         END
         
-        -- Agregar columna fecha si no existe (para carga individual mes actual)
         IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'fecha')
         BEGIN
             ALTER TABLE ventas_franquicias_sin_tango ADD fecha DATE NULL
         END
-        
-        -- Asegurar que fecha_carga tenga valor por defecto
-        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ventas_franquicias_sin_tango' AND COLUMN_NAME = 'fecha_carga' AND COLUMN_DEFAULT IS NOT NULL)
-        BEGIN
-            ALTER TABLE ventas_franquicias_sin_tango ADD CONSTRAINT DF_ventas_franquicias_sin_tango_fecha_carga DEFAULT GETDATE() FOR fecha_carga
-        END
     ";
     
-    error_log("🏗️ Ejecutando creación/verificación de tabla...");
-    try {
-        $conexionSistemas->exec($sqlCrearTabla);
-        error_log("✅ Tabla verificada/creada exitosamente");
-    } catch (Exception $e) {
-        error_log("❌ Error en creación de tabla: " . $e->getMessage());
-        throw new Exception("Error preparando estructura de tabla: " . $e->getMessage());
-    }
+    $conexionSistemas->exec($sqlCrearTabla);
+    error_log("✅ Tabla verificada/creada");
 
-    // Lógica según el modo de operación
-    $periodosAfectados = array_values(array_unique($periodosValidos)); // array_values para reindexar
+    // Obtener períodos únicos
+    $periodosAfectados = array_values(array_unique($periodosValidos));
     
-    error_log("🔍 DEBUG PERÍODOS:");
-    error_log("  periodosValidos: " . json_encode($periodosValidos));
-    error_log("  periodosAfectados: " . json_encode($periodosAfectados));
-    error_log("  count periodosAfectados: " . count($periodosAfectados));
+    error_log("📊 Períodos afectados: " . json_encode($periodosAfectados));
     
     if (empty($periodosAfectados)) {
         throw new Exception("No hay períodos válidos para procesar");
     }
     
+    // Lógica según el modo
     switch ($modo) {
         case 'reemplazar':
         case 'reemplazar_todo':
             error_log("=== MODO REEMPLAZAR ACTIVADO ===");
-            error_log("ENTRANDO EN CASE REEMPLAZAR - Modo: " . $modo);
             
-            // DEBUGGING CRÍTICO: Verificar valores exactos
-            error_log("🔍 VALORES PARA ELIMINACIÓN:");
-            error_log("  nroSucursal: '$nroSucursal' (tipo: " . gettype($nroSucursal) . ", longitud: " . strlen($nroSucursal) . ")");
-            error_log("  periodosAfectados: " . json_encode($periodosAfectados));
-            
-            // Crear lista de períodos únicos que vamos a reemplazar
-            $periodosParaEliminar = array_unique($periodosAfectados);
-            error_log("  periodosParaEliminar: " . json_encode($periodosParaEliminar));
-            
-            // VERIFICACIÓN PREVIA: ¿Existen realmente registros?
-            error_log("🔍 VERIFICACIÓN PREVIA - ¿Existen registros para eliminar?");
-            foreach ($periodosParaEliminar as $periodo) {
-                $sqlVerificarExistencia = "SELECT COUNT(*) as total, 
-                                                MIN(id) as min_id, 
-                                                MAX(id) as max_id,
-                                                MIN(fecha_carga) as fecha_min,
-                                                MAX(fecha_carga) as fecha_max
-                                        FROM ventas_franquicias_sin_tango 
-                                        WHERE nro_sucursal = ? AND periodo = ?";
-                
-                $stmtVerificar = $conexionSistemas->prepare($sqlVerificarExistencia);
-                $stmtVerificar->execute([$nroSucursal, $periodo]);
-                $infoExistente = $stmtVerificar->fetch(PDO::FETCH_ASSOC);
-                
-                error_log("📊 PERÍODO $periodo - Registros existentes:");
-                error_log("    Total: " . ($infoExistente['total'] ?? 0));
-                error_log("    IDs: " . ($infoExistente['min_id'] ?? 'N/A') . " - " . ($infoExistente['max_id'] ?? 'N/A'));
-                error_log("    Fechas: " . ($infoExistente['fecha_min'] ?? 'N/A') . " - " . ($infoExistente['fecha_max'] ?? 'N/A'));
-                
-                if ($infoExistente['total'] == 0) {
-                    error_log("⚠️ ADVERTENCIA: No hay registros para eliminar en período $periodo");
-                }
-            }
-            
-            // ELIMINACIÓN CON MÁXIMO DEBUGGING
-            error_log("🗑️ INICIANDO ELIMINACIÓN DETALLADA PARA MODO REEMPLAZAR");
-            error_log("=== EJECUTANDO ELIMINACIONES PARA CADA PERÍODO ===");
             $totalRegistrosEliminados = 0;
             
-            foreach ($periodosParaEliminar as $periodo) {
-                error_log("🗑️ === PROCESANDO ELIMINACIÓN PARA PERÍODO: $periodo ===");
+            foreach ($periodosAfectados as $periodo) {
+                error_log("🗑️ Eliminando período: $periodo");
                 
-                // PASO 1: Contar registros antes de eliminar
-                $sqlContarRegistros = "SELECT COUNT(*) FROM ventas_franquicias_sin_tango 
-                                    WHERE nro_sucursal = ? AND periodo = ?";
-                $stmtContar = $conexionSistemas->prepare($sqlContarRegistros);
+                $sqlEliminar = "DELETE FROM ventas_franquicias_sin_tango 
+                                WHERE nro_sucursal = ? AND periodo = ?";
                 
-                if (!$stmtContar) {
-                    $errorInfo = $conexionSistemas->errorInfo();
-                    throw new Exception("Error preparando COUNT: " . implode(" ", $errorInfo));
+                $stmtEliminar = $conexionSistemas->prepare($sqlEliminar);
+                
+                if (!$stmtEliminar->execute([$nroSucursal, $periodo])) {
+                    throw new Exception("Error eliminando período $periodo");
                 }
                 
-                $ejecutadoContar = $stmtContar->execute([$nroSucursal, $periodo]);
-                if (!$ejecutadoContar) {
-                    $errorInfo = $stmtContar->errorInfo();
-                    throw new Exception("Error ejecutando COUNT: " . $errorInfo[2]);
-                }
+                $eliminados = $stmtEliminar->rowCount();
+                $totalRegistrosEliminados += $eliminados;
                 
-                $countPeriodo = $stmtContar->fetchColumn();
-                error_log("📊 ANTES DE ELIMINAR - Período $periodo: $countPeriodo registros");
-                
-                if ($countPeriodo == 0) {
-                    error_log("⚠️ SALTANDO eliminación - No hay registros en período $periodo");
-                    continue;
-                }
-                
-                // PASO 2: Mostrar algunos registros que se van a eliminar (para debugging)
-                $sqlMostrarEjemplos = "SELECT TOP 3 id, codigo_articulo, cantidad, fecha_carga 
-                                    FROM ventas_franquicias_sin_tango 
-                                    WHERE nro_sucursal = ? AND periodo = ?";
-                $stmtEjemplos = $conexionSistemas->prepare($sqlMostrarEjemplos);
-                $stmtEjemplos->execute([$nroSucursal, $periodo]);
-                $ejemplos = $stmtEjemplos->fetchAll(PDO::FETCH_ASSOC);
-                
-                error_log("📋 EJEMPLOS DE REGISTROS A ELIMINAR:");
-                foreach ($ejemplos as $ej) {
-                    error_log("    ID: {$ej['id']}, Artículo: {$ej['codigo_articulo']}, Cantidad: {$ej['cantidad']}, Fecha: {$ej['fecha_carga']}");
-                }
-                
-                // PASO 3: ELIMINAR CON DEBUGGING EXTREMO
-                $sqlEliminarPeriodo = "DELETE FROM ventas_franquicias_sin_tango 
-                                    WHERE nro_sucursal = ? AND periodo = ?";
-                
-                error_log("🔥 EJECUTANDO DELETE:");
-                error_log("    SQL: $sqlEliminarPeriodo");
-                error_log("    Parámetros: ['{$nroSucursal}', '{$periodo}']");
-                
-                $stmtEliminarPeriodo = $conexionSistemas->prepare($sqlEliminarPeriodo);
-                
-                if (!$stmtEliminarPeriodo) {
-                    $errorInfo = $conexionSistemas->errorInfo();
-                    throw new Exception("Error preparando DELETE: " . implode(" ", $errorInfo));
-                }
-                
-                // EJECUTAR LA ELIMINACIÓN
-                $ejecutadoEliminacion = $stmtEliminarPeriodo->execute([$nroSucursal, $periodo]);
-                
-                if (!$ejecutadoEliminacion) {
-                    $errorInfo = $stmtEliminarPeriodo->errorInfo();
-                    error_log("❌ ERROR EN DELETE: " . print_r($errorInfo, true));
-                    throw new Exception("Error eliminando período $periodo: " . $errorInfo[2] . " (SQLSTATE: " . $errorInfo[0] . ")");
-                }
-                
-                // VERIFICAR RESULTADO DE LA ELIMINACIÓN
-                $registrosEliminados = $stmtEliminarPeriodo->rowCount();
-                $totalRegistrosEliminados += $registrosEliminados;
-                
-                error_log("🗑️ RESULTADO DELETE - Período $periodo:");
-                error_log("    Registros que DEBÍAN eliminarse: $countPeriodo");
-                error_log("    Registros EFECTIVAMENTE eliminados: $registrosEliminados");
-                error_log("    ¿Coinciden? " . ($countPeriodo == $registrosEliminados ? 'SÍ' : 'NO'));
-                
-                // VERIFICACIÓN FINAL INMEDIATA - ¿Realmente se eliminaron?
-                $sqlVerificarFinal = "SELECT COUNT(*) FROM ventas_franquicias_sin_tango 
-                                    WHERE nro_sucursal = ? AND periodo = ?";
-                $stmtVerificarFinal = $conexionSistemas->prepare($sqlVerificarFinal);
-                $stmtVerificarFinal->execute([$nroSucursal, $periodo]);
-                $quedanRegistros = $stmtVerificarFinal->fetchColumn();
-                
-                error_log("🔍 VERIFICACIÓN FINAL INMEDIATA - Período $periodo:");
-                error_log("    Registros que QUEDAN después del DELETE: $quedanRegistros");
-                
-                if ($quedanRegistros > 0) {
-                    error_log("❌ PROBLEMA CRÍTICO: Aún quedan $quedanRegistros registros después de DELETE");
-                    error_log("❌ ESTO INDICA QUE LA ELIMINACIÓN NO FUNCIONÓ CORRECTAMENTE");
-                    
-                    // INTENTAR ELIMINACIÓN FORZADA CON COMMIT INMEDIATO
-                    error_log("🔄 INTENTANDO ELIMINACIÓN FORZADA CON COMMIT...");
-                    
-                    // Hacer commit de la transacción actual para asegurar que el DELETE se aplique
-                    $conexionSistemas->commit();
-                    
-                    // Iniciar nueva transacción
-                    $conexionSistemas->beginTransaction();
-                    
-                    // Intentar DELETE forzado
-                    $sqlEliminarForzado = "DELETE FROM ventas_franquicias_sin_tango 
-                                        WHERE nro_sucursal = ? AND periodo = ?";
-                    $stmtForzado = $conexionSistemas->prepare($sqlEliminarForzado);
-                    $ejecutadoForzado = $stmtForzado->execute([$nroSucursal, $periodo]);
-                    
-                    if ($ejecutadoForzado) {
-                        $eliminadosForzados = $stmtForzado->rowCount();
-                        error_log("� ELIMINACIÓN FORZADA: $eliminadosForzados registros eliminados");
-                        
-                        // Verificar nuevamente
-                        $stmtVerificarForzado = $conexionSistemas->prepare($sqlVerificarFinal);
-                        $stmtVerificarForzado->execute([$nroSucursal, $periodo]);
-                        $quedanDespuesForzado = $stmtVerificarForzado->fetchColumn();
-                        
-                        if ($quedanDespuesForzado > 0) {
-                            error_log("❌ FALLO CRÍTICO: Incluso después de eliminación forzada quedan $quedanDespuesForzado registros");
-                            throw new Exception("No se pudo eliminar completamente el período $periodo. Quedan $quedanDespuesForzado registros.");
-                        } else {
-                            error_log("✅ ELIMINACIÓN FORZADA EXITOSA: Período $periodo completamente limpio");
-                        }
-                    }
-                } else {
-                    error_log("✅ CONFIRMADO: Período $periodo completamente eliminado");
-                }
+                error_log("✅ Período $periodo: $eliminados registros eliminados");
             }
             
-            error_log("📊 RESUMEN ELIMINACIÓN TOTAL:");
-            error_log("  Total registros eliminados: $totalRegistrosEliminados");
-            error_log("  Períodos procesados: " . count($periodosParaEliminar));
-            error_log("=== ELIMINACIÓN COMPLETADA EXITOSAMENTE ===");
-            
-            $eliminarTodoAlFinal = false; // Ya eliminamos
+            error_log("📊 Total eliminados: $totalRegistrosEliminados");
             break;
             
         case 'agregar':
         case 'solo_faltantes':
-            // Obtener períodos existentes para esta sucursal
             error_log("📋 MODO AGREGAR: Verificando períodos existentes");
             
-            // **SOLUCIÓN: Procesar en lotes si hay muchos períodos (poco probable pero seguro)**
-            $batchSize = 2000;
-            $totalPeriodos = count($periodosAfectados);
-            $periodosExistentes = [];
+            $placeholders = str_repeat('?,', count($periodosAfectados) - 1) . '?';
+            $sqlPeriodosExist = "SELECT DISTINCT periodo FROM ventas_franquicias_sin_tango 
+                                WHERE nro_sucursal = ? AND periodo IN ($placeholders)";
             
-            if ($totalPeriodos > $batchSize) {
-                error_log("⚠️ Verificando períodos en lotes: $totalPeriodos períodos");
-                
-                for ($i = 0; $i < $totalPeriodos; $i += $batchSize) {
-                    $batch = array_slice($periodosAfectados, $i, $batchSize);
-                    $placeholdersPerio = str_repeat('?,', count($batch) - 1) . '?';
-                    
-                    $sqlPeriodosExist = "SELECT DISTINCT periodo FROM ventas_franquicias_sin_tango 
-                                        WHERE nro_sucursal = ? AND periodo IN ($placeholdersPerio)";
-                    $stmtPeriodosExist = $conexionSistemas->prepare($sqlPeriodosExist);
-                    $stmtPeriodosExist->execute(array_merge([$nroSucursal], $batch));
-                    $periodosExistentesLote = $stmtPeriodosExist->fetchAll(PDO::FETCH_COLUMN);
-                    
-                    $periodosExistentes = array_merge($periodosExistentes, $periodosExistentesLote);
-                }
-            } else {
-                $placeholdersPerio = str_repeat('?,', count($periodosAfectados) - 1) . '?';
-                $sqlPeriodosExist = "SELECT DISTINCT periodo FROM ventas_franquicias_sin_tango 
-                                    WHERE nro_sucursal = ? AND periodo IN ($placeholdersPerio)";
-                $stmtPeriodosExist = $conexionSistemas->prepare($sqlPeriodosExist);
-                $stmtPeriodosExist->execute(array_merge([$nroSucursal], $periodosAfectados));
-                $periodosExistentes = $stmtPeriodosExist->fetchAll(PDO::FETCH_COLUMN);
-            }
+            $stmtPeriodosExist = $conexionSistemas->prepare($sqlPeriodosExist);
+            $stmtPeriodosExist->execute(array_merge([$nroSucursal], $periodosAfectados));
+            $periodosExistentes = $stmtPeriodosExist->fetchAll(PDO::FETCH_COLUMN);
             
-            error_log("Períodos existentes encontrados: " . json_encode($periodosExistentes));
+            error_log("Períodos existentes: " . json_encode($periodosExistentes));
             
-            // Filtrar datos para solo incluir períodos faltantes
-            $datosOriginales = $datos;
+            // Filtrar datos
             $datos = array_filter($datos, function($item) use ($periodosExistentes) {
-                $partesPeriodo = explode('/', $item['periodo']); // [01, MM, YYYY]
-                $periodoDb = $partesPeriodo[2] . $partesPeriodo[1]; // YYYYMM (año + mes)
+                $partes = explode('/', $item['periodo']);
+                $periodoDb = $partes[2] . $partes[1];
                 return !in_array($periodoDb, $periodosExistentes);
             });
             
-            error_log("Datos filtrados: " . count($datosOriginales) . " -> " . count($datos));
-            
             if (empty($datos)) {
-                $conexionSistemas->commit(); // Confirmar transacción aunque no hay datos que insertar
-                echo json_encode([
+                $conexionSistemas->commit();
+                jsonResponse([
                     'success' => true,
-                    'message' => 'No hay períodos faltantes para insertar. Todos los períodos ya están cargados.',
+                    'message' => 'No hay períodos faltantes para insertar',
                     'procesados' => 0,
-                    'periodos_existentes' => $periodosExistentes,
-                    'modo_operacion' => 'Solo períodos faltantes',
-                    'resumen_periodos' => []
+                    'periodos_existentes' => $periodosExistentes
                 ]);
-                exit;
             }
-            $eliminarTodoAlFinal = false;
             break;
             
         case 'nueva':
         default:
-            // Eliminar solo los períodos específicos que se van a importar
-            error_log("🗑️ INICIANDO ELIMINACIÓN DE PERÍODOS EXISTENTES");
-            error_log("Períodos afectados para eliminar: " . json_encode($periodosAfectados));
-            if (empty($periodosAfectados)) {
-                throw new Exception("No hay períodos válidos para eliminar en modo nueva");
-            }
+            error_log("🗑️ MODO NUEVA: Eliminando períodos existentes");
             
-            // Validar que todos los períodos sean strings válidos
-            foreach ($periodosAfectados as $periodo) {
-                if (!is_string($periodo) || !preg_match('/^[0-9]{6}$/', $periodo)) {
-                    throw new Exception("Período inválido para SQL: " . json_encode($periodo));
-                }
-            }
+            $placeholders = str_repeat('?,', count($periodosAfectados) - 1) . '?';
+            $sqlEliminar = "DELETE FROM ventas_franquicias_sin_tango 
+                           WHERE nro_sucursal = ? AND periodo IN ($placeholders)";
             
-            // **SOLUCIÓN: Procesar en lotes si hay muchos períodos**
-            $batchSize = 2000;
-            $totalPeriodos = count($periodosAfectados);
+            $stmtEliminar = $conexionSistemas->prepare($sqlEliminar);
+            $stmtEliminar->execute(array_merge([$nroSucursal], $periodosAfectados));
             
-            if ($totalPeriodos > $batchSize) {
-                error_log("⚠️ Eliminando períodos en lotes: $totalPeriodos períodos");
-                
-                for ($i = 0; $i < $totalPeriodos; $i += $batchSize) {
-                    $batch = array_slice($periodosAfectados, $i, $batchSize);
-                    $batchNum = floor($i / $batchSize) + 1;
-                    $totalBatches = ceil($totalPeriodos / $batchSize);
-                    
-                    error_log("📦 Eliminando lote $batchNum de $totalBatches (" . count($batch) . " períodos)");
-                    
-                    $placeholdersPerio = str_repeat('?,', count($batch) - 1) . '?';
-                    $sqlEliminarPeriodos = "DELETE FROM ventas_franquicias_sin_tango 
-                                           WHERE nro_sucursal = ? AND periodo IN ($placeholdersPerio)";
-                    
-                    $parametrosEliminar = array_merge([$nroSucursal], $batch);
-                    
-                    $stmtEliminarPeriodos = $conexionSistemas->prepare($sqlEliminarPeriodos);
-                    if (!$stmtEliminarPeriodos) {
-                        throw new Exception("Error preparando statement de eliminación (lote $batchNum): " . implode(" ", $conexionSistemas->errorInfo()));
-                    }
-                    
-                    $ejecutadoEliminar = $stmtEliminarPeriodos->execute($parametrosEliminar);
-                    if (!$ejecutadoEliminar) {
-                        $errorInfo = $stmtEliminarPeriodos->errorInfo();
-                        throw new Exception("Error ejecutando eliminación (lote $batchNum): " . $errorInfo[2] . " (SQLSTATE: " . $errorInfo[0] . ")");
-                    }
-                    
-                    error_log("✅ Lote $batchNum eliminado");
-                }
-                
-                error_log("✅ Eliminación de todos los lotes completada");
-            } else {
-                $placeholdersPerio = str_repeat('?,', count($periodosAfectados) - 1) . '?';
-                $sqlEliminarPeriodos = "DELETE FROM ventas_franquicias_sin_tango 
-                                       WHERE nro_sucursal = ? AND periodo IN ($placeholdersPerio)";
-                error_log("SQL de eliminación: $sqlEliminarPeriodos");
-                
-                $parametrosEliminar = array_merge([$nroSucursal], $periodosAfectados);
-                error_log("Parámetros eliminación: " . json_encode($parametrosEliminar));
-                error_log("Cantidad parámetros: " . count($parametrosEliminar) . " (debe ser " . (1 + count($periodosAfectados)) . ")");
-                
-                $stmtEliminarPeriodos = $conexionSistemas->prepare($sqlEliminarPeriodos);
-                if (!$stmtEliminarPeriodos) {
-                    throw new Exception("Error preparando statement de eliminación: " . implode(" ", $conexionSistemas->errorInfo()));
-                }
-                
-                $ejecutadoEliminar = $stmtEliminarPeriodos->execute($parametrosEliminar);
-                if (!$ejecutadoEliminar) {
-                    $errorInfo = $stmtEliminarPeriodos->errorInfo();
-                    throw new Exception("Error ejecutando eliminación: " . $errorInfo[2] . " (SQLSTATE: " . $errorInfo[0] . ")");
-                }
-                
-                error_log("✅ Eliminación de períodos exitosa");
-            }
+            error_log("✅ Eliminación completada");
             break;
     }
 
-    // VERIFICACIÓN DE ESTADO DE TRANSACCIÓN
-    error_log("🔍 ESTADO TRANSACCIÓN después de eliminación:");
-    error_log("  En transacción: " . ($conexionSistemas->inTransaction() ? 'SÍ' : 'NO'));
-
-    // Si hay transacción activa, verificar que los cambios sean visibles
-    if ($conexionSistemas->inTransaction()) {
-        error_log("⚠️ ADVERTENCIA: Transacción activa - los cambios no son definitivos hasta COMMIT");
-        
-        // Verificar cuántos registros quedan en total para esta sucursal
-        $sqlTotalSucursal = "SELECT COUNT(*) FROM ventas_franquicias_sin_tango WHERE nro_sucursal = ?";
-        $stmtTotalSucursal = $conexionSistemas->prepare($sqlTotalSucursal);
-        $stmtTotalSucursal->execute([$nroSucursal]);
-        $totalRegistrosSucursal = $stmtTotalSucursal->fetchColumn();
-        
-        error_log("📊 TOTAL REGISTROS para sucursal $nroSucursal: $totalRegistrosSucursal");
-    }
-
-    // **TIMESTAMP DE REFERENCIA PARA MODO REEMPLAZAR**
-    $timestampReemplazar = null;
-    if (isset($eliminarTodoAlFinal) && $eliminarTodoAlFinal === true) {
-        $timestampReemplazar = date('Y-m-d H:i:s');
-        error_log("🕒 MODO REEMPLAZAR: Timestamp de referencia establecido: $timestampReemplazar");
-    }
-
-    // Preparar query de inserción (MISMA ESTRUCTURA QUE EL ARCHIVO INDIVIDUAL)
-    // NOTA: fecha = NULL para carga múltiples períodos (trabaja con columna periodo)
-    $sqlInsertar = "INSERT INTO ventas_franquicias_sin_tango 
-                    (nro_sucursal, periodo, codigo_articulo, cantidad, fecha_carga, rubro, categoria_padre, usuario_carga, fecha) 
-                    VALUES (?, ?, ?, ?, GETDATE(), ?, ?, ?, NULL)";
+    // Pre-cargar rubros y categorías desde LAKER_SA (no desde sistemas)
+    error_log("📚 Pre-cargando rubros y categorías desde LAKER_SA...");
     
-    // DEBUGGING: Contar placeholders manualmente
-    $placeholdersEnInsert = substr_count($sqlInsertar, '?');
-    error_log("🔍 SQL INSERT preparación:");
-    error_log("  SQL: $sqlInsertar");
-    error_log("  Placeholders encontrados: $placeholdersEnInsert");
-    error_log("  Placeholders esperados: 8");
-    
-    try {
-        $stmtInsertar = $conexionSistemas->prepare($sqlInsertar);
-        if (!$stmtInsertar) {
-            $errorInfo = $conexionSistemas->errorInfo();
-            error_log("❌ Error preparando INSERT: " . print_r($errorInfo, true));
-            throw new Exception("Error preparando statement de inserción: " . implode(" ", $errorInfo));
-        }
-        error_log("✅ Statement INSERT preparado exitosamente");
-    } catch (Exception $e) {
-        error_log("❌ Excepción preparando INSERT: " . $e->getMessage());
-        throw new Exception("Error en preparación SQL: " . $e->getMessage());
-    }
-
-    // Procesar datos
-    $procesados = 0;
-    $erroresProcesamiento = [];
-    $resumenPeriodos = [];
-
-    error_log("📋 INICIO PROCESAMIENTO - Total items: " . count($datos));
-    error_log("📋 MODO OPERACIÓN: $modo");
-    error_log("📋 ELIMINAR AL FINAL: " . ($eliminarTodoAlFinal ? 'SÍ' : 'NO'));
-
-    // **OPTIMIZACIÓN CRÍTICA: Pre-cargar TODOS los rubros/categorías en una sola consulta**
-    error_log("� PRE-CARGANDO rubros y categorías para optimización...");
     $articulosUnicos = array_values(array_unique(array_column($datos, 'articulo')));
     $rubrosCategoriasCache = [];
     
-    // Cargar rubros/categorías en lotes
     $batchSize = 2000;
     $totalArticulos = count($articulosUnicos);
     
     for ($i = 0; $i < $totalArticulos; $i += $batchSize) {
         $batch = array_slice($articulosUnicos, $i, $batchSize);
-        $placeholdersRC = str_repeat('?,', count($batch) - 1) . '?';
+        $placeholders = str_repeat('?,', count($batch) - 1) . '?';
         
-        $sqlRubroCategoria = "SELECT COD_ARTICU, RUBRO, CATEGORIA_PADRE 
-                             FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
-                             WHERE COD_ARTICU IN ($placeholdersRC)";
-        $stmtRubroCategoria = $conexionSistemas->prepare($sqlRubroCategoria);
-        $stmtRubroCategoria->execute($batch);
-        $resultadosRC = $stmtRubroCategoria->fetchAll(PDO::FETCH_ASSOC);
+        // CORRECCIÓN: La tabla está en LAKER_SA, no en sistemas
+        // Usamos JOIN con STA11 para asegurar que solo obtengamos artículos válidos
+        $sqlRC = "SELECT 
+                    s.COD_ARTICU,
+                    ISNULL(m.RUBRO, 'Sin rubro') as RUBRO,
+                    ISNULL(m.CATEGORIA_PADRE, 'Sin categoría') as CATEGORIA_PADRE
+                  FROM STA11 s
+                  LEFT JOIN dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA m 
+                    ON s.COD_ARTICU = m.COD_ARTICU
+                  WHERE s.COD_ARTICU IN ($placeholders)";
+        
+        // CAMBIO CRÍTICO: Usar conexión LAKER en lugar de sistemas
+        $stmtRC = $conexionLaker->prepare($sqlRC);
+        
+        if (!$stmtRC) {
+            error_log("⚠️ Error preparando consulta de rubro/categoría: " . implode(" ", $conexionLaker->errorInfo()));
+            // Continuar sin rubros/categorías en caso de error
+            continue;
+        }
+        
+        if (!$stmtRC->execute($batch)) {
+            error_log("⚠️ Error ejecutando consulta de rubro/categoría: " . implode(" ", $stmtRC->errorInfo()));
+            continue;
+        }
+        
+        $resultadosRC = $stmtRC->fetchAll(PDO::FETCH_ASSOC);
         
         foreach ($resultadosRC as $row) {
             $rubrosCategoriasCache[trim($row['COD_ARTICU'])] = [
@@ -819,241 +466,245 @@ try {
                 'categoria' => trim($row['CATEGORIA_PADRE']) ?: 'Sin categoría'
             ];
         }
+        
+        error_log("📦 Lote rubro/categoría " . (floor($i / $batchSize) + 1) . ": " . count($resultadosRC) . " artículos procesados");
     }
     
     error_log("✅ Pre-carga completada: " . count($rubrosCategoriasCache) . " artículos con rubro/categoría");
-
-    // Asegurar que usuario tenga un valor válido
-    $usuario = $usuario ?? 'Sistema';
-    if (strlen($usuario) > 50) {
-        $usuario = substr($usuario, 0, 50);
+    
+    // Si no se pudieron obtener rubros/categorías, usar valores por defecto
+    if (empty($rubrosCategoriasCache)) {
+        error_log("⚠️ No se pudieron pre-cargar rubros/categorías, usando valores por defecto");
     }
 
-    // **OPTIMIZACIÓN CRÍTICA: Inserción por lotes (batch insert)**
+    // Inserción por lotes
     error_log("🚀 INICIANDO INSERCIÓN POR LOTES...");
+    
     $totalItems = count($datos);
     $procesados = 0;
     $erroresProcesamiento = [];
     $resumenPeriodos = [];
     
-    // Tamaño de lote optimizado para SQL Server
-    // SQL Server tiene límite de 2100 parámetros
-    // Con 7 parámetros por fila: 2100 / 7 = 300 filas máximo
-    $batchSize = 250; // Dejamos margen de seguridad
+    $batchSize = 250;
     $totalBatches = ceil($totalItems / $batchSize);
     
-    error_log("📊 Configuración de lotes:");
-    error_log("  Total items: $totalItems");
-    error_log("  Tamaño de lote: $batchSize");
-    error_log("  Total lotes: $totalBatches");
+    error_log("📊 Total items: $totalItems en $totalBatches lotes");
     
-    // Procesar en lotes
     for ($batchNum = 0; $batchNum < $totalBatches; $batchNum++) {
         $startIdx = $batchNum * $batchSize;
-        $endIdx = min($startIdx + $batchSize, $totalItems);
         $batchDatos = array_slice($datos, $startIdx, $batchSize);
         
-        error_log("📦 Procesando lote " . ($batchNum + 1) . "/$totalBatches (items $startIdx-" . ($endIdx - 1) . ")");
+        error_log("📦 Procesando lote " . ($batchNum + 1) . "/$totalBatches");
         
-        // Construir INSERT masivo con múltiples VALUES
         $valuesArray = [];
         $parametros = [];
         
         foreach ($batchDatos as $index => $item) {
             try {
                 $cantidad = intval($item['cantidad']);
-                if ($cantidad <= 0) {
-                    continue; // Saltar cantidades no válidas
-                }
+                if ($cantidad <= 0) continue;
 
-                // Convertir período DD/MM/YYYY a YYYYMM para base de datos
-                $partesPeriodo = explode('/', $item['periodo']); // [01, MM, YYYY]
-                $periodoDb = $partesPeriodo[2] . $partesPeriodo[1]; // YYYYMM (año + mes)
+                $partes = explode('/', $item['periodo']);
+                $periodoDb = $partes[2] . $partes[1];
                 
-                // Validar que el período convertido sea numérico y tenga formato correcto
-            if (!preg_match('/^[0-9]{6}$/', $periodoDb)) {
-                throw new Exception("Período convertido inválido: {$item['periodo']} -> $periodoDb");
-            }
-            
-            // Sanitización del código de artículo
-            $codigoArticulo = trim($item['articulo']);
-            
-            if (function_exists('mb_convert_encoding')) {
-                $codigoArticulo = mb_convert_encoding($codigoArticulo, 'UTF-8', 'UTF-8');
-            }
-            
-            $codigoArticulo = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $codigoArticulo);
-            $codigoArticulo = preg_replace('/[^\x20-\x7E]/', '', $codigoArticulo);
-            $codigoArticulo = trim($codigoArticulo);
-            
-            if (empty($codigoArticulo)) {
-                throw new Exception("Código de artículo vacío después de sanitización para item $index");
-            }
-            
-            if (strlen($codigoArticulo) > 50) {
-                throw new Exception("Código de artículo muy largo: " . $codigoArticulo);
-            }
-            
-            // **OPTIMIZACIÓN: Usar cache pre-cargado en lugar de consultas individuales**
-            if (isset($rubrosCategoriasCache[$codigoArticulo])) {
-                $rubro = $rubrosCategoriasCache[$codigoArticulo]['rubro'];
-                $categoria = $rubrosCategoriasCache[$codigoArticulo]['categoria'];
-            } else {
+                if (!preg_match('/^[0-9]{6}$/', $periodoDb)) {
+                    throw new Exception("Período inválido: {$item['periodo']}");
+                }
+                
+                $codigoArticulo = trim($item['articulo']);
+                $codigoArticulo = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $codigoArticulo);
+                
+                if (empty($codigoArticulo) || strlen($codigoArticulo) > 50) {
+                    throw new Exception("Código de artículo inválido");
+                }
+                
+                // Obtener rubro/categoría del cache
                 $rubro = 'Sin rubro';
                 $categoria = 'Sin categoría';
-            }
-            
-            // Limitar longitud de campos
-            if (strlen($rubro) > 100) {
-                $rubro = substr($rubro, 0, 97) . '...';
-            }
-            if (strlen($categoria) > 100) {
-                $categoria = substr($categoria, 0, 97) . '...';
-            }
-            
-            // Agregar VALUES para este registro
-            $valuesArray[] = "(?, ?, ?, ?, GETDATE(), ?, ?, ?, NULL)";
-            
-            // Agregar parámetros en el orden correcto
-            $parametros[] = $nroSucursal;
-            $parametros[] = $periodoDb;
-            $parametros[] = $codigoArticulo;
-            $parametros[] = $cantidad;
-            $parametros[] = $rubro;
-            $parametros[] = $categoria;
-            $parametros[] = $usuario;
-            
-            // Contar por período para resumen
-            if (!isset($resumenPeriodos[$item['periodo']])) {
-                $resumenPeriodos[$item['periodo']] = 0;
-            }
-            $resumenPeriodos[$item['periodo']]++;
-            
-        } catch (Exception $e) {
-            $erroresProcesamiento[] = "Fila " . ($startIdx + $index + 1) . ": " . $e->getMessage();
-            error_log("❌ Error procesando fila " . ($startIdx + $index) . ": " . $e->getMessage());
-        }
-    }
-    
-    // Ejecutar INSERT masivo si hay datos en este lote
-    if (!empty($valuesArray)) {
-        try {
-            $sqlBatch = "INSERT INTO ventas_franquicias_sin_tango 
-                        (nro_sucursal, periodo, codigo_articulo, cantidad, fecha_carga, rubro, categoria_padre, usuario_carga, fecha) 
-                        VALUES " . implode(", ", $valuesArray);
-            
-            $stmtBatch = $conexionSistemas->prepare($sqlBatch);
-            $ejecutado = $stmtBatch->execute($parametros);
-            
-            if (!$ejecutado) {
-                $errorInfo = $stmtBatch->errorInfo();
-                throw new Exception("Error ejecutando lote: " . $errorInfo[2] . " (SQLSTATE: " . $errorInfo[0] . ")");
-            }
-            
-            $procesadosLote = count($valuesArray);
-            $procesados += $procesadosLote;
-            
-            $porcentaje = round(($batchNum + 1) / $totalBatches * 100);
-            error_log("✅ Lote " . ($batchNum + 1) . "/$totalBatches completado: $procesadosLote registros insertados ($porcentaje% total)");
-            
-        } catch (Exception $e) {
-            error_log("❌ Error ejecutando lote " . ($batchNum + 1) . ": " . $e->getMessage());
-            throw $e; // Re-lanzar para hacer rollback
-        }
-    }
-}
-
-error_log("✅ INSERCIÓN POR LOTES COMPLETADA - Total procesados: $procesados de $totalItems");
-            
-            // Log de progreso cada 5% (menos verboso)
-            if ($index % $logEach === 0 || $index === $totalItems - 1) {
-                $porcentaje = round(($index + 1) / $totalItems * 100);
-                error_log("� Progreso: $porcentaje% ($procesados/$totalItems registros procesados)");
-            }
-            
-        } catch (Exception $e) {
-            $erroresProcesamiento[] = "Fila " . ($index + 1) . ": " . $e->getMessage();
-            error_log("❌ Error procesando fila $index: " . $e->getMessage());
-        }
-    }
-    
-    error_log("✅ PROCESAMIENTO COMPLETADO - Total procesados: $procesados de " . count($datos));
-
-    // **NOTA: La eliminación en modo reemplazar ahora se hace ANTES de insertar**
-    // Esta sección ya no es necesaria porque eliminamos primero
-    /*
-    if (isset($eliminarTodoAlFinal) && $eliminarTodoAlFinal === true) {
-        // Esta lógica se movió al inicio, antes de las inserciones
-        error_log("ℹ️ Eliminación ya realizada antes de las inserciones");
-    }
-        error_log("🗑️ MODO REEMPLAZAR: Eliminando SOLO datos antiguos, manteniendo nuevos datos insertados");
-        try {
-            // ESTRATEGIA MÁS PRECISA: Eliminar registros por períodos específicos que acabamos de procesar
-            // Esto garantiza que solo eliminamos los datos de los períodos que estamos reemplazando
-            
-            // Crear lista de períodos únicos de los datos que acabamos de insertar
-            $periodosParaEliminar = array_unique($periodosAfectados);
-            error_log("� Períodos que serán reemplazados: " . implode(', ', $periodosParaEliminar));
-            
-            foreach ($periodosParaEliminar as $periodo) {
-                // Eliminar TODOS los registros de este período específico para esta sucursal
-                // (modo reemplazar completo)
-                $sqlEliminarPeriodo = "DELETE FROM ventas_franquicias_sin_tango 
-                                      WHERE nro_sucursal = ? 
-                                      AND periodo = ?";
                 
-                $stmtEliminarPeriodo = $conexionSistemas->prepare($sqlEliminarPeriodo);
-                $ejecutadoEliminacion = $stmtEliminarPeriodo->execute([$nroSucursal, $periodo]);
-                
-                if (!$ejecutadoEliminacion) {
-                    $errorInfo = $stmtEliminarPeriodo->errorInfo();
-                    throw new Exception("Error eliminando período $periodo: " . $errorInfo[2]);
+                if (isset($rubrosCategoriasCache[$codigoArticulo])) {
+                    $rubro = $rubrosCategoriasCache[$codigoArticulo]['rubro'];
+                    $categoria = $rubrosCategoriasCache[$codigoArticulo]['categoria'];
                 }
                 
-                $registrosEliminados = $stmtEliminarPeriodo->rowCount();
-                error_log("🗑️ Período $periodo: $registrosEliminados registros eliminados (TODOS)");
+                if (strlen($rubro) > 100) $rubro = substr($rubro, 0, 97) . '...';
+                if (strlen($categoria) > 100) $categoria = substr($categoria, 0, 97) . '...';
+                
+                // Orden correcto según estructura de tabla en 'sistemas':
+                // nro_sucursal, periodo, codigo_articulo, rubro, categoria_padre, cantidad, fecha_carga, usuario_carga, fecha
+                $valuesArray[] = "(?, ?, ?, ?, ?, ?, GETDATE(), ?, NULL)";
+                
+                $parametros[] = $nroSucursal;
+                $parametros[] = $periodoDb;
+                $parametros[] = $codigoArticulo;
+                $parametros[] = $rubro;
+                $parametros[] = $categoria;
+                $parametros[] = $cantidad;
+                $parametros[] = $usuario;
+                
+                if (!isset($resumenPeriodos[$item['periodo']])) {
+                    $resumenPeriodos[$item['periodo']] = 0;
+                }
+                $resumenPeriodos[$item['periodo']]++;
+                
+            } catch (Exception $e) {
+                $erroresProcesamiento[] = "Fila " . ($startIdx + $index + 1) . ": " . $e->getMessage();
             }
-            
-            error_log("✅ REEMPLAZAR COMPLETADO: Todos los períodos antiguos eliminados correctamente");
-            
-        } catch (Exception $e) {
-            error_log("❌ Error en eliminación modo reemplazar: " . $e->getMessage());
-            throw new Exception("Error reemplazando datos existentes: " . $e->getMessage());
+        }
+        
+        if (!empty($valuesArray)) {
+            try {
+                // Orden correcto de columnas según estructura en base de datos 'sistemas'
+                $sqlBatch = "INSERT INTO ventas_franquicias_sin_tango 
+                            (nro_sucursal, periodo, codigo_articulo, rubro, categoria_padre, cantidad, fecha_carga, usuario_carga, fecha) 
+                            VALUES " . implode(", ", $valuesArray);
+                
+                // **DEBUG DETALLADO**
+                error_log("🔍 PREPARANDO LOTE " . ($batchNum + 1) . ":");
+                error_log("  - Registros en este lote: " . count($valuesArray));
+                error_log("  - Parámetros totales: " . count($parametros) . " (esperados: " . (count($valuesArray) * 7) . ")");
+                error_log("  - Primeros 3 parámetros: " . json_encode(array_slice($parametros, 0, 3)));
+                error_log("  - SQL (primeros 200 chars): " . substr($sqlBatch, 0, 200) . "...");
+                
+                $stmtBatch = $conexionSistemas->prepare($sqlBatch);
+                error_log("  ✅ SQL preparado correctamente");
+                
+                error_log("  🚀 Ejecutando INSERT...");
+                $executeResult = $stmtBatch->execute($parametros);
+                error_log("  📊 Execute result: " . ($executeResult ? 'TRUE' : 'FALSE'));
+                
+                if (!$executeResult) {
+                    $errorInfo = $stmtBatch->errorInfo();
+                    error_log("  ❌ Error PDO: " . json_encode($errorInfo));
+                    throw new Exception("Error ejecutando lote: " . implode(" ", $errorInfo));
+                }
+                
+                $procesadosLote = count($valuesArray);
+                $procesados += $procesadosLote;
+                
+                error_log("  ✅ Lote " . ($batchNum + 1) . " EJECUTADO: $procesadosLote registros");
+                
+                // Verificar inmediatamente después del INSERT
+                $sqlVerificar = "SELECT COUNT(*) as insertados 
+                                FROM ventas_franquicias_sin_tango 
+                                WHERE nro_sucursal = ? 
+                                AND fecha_carga >= DATEADD(SECOND, -5, GETDATE())";
+                $stmtVerif = $conexionSistemas->prepare($sqlVerificar);
+                $stmtVerif->execute([$nroSucursal]);
+                $verifResult = $stmtVerif->fetch(PDO::FETCH_ASSOC);
+                error_log("  🔍 Verificación inmediata: " . $verifResult['insertados'] . " registros encontrados en últimos 5 segundos");
+                
+            } catch (Exception $e) {
+                error_log("❌ EXCEPCIÓN en lote " . ($batchNum + 1) . ": " . $e->getMessage());
+                error_log("❌ Stack trace: " . $e->getTraceAsString());
+                throw $e;
+            }
+        } else {
+            error_log("⚠️ Lote " . ($batchNum + 1) . " está VACÍO (no hay valuesArray)");
         }
     }
-    */
+    
+    error_log("✅ INSERCIÓN COMPLETADA - Total procesados: $procesados");
 
     // Confirmar transacción
-    if ($modo === 'reemplazar' || $modo === 'reemplazar_todo') {
-        error_log("🔥 MODO REEMPLAZAR - ANTES DEL COMMIT:");
-        error_log("  Total procesados: $procesados");
-        error_log("  Eliminar al final: " . ($eliminarTodoAlFinal ? 'SÍ' : 'NO'));
-        error_log("  Resumen períodos: " . json_encode($resumenPeriodos));
-    }
-    
     $conexionSistemas->commit();
-    
-    if ($modo === 'reemplazar' || $modo === 'reemplazar_todo') {
-        error_log("✅ MODO REEMPLAZAR - COMMIT COMPLETADO");
+    error_log("✅ COMMIT COMPLETADO");
+
+    // **VERIFICACIÓN POST-COMMIT**
+    try {
+        error_log("🔍 VERIFICACIÓN POST-COMMIT:");
+        
+        // 1. Verificar servidor y base de datos donde se insertó
+        $sqlServerInfo = "SELECT @@SERVERNAME as servidor, DB_NAME() as base_datos";
+        $stmtServerInfo = $conexionSistemas->query($sqlServerInfo);
+        $serverInfo = $stmtServerInfo->fetch(PDO::FETCH_ASSOC);
+        error_log("  📍 Servidor: " . $serverInfo['servidor']);
+        error_log("  📍 Base de datos: " . $serverInfo['base_datos']);
+        
+        // 2. Contar registros insertados en los últimos 5 minutos
+        $sqlCount = "SELECT COUNT(*) as total 
+                     FROM ventas_franquicias_sin_tango 
+                     WHERE nro_sucursal = ? 
+                     AND fecha_carga >= DATEADD(MINUTE, -5, GETDATE())";
+        
+        $stmtCount = $conexionSistemas->prepare($sqlCount);
+        $stmtCount->execute([$nroSucursal]);
+        $countResult = $stmtCount->fetch(PDO::FETCH_ASSOC);
+        $registrosInsertados = $countResult['total'];
+        
+        error_log("  📊 Registros insertados últimos 5 min: " . $registrosInsertados);
+        error_log("  📊 Registros que DEBERÍAN haberse insertado: " . $procesados);
+        
+        if ($registrosInsertados == 0) {
+            error_log("  ⚠️ ADVERTENCIA: No se encontraron registros recién insertados!");
+        } else if ($registrosInsertados < $procesados) {
+            error_log("  ⚠️ ADVERTENCIA: Se insertaron menos registros de los esperados!");
+        } else {
+            error_log("  ✅ Verificación exitosa: registros encontrados");
+        }
+        
+        // 3. Mostrar ejemplos de registros insertados
+        if ($registrosInsertados > 0) {
+            $sqlEjemplos = "SELECT TOP 5 
+                           id, nro_sucursal, periodo, codigo_articulo, cantidad, 
+                           rubro, categoria_padre, fecha_carga 
+                           FROM ventas_franquicias_sin_tango 
+                           WHERE nro_sucursal = ? 
+                           ORDER BY id DESC";
+            
+            $stmtEjemplos = $conexionSistemas->prepare($sqlEjemplos);
+            $stmtEjemplos->execute([$nroSucursal]);
+            $ejemplos = $stmtEjemplos->fetchAll(PDO::FETCH_ASSOC);
+            
+            error_log("  📋 EJEMPLOS DE REGISTROS INSERTADOS:");
+            foreach ($ejemplos as $idx => $ej) {
+                error_log("    " . ($idx + 1) . ". ID: {$ej['id']}, Período: {$ej['periodo']}, " .
+                         "Artículo: {$ej['codigo_articulo']}, Cantidad: {$ej['cantidad']}, " .
+                         "Rubro: {$ej['rubro']}, Cat: {$ej['categoria_padre']}");
+            }
+        }
+        
+        // 4. Total de registros en la tabla para esta sucursal
+        $sqlTotalSucursal = "SELECT COUNT(*) as total_general 
+                            FROM ventas_franquicias_sin_tango 
+                            WHERE nro_sucursal = ?";
+        
+        $stmtTotalSucursal = $conexionSistemas->prepare($sqlTotalSucursal);
+        $stmtTotalSucursal->execute([$nroSucursal]);
+        $totalGeneral = $stmtTotalSucursal->fetch(PDO::FETCH_ASSOC);
+        
+        error_log("  📊 Total registros en tabla para sucursal {$nroSucursal}: " . $totalGeneral['total_general']);
+        
+    } catch (Exception $e) {
+        error_log("  ❌ Error en verificación post-commit: " . $e->getMessage());
     }
+    // **FIN VERIFICACIÓN**
 
     jsonResponse([
         'success' => true,
-        'message' => "Importación múltiples períodos completada exitosamente",
+        'message' => "Importación completada exitosamente",
         'procesados' => $procesados,
         'modo_operacion' => $modo,
         'periodos_afectados' => count($periodosAfectados),
         'resumen_periodos' => $resumenPeriodos,
-        'errores_procesamiento' => $erroresProcesamiento
+        'errores_procesamiento' => $erroresProcesamiento,
+        'debug_info' => [
+            'nro_sucursal' => $nroSucursal,
+            'usuario' => $usuario,
+            'servidor_insertado' => $serverInfo['servidor'] ?? 'desconocido',
+            'base_datos_insertada' => $serverInfo['base_datos'] ?? 'desconocido'
+        ]
     ]);
 
 } catch (Exception $e) {
     // Rollback en caso de error
-    if (isset($conexionSistemas)) {
+    if (isset($conexionSistemas) && $conexionSistemas->inTransaction()) {
         $conexionSistemas->rollback();
+        error_log("🔄 ROLLBACK ejecutado");
     }
     
-    error_log("Error en importación múltiples períodos: " . $e->getMessage());
+    error_log("❌ Error en importación: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
     
     jsonResponse([
         'success' => false,

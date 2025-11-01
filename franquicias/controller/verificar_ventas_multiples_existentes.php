@@ -24,13 +24,18 @@ if (!isset($_SESSION['autenticado']) || $_SESSION['autenticado'] !== true) {
 // Obtener información de la sesión
 $nroSucursal = $_SESSION['franquicia_id'] ?? '';
 if (empty($nroSucursal)) {
+    error_log("❌ ERROR: No se pudo obtener el número de sucursal de la sesión");
     echo json_encode(['success' => false, 'message' => 'No se pudo obtener el número de sucursal']);
     exit;
 }
 
+error_log("🔍 Verificando datos para sucursal: $nroSucursal (tipo: " . gettype($nroSucursal) . ")");
+
 try {
     // Conectar a la base de datos 'sistemas'
     $conexion = DatabaseConfig::conectarSistemas();
+    
+    error_log("🔍 VERIFICACIÓN DATOS EXISTENTES - Sucursal: $nroSucursal");
     
     // Consulta para obtener un resumen de TODOS los períodos cargados para la sucursal
     $sql = "
@@ -48,14 +53,18 @@ try {
     $stmt->execute([$nroSucursal]);
     $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
+    error_log("📊 Total períodos encontrados: " . count($resultados));
+    
     // Ahora, la lógica es mucho más simple:
     // Si hay CUALQUIER resultado (1 o más), entonces tiene datos.
     if (count($resultados) > 0) {
         
         $datosProcesados = [];
         foreach ($resultados as $row) {
-            $periodo = $row['periodo'];
-            // Asegurarse de que el período tenga el formato YYYYMM
+            $periodo = trim($row['periodo']); // TRIM para eliminar espacios
+            error_log("  - Período: '{$periodo}' (length: " . strlen($periodo) . "), Registros: {$row['total_registros']}, Fecha: {$row['fecha_carga']}");
+            
+            // Asegurarse de que el período tenga el formato YYYYMM (6 dígitos)
             if (strlen($periodo) == 6 && is_numeric($periodo)) {
                 $datosProcesados[] = [
                     'periodo' => $periodo,
@@ -63,6 +72,8 @@ try {
                     'total_registros' => (int)$row['total_registros'],
                     'fecha_carga' => $row['fecha_carga']
                 ];
+            } else {
+                error_log("  ⚠️ Período rechazado: '{$periodo}' - length=" . strlen($periodo) . ", is_numeric=" . (is_numeric($periodo) ? 'true' : 'false'));
             }
         }
         

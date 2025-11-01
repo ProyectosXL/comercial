@@ -3241,19 +3241,30 @@ if (!function_exists('es_modo_desarrollo')) {
                 
                 // Crear controlador para verificar datos específicos de múltiples períodos
                 const response = await fetch('controller/verificar_ventas_multiples_existentes.php');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const result = await response.json();
                 
                 console.log('📊 Resultado verificación múltiples:', result);
+                console.log('  ✅ Success:', result.success);
+                console.log('  ✅ Tiene datos:', result.tiene_datos);
+                console.log('  ✅ Total períodos:', result.total_periodos);
+                console.log('  ✅ Datos:', result.datos);
                 
                 if (result.success && result.tiene_datos) {
+                    console.log('✅ Se encontraron datos, mostrando tabla...');
                     // Mostrar vista con tabla de resumen
                     mostrarVistaTablaPersistente(result.datos);
                 } else {
+                    console.log('⚠️ No se encontraron datos, mostrando configuración inicial');
                     // Mostrar vista de configuración inicial
                     mostrarVistaConfiguracionInicial();
                 }
             } catch (error) {
-                console.error('Error verificando datos múltiples:', error);
+                console.error('❌ Error verificando datos múltiples:', error);
                 // Por defecto mostrar vista de configuración
                 mostrarVistaConfiguracionInicial();
             }
@@ -4792,6 +4803,15 @@ if (!function_exists('es_modo_desarrollo')) {
                     
                     console.log('✅ Importación múltiple exitosa:', result);
                     
+                    // **INFORMACIÓN DE DEBUG**
+                    console.log('📊 INFORMACIÓN DE DEBUG:');
+                    console.log('  Servidor:', result.debug_info?.servidor_insertado);
+                    console.log('  Base de datos:', result.debug_info?.base_datos_insertada);
+                    console.log('  Sucursal:', result.debug_info?.nro_sucursal);
+                    console.log('  Procesados:', result.procesados);
+                    console.log('  Períodos afectados:', result.periodos_afectados);
+                    console.log('  Modo:', result.modo_operacion);
+                    
                     // Esperar un momento para que el usuario vea el 100%
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     
@@ -4815,13 +4835,18 @@ if (!function_exists('es_modo_desarrollo')) {
                     }
                     
                     // **REGRESAR AUTOMÁTICAMENTE A LA VISTA DE TABLA PERSISTENTE**
-                    setTimeout(() => {
+                    console.log('⏳ Esperando 2 segundos antes de verificar datos...');
+                    setTimeout(async () => {
+                        console.log('🔄 Verificando datos después de importación...');
                         // Limpiar completamente el estado del modal antes de redirigir
                         resetModalMultipleState();
                         // AHORA SÍ limpiar las fechas después de importación exitosa
                         limpiarFechasPostImportacion();
-                        verificarDatosMultiplesExistentes(); // Re-verificar datos y mostrar tabla
-                    }, 500);
+                        
+                        // Verificar datos con logging adicional
+                        await verificarDatosMultiplesExistentes();
+                        console.log('✅ Verificación completada');
+                    }, 2000); // Aumentado a 2 segundos para dar tiempo al COMMIT
                     
                 } else {
                     // Error en el resultado
