@@ -1,89 +1,67 @@
 <?php
-/**
- * Controlador para procesar importación de múltiples períodos
- * Maneja la inserción de ventas para diferentes períodos en una sola operación
- */
+// **TEMPORAL: Habilitar errores para debugging**
+ini_set('display_errors', '1');
+ini_set('error_reporting', E_ALL);
+ini_set('html_errors', '0');
+ini_set('log_errors', '1');
 
-// Suprimir TODOS los errores/warnings para evitar contaminar el JSON
-error_reporting(0);
-ini_set('display_errors', '0');
+// Iniciar buffer de output INMEDIATAMENTE
+ob_start();
 
-// **OPTIMIZACIÓN: Aumentar límites para archivos grandes**
-set_time_limit(300); // 5 minutos máximo de ejecución
+// Aumentar límites
 ini_set('max_execution_time', '300');
-ini_set('memory_limit', '512M'); // Aumentar memoria disponible
+ini_set('memory_limit', '512M');
+set_time_limit(300);
 
-// Limpiar cualquier output previo
-if (ob_get_level()) {
-    ob_clean();
-}
-
+// Includes
 require_once '../config_sesiones_fixed.php';
 require_once '../class/DatabaseConfig.php';
 
-// Establecer header JSON inmediatamente
-header('Content-Type: application/json');
+// Descartar CUALQUIER output hasta ahora
+$trash = ob_get_clean();
+if ($trash) {
+    error_log("Output descartado: " . strlen($trash) . " bytes");
+}
 
-error_log("✅ PASO 1: Headers y includes cargados correctamente");
+// Headers limpios
+header('Content-Type: application/json; charset=UTF-8');
+header('Cache-Control: no-cache');
 
-// Verificar sesión
+// Función helper para responder JSON limpio
+function jsonResponse($data) {
+    echo json_encode($data);
+    exit;
+}
+
+// Verificaciones básicas
 if (!isset($_SESSION['autenticado']) || $_SESSION['autenticado'] !== true) {
-    error_log("❌ Sesión no autenticada");
-    echo json_encode(['success' => false, 'message' => 'No autorizado']);
-    exit;
+    jsonResponse(['success' => false, 'message' => 'No autorizado']);
 }
 
-error_log("✅ PASO 2: Sesión verificada");
-
-// Verificar que sea una petición POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    error_log("❌ Método no POST: " . $_SERVER['REQUEST_METHOD']);
-    echo json_encode(['success' => false, 'message' => 'Método no permitido']);
-    exit;
+    jsonResponse(['success' => false, 'message' => 'Método no permitido']);
 }
 
-error_log("✅ PASO 3: Método POST verificado");
-
-error_log("✅ PASO 3: Método POST verificado");
+error_log("✅ Iniciando procesamiento múltiples períodos");
 
 error_log("=== INICIO PROCESAMIENTO MÚLTIPLES PERÍODOS ===");
-
-// Debug: Log de datos recibidos
-$rawInputPreview = substr(file_get_contents('php://input'), 0, 200) . '...';
-error_log("📥 DATOS RECIBIDOS - Raw input preview: " . $rawInputPreview);
-
-error_log("✅ PASO 4: Input preview obtenido");
 
 // Leer datos JSON del request
 $rawInput = file_get_contents('php://input');
 if (empty($rawInput)) {
-    error_log("❌ Raw input vacío");
-    echo json_encode(['success' => false, 'message' => 'No se recibieron datos en el request']);
-    exit;
+    jsonResponse(['success' => false, 'message' => 'No se recibieron datos en el request']);
 }
-
-error_log("✅ PASO 5: Raw input leído - longitud: " . strlen($rawInput));
 
 $input = json_decode($rawInput, true);
 if (json_last_error() !== JSON_ERROR_NONE) {
-    error_log("❌ Error JSON: " . json_last_error_msg());
-    echo json_encode(['success' => false, 'message' => 'Error decodificando JSON: ' . json_last_error_msg()]);
-    exit;
+    jsonResponse(['success' => false, 'message' => 'Error decodificando JSON: ' . json_last_error_msg()]);
 }
-
-error_log("✅ PASO 6: JSON decodificado correctamente");
-
-error_log("📥 JSON decodificado: " . print_r($input, true));
 
 // Extraer datos del input JSON
 $datos = $input['datos'] ?? [];
 if (empty($datos)) {
-    error_log("❌ No se encontraron datos en el input JSON");
-    echo json_encode(['success' => false, 'message' => 'No se encontraron datos para procesar']);
-    exit;
+    jsonResponse(['success' => false, 'message' => 'No se encontraron datos para procesar']);
 }
-
-error_log("✅ PASO 7: Datos extraídos - count: " . count($datos));
 
 /**
  * Función para agrupar artículos duplicados por artículo + período
@@ -213,8 +191,7 @@ $usuario = $_SESSION['usuario_franquicia'] ?? '';
 $nroSucursal = $_SESSION['franquicia_id'] ?? '';
 
 if (empty($nroSucursal)) {
-    echo json_encode(['success' => false, 'message' => 'No se pudo obtener el número de sucursal']);
-    exit;
+    jsonResponse(['success' => false, 'message' => 'No se pudo obtener el número de sucursal']);
 }
 
 try {
@@ -852,22 +829,48 @@ try {
         $usuario = substr($usuario, 0, 50);
     }
 
-    // Procesar en lotes para logs menos verbosos
+    // **OPTIMIZACIÓN CRÍTICA: Inserción por lotes (batch insert)**
+    error_log("🚀 INICIANDO INSERCIÓN POR LOTES...");
     $totalItems = count($datos);
-    $logEach = max(1, floor($totalItems / 20)); // Log cada 5%
+    $procesados = 0;
+    $erroresProcesamiento = [];
+    $resumenPeriodos = [];
     
-    foreach ($datos as $index => $item) {
-        try {
-            $cantidad = intval($item['cantidad']);
-            if ($cantidad <= 0) {
-                continue; // Saltar cantidades no válidas
-            }
+    // Tamaño de lote optimizado para SQL Server
+    // SQL Server tiene límite de 2100 parámetros
+    // Con 7 parámetros por fila: 2100 / 7 = 300 filas máximo
+    $batchSize = 250; // Dejamos margen de seguridad
+    $totalBatches = ceil($totalItems / $batchSize);
+    
+    error_log("📊 Configuración de lotes:");
+    error_log("  Total items: $totalItems");
+    error_log("  Tamaño de lote: $batchSize");
+    error_log("  Total lotes: $totalBatches");
+    
+    // Procesar en lotes
+    for ($batchNum = 0; $batchNum < $totalBatches; $batchNum++) {
+        $startIdx = $batchNum * $batchSize;
+        $endIdx = min($startIdx + $batchSize, $totalItems);
+        $batchDatos = array_slice($datos, $startIdx, $batchSize);
+        
+        error_log("📦 Procesando lote " . ($batchNum + 1) . "/$totalBatches (items $startIdx-" . ($endIdx - 1) . ")");
+        
+        // Construir INSERT masivo con múltiples VALUES
+        $valuesArray = [];
+        $parametros = [];
+        
+        foreach ($batchDatos as $index => $item) {
+            try {
+                $cantidad = intval($item['cantidad']);
+                if ($cantidad <= 0) {
+                    continue; // Saltar cantidades no válidas
+                }
 
-            // Convertir período DD/MM/YYYY a YYYYMM para base de datos
-            $partesPeriodo = explode('/', $item['periodo']); // [01, MM, YYYY]
-            $periodoDb = $partesPeriodo[2] . $partesPeriodo[1]; // YYYYMM (año + mes)
-            
-            // Validar que el período convertido sea numérico y tenga formato correcto
+                // Convertir período DD/MM/YYYY a YYYYMM para base de datos
+                $partesPeriodo = explode('/', $item['periodo']); // [01, MM, YYYY]
+                $periodoDb = $partesPeriodo[2] . $partesPeriodo[1]; // YYYYMM (año + mes)
+                
+                // Validar que el período convertido sea numérico y tenga formato correcto
             if (!preg_match('/^[0-9]{6}$/', $periodoDb)) {
                 throw new Exception("Período convertido inválido: {$item['periodo']} -> $periodoDb");
             }
@@ -908,31 +911,59 @@ try {
                 $categoria = substr($categoria, 0, 97) . '...';
             }
             
-            // Insertar registro
-            $parametros = [
-                $nroSucursal,
-                $periodoDb,
-                $codigoArticulo,
-                $cantidad,
-                $rubro,
-                $categoria,
-                $usuario,
-            ];
+            // Agregar VALUES para este registro
+            $valuesArray[] = "(?, ?, ?, ?, GETDATE(), ?, ?, ?, NULL)";
             
-            $ejecutado = $stmtInsertar->execute($parametros);
-            
-            if (!$ejecutado) {
-                $errorInfo = $stmtInsertar->errorInfo();
-                throw new Exception("Error ejecutando inserción: " . $errorInfo[2] . " (SQLSTATE: " . $errorInfo[0] . ")");
-            }
-            
-            $procesados++;
+            // Agregar parámetros en el orden correcto
+            $parametros[] = $nroSucursal;
+            $parametros[] = $periodoDb;
+            $parametros[] = $codigoArticulo;
+            $parametros[] = $cantidad;
+            $parametros[] = $rubro;
+            $parametros[] = $categoria;
+            $parametros[] = $usuario;
             
             // Contar por período para resumen
             if (!isset($resumenPeriodos[$item['periodo']])) {
                 $resumenPeriodos[$item['periodo']] = 0;
             }
             $resumenPeriodos[$item['periodo']]++;
+            
+        } catch (Exception $e) {
+            $erroresProcesamiento[] = "Fila " . ($startIdx + $index + 1) . ": " . $e->getMessage();
+            error_log("❌ Error procesando fila " . ($startIdx + $index) . ": " . $e->getMessage());
+        }
+    }
+    
+    // Ejecutar INSERT masivo si hay datos en este lote
+    if (!empty($valuesArray)) {
+        try {
+            $sqlBatch = "INSERT INTO ventas_franquicias_sin_tango 
+                        (nro_sucursal, periodo, codigo_articulo, cantidad, fecha_carga, rubro, categoria_padre, usuario_carga, fecha) 
+                        VALUES " . implode(", ", $valuesArray);
+            
+            $stmtBatch = $conexionSistemas->prepare($sqlBatch);
+            $ejecutado = $stmtBatch->execute($parametros);
+            
+            if (!$ejecutado) {
+                $errorInfo = $stmtBatch->errorInfo();
+                throw new Exception("Error ejecutando lote: " . $errorInfo[2] . " (SQLSTATE: " . $errorInfo[0] . ")");
+            }
+            
+            $procesadosLote = count($valuesArray);
+            $procesados += $procesadosLote;
+            
+            $porcentaje = round(($batchNum + 1) / $totalBatches * 100);
+            error_log("✅ Lote " . ($batchNum + 1) . "/$totalBatches completado: $procesadosLote registros insertados ($porcentaje% total)");
+            
+        } catch (Exception $e) {
+            error_log("❌ Error ejecutando lote " . ($batchNum + 1) . ": " . $e->getMessage());
+            throw $e; // Re-lanzar para hacer rollback
+        }
+    }
+}
+
+error_log("✅ INSERCIÓN POR LOTES COMPLETADA - Total procesados: $procesados de $totalItems");
             
             // Log de progreso cada 5% (menos verboso)
             if ($index % $logEach === 0 || $index === $totalItems - 1) {
@@ -1006,7 +1037,7 @@ try {
         error_log("✅ MODO REEMPLAZAR - COMMIT COMPLETADO");
     }
 
-    echo json_encode([
+    jsonResponse([
         'success' => true,
         'message' => "Importación múltiples períodos completada exitosamente",
         'procesados' => $procesados,
@@ -1024,7 +1055,7 @@ try {
     
     error_log("Error en importación múltiples períodos: " . $e->getMessage());
     
-    echo json_encode([
+    jsonResponse([
         'success' => false,
         'message' => 'Error procesando importación: ' . $e->getMessage()
     ]);

@@ -1,12 +1,13 @@
 <?php
 /**
- * Controlador para verificar si existen ventas cargadas desde la funcionalidad múltiples períodos
- * Diferencia los datos cargados desde múltiples períodos vs carga individual
+ * Controlador para verificar si existen ventas cargadas para una franquicia.
+ * Devuelve TODOS los períodos encontrados para que el frontend decida qué hacer.
+ * Lógica corregida para ser una fuente de verdad directa de la base de datos.
  */
 
-// Suprimir errores para mantener JSON limpio
-error_reporting(0);
-ini_set('display_errors', '0');
+// Suprimir errores en producción, pero mostrarlos en desarrollo para depurar
+error_reporting(E_ALL);
+ini_set('display_errors', '1'); // Cambiar a '0' en producción
 
 require_once '../config_sesiones_fixed.php';
 require_once '../class/DatabaseConfig.php';
@@ -28,21 +29,18 @@ if (empty($nroSucursal)) {
 }
 
 try {
-    // Conectar a la base de datos
+    // Conectar a la base de datos 'sistemas'
     $conexion = DatabaseConfig::conectarSistemas();
     
-    // Consultar si existen datos cargados desde múltiples períodos
-    // Identificaremos esto por el campo 'modo_carga' que agregaremos
-    // Por ahora, verificaremos si hay múltiples períodos para la misma sucursal
+    // Consulta para obtener un resumen de TODOS los períodos cargados para la sucursal
     $sql = "
-        SELECT DISTINCT 
+        SELECT 
             v.periodo,
             COUNT(*) as total_registros,
             MAX(v.fecha_carga) as fecha_carga
         FROM ventas_franquicias_sin_tango v 
         WHERE v.nro_sucursal = ? 
         GROUP BY v.periodo 
-        HAVING COUNT(*) > 0
         ORDER BY v.periodo DESC
     ";
     
@@ -50,43 +48,48 @@ try {
     $stmt->execute([$nroSucursal]);
     $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    if (count($resultados) > 1) {
-        // Si hay datos para múltiples períodos, consideramos que fueron cargados desde múltiples períodos
-        $datosProcesados = [];
+    // Ahora, la lógica es mucho más simple:
+    // Si hay CUALQUIER resultado (1 o más), entonces tiene datos.
+    if (count($resultados) > 0) {
         
+        $datosProcesados = [];
         foreach ($resultados as $row) {
             $periodo = $row['periodo'];
-            $datosProcesados[] = [
-                'periodo' => $periodo,
-                'periodo_display' => substr($periodo, 4, 2) . '/' . substr($periodo, 0, 4), // MM/YYYY
-                'total_registros' => (int)$row['total_registros'],
-                'fecha_carga' => $row['fecha_carga']
-            ];
+            // Asegurarse de que el período tenga el formato YYYYMM
+            if (strlen($periodo) == 6 && is_numeric($periodo)) {
+                $datosProcesados[] = [
+                    'periodo' => $periodo,
+                    'periodo_display' => substr($periodo, 4, 2) . '/' . substr($periodo, 0, 4), // Formato MM/YYYY
+                    'total_registros' => (int)$row['total_registros'],
+                    'fecha_carga' => $row['fecha_carga']
+                ];
+            }
         }
         
         echo json_encode([
             'success' => true,
-            'tiene_datos' => true,
-            'total_periodos' => count($resultados),
+            'tiene_datos' => true, // Es true si hay CUALQUIER dato
+            'total_periodos' => count($datosProcesados),
             'datos' => $datosProcesados,
-            'mensaje' => 'Datos de múltiples períodos encontrados'
+            'mensaje' => 'Se encontraron datos para ' . count($datosProcesados) . ' período(s).'
         ]);
+
     } else {
-        // Solo hay datos para un período o ningún dato
+        // Si no hay NINGÚN resultado, entonces no tiene datos.
         echo json_encode([
             'success' => true,
             'tiene_datos' => false,
-            'total_periodos' => count($resultados),
+            'total_periodos' => 0,
             'datos' => [],
-            'mensaje' => count($resultados) > 0 ? 'Solo datos de un período encontrados' : 'No hay datos cargados'
+            'mensaje' => 'No se encontraron datos de ventas cargados para esta sucursal.'
         ]);
     }
     
 } catch (Exception $e) {
-    error_log("Error verificando ventas múltiples: " . $e->getMessage());
+    error_log("Error en verificar_ventas_multiples_existentes.php: " . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Error verificando datos: ' . $e->getMessage()
+        'message' => 'Error de servidor: ' . $e->getMessage()
     ]);
 }
 ?>

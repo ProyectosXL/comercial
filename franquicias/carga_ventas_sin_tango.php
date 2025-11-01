@@ -2689,13 +2689,28 @@ if (!function_exists('es_modo_desarrollo')) {
                                     }).on('select2:select', function(e) {
                                         const data = e.params.data;
                                         console.log(`✅ Artículo seleccionado en fila ${index} (${selectId}):`, data);
+                                        console.log(`📋 Datos recibidos - ID: ${data.id}, Rubro: ${data.rubro}, Categoría: ${data.categoria}, Descripción: ${data.descripcion}`);
                                         
                                         // Actualizar los datos y la fila
                                         if (data && data.id) {
-                                            // Actualizar datos importados
+                                            // Actualizar datos importados CON rubro y categoría
                                             if (datosImportados[index]) {
+                                                const rubroFinal = data.rubro || 'Sin rubro';
+                                                const categoriaFinal = data.categoria || 'Sin categoría';
+                                                const descripcionFinal = data.descripcion || data.text.split(' - ').slice(1).join(' - ');
+                                                
                                                 datosImportados[index].articulo = data.id;
-                                                console.log(`✏️ Datos actualizados para fila ${index}:`, datosImportados[index]);
+                                                datosImportados[index].rubro = rubroFinal;
+                                                datosImportados[index].categoria = categoriaFinal;
+                                                datosImportados[index].descripcion = descripcionFinal;
+                                                
+                                                console.log(`✏️ Datos actualizados para fila ${index}:`, {
+                                                    articulo: data.id,
+                                                    rubro: rubroFinal,
+                                                    categoria: categoriaFinal,
+                                                    descripcion: descripcionFinal
+                                                });
+                                                console.log(`📦 Objeto completo datosImportados[${index}]:`, datosImportados[index]);
                                             }
                                             
                                             // Actualizar visualmente la fila
@@ -2706,16 +2721,16 @@ if (!function_exists('es_modo_desarrollo')) {
                                             $row.find('td:first-child code').text(data.id);
                                             
                                             // Actualizar la descripción en la segunda celda
-                                            const descripcionText = data.text.split(' - ').slice(1).join(' - ') || data.text;
+                                            const descripcionText = data.descripcion || data.text.split(' - ').slice(1).join(' - ') || data.text;
                                             $row.find('.descripcion-cell').text(descripcionText);
                                             
-                                            // Actualizar rubro y categoría con los datos adicionales del Select2
-                                            if (data.rubro) {
-                                                $row.find('.rubro-cell').text(data.rubro);
-                                            }
-                                            if (data.categoria) {
-                                                $row.find('.categoria-cell').text(data.categoria);
-                                            }
+                                            const rubroText = data.rubro || 'Sin rubro';
+                                            const categoriaText = data.categoria || 'Sin categoría';
+                                            
+                                            $row.find('.rubro-cell').text(rubroText);
+                                            $row.find('.categoria-cell').text(categoriaText);
+                                            
+                                            console.log(`🎨 Actualización visual - Rubro: "${rubroText}", Categoría: "${categoriaText}"`);
                                             
                                             // Cambiar el selector por un badge de éxito
                                             $row.find('.correccion-cell').html('<span class="badge bg-success"><i class="bi bi-check-circle"></i> Corregido</span>');
@@ -2723,7 +2738,7 @@ if (!function_exists('es_modo_desarrollo')) {
                                             // Recalcular contadores desde el DOM
                                             recalcularContadores();
                                             
-                                            console.log(`🎉 Fila ${index} corregida exitosamente`);
+                                            console.log(`🎉 Fila ${index} corregida exitosamente con rubro: ${rubroText}, categoría: ${categoriaText}`);
                                         }
                                     }).on('select2:error', function(e) {
                                         console.error(`❌ Error en Select2 fila ${index} (${selectId}):`, e);
@@ -4293,12 +4308,26 @@ if (!function_exists('es_modo_desarrollo')) {
                     }).on('select2:select', function(e) {
                         const data = e.params.data;
                         console.log(`✅ Artículo seleccionado en fila ${index}:`, data);
+                        console.log(`📋 Datos recibidos múltiple - ID: ${data.id}, Rubro: ${data.rubro}, Categoría: ${data.categoria}`);
                         
                         if (data && data.id) {
-                            // Actualizar los datos en el array global (múltiples períodos)
+                            // Actualizar los datos en el array global (múltiples períodos) CON rubro y categoría
                             if (datosImportadosMultiple && datosImportadosMultiple[index]) {
+                                const rubroFinal = data.rubro || 'Sin rubro';
+                                const categoriaFinal = data.categoria || 'Sin categoría';
+                                const descripcionFinal = data.descripcion || data.text.split(' - ').slice(1).join(' - ');
+                                
                                 datosImportadosMultiple[index].articulo = data.id;
-                                console.log(`✏️ Datos actualizados para fila ${index}:`, datosImportadosMultiple[index]);
+                                datosImportadosMultiple[index].rubro = rubroFinal;
+                                datosImportadosMultiple[index].categoria = categoriaFinal;
+                                datosImportadosMultiple[index].descripcion = descripcionFinal;
+                                
+                                console.log(`✏️ Datos actualizados para fila ${index}:`, {
+                                    articulo: data.id,
+                                    rubro: rubroFinal,
+                                    categoria: categoriaFinal,
+                                    descripcion: descripcionFinal
+                                });
                             }
                             
                             // Actualizar visualmente la fila (igual que modo individual)
@@ -4309,16 +4338,17 @@ if (!function_exists('es_modo_desarrollo')) {
                             $row.find('td:first-child code').text(data.id);
                             
                             // Actualizar la descripción
-                            const descripcionText = data.text.split(' - ').slice(1).join(' - ') || data.text;
+                            const descripcionText = data.descripcion || data.text.split(' - ').slice(1).join(' - ') || data.text;
                             $row.find('.descripcion-cell').text(descripcionText).attr('title', descripcionText);
                             
                             // Actualizar rubro y categoría
-                            if (data.rubro) {
-                                $row.find('.rubro-cell').text(data.rubro);
-                            }
-                            if (data.categoria) {
-                                $row.find('.categoria-cell').text(data.categoria);
-                            }
+                            const rubroText = data.rubro || 'Sin rubro';
+                            const categoriaText = data.categoria || 'Sin categoría';
+                            
+                            $row.find('.rubro-cell').text(rubroText);
+                            $row.find('.categoria-cell').text(categoriaText);
+                            
+                            console.log(`🎨 Actualización visual múltiple - Rubro: "${rubroText}", Categoría: "${categoriaText}"`);
                             
                             // Actualizar el estado a "Código de artículo corregido"
                             $row.find('td:nth-child(7)').html('✅ Código de artículo corregido');
@@ -4329,7 +4359,7 @@ if (!function_exists('es_modo_desarrollo')) {
                             // Recalcular contadores para múltiples períodos
                             recalcularContadoresMultiple();
                             
-                            console.log(`🎉 Fila ${index} corregida exitosamente en modo múltiple`);
+                            console.log(`🎉 Fila ${index} corregida exitosamente en modo múltiple con rubro: ${rubroText}, categoría: ${categoriaText}`);
                         }
                     }).on('select2:open', function() {
                         console.log(`📖 Select2 abierto para fila ${index} (${selectId})`);
@@ -5946,20 +5976,31 @@ if (!function_exists('es_modo_desarrollo')) {
                     }).on('select2:select', function(e) {
                         const data = e.params.data;
                         console.log(`✅ Artículo seleccionado en fila ${index} (${selectId}):`, data);
+                        console.log(`📋 Datos recibidos mes actual - ID: ${data.id}, Rubro: ${data.rubro}, Categoría: ${data.categoria}`);
                         
-                        // Actualizar el objeto en datosImportadosMesActual
+                        // Actualizar el objeto en datosImportadosMesActual CON rubro y categoría
                         if (datosImportadosMesActual[index]) {
                             const articuloAnterior = datosImportadosMesActual[index].articulo;
+                            const rubroFinal = data.rubro || 'Sin rubro';
+                            const categoriaFinal = data.categoria || 'Sin categoría';
+                            const descripcionFinal = data.descripcion || data.text.split(' - ').slice(1).join(' - ');
+                            
                             datosImportadosMesActual[index].articulo = data.id;
+                            datosImportadosMesActual[index].rubro = rubroFinal;
+                            datosImportadosMesActual[index].categoria = categoriaFinal;
+                            datosImportadosMesActual[index].descripcion = descripcionFinal;
                             
                             console.log(`🔄 Artículo actualizado en índice ${index}: ${articuloAnterior} → ${data.id}`);
+                            console.log(`📦 Datos guardados - Rubro: "${rubroFinal}", Categoría: "${categoriaFinal}"`);
                             
                             // Actualizar visualización en la tabla
                             const fila = this.closest('tr');
-                            fila.querySelector('.descripcion-cell').textContent = data.descripcion || data.text.split(' - ')[1];
-                            fila.querySelector('.rubro-cell').textContent = data.rubro || 'Sin rubro';
-                            fila.querySelector('.categoria-cell').textContent = data.categoria || 'Sin categoría';
+                            fila.querySelector('.descripcion-cell').textContent = descripcionFinal;
+                            fila.querySelector('.rubro-cell').textContent = rubroFinal;
+                            fila.querySelector('.categoria-cell').textContent = categoriaFinal;
                             fila.className = 'table-success';
+                            
+                            console.log(`🎨 Actualización visual mes actual - Rubro: "${rubroFinal}", Categoría: "${categoriaFinal}"`);
                             
                             // Reemplazar selector por badge de éxito
                             const correccionCell = fila.querySelector('.correccion-cell');
@@ -5971,7 +6012,7 @@ if (!function_exists('es_modo_desarrollo')) {
                             // Actualizar contadores
                             actualizarContadoresMesActual();
                             
-                            console.log(`✅ Corrección aplicada exitosamente en fila ${index}`);
+                            console.log(`✅ Corrección aplicada exitosamente en fila ${index} con rubro: ${rubroFinal}, categoría: ${categoriaFinal}`);
                         } else {
                             console.error(`❌ No se encontró el índice ${index} en datosImportadosMesActual`);
                         }
