@@ -23,68 +23,26 @@ class DatabaseConfig {
     
     /**
      * Obtener variables de entorno usando la clase DotEnv del proyecto
-     * Detecta automáticamente si existe .env (localhost) o usa configuración del servidor
+
      */
     private static function getEnvConfig() {
         if (self::$envVars === null) {
             try {
-                // Ruta al archivo .env (desde franquicias/class subir 2 niveles)
-                $envPath = realpath(__DIR__ . '/../../.env');
-                
-                // DETECCIÓN AUTOMÁTICA: verificar si existe .env
-                if ($envPath && file_exists($envPath)) {
-                    // LOCALHOST/DESARROLLO: Cargar desde .env
-                    error_log("DatabaseConfig: Detectado .env en: $envPath - usando configuración LOCAL");
-                    
-                    // Cargar el .env directamente sin usar listVars()
-                    if (!is_readable($envPath)) {
-                        throw new Exception("El archivo .env no es legible: $envPath");
-                    }
-                    
-                    // Leer el archivo .env
-                    $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-                    foreach ($lines as $line) {
-                        if (strpos(trim($line), '#') === 0) {
-                            continue; // Saltar comentarios
-                        }
-                        
-                        if (strpos($line, '=') === false) {
-                            continue; // Saltar líneas sin =
-                        }
-                        
-                        list($name, $value) = explode('=', $line, 2);
-                        $name = trim($name);
-                        $value = trim($value);
-                        
-                        // Establecer en entorno
-                        if (!array_key_exists($name, $_SERVER) && !array_key_exists($name, $_ENV)) {
-                            putenv(sprintf('%s=%s', $name, $value));
-                            $_ENV[$name] = $value;
-                            $_SERVER[$name] = $value;
-                        }
-                    }
-                    
-                    // Ahora leer las variables del entorno
-                    self::$envVars = [
-                        'HOST_CENTRAL' => getenv('HOST_CENTRAL'),
-                        'DATABASE_CENTRAL' => getenv('DATABASE_CENTRAL'),
-                        'HOST_APPS' => getenv('HOST_APPS'),
-                        'DATABASE_APPS' => getenv('DATABASE_APPS'),
-                        'USER' => getenv('USER'),
-                        'PASS' => getenv('PASS'),
-                        'CHARACTER' => getenv('CHARACTER'),
-                        'ENV' => getenv('ENV')
-                    ];
-                    
-                    error_log("DatabaseConfig: Variables cargadas desde .env - HOST_CENTRAL: " . self::$envVars['HOST_CENTRAL']);
-                } else {
-                    // PRODUCCIÓN: Si no hay .env, lanzar error
-                    error_log("DatabaseConfig: .env NO encontrado - ERROR CRÍTICO");
-                    throw new Exception("Archivo .env no encontrado. La aplicación requiere configuración.");
-                }
-                
+                // Usar la clase DotEnv del proyecto
+                require_once __DIR__ . '/../../Class/classEnv.php';
+                $dotenv = new DotEnv(__DIR__ . '/../../.env');
+                self::$envVars = $dotenv->listVars();
+                error_log("DatabaseConfig: Variables de entorno cargadas exitosamente usando DotEnv");
+
+
+
+
+
+
+
+
             } catch (Exception $e) {
-                error_log("DatabaseConfig ERROR: " . $e->getMessage());
+                error_log("DatabaseConfig ERROR: No se pudieron cargar variables de entorno: " . $e->getMessage());
                 throw new Exception("No se pudo cargar la configuración de base de datos: " . $e->getMessage());
             }
         }
@@ -117,25 +75,19 @@ class DatabaseConfig {
     
     public static function conectarLakerSA() {
         try {
-            // Obtener configuración
+            // Obtener configuración desde .env
             $config = self::getLakerSAConfig();
-            
-            // Logging detallado para debug
-            error_log("DEBUG DB LAKER_SA:");
-            error_log("  - Servidor: " . $config['server']);
-            error_log("  - Base de datos: " . $config['database']);
-            error_log("  - Usuario: " . $config['username']);
-            
+
             $dsn = "{$config['driver']}:server={$config['server']};Database={$config['database']}";
             
             $pdo = new PDO($dsn, $config['username'], $config['password']);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             
-            error_log("✅ Conexión exitosa a LAKER_SA");
+            error_log("DEBUG DB: Conexión exitosa a base de datos CENTRAL con servidor: {$config['server']}");
             return $pdo;
             
         } catch (Exception $e) {
-            error_log("❌ Error conectando a LAKER_SA: " . $e->getMessage());
+            error_log("DEBUG DB: Error con servidor principal ({$config['server']}): " . $e->getMessage());
             throw $e;
         }
     }
@@ -144,6 +96,12 @@ class DatabaseConfig {
         try {
             $config = self::getSistemasConfig();
             
+
+
+
+
+
+
             // Asegurar que tenemos los datos necesarios
             if (empty($config['database'])) {
                 // Fallback a 'sistemas' si no se carga desde .env
@@ -172,7 +130,7 @@ class DatabaseConfig {
             return $pdo;
             
         } catch (Exception $e) {
-            error_log("❌ Error conectando a SISTEMAS: " . $e->getMessage());
+            error_log("ERROR DB: No se pudo conectar a base de datos APPS: " . $e->getMessage());
             throw new Exception("No se pudo establecer conexión con base de datos APPS: " . $e->getMessage());
         }
     }
