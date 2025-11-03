@@ -81,11 +81,11 @@ class DatabaseConfig {
                     // PRODUCCIÓN: Cargar desde configuración hardcodeada o variables del servidor
                     error_log("DatabaseConfig: .env NO encontrado - usando configuración PRODUCCIÓN");
                     
-                    // Intentar cargar desde variables de entorno del servidor
+                    // Valores correctos de producción (mismos que .env de desarrollo)
                     self::$envVars = [
-                        'HOST_CENTRAL' => getenv('HOST_CENTRAL') ?: ($_ENV['HOST_CENTRAL'] ?? 'LAKER'),
+                        'HOST_CENTRAL' => getenv('HOST_CENTRAL') ?: ($_ENV['HOST_CENTRAL'] ?? 'SERVIDOR'),
                         'DATABASE_CENTRAL' => getenv('DATABASE_CENTRAL') ?: ($_ENV['DATABASE_CENTRAL'] ?? 'LAKER_SA'),
-                        'HOST_APPS' => getenv('HOST_APPS') ?: ($_ENV['HOST_APPS'] ?? 'LAKERBIS'),
+                        'HOST_APPS' => getenv('HOST_APPS') ?: ($_ENV['HOST_APPS'] ?? 'XL-APPS'),
                         'DATABASE_APPS' => getenv('DATABASE_APPS') ?: ($_ENV['DATABASE_APPS'] ?? 'sistemas'),
                         'USER' => getenv('USER') ?: ($_ENV['USER'] ?? 'sa'),
                         'PASS' => getenv('PASS') ?: ($_ENV['PASS'] ?? 'Axoft1988'),
@@ -93,7 +93,7 @@ class DatabaseConfig {
                         'ENV' => getenv('ENV') ?: ($_ENV['ENV'] ?? 'PROD')
                     ];
                     
-                    error_log("DatabaseConfig: Usando configuración del servidor - HOST_CENTRAL: " . self::$envVars['HOST_CENTRAL']);
+                    error_log("DatabaseConfig: Usando configuración PRODUCCIÓN - HOST_CENTRAL: " . self::$envVars['HOST_CENTRAL'] . ", HOST_APPS: " . self::$envVars['HOST_APPS']);
                 }
                 
             } catch (Exception $e) {
