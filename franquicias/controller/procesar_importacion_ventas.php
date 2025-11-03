@@ -89,7 +89,42 @@ try {
     // Iniciar transacción en sistemas
     $conexionSistemas->beginTransaction();
 
+    // **VALIDACIÓN: Verificar que no haya filas vacías o inválidas**
+    $erroresValidacion = [];
+    foreach ($datos as $index => $item) {
+        $fila = $index + 1;
+        
+        // Verificar que exista el campo articulo y no esté vacío
+        if (!isset($item['articulo']) || trim($item['articulo']) === '') {
+            $erroresValidacion[] = "Fila $fila: El código de artículo está vacío";
+        }
+        
+        // Verificar que exista el campo cantidad
+        if (!isset($item['cantidad'])) {
+            $erroresValidacion[] = "Fila $fila: La cantidad está vacía";
+        } elseif (!is_numeric($item['cantidad']) || intval($item['cantidad']) < 0) {
+            $erroresValidacion[] = "Fila $fila: La cantidad debe ser un número positivo (valor: " . ($item['cantidad'] ?? 'null') . ")";
+        }
+    }
+    
+    if (!empty($erroresValidacion)) {
+        throw new Exception("Errores en el archivo Excel:\n" . implode("\n", $erroresValidacion));
+    }
+
+    // **NUEVA FUNCIONALIDAD: Normalizar códigos de artículos (trim, uppercase y eliminar TODOS los espacios)**
+    foreach ($datos as &$item) {
+        $original = $item['articulo'];
+        // 1. Trim de espacios al inicio/final
+        // 2. Convertir a mayúsculas
+        // 3. Eliminar TODOS los espacios (incluso internos) para coincidir con base
+        $item['articulo'] = strtoupper(preg_replace('/\s+/', '', trim($item['articulo'])));
+        error_log("📝 Artículo normalizado: '$original' → '" . $item['articulo'] . "' (length: " . strlen($item['articulo']) . ")");
+    }
+    unset($item); // Romper la referencia
+    
     $articulosValidar = array_column($datos, 'articulo');
+    
+    error_log("🔍 VALIDACION BACKEND: Artículos a validar: " . json_encode($articulosValidar));
     
     // **SOLUCIÓN: Procesar en lotes para evitar límite de 2100 parámetros de SQL Server**
     $batchSize = 2000; // Límite seguro (2100 - margen de seguridad)
@@ -111,7 +146,11 @@ try {
         
         $placeholders = str_repeat('?,', count($batch) - 1) . '?';
         
-        $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
+        // Normalizar también en la consulta SQL para garantizar coincidencia (REPLACE elimina espacios internos)
+        $sqlValidar = "SELECT REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI as COD_ARTICU 
+                       FROM STA11 
+                       WHERE REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI IN ($placeholders) 
+                         AND COD_ARTICU LIKE '[XO]%'";
         $stmtValidar = $conexionLaker->prepare($sqlValidar);
         $stmtValidar->execute($batch);
         $articulosValidosLote = $stmtValidar->fetchAll(PDO::FETCH_COLUMN);
@@ -122,11 +161,22 @@ try {
         error_log("✅ Lote $batchNum completado: " . count($articulosValidosLote) . " artículos válidos");
     }
 
+    error_log("🔍 Total artículos válidos encontrados: " . count($articulosValidos));
+    error_log("🔍 Artículos válidos: " . json_encode($articulosValidos));
+
     // Verificar que todos los artículos sean válidos
+    $articulosInvalidos = [];
     foreach ($datos as $item) {
         if (!in_array($item['articulo'], $articulosValidos)) {
-            throw new Exception("Artículo inválido encontrado: " . $item['articulo']);
+            $articulosInvalidos[] = $item['articulo'];
+            error_log("❌ Artículo NO encontrado en STA11: " . $item['articulo']);
         }
+    }
+    
+    if (!empty($articulosInvalidos)) {
+        $mensajeError = "Artículos inválidos: " . implode(', ', $articulosInvalidos);
+        error_log("❌ ERROR VALIDACION: " . $mensajeError);
+        throw new Exception($mensajeError);
     }
 
     // Crear la tabla si no existe en sistemas y asegurar que tenga todas las columnas
@@ -203,7 +253,7 @@ try {
             try {
                 $sqlRubroCategoria = "SELECT RUBRO, CATEGORIA_PADRE 
                                      FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
-                                     WHERE COD_ARTICU = ?";
+                                     WHERE REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI = ?";
                 $stmtRubroCategoria = $conexionSistemas->prepare($sqlRubroCategoria);
                 $stmtRubroCategoria->execute([$codigoArticulo]);
                 $datosAdicionales = $stmtRubroCategoria->fetch(PDO::FETCH_ASSOC);
@@ -251,10 +301,21 @@ try {
         $conexionSistemas->rollback();
     }
     
-    error_log("Error procesando importación: " . $e->getMessage());
+    $errorMessage = $e->getMessage();
+    error_log("❌ Error procesando importación: " . $errorMessage);
+    
+    // Mejorar formato del mensaje de error para el usuario
+    $userMessage = $errorMessage;
+    
+    // Si el mensaje tiene múltiples líneas, formatearlo mejor
+    if (strpos($errorMessage, "\n") !== false) {
+        $lineas = explode("\n", $errorMessage);
+        $userMessage = implode("<br>", $lineas);
+    }
+    
     echo json_encode([
         'success' => false,
-        'message' => 'Error al procesar importación: ' . $e->getMessage()
+        'message' => $userMessage
     ]);
 }
 ?>

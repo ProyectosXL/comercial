@@ -36,23 +36,24 @@ try {
     $conexionLaker = DatabaseConfig::conectarLakerSA();
 
     // Construir consulta con JOIN en la MISMA base de datos
+    // NORMALIZAR: Usar REPLACE para eliminar espacios y COLLATE para evitar conflictos
     $sqlLaker = "SELECT TOP 50 
-                    s.COD_ARTICU as codigo, 
+                    REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI as codigo, 
                     s.DESCRIPCIO as descripcion,
                     ISNULL(m.RUBRO, 'Sin rubro') as rubro,
                     ISNULL(m.CATEGORIA_PADRE, 'Sin categoría') as categoria
                  FROM STA11 s
-                 LEFT JOIN dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA m ON s.COD_ARTICU = m.COD_ARTICU
+                 LEFT JOIN dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA m ON REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI = REPLACE(m.COD_ARTICU, ' ', '') COLLATE Modern_Spanish_CI_AI
                  WHERE s.COD_ARTICU LIKE '[XO]%'";
     
     $params = [];
     
     if (!empty($query)) {
-        $sqlLaker .= " AND (s.COD_ARTICU LIKE ? OR s.DESCRIPCIO LIKE ?)";
-        $searchTerm = '%' . $query . '%';
+        $sqlLaker .= " AND (REPLACE(s.COD_ARTICU, ' ', '') LIKE ? OR s.DESCRIPCIO LIKE ?)";
+        $searchTerm = '%' . str_replace(' ', '', $query) . '%'; // También normalizar el término de búsqueda
         $params[] = $searchTerm;
-        $params[] = $searchTerm;
-        error_log("DEBUG SELECT2: Usando filtro de búsqueda: '$searchTerm'");
+        $params[] = '%' . $query . '%'; // Para descripción mantener espacios
+        error_log("DEBUG SELECT2: Usando filtro de búsqueda normalizado: '$searchTerm'");
     } else {
         error_log("DEBUG SELECT2: Sin filtro específico, mostrando primeros artículos");
     }
@@ -71,6 +72,7 @@ try {
     $results = [];
     
     foreach ($articulos as $articulo) {
+        // El código ya viene normalizado del SQL, pero aplicamos trim por seguridad
         $codigo = trim($articulo['codigo']);
         $descripcion = trim($articulo['descripcion']);
         $rubro = trim($articulo['rubro']);

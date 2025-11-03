@@ -64,7 +64,7 @@ try {
             // Primero buscar coincidencia exacta
             $sqlSistemas = "SELECT RUBRO, CATEGORIA_PADRE 
                             FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
-                            WHERE COD_ARTICU = ?";
+                            WHERE LTRIM(RTRIM(COD_ARTICU)) COLLATE Modern_Spanish_CI_AI = ?";
             
             $stmtSistemas = $conexionSistemas->prepare($sqlSistemas);
             $stmtSistemas->execute([$codigo]);
@@ -74,7 +74,7 @@ try {
             if (!$datosAdicionales && strlen($codigo) >= 8) {
                 $sqlSistemasPrefijo = "SELECT TOP 1 RUBRO, CATEGORIA_PADRE 
                                        FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
-                                       WHERE COD_ARTICU LIKE ? 
+                                       WHERE LTRIM(RTRIM(COD_ARTICU)) COLLATE Modern_Spanish_CI_AI LIKE ? 
                                        ORDER BY LEN(COD_ARTICU)";
                 
                 $stmtSistemasPrefijo = $conexionSistemas->prepare($sqlSistemasPrefijo);

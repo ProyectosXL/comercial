@@ -160,18 +160,41 @@ try {
     $fechasValidas = [];
     $articulosValidar = [];
     
-    foreach ($datos as $index => $item) {
+    foreach ($datos as $index => &$item) {
         error_log("🔍 DEBUG: Procesando item $index en foreach");
+        
+        $fila = $index + 1;
         
         // Validar que tenga todas las propiedades necesarias
         if (!isset($item['articulo']) || !isset($item['cantidad']) || !isset($item['fecha'])) {
-            $errores[] = "Fila " . ($index + 1) . ": Datos incompletos";
+            $errores[] = "Fila $fila: Datos incompletos - se requiere artículo, cantidad y fecha";
             continue;
         }
         
+        // Validar que los campos no estén vacíos
+        if (trim($item['articulo']) === '') {
+            $errores[] = "Fila $fila: El código de artículo está vacío";
+            continue;
+        }
+        
+        if (trim($item['fecha']) === '') {
+            $errores[] = "Fila $fila: La fecha está vacía";
+            continue;
+        }
+        
+        if (!is_numeric($item['cantidad']) || intval($item['cantidad']) < 0) {
+            $errores[] = "Fila $fila: La cantidad debe ser un número positivo (valor actual: '" . ($item['cantidad'] ?? 'vacío') . "')";
+            continue;
+        }
+        
+        // **NORMALIZAR artículo (trim, uppercase y eliminar TODOS los espacios)**
+        $original = $item['articulo'];
+        $item['articulo'] = strtoupper(preg_replace('/\s+/', '', trim($item['articulo'])));
+        error_log("📝 Artículo normalizado: '$original' → '" . $item['articulo'] . "' (length: " . strlen($item['articulo']) . ")");
+        
         // Validar formato de fecha (DD/MM/YYYY)
         if (!preg_match('/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/[0-9]{4}$/', $item['fecha'])) {
-            $errores[] = "Fila " . ($index + 1) . ": Formato de fecha inválido (debe ser DD/MM/YYYY): " . $item['fecha'];
+            $errores[] = "Fila $fila: Formato de fecha inválido - debe ser DD/MM/YYYY (valor actual: '" . $item['fecha'] . "')";
             continue;
         }
         
@@ -192,6 +215,7 @@ try {
         // Recopilar artículos únicos para validar
         $articulosValidar[] = $item['articulo'];
     }
+    unset($item); // Romper la referencia
     
     error_log("🔍 DEBUG: Foreach completado - errores: " . count($errores));
 
@@ -235,7 +259,11 @@ try {
             
             // Crear placeholders para este lote
             $placeholders = str_repeat('?,', count($batch) - 1) . '?';
-            $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
+            // Normalizar también en la consulta SQL (REPLACE elimina espacios internos)
+            $sqlValidar = "SELECT REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI as COD_ARTICU 
+                           FROM STA11 
+                           WHERE REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI IN ($placeholders) 
+                             AND COD_ARTICU LIKE '[XO]%'";
             
             $stmtValidar = $conexionLaker->prepare($sqlValidar);
             if (!$stmtValidar) {
@@ -258,6 +286,7 @@ try {
         }
         
         error_log("✅ Validación exitosa - Total artículos válidos encontrados: " . count($articulosValidos));
+        error_log("🔍 Artículos válidos: " . json_encode($articulosValidos));
         
     } catch (Exception $e) {
         error_log("❌ Error en validación de artículos: " . $e->getMessage());
@@ -269,12 +298,14 @@ try {
     foreach ($articulosUnicos as $articulo) {
         if (!in_array($articulo, $articulosValidos)) {
             $articulosInvalidos[] = $articulo;
+            error_log("❌ Artículo NO encontrado en STA11: $articulo");
         }
     }
     
     if (!empty($articulosInvalidos)) {
+        $mensajeError = "Artículos inválidos: " . implode(', ', $articulosInvalidos);
         error_log("❌ ARTÍCULOS INVÁLIDOS DETECTADOS: " . json_encode($articulosInvalidos));
-        throw new Exception("Artículos inválidos encontrados: " . implode(', ', $articulosInvalidos));
+        throw new Exception($mensajeError);
     }
     
     error_log("✅ TODOS LOS ARTÍCULOS SON VÁLIDOS - Continuando procesamiento...");
@@ -360,9 +391,9 @@ try {
         $batch = array_slice($articulosUnicos, $i, $batchSize);
         $placeholdersRC = str_repeat('?,', count($batch) - 1) . '?';
         
-        $sqlRubroCategoria = "SELECT COD_ARTICU, RUBRO, CATEGORIA_PADRE 
+        $sqlRubroCategoria = "SELECT REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI as COD_ARTICU, RUBRO, CATEGORIA_PADRE 
                              FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
-                             WHERE COD_ARTICU IN ($placeholdersRC)";
+                             WHERE REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI IN ($placeholdersRC)";
         $stmtRubroCategoria = $conexionSistemas->prepare($sqlRubroCategoria);
         $stmtRubroCategoria->execute($batch);
         $resultadosRC = $stmtRubroCategoria->fetchAll(PDO::FETCH_ASSOC);
@@ -491,11 +522,21 @@ try {
         $conexionSistemas->rollback();
     }
     
-    error_log("Error en importación mes actual: " . $e->getMessage());
+    $errorMessage = $e->getMessage();
+    error_log("❌ Error en importación mes actual: " . $errorMessage);
+    
+    // Mejorar formato del mensaje de error para el usuario
+    $userMessage = $errorMessage;
+    
+    // Si el mensaje tiene múltiples líneas, formatearlo mejor
+    if (strpos($errorMessage, "\n") !== false) {
+        $lineas = explode("\n", $errorMessage);
+        $userMessage = implode("<br>", $lineas);
+    }
     
     echo json_encode([
         'success' => false,
-        'message' => 'Error procesando importación: ' . $e->getMessage()
+        'message' => $userMessage
     ]);
 }
 ?>

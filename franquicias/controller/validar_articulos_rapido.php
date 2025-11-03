@@ -99,7 +99,7 @@ try {
             // Buscar en sistemas
             $sqlSistemas = "SELECT RUBRO, CATEGORIA_PADRE 
                            FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
-                           WHERE COD_ARTICU = ?";
+                           WHERE LTRIM(RTRIM(COD_ARTICU)) COLLATE Modern_Spanish_CI_AI = ?";
             
             $stmtSistemas = $conexionSistemas->prepare($sqlSistemas);
             $stmtSistemas->execute([$codigo]);
@@ -109,7 +109,7 @@ try {
                 // Buscar por prefijo
                 $sqlSistemasPrefijo = "SELECT TOP 1 RUBRO, CATEGORIA_PADRE 
                                       FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
-                                      WHERE COD_ARTICU LIKE ?";
+                                      WHERE LTRIM(RTRIM(COD_ARTICU)) COLLATE Modern_Spanish_CI_AI LIKE ?";
                 
                 $stmtSistemasPrefijo = $conexionSistemas->prepare($sqlSistemasPrefijo);
                 $stmtSistemasPrefijo->execute([$codigo . '%']);

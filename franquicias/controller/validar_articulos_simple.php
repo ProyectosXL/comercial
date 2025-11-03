@@ -46,16 +46,17 @@ try {
        
         $sql = "
             SELECT 
-                s.COD_ARTICU, 
+                REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI as COD_ARTICU, 
                 s.DESCRIPCIO,
                 ISNULL(m.RUBRO, 'Sin rubro') as RUBRO,
                 ISNULL(m.CATEGORIA_PADRE, 'Sin categoría') as CATEGORIA_PADRE
             FROM 
                 STA11 s
             LEFT JOIN 
-                dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA m ON s.COD_ARTICU = m.COD_ARTICU
+                dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA m ON REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI = REPLACE(m.COD_ARTICU, ' ', '') COLLATE Modern_Spanish_CI_AI
             WHERE 
-                s.COD_ARTICU IN ($placeholders)
+                REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI IN ($placeholders)
+                AND s.COD_ARTICU LIKE '[XO]%'
         ";
         
         $stmt = $conexion->prepare($sql);

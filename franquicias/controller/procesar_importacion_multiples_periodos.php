@@ -212,15 +212,33 @@ try {
     $articulosValidar = [];
     
     foreach ($datos as $index => $item) {
+        $fila = $index + 1;
+        
         // Validar que tenga todas las propiedades necesarias
         if (!isset($item['articulo']) || !isset($item['cantidad']) || !isset($item['periodo'])) {
-            $errores[] = "Fila " . ($index + 1) . ": Datos incompletos";
+            $errores[] = "Fila $fila: Datos incompletos - se requiere artículo, cantidad y período";
+            continue;
+        }
+        
+        // Validar que los campos no estén vacíos
+        if (trim($item['articulo']) === '') {
+            $errores[] = "Fila $fila: El código de artículo está vacío";
+            continue;
+        }
+        
+        if (trim($item['periodo']) === '') {
+            $errores[] = "Fila $fila: El período está vacío";
+            continue;
+        }
+        
+        if (!is_numeric($item['cantidad']) || intval($item['cantidad']) < 0) {
+            $errores[] = "Fila $fila: La cantidad debe ser un número positivo (valor actual: '" . ($item['cantidad'] ?? 'vacío') . "')";
             continue;
         }
         
         // Validar formato de período (DD/MM/YYYY - primer día del mes)
         if (!preg_match('/^01\/(0[1-9]|1[0-2])\/[0-9]{4}$/', $item['periodo'])) {
-            $errores[] = "Fila " . ($index + 1) . ": Formato de período inválido: " . $item['periodo'];
+            $errores[] = "Fila $fila: Formato de período inválido - debe ser 01/MM/YYYY (valor actual: '" . $item['periodo'] . "')";
             continue;
         }
         
@@ -229,13 +247,19 @@ try {
         $periodoDb = $partesPeriodo[2] . $partesPeriodo[1];
         $periodosValidos[] = $periodoDb;
         
-        // Recopilar artículos únicos (limpiar y normalizar)
-        $articuloLimpio = trim(strtoupper($item['articulo']));
+        // Recopilar artículos únicos (limpiar y normalizar - eliminar TODOS los espacios)
+        $original = $item['articulo'];
+        $articuloLimpio = strtoupper(preg_replace('/\s+/', '', trim($item['articulo'])));
         $articulosValidar[] = $articuloLimpio;
+        error_log("📝 Artículo normalizado (múltiple): '$original' → '" . $articuloLimpio . "' (length: " . strlen($articuloLimpio) . ")");
     }
 
     if (!empty($errores)) {
-        throw new Exception("Errores de validación: " . implode(', ', array_slice($errores, 0, 5)));
+        $mensajeError = "Errores encontrados en el archivo Excel:\n" . implode("\n", array_slice($errores, 0, 10));
+        if (count($errores) > 10) {
+            $mensajeError .= "\n... y " . (count($errores) - 10) . " errores más";
+        }
+        throw new Exception($mensajeError);
     }
 
     // Validar artículos en LAKER_SA
@@ -261,7 +285,11 @@ try {
         error_log("📦 Validando lote $batchNum de $totalBatches (" . count($batch) . " artículos)");
         
         $placeholders = str_repeat('?,', count($batch) - 1) . '?';
-        $sqlValidar = "SELECT COD_ARTICU FROM STA11 WHERE COD_ARTICU IN ($placeholders) AND COD_ARTICU LIKE '[XO]%'";
+        // Normalizar también en la consulta SQL (REPLACE elimina espacios internos)
+        $sqlValidar = "SELECT REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI as COD_ARTICU 
+                       FROM STA11 
+                       WHERE REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI IN ($placeholders) 
+                         AND COD_ARTICU LIKE '[XO]%'";
         
         $stmtValidar = $conexionLaker->prepare($sqlValidar);
         if (!$stmtValidar) {
@@ -278,22 +306,22 @@ try {
         error_log("✅ Lote $batchNum completado: " . count($articulosValidosLote) . " artículos válidos");
     }
     
-    error_log("✅ Validación exitosa - Total artículos válidos: " . count($articulosValidos));
+    error_log("🔍 Total artículos válidos encontrados: " . count($articulosValidos));
+    error_log("🔍 Artículos válidos: " . json_encode($articulosValidos));
 
-    // Validación estricta
+    // Verificar artículos inválidos
     $articulosInvalidos = [];
     foreach ($articulosUnicos as $articulo) {
         if (!in_array($articulo, $articulosValidos)) {
             $articulosInvalidos[] = $articulo;
+            error_log("❌ Artículo NO encontrado en STA11: $articulo");
         }
     }
     
     if (!empty($articulosInvalidos)) {
-        error_log("❌ ARTÍCULOS INVÁLIDOS ENCONTRADOS:");
-        foreach (array_slice($articulosInvalidos, 0, 10) as $art) {
-            error_log("  - '{$art}' (length: " . strlen($art) . ", ord primero: " . ord($art[0]) . ")");
-        }
-        throw new Exception("Artículos inválidos: " . implode(', ', array_slice($articulosInvalidos, 0, 10)));
+        $mensajeError = "Artículos inválidos: " . implode(', ', $articulosInvalidos);
+        error_log("❌ ERROR VALIDACION (múltiple): " . $mensajeError);
+        throw new Exception($mensajeError);
     }
     
     error_log("✅ TODOS LOS ARTÍCULOS SON VÁLIDOS");
@@ -436,13 +464,13 @@ try {
         // CORRECCIÓN: La tabla está en LAKER_SA, no en sistemas
         // Usamos JOIN con STA11 para asegurar que solo obtengamos artículos válidos
         $sqlRC = "SELECT 
-                    s.COD_ARTICU,
+                    REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI as COD_ARTICU,
                     ISNULL(m.RUBRO, 'Sin rubro') as RUBRO,
                     ISNULL(m.CATEGORIA_PADRE, 'Sin categoría') as CATEGORIA_PADRE
                   FROM STA11 s
                   LEFT JOIN dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA m 
-                    ON s.COD_ARTICU = m.COD_ARTICU
-                  WHERE s.COD_ARTICU IN ($placeholders)";
+                    ON REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI = REPLACE(m.COD_ARTICU, ' ', '') COLLATE Modern_Spanish_CI_AI
+                  WHERE REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI IN ($placeholders)";
         
         // CAMBIO CRÍTICO: Usar conexión LAKER en lugar de sistemas
         $stmtRC = $conexionLaker->prepare($sqlRC);
@@ -703,12 +731,22 @@ try {
         error_log("🔄 ROLLBACK ejecutado");
     }
     
-    error_log("❌ Error en importación: " . $e->getMessage());
+    $errorMessage = $e->getMessage();
+    error_log("❌ Error en importación múltiples períodos: " . $errorMessage);
     error_log("Stack trace: " . $e->getTraceAsString());
+    
+    // Mejorar formato del mensaje de error para el usuario
+    $userMessage = $errorMessage;
+    
+    // Si el mensaje tiene múltiples líneas, formatearlo mejor
+    if (strpos($errorMessage, "\n") !== false) {
+        $lineas = explode("\n", $errorMessage);
+        $userMessage = implode("<br>", $lineas);
+    }
     
     jsonResponse([
         'success' => false,
-        'message' => 'Error procesando importación: ' . $e->getMessage()
+        'message' => $userMessage
     ]);
 }
 ?>

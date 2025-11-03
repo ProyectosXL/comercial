@@ -72,7 +72,9 @@ try {
                 $batch = array_slice($codigosArticulos, $i, $batchSize);
                 
                 $placeholders = str_repeat('?,', count($batch) - 1) . '?';
-                $sqlDescripciones = "SELECT COD_ARTICU, DESCRIPCIO FROM STA11 WHERE COD_ARTICU IN ($placeholders)";
+                $sqlDescripciones = "SELECT LTRIM(RTRIM(COD_ARTICU)) COLLATE Modern_Spanish_CI_AI as COD_ARTICU, DESCRIPCIO 
+                                     FROM STA11 
+                                     WHERE LTRIM(RTRIM(COD_ARTICU)) COLLATE Modern_Spanish_CI_AI IN ($placeholders)";
                 $stmtDescripciones = $conexionLaker->prepare($sqlDescripciones);
                 $stmtDescripciones->execute($batch);
                 $descripcionesLote = $stmtDescripciones->fetchAll(PDO::FETCH_KEY_PAIR);
