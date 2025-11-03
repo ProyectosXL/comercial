@@ -206,9 +206,7 @@ try {
     $conexionSistemas = DatabaseConfig::conectarSistemas();
     error_log("  ✅ Conexión sistemas establecida");
     
-    // **OPTIMIZACIÓN: Configurar timeout de PDO**
-    $conexionLaker->setAttribute(PDO::ATTR_TIMEOUT, 60);
-    $conexionSistemas->setAttribute(PDO::ATTR_TIMEOUT, 60);
+    // Nota: PDO::ATTR_TIMEOUT no es compatible con pdo_sqlsrv
     
     // Verificar base de datos actual
     $sqlCheckDB = "SELECT DB_NAME() as db_actual";

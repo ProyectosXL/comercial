@@ -13,3 +13,18 @@ php_value memory_limit 512M
 # Aumentar tamaño máximo de POST
 php_value post_max_size 50M
 php_value upload_max_filesize 50M
+
+# CRÍTICO: Timeout de Apache/FastCGI para evitar 504 Gateway Timeout
+<IfModule mod_fcgid.c>
+    FcgidIOTimeout 300
+    FcgidBusyTimeout 300
+    FcgidConnectTimeout 300
+</IfModule>
+
+# Si el servidor usa mod_proxy_fcgi (PHP-FPM)
+<IfModule mod_proxy_fcgi.c>
+    ProxyTimeout 300
+</IfModule>
+
+# Timeout general de Apache (esto puede requerir acceso root)
+# Si no funciona, el hosting debe configurar: Timeout 300 en httpd.conf

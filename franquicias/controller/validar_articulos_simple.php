@@ -27,11 +27,21 @@ if (empty($codigos)) {
 $codigosUnicos = array_values(array_unique(array_map('trim', $codigos)));
 
 try {
-    set_time_limit(120); 
-    ini_set('memory_limit', '256M');
+    // **OPTIMIZACIÓN: Aumentar límites de tiempo para evitar timeout**
+    set_time_limit(300); // 5 minutos igual que procesamiento
+    ini_set('max_execution_time', 300);
+    ini_set('memory_limit', '512M'); // Más memoria
 
+    // **OPTIMIZACIÓN: Evitar timeout de proxy/gateway**
+    header('Connection: keep-alive');
+    header('Keep-Alive: timeout=300, max=1');
     
+    // **OPTIMIZACIÓN: Enviar pequeños chunks para mantener conexión viva**
+    if (ob_get_level() == 0) ob_start();
+
     $conexion = DatabaseConfig::conectarLakerSA();
+    
+    // Nota: PDO::ATTR_TIMEOUT no es compatible con pdo_sqlsrv
 
     $articulosInfo = [];
     

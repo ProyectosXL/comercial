@@ -98,9 +98,7 @@ try {
     $conexionLaker = DatabaseConfig::conectarLakerSA(); // Para validar artículos
     $conexionSistemas = DatabaseConfig::conectarSistemas(); // Para guardar ventas
     
-    // **OPTIMIZACIÓN: Configurar timeout de PDO**
-    $conexionLaker->setAttribute(PDO::ATTR_TIMEOUT, 60);
-    $conexionSistemas->setAttribute(PDO::ATTR_TIMEOUT, 60);
+    // Nota: PDO::ATTR_TIMEOUT no es compatible con pdo_sqlsrv
 
     // Iniciar transacción en sistemas
     $conexionSistemas->beginTransaction();

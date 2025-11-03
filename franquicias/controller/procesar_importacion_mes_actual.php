@@ -161,9 +161,7 @@ try {
     $conexionSistemas = DatabaseConfig::conectarSistemas();
     error_log("🔍 DEBUG: Conexión Sistemas exitosa");
     
-    // **OPTIMIZACIÓN: Configurar timeout de PDO**
-    $conexionLaker->setAttribute(PDO::ATTR_TIMEOUT, 60);
-    $conexionSistemas->setAttribute(PDO::ATTR_TIMEOUT, 60);
+    // Nota: PDO::ATTR_TIMEOUT no es compatible con pdo_sqlsrv
     
     // Iniciar transacción
     error_log("🔍 DEBUG: Antes de iniciar transacción");

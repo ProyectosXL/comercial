@@ -88,7 +88,7 @@ class DatabaseConfig {
                         'HOST_APPS' => getenv('HOST_APPS') ?: ($_ENV['HOST_APPS'] ?? 'LAKERBIS'),
                         'DATABASE_APPS' => getenv('DATABASE_APPS') ?: ($_ENV['DATABASE_APPS'] ?? 'sistemas'),
                         'USER' => getenv('USER') ?: ($_ENV['USER'] ?? 'sa'),
-                        'PASS' => getenv('PASS') ?: ($_ENV['PASS'] ?? ''),
+                        'PASS' => getenv('PASS') ?: ($_ENV['PASS'] ?? 'Axoft1988'),
                         'CHARACTER' => getenv('CHARACTER') ?: ($_ENV['CHARACTER'] ?? 'UTF-8'),
                         'ENV' => getenv('ENV') ?: ($_ENV['ENV'] ?? 'PROD')
                     ];

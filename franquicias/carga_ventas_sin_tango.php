@@ -2416,8 +2416,12 @@ if (!function_exists('es_modo_desarrollo')) {
                 let validos = 0;
                 let errores = 0;
                 
-                // Extraer códigos únicos de los datos a validar
-                const codigosAValidar = [...new Set(datos.map(item => item.articulo.trim().toUpperCase()))];
+                // **FILTRAR artículos vacíos ANTES de validar**
+                const codigosAValidar = [...new Set(
+                    datos
+                        .map(item => item.articulo ? item.articulo.trim().toUpperCase() : '')
+                        .filter(codigo => codigo.length > 0) // Eliminar vacíos
+                )];
                 console.log('📋 Códigos a validar:', codigosAValidar);
                 
                 // Validar solo los códigos específicos del archivo
@@ -3876,8 +3880,13 @@ if (!function_exists('es_modo_desarrollo')) {
             // Almacenar datos globalmente para usar después
             window.datosImportadosMultiple = datos;
             
-            // Separar validación de artículos y períodos (IGUAL QUE MODO INDIVIDUAL)
-            const articulosValidar = [...new Set(datos.map(d => d.articulo.trim().toUpperCase()))];
+            // **FILTRAR artículos vacíos ANTES de validar**
+            const articulosValidar = [...new Set(
+                datos
+                    .map(d => d.articulo ? d.articulo.trim().toUpperCase() : '')
+                    .filter(codigo => codigo.length > 0) // Eliminar vacíos
+            )];
+            
             console.log('📋 Códigos a validar (múltiple):', articulosValidar);
             console.log('📊 Total datos múltiples:', datos.length);
             console.log('📊 Total artículos únicos:', articulosValidar.length);
@@ -5809,8 +5818,12 @@ if (!function_exists('es_modo_desarrollo')) {
                     return new Date(ano, mes - 1, dia);
                 };
                 
-                // Validar artículos y fechas
-                const codigosAValidar = [...new Set(datos.map(item => item.articulo))];
+                // **FILTRAR artículos vacíos ANTES de validar**
+                const codigosAValidar = [...new Set(
+                    datos
+                        .map(item => item.articulo ? item.articulo.trim().toUpperCase() : '')
+                        .filter(codigo => codigo.length > 0) // Eliminar vacíos
+                )];
                 
                 const response = await fetch('controller/validar_articulos_simple.php', {
                     method: 'POST',
