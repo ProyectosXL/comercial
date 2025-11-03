@@ -29,28 +29,20 @@ class DatabaseConfig {
         if (self::$envVars === null) {
             try {
                 // Ruta al archivo .env (desde franquicias/class subir 2 niveles)
-                $envPath = __DIR__ . '/../../.env';
-                
-                error_log("DatabaseConfig: Buscando .env en: $envPath");
-                error_log("DatabaseConfig: file_exists: " . (file_exists($envPath) ? 'SI' : 'NO'));
-                error_log("DatabaseConfig: is_readable: " . (is_readable($envPath) ? 'SI' : 'NO'));
+                $envPath = realpath(__DIR__ . '/../../.env');
                 
                 // DETECCIÓN AUTOMÁTICA: verificar si existe .env
-                if (file_exists($envPath)) {
-                    // LOCALHOST/DESARROLLO/PRODUCCIÓN: Cargar desde .env
-                    $envPathReal = realpath($envPath);
-                    error_log("DatabaseConfig: ✅ Detectado .env en: $envPathReal - cargando configuración");
+                if ($envPath && file_exists($envPath)) {
+                    // LOCALHOST/DESARROLLO: Cargar desde .env
+                    error_log("DatabaseConfig: Detectado .env en: $envPath - usando configuración LOCAL");
                     
                     // Cargar el .env directamente sin usar listVars()
                     if (!is_readable($envPath)) {
-                        error_log("DatabaseConfig: ❌ ERROR - Archivo .env existe pero NO es legible");
                         throw new Exception("El archivo .env no es legible: $envPath");
                     }
                     
                     // Leer el archivo .env
                     $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-                    error_log("DatabaseConfig: Archivo .env tiene " . count($lines) . " líneas");
-                    
                     foreach ($lines as $line) {
                         if (strpos(trim($line), '#') === 0) {
                             continue; // Saltar comentarios
@@ -84,24 +76,11 @@ class DatabaseConfig {
                         'ENV' => getenv('ENV')
                     ];
                     
-                    error_log("DatabaseConfig: ✅ Variables cargadas - HOST_CENTRAL: " . self::$envVars['HOST_CENTRAL'] . ", HOST_APPS: " . self::$envVars['HOST_APPS']);
-                    
-                    // Validar que se cargaron valores
-                    if (empty(self::$envVars['HOST_CENTRAL']) || empty(self::$envVars['HOST_APPS'])) {
-                        error_log("DatabaseConfig: ⚠️ ADVERTENCIA - Algunas variables están vacías");
-                        error_log("DatabaseConfig: HOST_CENTRAL = '" . self::$envVars['HOST_CENTRAL'] . "'");
-                        error_log("DatabaseConfig: HOST_APPS = '" . self::$envVars['HOST_APPS'] . "'");
-                    }
+                    error_log("DatabaseConfig: Variables cargadas desde .env - HOST_CENTRAL: " . self::$envVars['HOST_CENTRAL']);
                 } else {
-                    // SIN .ENV: Esto NO debería ocurrir en producción
-                    // Si llegamos aquí, hay un problema de configuración del servidor
-                    error_log("❌ CRÍTICO: Archivo .env NO encontrado en: " . __DIR__ . '/../../.env');
-                    error_log("❌ La aplicación requiere el archivo .env para funcionar correctamente");
-                    
-                    throw new Exception(
-                        "Configuración incompleta: Se requiere el archivo .env en la raíz del proyecto. " .
-                        "Por favor contacte al administrador del sistema."
-                    );
+                    // PRODUCCIÓN: Si no hay .env, lanzar error
+                    error_log("DatabaseConfig: .env NO encontrado - ERROR CRÍTICO");
+                    throw new Exception("Archivo .env no encontrado. La aplicación requiere configuración.");
                 }
                 
             } catch (Exception $e) {
@@ -165,17 +144,11 @@ class DatabaseConfig {
         try {
             $config = self::getSistemasConfig();
             
-            // Logging detallado para debug
-            error_log("DEBUG DB SISTEMAS:");
-            error_log("  - Servidor: " . $config['server']);
-            error_log("  - Base de datos: " . $config['database']);
-            error_log("  - Usuario: " . $config['username']);
-            
             // Asegurar que tenemos los datos necesarios
             if (empty($config['database'])) {
                 // Fallback a 'sistemas' si no se carga desde .env
                 $config['database'] = 'sistemas';
-                error_log("⚠️ DATABASE_APPS no configurado, usando 'sistemas' por defecto");
+                error_log("WARNING DB: DATABASE_APPS no configurado, usando 'sistemas' por defecto");
             }
             
             $dsn = "{$config['driver']}:server={$config['server']};Database={$config['database']}";
@@ -191,11 +164,11 @@ class DatabaseConfig {
             $dbActual = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($dbActual['db_actual'] !== $config['database']) {
-                error_log("❌ Se esperaba '{$config['database']}' pero está en '{$dbActual['db_actual']}'");
+                error_log("ERROR DB: Se esperaba base de datos '{$config['database']}' pero está en '{$dbActual['db_actual']}'");
                 throw new Exception("No se pudo cambiar a la base de datos correcta");
             }
             
-            error_log("✅ Conexión exitosa a SISTEMAS - Servidor: {$dbActual['servidor']}, DB: {$dbActual['db_actual']}");
+            error_log("DEBUG DB: Conexión exitosa - Servidor: {$dbActual['servidor']}, DB: {$dbActual['db_actual']}");
             return $pdo;
             
         } catch (Exception $e) {
