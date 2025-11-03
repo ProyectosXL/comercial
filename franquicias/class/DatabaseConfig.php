@@ -29,20 +29,28 @@ class DatabaseConfig {
         if (self::$envVars === null) {
             try {
                 // Ruta al archivo .env (desde franquicias/class subir 2 niveles)
-                $envPath = realpath(__DIR__ . '/../../.env');
+                $envPath = __DIR__ . '/../../.env';
+                
+                error_log("DatabaseConfig: Buscando .env en: $envPath");
+                error_log("DatabaseConfig: file_exists: " . (file_exists($envPath) ? 'SI' : 'NO'));
+                error_log("DatabaseConfig: is_readable: " . (is_readable($envPath) ? 'SI' : 'NO'));
                 
                 // DETECCIÓN AUTOMÁTICA: verificar si existe .env
-                if ($envPath && file_exists($envPath)) {
-                    // LOCALHOST/DESARROLLO: Cargar desde .env
-                    error_log("DatabaseConfig: Detectado .env en: $envPath - usando configuración LOCAL");
+                if (file_exists($envPath)) {
+                    // LOCALHOST/DESARROLLO/PRODUCCIÓN: Cargar desde .env
+                    $envPathReal = realpath($envPath);
+                    error_log("DatabaseConfig: ✅ Detectado .env en: $envPathReal - cargando configuración");
                     
                     // Cargar el .env directamente sin usar listVars()
                     if (!is_readable($envPath)) {
+                        error_log("DatabaseConfig: ❌ ERROR - Archivo .env existe pero NO es legible");
                         throw new Exception("El archivo .env no es legible: $envPath");
                     }
                     
                     // Leer el archivo .env
                     $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                    error_log("DatabaseConfig: Archivo .env tiene " . count($lines) . " líneas");
+                    
                     foreach ($lines as $line) {
                         if (strpos(trim($line), '#') === 0) {
                             continue; // Saltar comentarios
@@ -76,24 +84,24 @@ class DatabaseConfig {
                         'ENV' => getenv('ENV')
                     ];
                     
-                    error_log("DatabaseConfig: Variables cargadas desde .env - HOST_CENTRAL: " . self::$envVars['HOST_CENTRAL']);
+                    error_log("DatabaseConfig: ✅ Variables cargadas - HOST_CENTRAL: " . self::$envVars['HOST_CENTRAL'] . ", HOST_APPS: " . self::$envVars['HOST_APPS']);
+                    
+                    // Validar que se cargaron valores
+                    if (empty(self::$envVars['HOST_CENTRAL']) || empty(self::$envVars['HOST_APPS'])) {
+                        error_log("DatabaseConfig: ⚠️ ADVERTENCIA - Algunas variables están vacías");
+                        error_log("DatabaseConfig: HOST_CENTRAL = '" . self::$envVars['HOST_CENTRAL'] . "'");
+                        error_log("DatabaseConfig: HOST_APPS = '" . self::$envVars['HOST_APPS'] . "'");
+                    }
                 } else {
-                    // PRODUCCIÓN: Cargar desde configuración hardcodeada o variables del servidor
-                    error_log("DatabaseConfig: .env NO encontrado - usando configuración PRODUCCIÓN");
+                    // SIN .ENV: Esto NO debería ocurrir en producción
+                    // Si llegamos aquí, hay un problema de configuración del servidor
+                    error_log("❌ CRÍTICO: Archivo .env NO encontrado en: " . __DIR__ . '/../../.env');
+                    error_log("❌ La aplicación requiere el archivo .env para funcionar correctamente");
                     
-                    // Valores correctos de producción (mismos que .env de desarrollo)
-                    self::$envVars = [
-                        'HOST_CENTRAL' => getenv('HOST_CENTRAL') ?: ($_ENV['HOST_CENTRAL'] ?? 'SERVIDOR'),
-                        'DATABASE_CENTRAL' => getenv('DATABASE_CENTRAL') ?: ($_ENV['DATABASE_CENTRAL'] ?? 'LAKER_SA'),
-                        'HOST_APPS' => getenv('HOST_APPS') ?: ($_ENV['HOST_APPS'] ?? 'XL-APPS'),
-                        'DATABASE_APPS' => getenv('DATABASE_APPS') ?: ($_ENV['DATABASE_APPS'] ?? 'sistemas'),
-                        'USER' => getenv('USER') ?: ($_ENV['USER'] ?? 'sa'),
-                        'PASS' => getenv('PASS') ?: ($_ENV['PASS'] ?? 'Axoft1988'),
-                        'CHARACTER' => getenv('CHARACTER') ?: ($_ENV['CHARACTER'] ?? 'UTF-8'),
-                        'ENV' => getenv('ENV') ?: ($_ENV['ENV'] ?? 'PROD')
-                    ];
-                    
-                    error_log("DatabaseConfig: Usando configuración PRODUCCIÓN - HOST_CENTRAL: " . self::$envVars['HOST_CENTRAL'] . ", HOST_APPS: " . self::$envVars['HOST_APPS']);
+                    throw new Exception(
+                        "Configuración incompleta: Se requiere el archivo .env en la raíz del proyecto. " .
+                        "Por favor contacte al administrador del sistema."
+                    );
                 }
                 
             } catch (Exception $e) {
