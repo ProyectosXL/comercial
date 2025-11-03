@@ -2,3 +2,14 @@
 php_flag display_errors off
 php_flag html_errors off
 php_value error_reporting 0
+
+# Optimización para importaciones grandes - Aumentar tiempos de ejecución
+php_value max_execution_time 300
+php_value max_input_time 300
+
+# Aumentar memoria disponible
+php_value memory_limit 512M
+
+# Aumentar tamaño máximo de POST
+php_value post_max_size 50M
+php_value upload_max_filesize 50M

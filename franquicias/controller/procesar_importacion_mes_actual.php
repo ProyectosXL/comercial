@@ -138,6 +138,18 @@ if (empty($nroSucursal)) {
     exit;
 }
 
+// **OPTIMIZACIÓN: Aumentar límites de tiempo para evitar timeout**
+set_time_limit(300); // 5 minutos máximo
+ini_set('max_execution_time', 300);
+ini_set('memory_limit', '512M'); // Aumentar memoria disponible
+
+// **OPTIMIZACIÓN: Evitar timeout de proxy/gateway (Apache, Nginx, IIS)**
+header('Connection: keep-alive');
+header('Keep-Alive: timeout=300, max=1');
+
+// **OPTIMIZACIÓN: Enviar pequeños chunks para mantener conexión viva**
+if (ob_get_level() == 0) ob_start();
+
 try {
     error_log("🔍 DEBUG: Iniciando try principal - MES ACTUAL");
     
@@ -148,6 +160,10 @@ try {
     
     $conexionSistemas = DatabaseConfig::conectarSistemas();
     error_log("🔍 DEBUG: Conexión Sistemas exitosa");
+    
+    // **OPTIMIZACIÓN: Configurar timeout de PDO**
+    $conexionLaker->setAttribute(PDO::ATTR_TIMEOUT, 60);
+    $conexionSistemas->setAttribute(PDO::ATTR_TIMEOUT, 60);
     
     // Iniciar transacción
     error_log("🔍 DEBUG: Antes de iniciar transacción");

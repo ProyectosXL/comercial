@@ -81,10 +81,26 @@ if (empty($nroSucursal)) {
 // Calcular el período anterior (YYYYMM)
 $periodoActual = date('Ym', strtotime('-1 month')); // Formato: mes anterior al actual
 
+// **OPTIMIZACIÓN: Aumentar límites de tiempo para evitar timeout**
+set_time_limit(300); // 5 minutos máximo
+ini_set('max_execution_time', 300);
+ini_set('memory_limit', '512M'); // Aumentar memoria disponible
+
+// **OPTIMIZACIÓN: Evitar timeout de proxy/gateway (Apache, Nginx, IIS)**
+header('Connection: keep-alive');
+header('Keep-Alive: timeout=300, max=1');
+
+// **OPTIMIZACIÓN: Enviar pequeños chunks para mantener conexión viva**
+if (ob_get_level() == 0) ob_start();
+
 try {
     // Conectar a ambas bases de datos
     $conexionLaker = DatabaseConfig::conectarLakerSA(); // Para validar artículos
     $conexionSistemas = DatabaseConfig::conectarSistemas(); // Para guardar ventas
+    
+    // **OPTIMIZACIÓN: Configurar timeout de PDO**
+    $conexionLaker->setAttribute(PDO::ATTR_TIMEOUT, 60);
+    $conexionSistemas->setAttribute(PDO::ATTR_TIMEOUT, 60);
 
     // Iniciar transacción en sistemas
     $conexionSistemas->beginTransaction();
@@ -233,6 +249,37 @@ try {
     $stmtEliminar = $conexionSistemas->prepare($sqlEliminar);
     $stmtEliminar->execute([$nroSucursal, $periodoActual]);
 
+    // **OPTIMIZACIÓN: Obtener TODOS los rubros/categorías en UNA sola consulta**
+    error_log("📊 Obteniendo rubros y categorías para " . count($articulosValidos) . " artículos...");
+    $rubrosCategoriasCache = [];
+    
+    if (!empty($articulosValidos)) {
+        $batchSizeRC = 2000;
+        for ($i = 0; $i < count($articulosValidos); $i += $batchSizeRC) {
+            $batchRC = array_slice($articulosValidos, $i, $batchSizeRC);
+            $placeholdersRC = str_repeat('?,', count($batchRC) - 1) . '?';
+            
+            $sqlRubroCategoria = "SELECT 
+                                    REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI as COD_ARTICU,
+                                    RUBRO, 
+                                    CATEGORIA_PADRE 
+                                  FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
+                                  WHERE REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI IN ($placeholdersRC)";
+            
+            $stmtRubroCategoria = $conexionSistemas->prepare($sqlRubroCategoria);
+            $stmtRubroCategoria->execute($batchRC);
+            $resultadosRC = $stmtRubroCategoria->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($resultadosRC as $row) {
+                $rubrosCategoriasCache[trim($row['COD_ARTICU'])] = [
+                    'rubro' => trim($row['RUBRO']) ?: 'Sin rubro',
+                    'categoria' => trim($row['CATEGORIA_PADRE']) ?: 'Sin categoría'
+                ];
+            }
+        }
+    }
+    error_log("✅ Cache de rubros/categorías creado: " . count($rubrosCategoriasCache) . " artículos");
+
     // Preparar query para insertar nuevos datos - usar solo las columnas que sabemos que existen
     // NOTA: fecha = NULL para carga individual (mes anterior)
     $sqlInsertar = "INSERT INTO ventas_franquicias_sin_tango 
@@ -246,25 +293,13 @@ try {
         if ($cantidad > 0) { // Solo insertar cantidades positivas
             $codigoArticulo = $item['articulo'];
             
-            // Obtener rubro y categoría de sistemas (con esquema dbo explícito)
+            // Obtener rubro y categoría del CACHE
             $rubro = 'Sin rubro';
             $categoria = 'Sin categoría';
             
-            try {
-                $sqlRubroCategoria = "SELECT RUBRO, CATEGORIA_PADRE 
-                                     FROM dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA 
-                                     WHERE REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI = ?";
-                $stmtRubroCategoria = $conexionSistemas->prepare($sqlRubroCategoria);
-                $stmtRubroCategoria->execute([$codigoArticulo]);
-                $datosAdicionales = $stmtRubroCategoria->fetch(PDO::FETCH_ASSOC);
-                
-                if ($datosAdicionales) {
-                    $rubro = trim($datosAdicionales['RUBRO']) ?: 'Sin rubro';
-                    $categoria = trim($datosAdicionales['CATEGORIA_PADRE']) ?: 'Sin categoría';
-                }
-            } catch (Exception $e) {
-                error_log("Error obteniendo rubro/categoría para $codigoArticulo: " . $e->getMessage());
-                // Continuar con valores por defecto
+            if (isset($rubrosCategoriasCache[$codigoArticulo])) {
+                $rubro = $rubrosCategoriasCache[$codigoArticulo]['rubro'];
+                $categoria = $rubrosCategoriasCache[$codigoArticulo]['categoria'];
             }
             
             // Insertar el registro

@@ -180,6 +180,18 @@ if (strlen($usuario) > 50) {
     $usuario = substr($usuario, 0, 50);
 }
 
+// **OPTIMIZACIÓN: Aumentar límites de tiempo para evitar timeout**
+set_time_limit(300); // 5 minutos máximo
+ini_set('max_execution_time', 300);
+ini_set('memory_limit', '512M'); // Aumentar memoria disponible
+
+// **OPTIMIZACIÓN: Evitar timeout de proxy/gateway (Apache, Nginx, IIS)**
+header('Connection: keep-alive');
+header('Keep-Alive: timeout=300, max=1');
+
+// **OPTIMIZACIÓN: Enviar pequeños chunks para mantener conexión viva**
+if (ob_get_level() == 0) ob_start();
+
 try {
     error_log("🔍 Iniciando procesamiento principal");
     error_log("📊 Usuario: $usuario");
@@ -193,6 +205,10 @@ try {
     
     $conexionSistemas = DatabaseConfig::conectarSistemas();
     error_log("  ✅ Conexión sistemas establecida");
+    
+    // **OPTIMIZACIÓN: Configurar timeout de PDO**
+    $conexionLaker->setAttribute(PDO::ATTR_TIMEOUT, 60);
+    $conexionSistemas->setAttribute(PDO::ATTR_TIMEOUT, 60);
     
     // Verificar base de datos actual
     $sqlCheckDB = "SELECT DB_NAME() as db_actual";
