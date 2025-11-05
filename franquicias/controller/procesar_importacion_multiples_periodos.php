@@ -78,11 +78,25 @@ if (empty($datos)) {
     jsonResponse(['success' => false, 'message' => 'No se encontraron datos para procesar']);
 }
 
+// === DEBUG: Escribir a archivo temporal ===
+$debugFile = 'C:/xampp/htdocs/comercial/franquicias/logs/debug_import.txt';
+@mkdir(dirname($debugFile), 0777, true);
+$debugContent = "=== DEBUG IMPORTACIÓN " . date('Y-m-d H:i:s') . " ===\n";
+$debugContent .= "Total registros recibidos: " . count($datos) . "\n\n";
+$debugContent .= "PRIMER REGISTRO:\n";
+$debugContent .= print_r($datos[0] ?? [], true) . "\n\n";
+$debugContent .= "CLAVES DEL PRIMER REGISTRO:\n";
+$debugContent .= implode(', ', array_keys($datos[0] ?? [])) . "\n\n";
+file_put_contents($debugFile, $debugContent);
+// === FIN DEBUG ===
+
 // Extraer modo de operación
 $modo = $input['modo'] ?? 'nueva';
 
 error_log("MODO RECIBIDO: " . $modo);
 error_log("Total de registros recibidos: " . count($datos));
+error_log("📋 PRIMER REGISTRO DE EJEMPLO: " . json_encode($datos[0] ?? []));
+error_log("📋 CLAVES DEL PRIMER REGISTRO: " . implode(', ', array_keys($datos[0] ?? [])));
 
 /**
  * Función para agrupar artículos duplicados por artículo + período
@@ -104,7 +118,10 @@ function agruparArticulosDuplicados($datos) {
             $agrupados[$clave] = [
                 'articulo' => $item['articulo'],
                 'cantidad' => intval($item['cantidad']),
-                'periodo' => $item['periodo']
+                'periodo' => $item['periodo'],
+                'rubro' => $item['rubro'] ?? 'Sin rubro',
+                'categoria' => $item['categoria'] ?? 'Sin categoría',
+                'descripcion' => $item['descripcion'] ?? ''
             ];
         }
     }
@@ -416,6 +433,7 @@ try {
     }
     
     error_log("⚡ Pre-carga desde frontend: " . count($rubrosCategoriasCache) . " artículos con rubro/categoría");
+    error_log("📋 EJEMPLO DE CACHE: " . json_encode(array_slice($rubrosCategoriasCache, 0, 3, true)));
 
     // Inserción por lotes
     error_log("🚀 INICIANDO INSERCIÓN POR LOTES...");

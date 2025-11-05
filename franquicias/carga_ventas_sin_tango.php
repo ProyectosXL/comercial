@@ -3935,11 +3935,13 @@ if (!function_exists('es_modo_desarrollo')) {
                     categorias[codigoNormalizado] = a.categoria || 'Sin categoría';
                 });
                 
-                // Guardar datos en variable global para correcciones con Select2
-                datosImportadosMultiple = [...datos]; // Copia de los datos
-                window.datosImportadosMultiple = datosImportadosMultiple;
-                
+                // Generar tabla (esto agregará rubro, categoria y descripcion a cada item en 'datos')
                 generarTablaVistaPreviaMultiple(datos, articulosValidos, descripciones, rubros, categorias);
+                
+                // **IMPORTANTE: Guardar datos DESPUÉS de generar la tabla**
+                // para que incluyan rubro, categoria y descripcion
+                datosImportadosMultiple = datos; // Usar referencia directa, no copia
+                window.datosImportadosMultiple = datosImportadosMultiple;
 
             } catch (error) {
                 console.error('Error en validación múltiple:', error);
@@ -4162,6 +4164,11 @@ if (!function_exists('es_modo_desarrollo')) {
                 const descripcion = descripciones[codigoNormalizado] || 'Artículo no encontrado';
                 const rubro = rubros[codigoNormalizado] || 'Sin rubro';
                 const categoria = categorias[codigoNormalizado] || 'Sin categoría';
+
+                // **GUARDAR RUBRO Y CATEGORÍA EN EL OBJETO ITEM PARA ENVIAR AL BACKEND**
+                item.rubro = rubro;
+                item.categoria = categoria;
+                item.descripcion = descripcion;
 
                 const tr = document.createElement('tr');
                 tr.className = claseEstado;
@@ -4737,7 +4744,10 @@ if (!function_exists('es_modo_desarrollo')) {
                     const itemProcesado = {
                         articulo: String(item.articulo).trim().toUpperCase(),
                         cantidad: parseInt(item.cantidad),
-                        periodo: String(item.periodo).trim()
+                        periodo: String(item.periodo).trim(),
+                        rubro: item.rubro || 'Sin rubro',
+                        categoria: item.categoria || 'Sin categoría',
+                        descripcion: item.descripcion || 'Sin descripción'
                     };
                     
                     // Validar que la cantidad sea un número válido
