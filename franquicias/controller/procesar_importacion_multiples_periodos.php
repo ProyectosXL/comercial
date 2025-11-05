@@ -405,7 +405,8 @@ try {
     
     $rubrosCategoriasCache = [];
     foreach ($datos as $item) {
-        $codigo = trim($item['articulo']);
+        // Normalizar código igual que en frontend: sin espacios, mayúsculas
+        $codigo = trim(str_replace(' ', '', strtoupper($item['articulo'])));
         if (!isset($rubrosCategoriasCache[$codigo])) {
             $rubrosCategoriasCache[$codigo] = [
                 'rubro' => isset($item['rubro']) ? trim($item['rubro']) : 'Sin rubro',
@@ -414,7 +415,7 @@ try {
         }
     }
     
-    error_log("⚡ Pre-carga desde frontend: " . count($rubrosCategoriasCache) . " artículos");
+    error_log("⚡ Pre-carga desde frontend: " . count($rubrosCategoriasCache) . " artículos con rubro/categoría");
 
     // Inserción por lotes
     error_log("🚀 INICIANDO INSERCIÓN POR LOTES...");
@@ -456,13 +457,14 @@ try {
                     throw new Exception("Código de artículo inválido");
                 }
                 
-                // Obtener rubro/categoría del cache
+                // Obtener rubro/categoría del cache (normalizar código)
+                $codigoNormalizado = trim(str_replace(' ', '', strtoupper($codigoArticulo)));
                 $rubro = 'Sin rubro';
                 $categoria = 'Sin categoría';
                 
-                if (isset($rubrosCategoriasCache[$codigoArticulo])) {
-                    $rubro = $rubrosCategoriasCache[$codigoArticulo]['rubro'];
-                    $categoria = $rubrosCategoriasCache[$codigoArticulo]['categoria'];
+                if (isset($rubrosCategoriasCache[$codigoNormalizado])) {
+                    $rubro = $rubrosCategoriasCache[$codigoNormalizado]['rubro'];
+                    $categoria = $rubrosCategoriasCache[$codigoNormalizado]['categoria'];
                 }
                 
                 if (strlen($rubro) > 100) $rubro = substr($rubro, 0, 97) . '...';
