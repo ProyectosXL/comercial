@@ -8,22 +8,25 @@
 error_reporting(0);
 ini_set('display_errors', '0');
 
-// **OPTIMIZACIÓN: Aumentar límites para archivos grandes**
-set_time_limit(300); // 5 minutos máximo de ejecución
-ini_set('max_execution_time', '300');
-ini_set('memory_limit', '512M'); // Aumentar memoria disponible
+// **OPTIMIZACIÓN TIMEOUT**
+set_time_limit(180);
+ini_set('max_execution_time', '180');
+ini_set('memory_limit', '512M');
 
-// Limpiar cualquier output previo
-if (ob_get_level()) {
-    ob_clean();
-}
+// **ANTI-BUFFERING**
+while (ob_get_level()) ob_end_clean();
 
 require_once '../config_sesiones_fixed.php';
 require_once '../class/AuthFranquicia.php';
 require_once '../class/DatabaseConfig.php';
 
-// Establecer header JSON inmediatamente
-header('Content-Type: application/json');
+// Headers anti-timeout
+header('Content-Type: application/json; charset=UTF-8');
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('X-Accel-Buffering: no');
+if (function_exists('apache_setenv')) {
+    @apache_setenv('no-gzip', '1');
+}
 
 error_log("✅ PASO 1: Headers y includes cargados correctamente - MES ACTUAL");
 

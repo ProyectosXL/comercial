@@ -8,9 +8,18 @@
 ini_set('display_errors', '0');
 ini_set('error_reporting', E_ALL);
 ini_set('log_errors', '1');
-ini_set('max_execution_time', '300');
+ini_set('max_execution_time', '180');
 ini_set('memory_limit', '512M');
-set_time_limit(300);
+set_time_limit(180);
+
+// **ANTI-TIMEOUT: Headers inmediatos**
+while (ob_get_level()) ob_end_clean();
+header('Content-Type: application/json; charset=UTF-8');
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('X-Accel-Buffering: no');
+if (function_exists('apache_setenv')) {
+    @apache_setenv('no-gzip', '1');
+}
 
 // Capturar errores fatales
 register_shutdown_function(function() {
@@ -18,7 +27,6 @@ register_shutdown_function(function() {
     if ($error !== null && ($error['type'] === E_ERROR || $error['type'] === E_PARSE)) {
         error_log("FATAL ERROR: " . print_r($error, true));
         if (!headers_sent()) {
-            header('Content-Type: application/json');
             echo json_encode([
                 'success' => false,
                 'message' => 'Error fatal del servidor: ' . $error['message'],
@@ -29,22 +37,9 @@ register_shutdown_function(function() {
     }
 });
 
-// Iniciar buffer de output
-ob_start();
-
 // Includes
 require_once '../config_sesiones_fixed.php';
 require_once '../class/DatabaseConfig.php';
-
-// Descartar cualquier output previo
-$trash = ob_get_clean();
-if ($trash) {
-    error_log("Output descartado: " . strlen($trash) . " bytes");
-}
-
-// Headers limpios
-header('Content-Type: application/json; charset=UTF-8');
-header('Cache-Control: no-cache');
 
 // Función helper para responder JSON limpio
 function jsonResponse($data) {
@@ -527,16 +522,12 @@ try {
     $erroresProcesamiento = [];
     $resumenPeriodos = [];
     
-    $batchSize = 250;
+    $batchSize = 500; // Aumentado para velocidad
     $totalBatches = ceil($totalItems / $batchSize);
-    
-    error_log("📊 Total items: $totalItems en $totalBatches lotes");
     
     for ($batchNum = 0; $batchNum < $totalBatches; $batchNum++) {
         $startIdx = $batchNum * $batchSize;
         $batchDatos = array_slice($datos, $startIdx, $batchSize);
-        
-        error_log("📦 Procesando lote " . ($batchNum + 1) . "/$totalBatches");
         
         $valuesArray = [];
         $parametros = [];
@@ -601,56 +592,23 @@ try {
                             (nro_sucursal, periodo, codigo_articulo, rubro, categoria_padre, cantidad, fecha_carga, usuario_carga, fecha) 
                             VALUES " . implode(", ", $valuesArray);
                 
-                // **DEBUG DETALLADO**
-                error_log("🔍 PREPARANDO LOTE " . ($batchNum + 1) . ":");
-                error_log("  - Registros en este lote: " . count($valuesArray));
-                error_log("  - Parámetros totales: " . count($parametros) . " (esperados: " . (count($valuesArray) * 7) . ")");
-                error_log("  - Primeros 3 parámetros: " . json_encode(array_slice($parametros, 0, 3)));
-                error_log("  - SQL (primeros 200 chars): " . substr($sqlBatch, 0, 200) . "...");
-                
                 $stmtBatch = $conexionSistemas->prepare($sqlBatch);
-                error_log("  ✅ SQL preparado correctamente");
-                
-                error_log("  🚀 Ejecutando INSERT...");
                 $executeResult = $stmtBatch->execute($parametros);
-                error_log("  📊 Execute result: " . ($executeResult ? 'TRUE' : 'FALSE'));
                 
                 if (!$executeResult) {
-                    $errorInfo = $stmtBatch->errorInfo();
-                    error_log("  ❌ Error PDO: " . json_encode($errorInfo));
-                    throw new Exception("Error ejecutando lote: " . implode(" ", $errorInfo));
+                    throw new Exception("Error ejecutando lote: " . implode(" ", $stmtBatch->errorInfo()));
                 }
                 
-                $procesadosLote = count($valuesArray);
-                $procesados += $procesadosLote;
-                
-                error_log("  ✅ Lote " . ($batchNum + 1) . " EJECUTADO: $procesadosLote registros");
-                
-                // Verificar inmediatamente después del INSERT
-                $sqlVerificar = "SELECT COUNT(*) as insertados 
-                                FROM ventas_franquicias_sin_tango 
-                                WHERE nro_sucursal = ? 
-                                AND fecha_carga >= DATEADD(SECOND, -5, GETDATE())";
-                $stmtVerif = $conexionSistemas->prepare($sqlVerificar);
-                $stmtVerif->execute([$nroSucursal]);
-                $verifResult = $stmtVerif->fetch(PDO::FETCH_ASSOC);
-                error_log("  🔍 Verificación inmediata: " . $verifResult['insertados'] . " registros encontrados en últimos 5 segundos");
+                $procesados += count($valuesArray);
                 
             } catch (Exception $e) {
-                error_log("❌ EXCEPCIÓN en lote " . ($batchNum + 1) . ": " . $e->getMessage());
-                error_log("❌ Stack trace: " . $e->getTraceAsString());
                 throw $e;
             }
-        } else {
-            error_log("⚠️ Lote " . ($batchNum + 1) . " está VACÍO (no hay valuesArray)");
         }
     }
     
-    error_log("✅ INSERCIÓN COMPLETADA - Total procesados: $procesados");
-
     // Confirmar transacción
     $conexionSistemas->commit();
-    error_log("✅ COMMIT COMPLETADO");
 
     // **VERIFICACIÓN POST-COMMIT**
     try {
