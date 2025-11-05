@@ -1,10 +1,16 @@
 <?php
-error_reporting(0);
+// Desactivar reporte de errores en pantalla pero mantener logs
+error_reporting(E_ALL);
 ini_set('display_errors', '0');
+ini_set('log_errors', '1');
 
+// Configurar sesiones
 require_once '../config_sesiones_fixed.php';
+
+// Cargar clase de configuración de base de datos
 require_once '../class/DatabaseConfig.php';
 
+// Establecer cabeceras
 header('Content-Type: application/json');
 
 
@@ -39,7 +45,15 @@ try {
     // **OPTIMIZACIÓN: Enviar pequeños chunks para mantener conexión viva**
     if (ob_get_level() == 0) ob_start();
 
+    // Conectar a LAKER_SA (base central donde está STA11)
+    error_log("validar_articulos_simple: Intentando conectar a LAKER_SA");
     $conexion = DatabaseConfig::conectarLakerSA();
+    
+    if (!$conexion) {
+        throw new Exception("No se pudo establecer conexión con la base de datos LAKER_SA");
+    }
+    
+    error_log("validar_articulos_simple: Conexión establecida exitosamente");
     
     // Nota: PDO::ATTR_TIMEOUT no es compatible con pdo_sqlsrv
 
@@ -114,9 +128,23 @@ try {
         'noEncontrados' => count($codigosUnicos) - $encontrados
     ]);
 
-} catch (Exception $e) {
-    error_log("Error en validar_articulos_simple.php: " . $e->getMessage());
+} catch (PDOException $e) {
+    error_log("validar_articulos_simple - Error PDO: " . $e->getMessage());
+    error_log("validar_articulos_simple - Stack trace: " . $e->getTraceAsString());
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error del servidor: ' . $e->getMessage()]);
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Error de conexión a base de datos',
+        'error' => 'PDO Error: ' . $e->getMessage()
+    ]);
+} catch (Exception $e) {
+    error_log("validar_articulos_simple - Error general: " . $e->getMessage());
+    error_log("validar_articulos_simple - Stack trace: " . $e->getTraceAsString());
+    http_response_code(500);
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Error del servidor', 
+        'error' => $e->getMessage()
+    ]);
 }
 ?>

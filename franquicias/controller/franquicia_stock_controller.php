@@ -48,9 +48,9 @@ if (!class_exists('FranquiciaStockController')) {
                 $this->franquicias = null;
             }
             
-            // Intentar conexión central, pero no fallar si hay error de .env
+            // Intentar conexión central usando la clase Conexion local de franquicias
             try {
-                require_once __DIR__ . '/../../class/Conexion.php';
+                require_once __DIR__ . '/../class/Conexion.php';
                 $conexion = new Conexion();
                 $this->cid = $conexion->conectar('central');
                 
