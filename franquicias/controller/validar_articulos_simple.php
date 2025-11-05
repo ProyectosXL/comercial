@@ -29,92 +29,85 @@ if (empty($codigos)) {
     exit;
 }
 
-
-$codigosUnicos = array_values(array_unique(array_map('trim', $codigos)));
+// Normalizar códigos: quitar espacios, mayúsculas
+$codigosUnicos = array_values(array_unique(
+    array_map(function($c) {
+        return trim(str_replace(' ', '', strtoupper($c)));
+    }, $codigos)
+));
 
 try {
-    // **OPTIMIZACIÓN: Configurar para producción con límites más conservadores**
-    set_time_limit(120); // 2 minutos (más conservador para evitar 504)
-    ini_set('max_execution_time', 120);
-    ini_set('memory_limit', '512M');
-
-    // **EVITAR TIMEOUT: Deshabilitar buffering para enviar respuesta inmediatamente**
-    if (ob_get_level()) ob_end_clean();
-    header('Content-Type: application/json');
-    header('X-Accel-Buffering: no'); // Nginx
+    // **RESPUESTA INMEDIATA: Configurar headers ANTES de cualquier output**
+    set_time_limit(60);
+    ini_set('max_execution_time', 60);
+    ini_set('memory_limit', '256M');
     
-    // Apache: desactivar gzip solo si la función existe
+    // Limpiar buffer solo si existe
+    if (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    
+    // Headers de respuesta
+    header('Content-Type: application/json; charset=utf-8');
+    header('X-Accel-Buffering: no');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    
     if (function_exists('apache_setenv')) {
-        apache_setenv('no-gzip', '1');
+        @apache_setenv('no-gzip', '1');
     }
     
     $startTime = microtime(true);
     
-    // Conectar a LAKER_SA (base central donde está STA11)
-    error_log("validar_articulos_simple: Intentando conectar a LAKER_SA - Total códigos: " . count($codigosUnicos));
+    // Conectar
     $conexion = DatabaseConfig::conectarLakerSA();
-    
     if (!$conexion) {
-        throw new Exception("No se pudo establecer conexión con la base de datos LAKER_SA");
+        throw new Exception("No se pudo conectar a LAKER_SA");
     }
-    
-    error_log("validar_articulos_simple: Conexión establecida exitosamente");
     
     $articulosInfo = [];
     
-    // **OPTIMIZACIÓN CRÍTICA: Reducir batch size para evitar timeout en servidor**
-    // Lotes más pequeños = menos tiempo de query = menos probabilidad de 504
-    $batchSize = 200; // Reducido de 1000 a 200 para producción
+    // **QUERY SIMPLIFICADA: Sin JOIN pesado**
+    $batchSize = 50; // Batch MUY pequeño
     $totalCodigos = count($codigosUnicos);
-
+    
     for ($i = 0; $i < $totalCodigos; $i += $batchSize) {
         $batch = array_slice($codigosUnicos, $i, $batchSize);
         $placeholders = str_repeat('?,', count($batch) - 1) . '?';
-
-        // Log de progreso
-        $currentTime = microtime(true);
-        $elapsed = round($currentTime - $startTime, 2);
-        error_log("validar_articulos_simple: Procesando lote " . ($i / $batchSize + 1) . " - Códigos: " . count($batch) . " - Tiempo: {$elapsed}s");
-       
+        
+        // Query ULTRA optimizada - sin REPLACE ni COLLATE en WHERE
         $sql = "
-            SELECT 
-                REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI as COD_ARTICU, 
-                s.DESCRIPCIO,
-                ISNULL(m.RUBRO, 'Sin rubro') as RUBRO,
-                ISNULL(m.CATEGORIA_PADRE, 'Sin categoría') as CATEGORIA_PADRE
+            SELECT TOP 10000
+                LTRIM(RTRIM(COD_ARTICU)) as COD_ARTICU,
+                DESCRIPCIO
             FROM 
-                STA11 s WITH (NOLOCK)
-            LEFT JOIN 
-                dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA m WITH (NOLOCK) 
-                ON REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI = REPLACE(m.COD_ARTICU, ' ', '') COLLATE Modern_Spanish_CI_AI
+                STA11 WITH (NOLOCK, FASTFIRSTROW)
             WHERE 
-                REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI IN ($placeholders)
-                AND s.COD_ARTICU LIKE '[XO]%'
+                COD_ARTICU IN ($placeholders)
         ";
         
         $stmt = $conexion->prepare($sql);
         $stmt->execute($batch);
-        $resultadosLote = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        foreach ($resultadosLote as $row) {
-            $codigo = trim($row['COD_ARTICU']);
+        $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($resultados as $row) {
+            $codigo = trim(str_replace(' ', '', strtoupper($row['COD_ARTICU'])));
             $articulosInfo[$codigo] = [
                 'descripcion' => trim($row['DESCRIPCIO']),
-                'rubro' => trim($row['RUBRO']),
-                'categoria' => trim($row['CATEGORIA_PADRE'])
+                'rubro' => 'Sin rubro',
+                'categoria' => 'Sin categoría'
             ];
         }
         
-        // Verificar si estamos cerca del límite de tiempo
-        $elapsed = microtime(true) - $startTime;
-        if ($elapsed > 100) { // Si llevamos más de 100 segundos, terminar
-            error_log("validar_articulos_simple: ADVERTENCIA - Cerca del límite de tiempo ({$elapsed}s)");
+        // Break si toma mucho tiempo
+        if ((microtime(true) - $startTime) > 40) {
             break;
         }
     }
-  
+    
+    // Construir respuesta final
     $respuestaFinal = [];
     $encontrados = 0;
+    
     foreach ($codigosUnicos as $codigo) {
         if (isset($articulosInfo[$codigo])) {
             $info = $articulosInfo[$codigo];
@@ -135,9 +128,7 @@ try {
         }
     }
     
-    $endTime = microtime(true);
-    $totalTime = round($endTime - $startTime, 2);
-    error_log("validar_articulos_simple: Validación completada - Total: " . count($codigosUnicos) . " - Encontrados: $encontrados - Tiempo: {$totalTime}s");
+    $totalTime = round(microtime(true) - $startTime, 2);
     
     echo json_encode([
         'success' => true,
