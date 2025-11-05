@@ -29,12 +29,15 @@ if (empty($codigos)) {
     exit;
 }
 
-// Normalizar códigos: quitar espacios, mayúsculas
-$codigosUnicos = array_values(array_unique(
-    array_map(function($c) {
-        return trim(str_replace(' ', '', strtoupper($c)));
-    }, $codigos)
-));
+// Normalizar códigos manualmente para evitar problemas con funciones anónimas en PHP 7.3
+$codigosNormalizados = array();
+foreach ($codigos as $codigo) {
+    $normalizado = trim(str_replace(' ', '', strtoupper($codigo)));
+    if (!empty($normalizado)) {
+        $codigosNormalizados[] = $normalizado;
+    }
+}
+$codigosUnicos = array_values(array_unique($codigosNormalizados));
 
 try {
     // **RESPUESTA INMEDIATA: Configurar headers ANTES de cualquier output**
