@@ -271,69 +271,11 @@ try {
         throw new Exception($mensajeError);
     }
 
-    // Validar artículos en LAKER_SA
-    $articulosUnicos = array_values(array_unique($articulosValidar));
+    // **OPTIMIZACIÓN: Saltear validación de artículos (ya se validaron en frontend)**
+    // Los artículos ya fueron validados en validar_articulos_simple.php
+    // No es necesario re-validarlos aquí, solo ralentiza el proceso
     
-    error_log("🔍 VALIDACIÓN DE ARTÍCULOS - Total únicos: " . count($articulosUnicos));
-    error_log("  Primeros 5 artículos a validar: " . implode(', ', array_slice($articulosUnicos, 0, 5)));
-    
-    if (empty($articulosUnicos)) {
-        throw new Exception("No hay artículos para validar");
-    }
-    
-    // Procesar validación en lotes
-    $batchSize = 2000;
-    $totalCodigos = count($articulosUnicos);
-    $articulosValidos = [];
-    
-    for ($i = 0; $i < $totalCodigos; $i += $batchSize) {
-        $batch = array_slice($articulosUnicos, $i, $batchSize);
-        $batchNum = floor($i / $batchSize) + 1;
-        $totalBatches = ceil($totalCodigos / $batchSize);
-        
-        error_log("📦 Validando lote $batchNum de $totalBatches (" . count($batch) . " artículos)");
-        
-        $placeholders = str_repeat('?,', count($batch) - 1) . '?';
-        // Normalizar también en la consulta SQL (REPLACE elimina espacios internos)
-        $sqlValidar = "SELECT REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI as COD_ARTICU 
-                       FROM STA11 
-                       WHERE REPLACE(LTRIM(RTRIM(COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI IN ($placeholders) 
-                         AND COD_ARTICU LIKE '[XO]%'";
-        
-        $stmtValidar = $conexionLaker->prepare($sqlValidar);
-        if (!$stmtValidar) {
-            throw new Exception("Error preparando validación: " . implode(" ", $conexionLaker->errorInfo()));
-        }
-        
-        if (!$stmtValidar->execute($batch)) {
-            throw new Exception("Error ejecutando validación: " . implode(" ", $stmtValidar->errorInfo()));
-        }
-        
-        $articulosValidosLote = $stmtValidar->fetchAll(PDO::FETCH_COLUMN);
-        $articulosValidos = array_merge($articulosValidos, $articulosValidosLote);
-        
-        error_log("✅ Lote $batchNum completado: " . count($articulosValidosLote) . " artículos válidos");
-    }
-    
-    error_log("🔍 Total artículos válidos encontrados: " . count($articulosValidos));
-    error_log("🔍 Artículos válidos: " . json_encode($articulosValidos));
-
-    // Verificar artículos inválidos
-    $articulosInvalidos = [];
-    foreach ($articulosUnicos as $articulo) {
-        if (!in_array($articulo, $articulosValidos)) {
-            $articulosInvalidos[] = $articulo;
-            error_log("❌ Artículo NO encontrado en STA11: $articulo");
-        }
-    }
-    
-    if (!empty($articulosInvalidos)) {
-        $mensajeError = "Artículos inválidos: " . implode(', ', $articulosInvalidos);
-        error_log("❌ ERROR VALIDACION (múltiple): " . $mensajeError);
-        throw new Exception($mensajeError);
-    }
-    
-    error_log("✅ TODOS LOS ARTÍCULOS SON VÁLIDOS");
+    error_log("⚡ VALIDACIÓN SALTADA: Los artículos ya fueron validados en el frontend");
 
     // Crear/verificar tabla
     $sqlCrearTabla = "
@@ -457,62 +399,22 @@ try {
             break;
     }
 
-    // Pre-cargar rubros y categorías desde LAKER_SA (no desde sistemas)
-    error_log("📚 Pre-cargando rubros y categorías desde LAKER_SA...");
+    // **OPTIMIZACIÓN: Usar rubros/categorías del frontend**
+    // Los rubros y categorías ya vienen en el JSON desde validar_articulos_simple.php
+    // No es necesario consultar LAKER_SA nuevamente
     
-    $articulosUnicos = array_values(array_unique(array_column($datos, 'articulo')));
     $rubrosCategoriasCache = [];
-    
-    $batchSize = 2000;
-    $totalArticulos = count($articulosUnicos);
-    
-    for ($i = 0; $i < $totalArticulos; $i += $batchSize) {
-        $batch = array_slice($articulosUnicos, $i, $batchSize);
-        $placeholders = str_repeat('?,', count($batch) - 1) . '?';
-        
-        // CORRECCIÓN: La tabla está en LAKER_SA, no en sistemas
-        // Usamos JOIN con STA11 para asegurar que solo obtengamos artículos válidos
-        $sqlRC = "SELECT 
-                    REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI as COD_ARTICU,
-                    ISNULL(m.RUBRO, 'Sin rubro') as RUBRO,
-                    ISNULL(m.CATEGORIA_PADRE, 'Sin categoría') as CATEGORIA_PADRE
-                  FROM STA11 s
-                  LEFT JOIN dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA m 
-                    ON REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI = REPLACE(m.COD_ARTICU, ' ', '') COLLATE Modern_Spanish_CI_AI
-                  WHERE REPLACE(LTRIM(RTRIM(s.COD_ARTICU)), ' ', '') COLLATE Modern_Spanish_CI_AI IN ($placeholders)";
-        
-        // CAMBIO CRÍTICO: Usar conexión LAKER en lugar de sistemas
-        $stmtRC = $conexionLaker->prepare($sqlRC);
-        
-        if (!$stmtRC) {
-            error_log("⚠️ Error preparando consulta de rubro/categoría: " . implode(" ", $conexionLaker->errorInfo()));
-            // Continuar sin rubros/categorías en caso de error
-            continue;
-        }
-        
-        if (!$stmtRC->execute($batch)) {
-            error_log("⚠️ Error ejecutando consulta de rubro/categoría: " . implode(" ", $stmtRC->errorInfo()));
-            continue;
-        }
-        
-        $resultadosRC = $stmtRC->fetchAll(PDO::FETCH_ASSOC);
-        
-        foreach ($resultadosRC as $row) {
-            $rubrosCategoriasCache[trim($row['COD_ARTICU'])] = [
-                'rubro' => trim($row['RUBRO']) ?: 'Sin rubro',
-                'categoria' => trim($row['CATEGORIA_PADRE']) ?: 'Sin categoría'
+    foreach ($datos as $item) {
+        $codigo = trim($item['articulo']);
+        if (!isset($rubrosCategoriasCache[$codigo])) {
+            $rubrosCategoriasCache[$codigo] = [
+                'rubro' => isset($item['rubro']) ? trim($item['rubro']) : 'Sin rubro',
+                'categoria' => isset($item['categoria']) ? trim($item['categoria']) : 'Sin categoría'
             ];
         }
-        
-        error_log("📦 Lote rubro/categoría " . (floor($i / $batchSize) + 1) . ": " . count($resultadosRC) . " artículos procesados");
     }
     
-    error_log("✅ Pre-carga completada: " . count($rubrosCategoriasCache) . " artículos con rubro/categoría");
-    
-    // Si no se pudieron obtener rubros/categorías, usar valores por defecto
-    if (empty($rubrosCategoriasCache)) {
-        error_log("⚠️ No se pudieron pre-cargar rubros/categorías, usando valores por defecto");
-    }
+    error_log("⚡ Pre-carga desde frontend: " . count($rubrosCategoriasCache) . " artículos");
 
     // Inserción por lotes
     error_log("🚀 INICIANDO INSERCIÓN POR LOTES...");
