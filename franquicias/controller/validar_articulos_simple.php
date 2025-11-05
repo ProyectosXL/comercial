@@ -69,17 +69,20 @@ try {
     
     $articulosInfo = [];
     
-    // **QUERY SIMPLIFICADA: Sin JOIN pesado**
-    $batchSize = 50; // Batch MUY pequeño
+    // **ESTRATEGIA OPTIMIZADA: Dos consultas separadas en lugar de un JOIN pesado**
+    // 1. Primero obtener artículos de STA11 (rápido)
+    // 2. Luego obtener rubros/categorías de la tabla maestro (rápido)
+    
+    $batchSize = 100;
     $totalCodigos = count($codigosUnicos);
     
+    // PASO 1: Obtener artículos de STA11
     for ($i = 0; $i < $totalCodigos; $i += $batchSize) {
         $batch = array_slice($codigosUnicos, $i, $batchSize);
         $placeholders = str_repeat('?,', count($batch) - 1) . '?';
         
-        // Query ultra simple y rápida
         $sql = "
-            SELECT TOP 10000
+            SELECT 
                 LTRIM(RTRIM(COD_ARTICU)) as COD_ARTICU,
                 DESCRIPCIO
             FROM 
@@ -101,9 +104,44 @@ try {
             ];
         }
         
-        // Break si toma mucho tiempo
-        if ((microtime(true) - $startTime) > 40) {
+        if ((microtime(true) - $startTime) > 25) {
             break;
+        }
+    }
+    
+    // PASO 2: Obtener rubros y categorías (solo para los artículos encontrados)
+    $codigosEncontrados = array_keys($articulosInfo);
+    if (!empty($codigosEncontrados)) {
+        for ($i = 0; $i < count($codigosEncontrados); $i += $batchSize) {
+            $batch = array_slice($codigosEncontrados, $i, $batchSize);
+            $placeholders = str_repeat('?,', count($batch) - 1) . '?';
+            
+            $sql = "
+                SELECT 
+                    REPLACE(COD_ARTICU, ' ', '') as COD_ARTICU,
+                    ISNULL(RUBRO, 'Sin rubro') as RUBRO,
+                    ISNULL(CATEGORIA_PADRE, 'Sin categoría') as CATEGORIA_PADRE
+                FROM 
+                    dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA WITH (NOLOCK)
+                WHERE 
+                    REPLACE(COD_ARTICU, ' ', '') IN ($placeholders)
+            ";
+            
+            $stmt = $conexion->prepare($sql);
+            $stmt->execute($batch);
+            $rubrosResult = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($rubrosResult as $row) {
+                $codigo = trim(str_replace(' ', '', strtoupper($row['COD_ARTICU'])));
+                if (isset($articulosInfo[$codigo])) {
+                    $articulosInfo[$codigo]['rubro'] = trim($row['RUBRO']);
+                    $articulosInfo[$codigo]['categoria'] = trim($row['CATEGORIA_PADRE']);
+                }
+            }
+            
+            if ((microtime(true) - $startTime) > 45) {
+                break;
+            }
         }
     }
     
