@@ -424,7 +424,10 @@ try {
     $erroresProcesamiento = [];
     $resumenPeriodos = [];
     
-    $batchSize = 500; // Aumentado para velocidad
+    // **LÍMITE SQL SERVER: Máximo 2100 parámetros**
+    // Con 7 campos por registro: 2100 / 7 = 300 máximo
+    // Usando 280 para margen de seguridad
+    $batchSize = 280;
     $totalBatches = ceil($totalItems / $batchSize);
     
     for ($batchNum = 0; $batchNum < $totalBatches; $batchNum++) {
