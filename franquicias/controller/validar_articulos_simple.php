@@ -74,13 +74,13 @@ try {
         $batch = array_slice($codigosUnicos, $i, $batchSize);
         $placeholders = str_repeat('?,', count($batch) - 1) . '?';
         
-        // Query ULTRA optimizada - sin REPLACE ni COLLATE en WHERE
+        // Query ultra simple y rápida
         $sql = "
             SELECT TOP 10000
                 LTRIM(RTRIM(COD_ARTICU)) as COD_ARTICU,
                 DESCRIPCIO
             FROM 
-                STA11 WITH (NOLOCK, FASTFIRSTROW)
+                STA11 WITH (NOLOCK)
             WHERE 
                 COD_ARTICU IN ($placeholders)
         ";
