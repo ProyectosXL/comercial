@@ -906,20 +906,23 @@ if (!class_exists('FranquiciaStockController')) {
                 // **NO EXISTE: Hacer INSERT como antes**
                 error_log("DEBUG: No existe registro para $rubro/$categoria en período $periodoActual, haciendo INSERT");
                 
+                // ORDEN CORRECTO según estructura real de la tabla:
+                // franquicia_id, stock_anterior, movimiento, stock_actual, observaciones, usuario, fecha_movimiento, rubro, categoria
                 $sqlInsert = "INSERT INTO franquicia_historial_stock 
-                            (franquicia_id, rubro, categoria, stock_anterior, 
-                             movimiento, stock_actual, observaciones, usuario) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                            (franquicia_id, stock_anterior, movimiento, stock_actual, 
+                             observaciones, usuario, fecha_movimiento, rubro, categoria) 
+                            VALUES (?, ?, ?, ?, ?, ?, GETDATE(), ?, ?)";
                 
                 $paramsInsert = [
-                    $nroSucurs, // Usar NRO_SUCURS en lugar del nombre de usuario
-                    $rubro,
-                    $categoria,
-                    $stockAnterior,
-                    $movimiento,
-                    $stockActual,
-                    'Registro desde interfaz web',
-                    $nombreUsuario // Mantener el nombre de usuario en campo usuario
+                    $nroSucurs,     // franquicia_id
+                    $stockAnterior, // stock_anterior
+                    $movimiento,    // movimiento
+                    $stockActual,   // stock_actual
+                    'Registro desde interfaz web', // observaciones
+                    $nombreUsuario, // usuario
+                    // fecha_movimiento se establece automáticamente con GETDATE()
+                    $rubro,         // rubro (va AL FINAL)
+                    $categoria      // categoria (va AL FINAL)
                 ];
                 
                 $stmtInsert = sqlsrv_prepare($this->sistemas_conn, $sqlInsert, $paramsInsert);
