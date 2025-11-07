@@ -27,6 +27,7 @@ if (!isset($_SESSION['username'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="css/autorizarGastos.css" class="rel">
+    <link rel="stylesheet" href="css/image-rotation.css">
 </head>
 <body>
     <div class="fixed-header">
@@ -246,6 +247,7 @@ if (!isset($_SESSION['username'])) {
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/js-image-zoom@0.7.0/js-image-zoom.js"></script>
+    <script src="js/image-rotation-helper.js"></script>
     <script src="js/autorizarGastos.js"></script>
 </body>
 </html>

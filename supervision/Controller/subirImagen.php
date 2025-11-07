@@ -7,6 +7,70 @@ ini_set('error_log', __DIR__ . '/php_errors.log');
 
 header('Content-Type: application/json');
 
+/**
+ * Corrige la orientación de la imagen según los metadatos EXIF
+ * @param string $imagenData Datos binarios de la imagen
+ * @param string $extension Extensión del archivo (jpg, jpeg, png)
+ * @return string Datos binarios de la imagen corregida
+ */
+function corregirOrientacionEXIF($imagenData, $extension) {
+    try {
+        // Crear imagen desde string
+        if ($extension === 'png') {
+            $imagen = @imagecreatefromstring($imagenData);
+        } else {
+            $imagen = @imagecreatefromstring($imagenData);
+        }
+        
+        if ($imagen === false) {
+            error_log("No se pudo crear imagen desde string");
+            return $imagenData; // Retornar original si falla
+        }
+
+        // Leer datos EXIF (solo funciona con JPEG)
+        if (in_array($extension, ['jpg', 'jpeg'])) {
+            $exif = @exif_read_data('data://image/jpeg;base64,' . base64_encode($imagenData));
+            
+            if ($exif && isset($exif['Orientation'])) {
+                $orientacion = $exif['Orientation'];
+                error_log("Orientación EXIF detectada: " . $orientacion);
+                
+                switch ($orientacion) {
+                    case 3:
+                        $imagen = imagerotate($imagen, 180, 0);
+                        break;
+                    case 6:
+                        $imagen = imagerotate($imagen, -90, 0);
+                        break;
+                    case 8:
+                        $imagen = imagerotate($imagen, 90, 0);
+                        break;
+                }
+                
+                // Convertir imagen corregida a string
+                ob_start();
+                if ($extension === 'png') {
+                    imagepng($imagen, null, 9);
+                } else {
+                    imagejpeg($imagen, null, 95);
+                }
+                $imagenCorregida = ob_get_clean();
+                imagedestroy($imagen);
+                
+                error_log("Imagen rotada correctamente según EXIF");
+                return $imagenCorregida;
+            }
+        }
+        
+        imagedestroy($imagen);
+        return $imagenData;
+        
+    } catch (Exception $e) {
+        error_log("Error al corregir orientación EXIF: " . $e->getMessage());
+        return $imagenData; // Retornar original si hay error
+    }
+}
+
 try {
     session_start();
     if (!isset($_SESSION['username'])) {
@@ -58,6 +122,11 @@ try {
 
     if ($imagenDecodificada === false) {
         throw new Exception('Error al decodificar la imagen');
+    }
+
+    // Corregir orientación EXIF para imágenes JPG/JPEG/PNG
+    if (in_array($extension, ['jpg', 'jpeg', 'png'])) {
+        $imagenDecodificada = corregirOrientacionEXIF($imagenDecodificada, $extension);
     }
 
     $directorio = __DIR__ . '/../../imagenes/compSupervision/';

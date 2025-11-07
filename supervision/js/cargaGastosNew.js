@@ -1284,6 +1284,9 @@ function mostrarVisorImagenes(id_conc, type) {
                 didOpen: (modalElement) => {
                     const carousel = new bootstrap.Carousel(modalElement.querySelector('#imageCarousel'));
                     
+                    // Agregar botones de rotación al carrusel
+                    addRotationToCarousel('imageCarousel');
+                    
                     // Verificar si medium-zoom está disponible
                     if (typeof mediumZoom !== 'undefined') {
                         const zoomInstances = mediumZoom('.zoomable', {
