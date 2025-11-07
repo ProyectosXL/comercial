@@ -130,3 +130,17 @@ h1, h2 {
 #gastosPendientesTable td, #gastosPendientesTable th {
     padding: 8px;
 }
+
+/* Estilos para rotación de imágenes en Fancybox */
+.fancybox__slide img {
+    transition: transform 0.3s ease;
+}
+
+/* Botones de rotación personalizados */
+.fancybox__toolbar__column button[data-rotate] {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
