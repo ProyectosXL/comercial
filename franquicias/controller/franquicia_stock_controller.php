@@ -4,6 +4,14 @@ error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
+// Log personalizado para debugging
+$custom_log_file = __DIR__ . '/../logs/stock_debug.log';
+$log_dir = dirname($custom_log_file);
+if (!is_dir($log_dir)) {
+    mkdir($log_dir, 0777, true);
+}
+ini_set('error_log', $custom_log_file);
+
 // Función para manejar errores fatales
 if (!function_exists('handleFatalError')) {
     function handleFatalError() {
@@ -666,24 +674,33 @@ if (!class_exists('FranquiciaStockController')) {
      */
     private function procesarStockData($franquicia_id_sesion) {
         try {
-            error_log("DEBUG: Procesando stock_data del frontend");
+            error_log("DEBUG STOCK_DATA: Iniciando procesamiento");
+            error_log("DEBUG STOCK_DATA: franquicia_id_sesion = " . $franquicia_id_sesion);
+            
+            // Verificar conexión a la base de datos primero
+            if (!$this->sistemas_conn) {
+                error_log("ERROR STOCK_DATA: No hay conexión a sistemas_conn");
+                throw new Exception('No hay conexión a la base de datos. Por favor, contacte al administrador.');
+            }
             
             $stockDataJson = $_POST['stock_data'] ?? '';
             $periodo = $_POST['periodo'] ?? '';
             
-            error_log("DEBUG: stock_data recibido: " . $stockDataJson);
-            error_log("DEBUG: periodo recibido: " . $periodo);
+            error_log("DEBUG STOCK_DATA: stock_data length: " . strlen($stockDataJson));
+            error_log("DEBUG STOCK_DATA: periodo recibido: " . $periodo);
             
             if (empty($stockDataJson)) {
+                error_log("ERROR STOCK_DATA: stock_data está vacío");
                 throw new Exception('No se recibieron datos de stock');
             }
             
             $stockArray = json_decode($stockDataJson, true);
             if (!$stockArray || !is_array($stockArray)) {
+                error_log("ERROR STOCK_DATA: Error decodificando JSON: " . json_last_error_msg());
                 throw new Exception('Formato de datos de stock inválido: ' . json_last_error_msg());
             }
             
-            error_log("DEBUG: Array de stock decodificado: " . json_encode($stockArray));
+            error_log("DEBUG STOCK_DATA: Array de stock tiene " . count($stockArray) . " elementos");
             
             // Validar que vengan datos válidos (incluir cantidades 0)
             $datosValidos = array_filter($stockArray, function($item) {
@@ -691,22 +708,32 @@ if (!class_exists('FranquiciaStockController')) {
                        isset($item['rubro']) && is_numeric($item['cantidad']);
             });
             
+            error_log("DEBUG STOCK_DATA: Datos válidos: " . count($datosValidos));
+            
             if (empty($datosValidos)) {
+                error_log("ERROR STOCK_DATA: No hay datos válidos para procesar");
                 throw new Exception('No se encontraron datos válidos para procesar. Verifique que los datos estén completos.');
             }
             
             $movimientosRegistrados = 0;
             $errores = [];
             
-            foreach ($datosValidos as $item) {
+            error_log("DEBUG STOCK_DATA: Iniciando procesamiento de " . count($datosValidos) . " items");
+            
+            foreach ($datosValidos as $index => $item) {
                 try {
+                    error_log("DEBUG STOCK_DATA: Procesando item $index");
+                    
                     // Limpiar y validar los datos del item
                     $rubro = trim($item['rubro']);
                     $categoria = trim($item['categoria']);
                     $cantidad = intval($item['cantidad']); // Nueva cantidad a establecer
                     
+                    error_log("DEBUG STOCK_DATA Item $index: rubro='$rubro', categoria='$categoria', cantidad=$cantidad");
+                    
                     if (empty($rubro) || empty($categoria)) {
                         $errores[] = "Datos inválidos para {$categoria} (rubro: $rubro)";
+                        error_log("ERROR STOCK_DATA Item $index: Rubro o categoría vacíos");
                         continue;
                     }
                     
@@ -714,20 +741,23 @@ if (!class_exists('FranquiciaStockController')) {
                     $categoria = preg_replace('/[^\w\s\-\.]/', '', $categoria);
                     $rubro = preg_replace('/[^\w\s\-\.]/', '', $rubro);
                     
+                    error_log("DEBUG STOCK_DATA Item $index: Después de limpiar - rubro='$rubro', categoria='$categoria'");
+                    
                     $codigoArticulo = $rubro . '_' . $categoria;
                     $descripcion = $categoria . ' - ' . $rubro;
                     
                     // Obtener stock actual
+                    error_log("DEBUG STOCK_DATA Item $index: Obteniendo stock anterior");
                     $stockActual = $this->obtenerStockAnteriorDirecto($franquicia_id_sesion, $codigoArticulo);
                     
                     // Calcular el movimiento necesario para llegar a la cantidad deseada
                     $movimiento = $cantidad - $stockActual;
                     
-                    error_log("DEBUG: Procesando item - Rubro: '$rubro', Categoría: '$categoria', " . 
-                             "Stock actual: $stockActual, Nueva cantidad: $cantidad, Movimiento: $movimiento");
+                    error_log("DEBUG STOCK_DATA Item $index: Stock actual: $stockActual, Nueva cantidad: $cantidad, Movimiento: $movimiento");
                     
                     // Solo registrar si hay un cambio
                     if ($movimiento !== 0) {
+                        error_log("DEBUG STOCK_DATA Item $index: Registrando movimiento");
                         $resultado = $this->registrarArticuloIndividual(
                             $franquicia_id_sesion,
                             $codigoArticulo,
@@ -738,34 +768,41 @@ if (!class_exists('FranquiciaStockController')) {
                         
                         if ($resultado) {
                             $movimientosRegistrados++;
-                            error_log("DEBUG: Movimiento registrado exitosamente para: " . $codigoArticulo);
+                            error_log("DEBUG STOCK_DATA Item $index: Movimiento registrado exitosamente");
                         } else {
                             $errores[] = "No se pudo registrar '$categoria' en rubro '$rubro'";
-                            error_log("DEBUG: Error registrando: $categoria");
+                            error_log("ERROR STOCK_DATA Item $index: No se pudo registrar");
                         }
                     } else {
-                        error_log("DEBUG: No se requiere movimiento para: $codigoArticulo (stock actual = cantidad deseada)");
+                        error_log("DEBUG STOCK_DATA Item $index: No se requiere movimiento (stock actual = cantidad deseada)");
                     }
                     
                 } catch (Exception $e) {
                     $errores[] = "Error procesando '$categoria' en rubro '$rubro': " . $e->getMessage();
-                    error_log("DEBUG: Excepción procesando item '$categoria': " . $e->getMessage());
+                    error_log("ERROR STOCK_DATA Item $index: Excepción - " . $e->getMessage());
+                    error_log("ERROR STOCK_DATA Item $index: Stack trace - " . $e->getTraceAsString());
                 }
             }
             
+            error_log("DEBUG STOCK_DATA: Procesamiento completado. Movimientos registrados: $movimientosRegistrados");
+            error_log("DEBUG STOCK_DATA: Errores: " . count($errores));
+            
             if ($movimientosRegistrados > 0) {
+                error_log("DEBUG STOCK_DATA: Retornando éxito");
                 return [
                     'success' => true,
-                    'message' => "Se registraron $movimientosRegistrados registros de stock (incluye cantidades 0)",
+                    'message' => "Se registraron $movimientosRegistrados registros de stock",
                     'movimientos_registrados' => $movimientosRegistrados,
                     'errores' => $errores
                 ];
             } else {
+                error_log("ERROR STOCK_DATA: No se registró ningún movimiento");
                 throw new Exception('No se pudo registrar ningún movimiento. Errores: ' . implode('; ', $errores));
             }
             
         } catch (Exception $e) {
-            error_log("Error procesando stock_data: " . $e->getMessage());
+            error_log("ERROR STOCK_DATA FATAL: " . $e->getMessage());
+            error_log("ERROR STACK TRACE: " . $e->getTraceAsString());
             throw new Exception("Error procesando datos de stock: " . $e->getMessage());
         }
     }
@@ -812,14 +849,6 @@ if (!class_exists('FranquiciaStockController')) {
             // Convertir a entero para asegurar consistencia
             $movimiento = intval($movimiento);
             
-            // Obtener stock anterior
-            $stockAnterior = $this->obtenerStockAnteriorDirecto($franquicia_id, $codigo_articulo);
-            error_log("DEBUG: Stock anterior: $stockAnterior");
-            
-            // Calcular nuevo stock
-            $stockActual = $stockAnterior + $movimiento;
-            error_log("DEBUG: Stock actual calculado: $stockActual = $stockAnterior + $movimiento");
-            
             // Intentar reconectar si no hay conexión
             if (!$this->sistemas_conn) {
                 error_log("DEBUG: Reintentando conexión a sistemas en registrarArticuloIndividual");
@@ -836,7 +865,11 @@ if (!class_exists('FranquiciaStockController')) {
             
             // Obtener stock anterior (usando el nombre de usuario para la consulta pero insertando el NRO_SUCURS)
             $stockAnterior = $this->obtenerStockAnteriorDirecto($nombreUsuario, $codigo_articulo);
+            error_log("DEBUG: Stock anterior: $stockAnterior");
+            
+            // Calcular nuevo stock
             $stockActual = $stockAnterior + $movimiento;
+            error_log("DEBUG: Stock actual calculado: $stockActual = $stockAnterior + $movimiento");
             
             // Usar nroSucurs para el INSERT
             error_log("DEBUG: Usando NRO_SUCURS para INSERT: '$nroSucurs'");
@@ -854,18 +887,29 @@ if (!class_exists('FranquiciaStockController')) {
             error_log("DEBUG: Rubro extraído: '$rubro', Categoría extraída: '$categoria'");
             
             // **NUEVA LÓGICA: Verificar si ya existe un registro para este rubro/categoría en el período actual**
-            $periodoActual = date('m-Y');
+            $mesActual = date('n'); // Mes sin ceros a la izquierda (1-12)
+            $añoActual = date('Y'); // Año de 4 dígitos
             
             $sqlVerificar = "SELECT id, stock_actual 
                            FROM franquicia_historial_stock 
                            WHERE franquicia_id = ? AND rubro = ? AND categoria = ? 
-                           AND FORMAT(fecha_movimiento, 'MM-yyyy') = ?";
+                           AND MONTH(fecha_movimiento) = ? AND YEAR(fecha_movimiento) = ?";
             
-            $paramsVerificar = [$nroSucurs, $rubro, $categoria, $periodoActual];
+            $paramsVerificar = [$nroSucurs, $rubro, $categoria, $mesActual, $añoActual];
+            error_log("DEBUG: Verificando registro existente con params: " . json_encode($paramsVerificar));
+            
             $stmtVerificar = sqlsrv_prepare($this->sistemas_conn, $sqlVerificar, $paramsVerificar);
             
-            if (!$stmtVerificar || !sqlsrv_execute($stmtVerificar)) {
-                throw new Exception('Error al verificar registro existente');
+            if (!$stmtVerificar) {
+                $errors = sqlsrv_errors();
+                error_log("DEBUG: Error preparando consulta de verificación: " . print_r($errors, true));
+                throw new Exception('Error al preparar consulta de verificación: ' . ($errors[0]['message'] ?? 'Error desconocido'));
+            }
+            
+            if (!sqlsrv_execute($stmtVerificar)) {
+                $errors = sqlsrv_errors();
+                error_log("DEBUG: Error ejecutando consulta de verificación: " . print_r($errors, true));
+                throw new Exception('Error al ejecutar consulta de verificación: ' . ($errors[0]['message'] ?? 'Error desconocido'));
             }
             
             $registroExistente = sqlsrv_fetch_array($stmtVerificar, SQLSRV_FETCH_ASSOC);
@@ -874,15 +918,17 @@ if (!class_exists('FranquiciaStockController')) {
             if ($registroExistente) {
                 // **EXISTE UN REGISTRO: Hacer UPDATE**
                 error_log("DEBUG: Registro existente encontrado para $rubro/$categoria, haciendo UPDATE. ID: " . $registroExistente['id']);
-                
+
                 // Calcular la nueva cantidad (no es incremental, es absoluta)
                 $nuevaCantidad = $stockAnterior + $movimiento; // $movimiento ya contiene la diferencia calculada
-                
+
+                // Actualizar stock, observaciones y FECHA de movimiento para que quede como el registro más reciente
                 $sqlUpdate = "UPDATE franquicia_historial_stock 
                              SET stock_actual = ?, 
-                                 observaciones = 'Actualizado desde interfaz web - ' + CONVERT(varchar, GETDATE(), 20)
+                                 observaciones = CONCAT('Actualizado desde interfaz web - ', CONVERT(varchar(20), GETDATE(), 20)),
+                                 fecha_movimiento = GETDATE()
                              WHERE id = ?";
-                
+
                 $paramsUpdate = [$nuevaCantidad, $registroExistente['id']];
                 $stmtUpdate = sqlsrv_prepare($this->sistemas_conn, $sqlUpdate, $paramsUpdate);
                 
@@ -904,7 +950,7 @@ if (!class_exists('FranquiciaStockController')) {
                 
             } else {
                 // **NO EXISTE: Hacer INSERT como antes**
-                error_log("DEBUG: No existe registro para $rubro/$categoria en período $periodoActual, haciendo INSERT");
+                error_log("DEBUG: No existe registro para $rubro/$categoria en período $mesActual/$añoActual, haciendo INSERT");
                 
                 // ORDEN CORRECTO según estructura real de la tabla:
                 // franquicia_id, stock_anterior, movimiento, stock_actual, observaciones, usuario, fecha_movimiento, rubro, categoria
@@ -925,24 +971,42 @@ if (!class_exists('FranquiciaStockController')) {
                     $categoria      // categoria (va AL FINAL)
                 ];
                 
+                error_log("DEBUG: Preparando INSERT con params: " . json_encode($paramsInsert));
+                
                 $stmtInsert = sqlsrv_prepare($this->sistemas_conn, $sqlInsert, $paramsInsert);
-                if ($stmtInsert && sqlsrv_execute($stmtInsert)) {
-                    sqlsrv_free_stmt($stmtInsert);
-                    error_log("DEBUG: INSERT exitoso para artículo: $codigo_articulo");
-                    return true;
-                } else {
+                
+                if (!$stmtInsert) {
                     $errors = sqlsrv_errors();
-                    $errorMsg = "Error SQL INSERT para $codigo_articulo";
+                    $errorMsg = "Error al preparar INSERT para $codigo_articulo";
                     if ($errors) {
                         foreach ($errors as $error) {
-                            $errorMsg .= " - SQLSTATE: {$error['SQLSTATE']}, Error: {$error['message']}";
+                            $errorMsg .= " - SQLSTATE: {$error['SQLSTATE']}, Code: {$error['code']}, Error: {$error['message']}";
                         }
                     }
                     error_log("DEBUG: $errorMsg");
                     error_log("DEBUG: SQL: $sqlInsert");
                     error_log("DEBUG: Params: " . json_encode($paramsInsert));
-                    return false;
+                    throw new Exception($errorMsg);
                 }
+                
+                if (!sqlsrv_execute($stmtInsert)) {
+                    $errors = sqlsrv_errors();
+                    $errorMsg = "Error al ejecutar INSERT para $codigo_articulo";
+                    if ($errors) {
+                        foreach ($errors as $error) {
+                            $errorMsg .= " - SQLSTATE: {$error['SQLSTATE']}, Code: {$error['code']}, Error: {$error['message']}";
+                        }
+                    }
+                    error_log("DEBUG: $errorMsg");
+                    error_log("DEBUG: SQL: $sqlInsert");
+                    error_log("DEBUG: Params: " . json_encode($paramsInsert));
+                    sqlsrv_free_stmt($stmtInsert);
+                    throw new Exception($errorMsg);
+                }
+                
+                sqlsrv_free_stmt($stmtInsert);
+                error_log("DEBUG: INSERT exitoso para artículo: $codigo_articulo");
+                return true;
             }
             
         } catch (Exception $e) {
@@ -1184,8 +1248,12 @@ if (!class_exists('FranquiciaStockController')) {
             // Usar franquicia_id directamente como texto
             
             // Actualizar directamente en la base de datos
+            // También actualizar fecha_movimiento para que se refleje en el resumen
             $sql = "UPDATE franquicia_historial_stock 
-                    SET stock_actual = ?, observaciones = ?, fecha_modificacion = GETDATE() 
+                    SET stock_actual = ?, 
+                        observaciones = ?, 
+                        fecha_modificacion = GETDATE(),
+                        fecha_movimiento = GETDATE() 
                     WHERE id = ? AND franquicia_id = ?";
             
             $params = [$stock_actual, $observaciones, $id, $franquicia_id];
@@ -1361,11 +1429,18 @@ if (!class_exists('FranquiciaStockController')) {
 // Procesar petición si es una llamada AJAX directa
 if (($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['accion'])) && !headers_sent()) {
     try {
+        error_log("========================================");
         error_log("DEBUG CONTROLLER: Iniciando procesamiento de petición AJAX");
+        error_log("DEBUG CONTROLLER: Timestamp: " . date('Y-m-d H:i:s'));
         error_log("DEBUG CONTROLLER: Método: " . $_SERVER['REQUEST_METHOD']);
         error_log("DEBUG CONTROLLER: Acción: " . ($_POST['accion'] ?? $_GET['accion'] ?? 'no especificada'));
-        error_log("DEBUG CONTROLLER: Parámetros POST: " . json_encode($_POST));
-        error_log("DEBUG CONTROLLER: Parámetros GET: " . json_encode($_GET));
+        
+        // Log de todos los parámetros POST (sin datos sensibles)
+        $postCopy = $_POST;
+        if (isset($postCopy['stock_data'])) {
+            $postCopy['stock_data'] = '[' . strlen($postCopy['stock_data']) . ' bytes]';
+        }
+        error_log("DEBUG CONTROLLER: Parámetros POST: " . json_encode($postCopy));
         
         // Verificar sesión antes de procesar
         if (!isset($_SESSION)) {
@@ -1381,42 +1456,59 @@ if (($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['accion'])) && !header
         ]));
         
         // Crear controlador y procesar petición
+        error_log("DEBUG CONTROLLER: Creando instancia del controlador...");
         $controller = new FranquiciaStockController();
-        error_log("DEBUG CONTROLLER: Controlador creado");
+        error_log("DEBUG CONTROLLER: Controlador creado exitosamente");
         
+        error_log("DEBUG CONTROLLER: Llamando a procesarPeticion()...");
         $resultado = $controller->procesarPeticion();
-        error_log("DEBUG CONTROLLER: Petición procesada, resultado: " . json_encode($resultado));
+        error_log("DEBUG CONTROLLER: procesarPeticion() completado");
+        error_log("DEBUG CONTROLLER: Resultado success: " . ($resultado['success'] ? 'true' : 'false'));
         
         // Verificar que no se han enviado headers
         if (!headers_sent()) {
             header('Content-Type: application/json; charset=utf-8');
             error_log("DEBUG CONTROLLER: Headers establecidos");
         } else {
-            error_log("DEBUG CONTROLLER: Headers ya enviados");
+            error_log("WARNING CONTROLLER: Headers ya fueron enviados");
         }
         
         // Codificar respuesta
         $jsonResponse = json_encode($resultado);
         if ($jsonResponse === false) {
-            error_log("DEBUG CONTROLLER: Error codificando JSON: " . json_last_error_msg());
-            throw new Exception("Error codificando respuesta JSON: " . json_last_error_msg());
+            $jsonError = json_last_error_msg();
+            error_log("ERROR CONTROLLER: Error codificando JSON: " . $jsonError);
+            throw new Exception("Error codificando respuesta JSON: " . $jsonError);
         }
         
+        error_log("DEBUG CONTROLLER: Respuesta JSON generada (" . strlen($jsonResponse) . " bytes)");
         echo $jsonResponse;
         error_log("DEBUG CONTROLLER: Respuesta enviada exitosamente");
+        error_log("========================================");
         
-    } catch (Exception $e) {
-        error_log("ERROR CONTROLLER: " . $e->getMessage());
+    } catch (Throwable $e) {
+        error_log("========================================");
+        error_log("ERROR CONTROLLER FATAL: " . $e->getMessage());
+        error_log("ERROR CONTROLLER File: " . $e->getFile());
+        error_log("ERROR CONTROLLER Line: " . $e->getLine());
+        error_log("ERROR CONTROLLER Stack trace:");
+        error_log($e->getTraceAsString());
+        error_log("========================================");
         
         if (!headers_sent()) {
+            http_response_code(500);
             header('Content-Type: application/json; charset=utf-8');
         }
         
         echo json_encode([
             'success' => false,
-            'message' => $e->getMessage(),
+            'message' => 'Error interno del servidor: ' . $e->getMessage(),
             'error_type' => 'fatal_error',
-            'stack_trace' => $e->getTraceAsString()
+            'error_details' => [
+                'file' => basename($e->getFile()),
+                'line' => $e->getLine(),
+                'message' => $e->getMessage()
+            ]
         ]);
     }
 }
