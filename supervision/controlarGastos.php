@@ -162,6 +162,7 @@ session_start();
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@5.0/dist/fancybox/fancybox.umd.js"></script>
     <script src="js/image-rotation-helper.js"></script>
+    <script src="js/diagnostico-imagenes.js"></script>
     <script src="js/controlarGastos.js"></script>
 </body>
 </html>

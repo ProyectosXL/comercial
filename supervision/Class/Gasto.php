@@ -233,7 +233,6 @@ class Gasto
         $baseUrl = '/comercial/imagenes/compSupervision/';
         
         // Construct the file name pattern
-
         $nombreArchivo = $semana . '_' . str_replace(' ', '_', strtoupper($supervisora)) . '_' . $id_conc. '_' . $type;
 
         
@@ -254,10 +253,18 @@ class Gasto
                 $imagenes = array_merge($imagenes, $archivos);
             }
         }
-        // Convert server paths to URLs
+        
+        // Convert server paths to URLs and get rotations
         $imageUrls = array_map(function($imagen) use ($documentRoot, $baseUrl) {
             $relativePath = str_replace($documentRoot, '', $imagen);
-            return $baseUrl . basename($relativePath);
+            $nombreImagen = basename($relativePath);
+            $rotacion = $this->obtenerRotacionImagen($nombreImagen);
+            
+            return [
+                'src' => $baseUrl . $nombreImagen,
+                'rotacion' => $rotacion,
+                'nombre' => $nombreImagen
+            ];
         }, $imagenes);
         
         // Debug information
@@ -552,6 +559,65 @@ public function obtenerGastosAutorizados($semana, $anio, $supervisora = null)
         }
         
         return $gastos;
+    }
+
+    public function guardarRotacionImagen($nombreImagen, $rotacion, $id_conc, $semana, $anio, $supervisora, $type) {
+        try {
+            // Verificar si ya existe un registro
+            $sqlCheck = "SELECT COUNT(*) as total FROM RO_T_ROTACION_IMAGENES_SUP 
+                         WHERE NOMBRE_IMAGEN = ?";
+            $stmtCheck = sqlsrv_query($this->cid_central, $sqlCheck, array($nombreImagen));
+            
+            if ($stmtCheck === false) {
+                throw new Exception("Error al verificar imagen existente: " . print_r(sqlsrv_errors(), true));
+            }
+            
+            $row = sqlsrv_fetch_array($stmtCheck, SQLSRV_FETCH_ASSOC);
+            
+            if ($row['total'] > 0) {
+                // Actualizar
+                $sqlUpdate = "UPDATE RO_T_ROTACION_IMAGENES_SUP 
+                             SET ROTACION = ?, FECHA_MODIFICACION = GETDATE()
+                             WHERE NOMBRE_IMAGEN = ?";
+                $stmt = sqlsrv_query($this->cid_central, $sqlUpdate, array($rotacion, $nombreImagen));
+                
+                if ($stmt === false) {
+                    throw new Exception("Error al actualizar rotación: " . print_r(sqlsrv_errors(), true));
+                }
+                
+                error_log("Rotación actualizada: $nombreImagen = $rotacion grados");
+            } else {
+                // Insertar
+                $sqlInsert = "INSERT INTO RO_T_ROTACION_IMAGENES_SUP 
+                             (NOMBRE_IMAGEN, ROTACION, ID_CONC, SEMANA, ANIO, SUPERVISORA, TIPO, FECHA_CREACION)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, GETDATE())";
+                $stmt = sqlsrv_query($this->cid_central, $sqlInsert, 
+                    array($nombreImagen, $rotacion, $id_conc, $semana, $anio, $supervisora, $type));
+                
+                if ($stmt === false) {
+                    throw new Exception("Error al insertar rotación: " . print_r(sqlsrv_errors(), true));
+                }
+                
+                error_log("Rotación insertada: $nombreImagen = $rotacion grados");
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            error_log("Error en guardarRotacionImagen: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function obtenerRotacionImagen($nombreImagen) {
+        $sql = "SELECT ROTACION FROM RO_T_ROTACION_IMAGENES_SUP WHERE NOMBRE_IMAGEN = ?";
+        $stmt = sqlsrv_query($this->cid_central, $sql, array($nombreImagen));
+        
+        if ($stmt === false) {
+            return 0;
+        }
+        
+        $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+        return $row ? intval($row['ROTACION']) : 0;
     }
 
 }

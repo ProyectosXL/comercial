@@ -562,8 +562,13 @@ $(document).ready(function() {
 
     // Función para mostrar imágenes
     function mostrarImagenes(id_conc, type) {
+        console.log('🎬 Iniciando mostrarImagenes:', {id_conc, type});
+        console.log('🔍 Fancybox disponible:', typeof Fancybox !== 'undefined');
+        
         const semanaCompleta = $('#semanaRetail').val();
         let supervisora = $('#supervisoraSelect').val();
+
+        console.log('📋 Parámetros iniciales:', {semanaCompleta, supervisora});
 
         if (!semanaCompleta) {
             Swal.fire('Error', 'Por favor, seleccione una semana', 'error');
@@ -584,6 +589,7 @@ $(document).ready(function() {
 
             if (rowData && rowData.supervisora) {
                 supervisora = rowData.supervisora;
+                console.log('👤 Supervisora obtenida de la fila:', supervisora);
             } else {
                 Swal.fire('Error', 'No se pudo determinar la supervisora para este gasto', 'error');
                 return;
@@ -591,6 +597,8 @@ $(document).ready(function() {
         }
 
         const [semana, anio] = semanaCompleta.split('|');
+        
+        console.log('📤 Enviando request con:', {id_conc, semana, anio, supervisora, type});
 
         // Usamos POST exactamente como antes, pero sin Swal
         $.ajax({
@@ -600,91 +608,313 @@ $(document).ready(function() {
             contentType: 'application/json',
             dataType: 'json',
             beforeSend: () => {
+                console.log('⏳ Cargando imágenes...');
                 // Fancybox mostrará su propio indicador
             }
         })
         .done(function (response) {
+            console.log('📥 Respuesta de obtenerImagenesSup:', response);
+            console.log('🔍 Debug info:', response.debug);
+            
             if (response.success && response.imagenes && response.imagenes.length) {
-                const fancyboxImages = response.imagenes.map((src, i) => ({
-                    src: src,
-                    caption: `Imagen ${i + 1} de ${response.imagenes.length}`
-                }));
+                console.log(`🖼️ Se encontraron ${response.imagenes.length} imágenes:`, response.imagenes);
                 
-                // Variable para almacenar los grados de rotación de cada imagen
+                // Verificar que Fancybox esté disponible
+                if (typeof Fancybox === 'undefined') {
+                    console.error('❌ Fancybox no está disponible!');
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'La librería de visualización de imágenes (Fancybox) no está cargada.',
+                        icon: 'error'
+                    });
+                    return;
+                }
+                
+                const fancyboxImages = response.imagenes.map((imgData, i) => {
+                    console.log(`  📌 Imagen ${i + 1}: ${imgData.src} (Rotación guardada: ${imgData.rotacion}°)`);
+                    return {
+                        src: imgData.src,
+                        caption: `Imagen ${i + 1} de ${response.imagenes.length}`,
+                        nombre: imgData.nombre,
+                        rotacion: imgData.rotacion
+                    };
+                });
+                
+                console.log('📦 Imágenes para Fancybox:', fancyboxImages);
+                
+                // Variable para almacenar las rotaciones de cada imagen
                 const rotaciones = {};
                 
-                Fancybox.show(fancyboxImages, {
-                    loop: false,
-                    Toolbar: {
-                        display: {
-                            left: [],
-                            middle: [],
-                            right: ['rotateLeft', 'rotateRight', 'zoom', 'close']
-                        }
-                    },
-                    on: {
-                        init: (fancybox) => {
-                            // Agregar botones personalizados de rotación
-                            const toolbar = fancybox.$container.querySelector('.fancybox__toolbar');
+                // Variable para controlar guardados pendientes
+                const guardadosPendientes = {};
+                
+                // Inicializar rotaciones con los valores guardados
+                fancyboxImages.forEach((img, idx) => {
+                    rotaciones[idx] = img.rotacion || 0;
+                    console.log(`📋 Imagen ${idx} (${img.nombre}): Rotación inicial ${rotaciones[idx]}°`);
+                });
+                
+                // Función para guardar rotación en el servidor
+                function guardarRotacion(nombreImagen, rotacion, callback) {
+                    console.log('💾 Intentando guardar rotación:', {
+                        nombreImagen: nombreImagen,
+                        rotacion: rotacion,
+                        id_conc: id_conc,
+                        semana: semana,
+                        anio: anio,
+                        supervisora: supervisora,
+                        type: type
+                    });
+                    
+                    // Cancelar guardado pendiente si existe
+                    if (guardadosPendientes[nombreImagen]) {
+                        clearTimeout(guardadosPendientes[nombreImagen]);
+                    }
+                    
+                    // Mostrar indicador de guardando
+                    const indicador = document.createElement('div');
+                    indicador.id = 'indicador-guardando';
+                    indicador.style.cssText = 'position: fixed; top: 20px; right: 20px; background: rgba(0, 123, 255, 0.9); color: white; padding: 10px 20px; border-radius: 5px; z-index: 999999; font-size: 14px;';
+                    indicador.innerHTML = '💾 Guardando rotación...';
+                    document.body.appendChild(indicador);
+                    
+                    // Guardar con un pequeño delay para evitar múltiples guardados
+                    guardadosPendientes[nombreImagen] = setTimeout(() => {
+                        $.ajax({
+                            url: 'Controller/guardarRotacionImagen.php',
+                            method: 'POST',
+                            data: JSON.stringify({
+                                nombreImagen: nombreImagen,
+                                rotacion: rotacion,
+                                id_conc: id_conc,
+                                semana: semana,
+                                anio: anio,
+                                supervisora: supervisora,
+                                type: type
+                            }),
+                            contentType: 'application/json',
+                            dataType: 'json',
+                            timeout: 10000 // 10 segundos timeout
+                        })
+                        .done(function(response) {
+                            // Actualizar indicador
+                            indicador.style.background = 'rgba(40, 167, 69, 0.9)';
+                            indicador.innerHTML = '✅ Rotación guardada';
                             
-                            // Botón rotar a la izquierda
-                            const btnRotateLeft = document.createElement('button');
-                            btnRotateLeft.className = 'fancybox__button';
-                            btnRotateLeft.setAttribute('data-rotate', 'left');
-                            btnRotateLeft.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M7.11 8.53L5.7 7.11C4.8 8.27 4.24 9.61 4.07 11h2.02c.14-.87.49-1.72 1.02-2.47zM6.09 13H4.07c.17 1.39.72 2.73 1.62 3.89l1.41-1.42c-.52-.75-.87-1.59-1.01-2.47zm1.01 5.32c1.16.9 2.51 1.44 3.9 1.61V17.9c-.87-.15-1.71-.49-2.46-1.03L7.1 18.32zM13 4.07V1L8.45 5.55 13 10V6.09c2.84.48 5 2.94 5 5.91s-2.16 5.43-5 5.91v2.02c3.95-.49 7-3.85 7-7.93s-3.05-7.44-7-7.93z"/></svg>';
-                            btnRotateLeft.title = 'Rotar izquierda';
-                            btnRotateLeft.onclick = () => {
-                                const currentSlide = fancybox.getSlide();
-                                const index = currentSlide.index;
-                                rotaciones[index] = (rotaciones[index] || 0) - 90;
-                                const img = currentSlide.$el.querySelector('.fancybox__content img');
-                                if (img) {
-                                    img.style.transform = `rotate(${rotaciones[index]}deg)`;
+                            if (response.success) {
+                                console.log('✅ Rotación guardada exitosamente:', nombreImagen, rotacion + '°');
+                                if (callback) callback(true);
+                            } else {
+                                console.error('❌ Error al guardar rotación:', response.message);
+                                indicador.style.background = 'rgba(220, 53, 69, 0.9)';
+                                indicador.innerHTML = '❌ Error al guardar';
+                                if (callback) callback(false);
+                            }
+                            
+                            // Remover indicador después de 2 segundos
+                            setTimeout(() => {
+                                if (indicador && indicador.parentNode) {
+                                    indicador.parentNode.removeChild(indicador);
                                 }
-                            };
+                            }, 2000);
+                        })
+                        .fail(function(xhr, status, error) {
+                            console.error('❌ Error AJAX al guardar rotación:');
+                            console.error('  - Status:', status);
+                            console.error('  - Error:', error);
+                            console.error('  - Status Code:', xhr.status);
+                            console.error('  - Response Text:', xhr.responseText);
+                            console.error('  - Ready State:', xhr.readyState);
                             
-                            // Botón rotar a la derecha
-                            const btnRotateRight = document.createElement('button');
-                            btnRotateRight.className = 'fancybox__button';
-                            btnRotateRight.setAttribute('data-rotate', 'right');
-                            btnRotateRight.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M15.55 5.55L11 1v3.07C7.06 4.56 4 7.92 4 12s3.05 7.44 7 7.93v-2.02c-2.84-.48-5-2.94-5-5.91s2.16-5.43 5-5.91V10l4.55-4.45zM19.93 11c-.17-1.39-.72-2.73-1.62-3.89l-1.42 1.42c.54.75.88 1.6 1.02 2.47h2.02zM13 17.9v2.02c1.39-.17 2.74-.71 3.9-1.61l-1.44-1.44c-.75.54-1.59.89-2.46 1.03zm3.89-2.42l1.42 1.41c.9-1.16 1.45-2.5 1.62-3.89h-2.02c-.14.87-.48 1.72-1.02 2.48z"/></svg>';
-                            btnRotateRight.title = 'Rotar derecha';
-                            btnRotateRight.onclick = () => {
-                                const currentSlide = fancybox.getSlide();
-                                const index = currentSlide.index;
-                                rotaciones[index] = (rotaciones[index] || 0) + 90;
-                                const img = currentSlide.$el.querySelector('.fancybox__content img');
-                                if (img) {
-                                    img.style.transform = `rotate(${rotaciones[index]}deg)`;
+                            // Actualizar indicador
+                            indicador.style.background = 'rgba(220, 53, 69, 0.9)';
+                            indicador.innerHTML = '❌ Error: ' + (error || 'Desconocido');
+                            
+                            if (callback) callback(false);
+                            
+                            // Remover indicador después de 3 segundos
+                            setTimeout(() => {
+                                if (indicador && indicador.parentNode) {
+                                    indicador.parentNode.removeChild(indicador);
                                 }
-                            };
-                            
-                            // Insertar botones al inicio del toolbar
-                            const rightColumn = toolbar.querySelector('.fancybox__toolbar__column--right');
-                            if (rightColumn && rightColumn.firstChild) {
-                                rightColumn.insertBefore(btnRotateRight, rightColumn.firstChild);
-                                rightColumn.insertBefore(btnRotateLeft, rightColumn.firstChild);
+                            }, 3000);
+                        });
+                        
+                        delete guardadosPendientes[nombreImagen];
+                    }, 300); // Delay de 300ms para evitar guardados múltiples
+                }
+                
+                try {
+                    // Configuración simple de Fancybox
+                    const fancyboxInstance = Fancybox.show(fancyboxImages, {
+                        loop: true,
+                        Toolbar: {
+                            display: {
+                                left: ['infobar'],
+                                middle: [],
+                                right: ['zoom', 'slideshow', 'thumbs', 'close']
                             }
                         },
-                        'Carousel.change': (fancybox, carousel, to, from) => {
-                            // Aplicar rotación guardada al cambiar de imagen
-                            if (rotaciones[to] !== undefined) {
-                                setTimeout(() => {
-                                    const currentSlide = fancybox.getSlide();
-                                    const img = currentSlide.$el.querySelector('.fancybox__content img');
-                                    if (img) {
-                                        img.style.transform = `rotate(${rotaciones[to]}deg)`;
-                                    }
-                                }, 50);
+                        on: {
+                            done: (fancybox, slide) => {
+                                // Aplicar rotación guardada a la imagen actual
+                                const currentIndex = slide.index;
+                                if (rotaciones[currentIndex] !== undefined && rotaciones[currentIndex] !== 0) {
+                                    setTimeout(() => {
+                                        const img = document.querySelector('.fancybox__slide.is-selected img');
+                                        if (img) {
+                                            img.style.transform = `rotate(${rotaciones[currentIndex]}deg)`;
+                                            img.style.transition = 'none';
+                                            console.log(`🔄 Aplicada rotación inicial: ${rotaciones[currentIndex]}°`);
+                                        }
+                                    }, 100);
+                                }
+                                
+                                // Agregar botones de rotación cuando la primera imagen se carga
+                                const toolbar = document.querySelector('.fancybox__toolbar');
+                                if (toolbar && !toolbar.querySelector('.btn-rotate')) {
+                                    console.log('🔧 Agregando botones de rotación');
+                                    
+                                    // CSS inline para los botones - con z-index alto y pointer-events
+                                    const btnStyle = 'background: rgba(30, 30, 30, 0.9); border: 2px solid white; color: white; cursor: pointer; padding: 10px; margin: 0 5px; border-radius: 5px; width: 45px; height: 45px; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; z-index: 99999; pointer-events: auto;';
+                                    
+                                    // Crear contenedor para botones
+                                    const btnContainer = document.createElement('div');
+                                    btnContainer.style.cssText = 'position: absolute; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 99999; pointer-events: auto;';
+                                    
+                                    // Botón rotar izquierda
+                                    const btnLeft = document.createElement('button');
+                                    btnLeft.className = 'btn-rotate btn-rotate-left';
+                                    btnLeft.type = 'button';
+                                    btnLeft.style.cssText = btnStyle;
+                                    btnLeft.innerHTML = '↶';
+                                    btnLeft.title = 'Rotar izquierda (antihorario)';
+                                    
+                                    btnLeft.addEventListener('click', function(e) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        console.log('🔄 Click en botón IZQUIERDA detectado');
+                                        
+                                        const currentSlide = fancybox.getSlide();
+                                        if (!currentSlide) {
+                                            console.error('No se pudo obtener el slide actual');
+                                            return;
+                                        }
+                                        
+                                        const idx = currentSlide.index;
+                                        const nombreImagen = fancyboxImages[idx].nombre;
+                                        rotaciones[idx] = (rotaciones[idx] || 0) - 90;
+                                        console.log(`Rotación para imagen ${idx}: ${rotaciones[idx]}°`);
+                                        
+                                        const img = document.querySelector('.fancybox__slide.is-selected img');
+                                        if (img) {
+                                            img.style.transform = `rotate(${rotaciones[idx]}deg)`;
+                                            img.style.transition = 'transform 0.3s ease';
+                                            console.log('✅ Imagen rotada a la izquierda');
+                                            
+                                            // Guardar en el servidor
+                                            guardarRotacion(nombreImagen, rotaciones[idx]);
+                                        } else {
+                                            console.error('No se encontró la imagen');
+                                        }
+                                    });
+                                    
+                                    // Botón rotar derecha
+                                    const btnRight = document.createElement('button');
+                                    btnRight.className = 'btn-rotate btn-rotate-right';
+                                    btnRight.type = 'button';
+                                    btnRight.style.cssText = btnStyle;
+                                    btnRight.innerHTML = '↷';
+                                    btnRight.title = 'Rotar derecha (horario)';
+                                    
+                                    btnRight.addEventListener('click', function(e) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        console.log('🔄 Click en botón DERECHA detectado');
+                                        
+                                        const currentSlide = fancybox.getSlide();
+                                        if (!currentSlide) {
+                                            console.error('No se pudo obtener el slide actual');
+                                            return;
+                                        }
+                                        
+                                        const idx = currentSlide.index;
+                                        const nombreImagen = fancyboxImages[idx].nombre;
+                                        rotaciones[idx] = (rotaciones[idx] || 0) + 90;
+                                        console.log(`Rotación para imagen ${idx}: ${rotaciones[idx]}°`);
+                                        
+                                        const img = document.querySelector('.fancybox__slide.is-selected img');
+                                        if (img) {
+                                            img.style.transform = `rotate(${rotaciones[idx]}deg)`;
+                                            img.style.transition = 'transform 0.3s ease';
+                                            console.log('✅ Imagen rotada a la derecha');
+                                            
+                                            // Guardar en el servidor
+                                            guardarRotacion(nombreImagen, rotaciones[idx]);
+                                        } else {
+                                            console.error('No se encontró la imagen');
+                                        }
+                                    });
+                                    
+                                    // Agregar efecto hover para confirmar que son clickeables
+                                    btnLeft.addEventListener('mouseenter', function() {
+                                        this.style.background = 'rgba(50, 50, 50, 1)';
+                                        this.style.transform = 'scale(1.1)';
+                                    });
+                                    btnLeft.addEventListener('mouseleave', function() {
+                                        this.style.background = 'rgba(30, 30, 30, 0.9)';
+                                        this.style.transform = 'scale(1)';
+                                    });
+                                    
+                                    btnRight.addEventListener('mouseenter', function() {
+                                        this.style.background = 'rgba(50, 50, 50, 1)';
+                                        this.style.transform = 'scale(1.1)';
+                                    });
+                                    btnRight.addEventListener('mouseleave', function() {
+                                        this.style.background = 'rgba(30, 30, 30, 0.9)';
+                                        this.style.transform = 'scale(1)';
+                                    });
+                                    
+                                    btnContainer.appendChild(btnLeft);
+                                    btnContainer.appendChild(btnRight);
+                                    toolbar.appendChild(btnContainer);
+                                    
+                                    console.log('✅ Botones de rotación agregados con addEventListener');
+                                }
+                            },
+                            'Carousel.change': (fancybox, carousel, to, from) => {
+                                // Aplicar rotación guardada al cambiar de imagen
+                                console.log(`📸 Cambio de imagen: ${from} → ${to}`);
+                                if (rotaciones[to] !== undefined) {
+                                    setTimeout(() => {
+                                        const img = document.querySelector('.fancybox__slide.is-selected img');
+                                        if (img) {
+                                            img.style.transform = `rotate(${rotaciones[to]}deg)`;
+                                            img.style.transition = 'none';
+                                            console.log(`✅ Aplicada rotación guardada: ${rotaciones[to]}°`);
+                                        }
+                                    }, 50);
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                    console.log('✅ Fancybox iniciado correctamente');
+                } catch (error) {
+                    console.error('❌ Error al iniciar Fancybox:', error);
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Error al mostrar las imágenes: ' + error.message,
+                        icon: 'error'
+                    });
+                }
             } else {
+                console.warn('⚠️ No se encontraron imágenes o hubo error:', response);
                 Swal.fire('Sin imágenes', response.message || 'No se encontraron imágenes', 'info');
             }
         })
         .fail(function (xhr) {
+            console.error('❌ Error al cargar imágenes:', xhr);
+            console.error('Response text:', xhr.responseText);
             Swal.fire('Error', 'No se pudieron cargar las imágenes', 'error');
         });
     }
