@@ -39,6 +39,7 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" integrity="sha256-mmgLkCYLUQbXn0B1SRqzHar6dCnv9oZFPEC1g1cwlkk=" crossorigin="anonymous" />
     <link rel="stylesheet" href="css/cargaGastos.css" class="rel">
+    <link rel="stylesheet" href="css/image-rotation.css">
     <style>
         .presupuesto-info {
             background-color: #e3f2fd;
@@ -317,6 +318,7 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
     <script>
         var gastosExistentes = <?php echo $gastosExistentesJSON; ?>;
     </script>
+    <script src="js/image-rotation-helper.js"></script>
     <script src="js/cargaGastosNew.js"></script>
     <script src="js/mostrarNew.js"></script>
     <script src="js/verificacion-dinamica.js"></script>

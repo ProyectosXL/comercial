@@ -332,6 +332,9 @@ function mostrarImagenes(id_conc, type) {
                 },
                 didOpen: (modalElement) => {
                     new bootstrap.Carousel(modalElement.querySelector('#imageCarousel'));
+                    
+                    // Agregar botones de rotación al carrusel
+                    addRotationToCarousel('imageCarousel');
                 }
             });
         } else {

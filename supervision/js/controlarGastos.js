@@ -609,11 +609,9 @@ $(document).ready(function() {
                     src: src,
                     caption: `Imagen ${i + 1} de ${response.imagenes.length}`
                 }));
-                Fancybox.show(fancyboxImages, {
-                    loop: false,
-                    buttons: ['zoom', 'close'],
-                    slideShow: { autoStart: false }
-                });
+                
+                // Usar el helper de rotación de imágenes
+                showFancyboxWithRotation(fancyboxImages);
             } else {
                 Swal.fire('Sin imágenes', response.message || 'No se encontraron imágenes', 'info');
             }

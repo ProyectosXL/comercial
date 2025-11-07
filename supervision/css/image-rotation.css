@@ -1,0 +1,65 @@
+/* Estilos para controles de rotación de imágenes */
+
+/* Transición suave para rotación de imágenes en Fancybox */
+.fancybox__slide img {
+    transition: transform 0.3s ease;
+}
+
+/* Iconos más grandes en botones de Fancybox */
+.fancybox__toolbar .f-button i {
+    font-size: 1.2rem;
+}
+
+/* Botones de rotación en carrusel de Bootstrap */
+.rotation-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+    display: flex;
+    gap: 5px;
+}
+
+.rotation-controls .rotate-btn {
+    background-color: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.rotation-controls .rotate-btn:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.1);
+}
+
+.rotation-controls .rotate-btn i {
+    font-size: 1.2rem;
+}
+
+/* Transición suave para rotación en carrusel */
+.carousel-item img {
+    transition: transform 0.3s ease;
+}
+
+/* Ajuste para que la imagen rotada se mantenga centrada */
+.carousel-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Estilos para modal de SweetAlert con carrusel */
+.swal-large-modal {
+    overflow: visible !important;
+}
+
+.swal-large-modal .swal2-html-container {
+    overflow: visible !important;
+}
