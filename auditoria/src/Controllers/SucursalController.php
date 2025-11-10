@@ -99,7 +99,9 @@ class SucursalController extends BaseController {
                 'motivo' => $_POST['motivo'],
                 'observaciones' => $_POST['observaciones'] ?? '',
                 'aprobado_supervisora' => $_POST['aprobado_supervisora'] ?? 'No',
-                'path_adjunto' => $path_adjunto
+                'path_adjunto' => $path_adjunto,
+                'estado' => 'Pendiente',
+                'fecha_creacion' => date('Y-m-d H:i:s')
             ];
 
             $auditModel = new AuditModel();

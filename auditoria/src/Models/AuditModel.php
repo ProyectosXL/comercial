@@ -6,9 +6,9 @@ class AuditModel {
 
     public function guardarJustificacion($datos) {
         $sql = "INSERT INTO FP_AUDITORIA_DIF_PRECIO 
-                    (n_comp, nro_sucursal, fecha_operacion, importe, motivo, observaciones, aprobado_supervisora, path_adjunto) 
+                    (n_comp, nro_sucursal, fecha_operacion, importe, motivo, observaciones, aprobado_supervisora, path_adjunto, estado, fecha_creacion) 
                 VALUES 
-                    (:n_comp, :nro_sucursal, :fecha_operacion, :importe, :motivo, :observaciones, :aprobado_supervisora, :path_adjunto);
+                    (:n_comp, :nro_sucursal, :fecha_operacion, :importe, :motivo, :observaciones, :aprobado_supervisora, :path_adjunto, :estado, :fecha_creacion);
                 SELECT SCOPE_IDENTITY() as LastID;";
         try {
             $pdo = Database::getConnectionSistemas();
@@ -21,6 +21,8 @@ class AuditModel {
             $stmt->bindParam(':observaciones', $datos['observaciones']);
             $stmt->bindParam(':aprobado_supervisora', $datos['aprobado_supervisora']);
             $stmt->bindParam(':path_adjunto', $datos['path_adjunto']);
+            $stmt->bindParam(':estado', $datos['estado']);
+            $stmt->bindParam(':fecha_creacion', $datos['fecha_creacion']);
             $stmt->execute();
             $stmt->nextRowset(); 
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
