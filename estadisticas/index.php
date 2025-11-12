@@ -299,7 +299,7 @@ if (!isset($_SESSION['username'])) {
                             </section>
                         </div>
 
-                        <!-- E-commerce -->
+<!-- E-commerce -->
                         <div class="tab-pane fade" id="ecommerce" role="tabpanel">
                             <section class="mb-5">
                                 <h2 class="section-title">
@@ -318,11 +318,21 @@ if (!isset($_SESSION['username'])) {
                                     <div class="card">
                                         <div class="card-body">
                                             <i class="bi bi-cart-check card-icon color-success"></i>
-                                            <h5 class="card-title">Dashboard E-commerce</h5>
-                                            <p class="card-subtitle">Panel principal de e-commerce</p>
+                                            <h5 class="card-title">Dashboard E-commerce AR</h5>
+                                            <p class="card-subtitle">Panel e-commerce Argentina</p>
                                             <a href="../../bi/tableros/dashEcommerce.html" class="btn btn-success btn-card">Ver Dashboard</a>
                                         </div>
                                     </div>
+
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <i class="bi bi-cart-check card-icon color-info"></i>
+                                            <h5 class="card-title">Dashboard E-commerce UY</h5>
+                                            <p class="card-subtitle">Panel e-commerce Uruguay</p>
+                                            <a href="../../bi/tableros/dashEcommerceUy.html" class="btn btn-info btn-card">Ver Dashboard</a>
+                                        </div>
+                                    </div>
+                                    
                                     <div class="card">
                                         <div class="card-body">
                                             <i class="bi bi-tags card-icon color-info"></i>
@@ -334,8 +344,6 @@ if (!isset($_SESSION['username'])) {
                                 </div>
                             </section>
                         </div>
-                    </div>
-                </div>
 
                 <!-- Tab 3: Aplicaciones -->
                 <div class="tab-pane fade" id="aplicaciones" role="tabpanel">
