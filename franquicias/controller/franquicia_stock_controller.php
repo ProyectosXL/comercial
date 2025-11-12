@@ -738,8 +738,8 @@ if (!class_exists('FranquiciaStockController')) {
                     }
                     
                     // Limpiar caracteres especiales que puedan causar problemas
-                    $categoria = preg_replace('/[^\w\s\-\.]/', '', $categoria);
-                    $rubro = preg_replace('/[^\w\s\-\.]/', '', $rubro);
+                    $categoria = preg_replace('/[^\w\s\-\.ÑñÁÉÍÓÚáéíóú]/', '', $categoria);
+                    $rubro = preg_replace('/[^\w\s\-\.ÑñÁÉÍÓÚáéíóú]/', '', $rubro);
                     
                     error_log("DEBUG STOCK_DATA Item $index: Después de limpiar - rubro='$rubro', categoria='$categoria'");
                     
@@ -755,26 +755,23 @@ if (!class_exists('FranquiciaStockController')) {
                     
                     error_log("DEBUG STOCK_DATA Item $index: Stock actual: $stockActual, Nueva cantidad: $cantidad, Movimiento: $movimiento");
                     
-                    // Solo registrar si hay un cambio
-                    if ($movimiento !== 0) {
-                        error_log("DEBUG STOCK_DATA Item $index: Registrando movimiento");
-                        $resultado = $this->registrarArticuloIndividual(
-                            $franquicia_id_sesion,
-                            $codigoArticulo,
-                            $descripcion,
-                            $movimiento, // Enviamos la diferencia, no la cantidad final
-                            'AJUSTE'
-                        );
-                        
-                        if ($resultado) {
-                            $movimientosRegistrados++;
-                            error_log("DEBUG STOCK_DATA Item $index: Movimiento registrado exitosamente");
-                        } else {
-                            $errores[] = "No se pudo registrar '$categoria' en rubro '$rubro'";
-                            error_log("ERROR STOCK_DATA Item $index: No se pudo registrar");
-                        }
+                    // IMPORTANTE: Siempre registrar, incluso si el movimiento es 0
+                    // Esto asegura que todas las categorías queden registradas en el período actual
+                    error_log("DEBUG STOCK_DATA Item $index: Registrando (movimiento=$movimiento)");
+                    $resultado = $this->registrarArticuloIndividual(
+                        $franquicia_id_sesion,
+                        $codigoArticulo,
+                        $descripcion,
+                        $movimiento, // Enviamos la diferencia, no la cantidad final
+                        'AJUSTE'
+                    );
+                    
+                    if ($resultado) {
+                        $movimientosRegistrados++;
+                        error_log("DEBUG STOCK_DATA Item $index: Registro exitoso (cantidad final: $cantidad)");
                     } else {
-                        error_log("DEBUG STOCK_DATA Item $index: No se requiere movimiento (stock actual = cantidad deseada)");
+                        $errores[] = "No se pudo registrar '$categoria' en rubro '$rubro'";
+                        error_log("ERROR STOCK_DATA Item $index: No se pudo registrar");
                     }
                     
                 } catch (Exception $e) {
@@ -828,7 +825,8 @@ if (!class_exists('FranquiciaStockController')) {
             }
             
             $descripcion = trim($descripcion);
-            $descripcion = preg_replace('/[^\w\s\-\.]/', '', $descripcion);
+            // Permitir caracteres en español (acentos, ñ) y caracteres comunes
+            $descripcion = preg_replace('/[^\w\s\-\.ÑñÁÉÍÓÚáéíóú]/', '', $descripcion);
             
             if (strlen($codigo_articulo) > 50) {
                 $codigo_articulo = substr($codigo_articulo, 0, 50);
@@ -883,6 +881,10 @@ if (!class_exists('FranquiciaStockController')) {
             if (empty($categoria)) {
                 $categoria = $descripcion;
             }
+            
+            // Limpiar rubro y categoría manteniendo espacios y caracteres españoles
+            $rubro = trim($rubro);
+            $categoria = trim($categoria);
             
             error_log("DEBUG: Rubro extraído: '$rubro', Categoría extraída: '$categoria'");
             
