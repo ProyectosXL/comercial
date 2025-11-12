@@ -18,13 +18,14 @@ $hasta = isset($_GET['hasta']) ? $_GET['hasta'] : date('Y-m-d');
 $canal = isset($_GET['selectCanal']) ? $_GET['selectCanal'] : '%';
 $selectCliente = isset($_GET['selectCliente']) ? $_GET['selectCliente'] : '%';
 $estado = isset($_GET['selectEstado']) ? $_GET['selectEstado'] : '%';
+$tipo = isset($_GET['selectTipo']) ? $_GET['selectTipo'] : '%';
 
 $data = [];
 $busquedaRealizada = false;
 
 // Solo cargar datos si se ha realizado una búsqueda (se envió el formulario)
 if (isset($_GET['buscar']) && $_GET['buscar'] == '1') {
-    $data = $pedido->traePedido($desde, $hasta, $canal, $selectCliente, $estado);
+    $data = $pedido->traePedido($desde, $hasta, $canal, $selectCliente, $estado, $tipo);
     $busquedaRealizada = true;
 }
 
@@ -98,87 +99,86 @@ error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 
                 </div>
             </div>
 
-            <!-- Filters -->
+<!-- Filters -->
             <div class="card-body">
                 <form method="GET" id="formFiltros">
                     <input type="hidden" name="buscar" value="1">
-                    <div class="row g-3 align-items-end mb-3">
-                        <div class="col-md-6 col-lg-2">
-                            <label for="desde" class="form-label">Desde:</label>
-                            <input type="date" 
-                                   id="desde" 
-                                   name="desde" 
-                                   class="form-control form-control-sm" 
-                                   value="<?= $desde ?>">
+
+                    <div class="filter-panel">
+                        <div class="filter-panel-header">
+                            <h5 class="filter-panel-title">
+                                <i class="bi bi-funnel-fill me-2"></i>
+                                Panel de Filtros
+                            </h5>
                         </div>
                         
-                        <div class="col-md-6 col-lg-2">
-                            <label for="hasta" class="form-label">Hasta:</label>
-                            <input type="date" 
-                                   id="hasta" 
-                                   name="hasta" 
-                                   class="form-control form-control-sm" 
-                                   value="<?= $hasta ?>">
-                        </div>
+                        <div class="filter-panel-body">
+                            <!-- Fila 1: Fechas y Cliente -->
+                            <div class="row g-3 mb-3 align-items-end">
+                                <div class="col-lg-2 col-md-6">
+                                    <label for="desde" class="form-label">Desde</label>
+                                    <input type="date" id="desde" name="desde" class="form-control form-control-sm" value="<?= $desde ?>">
+                                </div>
+                                <div class="col-lg-2 col-md-6">
+                                    <label for="hasta" class="form-label">Hasta</label>
+                                    <input type="date" id="hasta" name="hasta" class="form-control form-control-sm" value="<?= $hasta ?>">
+                                </div>
+                                <div class="col-lg-8 col-md-12">
+                                    <label for="selectCliente" class="form-label">Cliente</label>
+                                    <select name="selectCliente" id="selectCliente" class="form-select form-select-sm">
+                                        <option value="%">TODOS</option>
+                                        <?php 
+                                        foreach ($clientes as $cliente) {
+                                            $selected = ($cliente['COD_CLIENT'] == $selectCliente) ? 'selected' : '';
+                                            echo "<option value='{$cliente['COD_CLIENT']}' {$selected}>";
+                                            echo htmlspecialchars($cliente['COD_CLIENT'] . " - " . $cliente['RAZON_SOCI']);
+                                            echo "</option>";
+                                        }
+                                        ?>
+                                    </select>
+                                </div>
+                            </div>
 
-                        <div class="col-md-6 col-lg-2">
-                            <label for="selectCanal" class="form-label">Canal:</label>
-                            <select name="selectCanal" 
-                                    id="selectCanal" 
-                                    class="form-select form-select-sm">
-                                <option value="%" <?= ($canal == '%') ? 'selected' : '' ?>>TODOS</option>
-                                <option value="PROPIOS" <?= ($canal == 'PROPIOS') ? 'selected' : '' ?>>PROPIOS</option>
-                                <option value="FRANQUICIAS" <?= ($canal == 'FRANQUICIAS') ? 'selected' : '' ?>>FRANQUICIAS</option>
-                                <option value="MAYORISTAS" <?= ($canal == 'MAYORISTAS') ? 'selected' : '' ?>>MAYORISTAS</option>
-                                <option value="ECOMMERCE" <?= ($canal == 'ECOMMERCE') ? 'selected' : '' ?>>ECOMMERCE</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-6 col-lg-3">
-                            <label for="selectCliente" class="form-label">Cliente:</label>
-                            <select name="selectCliente" 
-                                    id="selectCliente" 
-                                    class="form-select form-select-sm">
-                                <option value="%">TODOS</option>
-                                <?php 
-                                foreach ($clientes as $cliente) {
-                                    $selected = ($cliente['COD_CLIENT'] == $selectCliente) ? 'selected' : '';
-                                    echo "<option value='{$cliente['COD_CLIENT']}' {$selected}>";
-                                    echo htmlspecialchars($cliente['COD_CLIENT'] . " - " . $cliente['RAZON_SOCI']);
-                                    echo "</option>";
-                                }
-                                ?>
-                            </select>
-                        </div>
-
-                        <div class="col-md-6 col-lg-2">
-                            <label for="selectEstado" class="form-label">Estado:</label>
-                            <select name="selectEstado" 
-                                    id="selectEstado" 
-                                    class="form-select form-select-sm">
-                                <option value="%" <?= ($estado == '%') ? 'selected' : '' ?>>TODOS</option>
-                                <option value="ABIERTO" <?= ($estado == 'ABIERTO') ? 'selected' : '' ?>>ABIERTO</option>
-                                <option value="CERRADO" <?= ($estado == 'CERRADO') ? 'selected' : '' ?>>CERRADO</option>
-                                <option value="CUMPLIDO" <?= ($estado == 'CUMPLIDO') ? 'selected' : '' ?>>CUMPLIDO</option>
-                            </select>
-                        </div>
-
-                        <div class="col-12 col-lg-1">
-                            <button type="submit" 
-                                    class="btn btn-primary btn-sm w-100">
-                                <i class="bi bi-search"></i> Buscar
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-12">
-                            <button type="button" 
-                                    class="btn btn-success btn-sm" 
-                                    id="btnExportar"
-                                    <?= !$busquedaRealizada ? 'disabled' : '' ?>>
-                                <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
-                            </button>
+                            <!-- Fila 2: Dropdowns y Botones -->
+                            <div class="row g-3 align-items-end">
+                                <div class="col-lg-3 col-md-6">
+                                    <label for="selectCanal" class="form-label">Canal</label>
+                                    <select name="selectCanal" id="selectCanal" class="form-select form-select-sm">
+                                        <option value="%" <?= ($canal == '%') ? 'selected' : '' ?>>Todos</option>
+                                        <option value="PROPIOS" <?= ($canal == 'PROPIOS') ? 'selected' : '' ?>>Propios</option>
+                                        <option value="FRANQUICIAS" <?= ($canal == 'FRANQUICIAS') ? 'selected' : '' ?>>Franquicias</option>
+                                        <option value="MAYORISTAS" <?= ($canal == 'MAYORISTAS') ? 'selected' : '' ?>>Mayoristas</option>
+                                        <option value="ECOMMERCE" <?= ($canal == 'ECOMMERCE') ? 'selected' : '' ?>>Ecommerce</option>
+                                    </select>
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label for="selectTipo" class="form-label">Tipo de Pedido</label>
+                                    <select name="selectTipo" id="selectTipo" class="form-select form-select-sm">
+                                        <option value="%" <?= ($tipo == '%') ? 'selected' : '' ?>>Todos</option>
+                                        <option value="REPOSICION" <?= ($tipo == 'REPOSICION') ? 'selected' : '' ?>>Reposición</option>
+                                        <option value="DISTRIBUCION" <?= ($tipo == 'DISTRIBUCION') ? 'selected' : '' ?>>Distribución</option>
+                                    </select>
+                                </div>
+                                <div class="col-lg-3 col-md-6">
+                                    <label for="selectEstado" class="form-label">Estado</label>
+                                    <select name="selectEstado" id="selectEstado" class="form-select form-select-sm">
+                                        <option value="%" <?= ($estado == '%') ? 'selected' : '' ?>>Todos</option>
+                                        <option value="ABIERTO" <?= ($estado == 'ABIERTO') ? 'selected' : '' ?>>Abierto</option>
+                                        <option value="CERRADO" <?= ($estado == 'CERRADO') ? 'selected' : '' ?>>Cerrado</option>
+                                        <option value="CUMPLIDO" <?= ($estado == 'CUMPLIDO') ? 'selected' : '' ?>>Cumplido</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Botones de Acción -->
+                                <div class="col-lg-3 col-md-6 d-flex justify-content-end">
+                                    <button type="button" class="btn btn-outline-success me-2" id="btnExportar" <?= !$busquedaRealizada ? 'disabled' : '' ?>>
+                                        <i class="bi bi-file-earmark-excel"></i> Exportar Excel
+                                    </button>
+                                    <button type="submit" class="btn btn-primary px-4">
+                                        <i class="bi bi-search"></i> Buscar
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </form>

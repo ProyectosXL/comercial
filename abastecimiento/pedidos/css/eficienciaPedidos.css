@@ -607,3 +607,63 @@
 #tablePedidos tbody td:nth-child(1) {
     white-space: nowrap;
 }
+.filter-panel {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.filter-panel-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.filter-panel-title {
+    color: #495057;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0;
+}
+
+.filter-panel-body {
+    padding: 1.5rem;
+}
+
+/* Alineación y espaciado de las etiquetas */
+.form-label {
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #6c757d;
+}
+
+/* ===================================
+   CONSISTENCIA DE ALTURA DE CAMPOS
+   =================================== */
+
+/* Forzar la misma altura para todos los campos .form-control-sm y .form-select-sm */
+.form-control-sm, .form-select-sm {
+    height: 38px !important;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.25rem;
+}
+
+/* CSS crucial para que Select2 tenga EXACTAMENTE la misma altura */
+.select2-container--default .select2-selection--single {
+    height: 38px !important;
+    border: 1px solid #ced4da !important;
+    border-radius: 0.25rem !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 36px !important;
+    padding-left: 0.5rem !important;
+    font-size: 0.875rem;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px !important;
+}

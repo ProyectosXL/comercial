@@ -62,7 +62,7 @@ class Pedido
 
     }  
 
-    public function traePedido($desde, $hasta, $canal, $cliente, $estado){
+    public function traePedido($desde, $hasta, $canal, $cliente, $estado, $tipo){
 
         $sql = " 
             SELECT * FROM RO_V_EFICIENCIA_PEDIDOS 
@@ -70,6 +70,7 @@ class Pedido
             AND CANAL LIKE '%$canal%'
             AND COD_CLIENT LIKE '%$cliente%'
             AND ESTADO LIKE '%$estado%'
+             AND TIPO LIKE '%$tipo%'
         ";
 
         

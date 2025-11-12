@@ -1,4 +1,3 @@
-
 <?php
 
 session_start();
@@ -119,7 +118,6 @@ if (!isset($_SESSION['username'])) {
                             </div>
                         </div>
                     </section>
-
                     <section class="mb-5">
                         <h2 class="section-title">
                             <i class="bi bi-bar-chart-fill me-2"></i>
@@ -299,7 +297,7 @@ if (!isset($_SESSION['username'])) {
                             </section>
                         </div>
 
-<!-- E-commerce -->
+                        <!-- E-commerce -->
                         <div class="tab-pane fade" id="ecommerce" role="tabpanel">
                             <section class="mb-5">
                                 <h2 class="section-title">
@@ -323,7 +321,6 @@ if (!isset($_SESSION['username'])) {
                                             <a href="../../bi/tableros/dashEcommerce.html" class="btn btn-success btn-card">Ver Dashboard</a>
                                         </div>
                                     </div>
-
                                     <div class="card">
                                         <div class="card-body">
                                             <i class="bi bi-cart-check card-icon color-info"></i>
@@ -332,7 +329,6 @@ if (!isset($_SESSION['username'])) {
                                             <a href="../../bi/tableros/dashEcommerceUy.html" class="btn btn-info btn-card">Ver Dashboard</a>
                                         </div>
                                     </div>
-                                    
                                     <div class="card">
                                         <div class="card-body">
                                             <i class="bi bi-tags card-icon color-info"></i>
@@ -344,6 +340,8 @@ if (!isset($_SESSION['username'])) {
                                 </div>
                             </section>
                         </div>
+                    </div>
+                </div>
 
                 <!-- Tab 3: Aplicaciones -->
                 <div class="tab-pane fade" id="aplicaciones" role="tabpanel">
@@ -408,4 +406,3 @@ if (!isset($_SESSION['username'])) {
     } 
 
 ?>
-

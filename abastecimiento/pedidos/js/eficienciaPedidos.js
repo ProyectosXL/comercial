@@ -122,9 +122,23 @@ function inicializarDataTable() {
             search: "Buscar:",
             zeroRecords: "No se encontraron registros coincidentes"
         },
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
-             '<"row"<"col-sm-12"tr>>' +
-             '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+dom:
+            // Contenedor superior con alineación flexbox
+            '<"row justify-content-between align-items-center mb-3"' +
+                // "Mostrar X registros" a la izquierda
+                '<"col-md-auto"l>' +
+                // "Buscar:" a la derecha
+                '<"col-md-auto"f>' +
+            '>' +
+            // La tabla en sí
+            't' +
+            // Contenedor inferior
+            '<"row align-items-center mt-3"' +
+                // "Mostrando X de Y"
+                '<"col-md-6"i>' +
+                // Paginación a la derecha
+                '<"col-md-6"p>' +
+            '>',
         pageLength: 100,
         lengthMenu: [[25, 50, 100, 200, -1], [25, 50, 100, 200, "Todos"]],
         order: [[0, 'desc']], // Ordenar por fecha descendente
