@@ -43,7 +43,7 @@ class Rubro
     public function traerRubrosDestinos(){
 
         $sql="SELECT DISTINCT(RUBRO) RUBRO FROM SOF_RUBROS_TANGO
-        WHERE RUBRO NOT LIKE '[_]%' AND RUBRO NOT IN ('ALHAJEROS','PACKAGING')";
+        WHERE RUBRO NOT LIKE '[_]%'";
         
         $stmt = sqlsrv_query( $this->cid_central, $sql );
 

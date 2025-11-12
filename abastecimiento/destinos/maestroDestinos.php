@@ -94,23 +94,21 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
                              
                                     <div class="col-6 mt-2">
                                         <div class="row">
-                                            <div class="col-4">
-                                                <label for="inputCity">Rubro</label>
-                                                <select id="inputRubro" class="form-control form-control-sm" name="rubro">
-                                                    <option selected disabled></option>
-                                                        <?php
-                                                    
-                                                            foreach($todosLosRubros as $rubro => $key){
-                                                        
-                                                        ?>
-                                                            <option value="<?= $key['RUBRO'] ?>"  <?= (isset($_GET['rubro']) && ($key['RUBRO'] == $_GET['rubro'])) ? 'selected' : '' ?>><?= $key['RUBRO'] ?></option>
-                                                        <?php
-                                                        }
-                                                        ?>
-            
-                                                        
-                                                </select>
-                                            </div>
+<div class="col-4">
+    <label for="inputCity">Rubro</label>
+    <select id="inputRubro" class="form-control form-control-sm" name="rubro">
+        <!-- ESTA ES LA LÍNEA CLAVE -->
+        <option value="" selected>-- Todos los Rubros --</option>
+        
+        <?php
+            foreach($todosLosRubros as $rubro => $key){
+        ?>
+            <option value="<?= $key['RUBRO'] ?>" <?= (isset($_GET['rubro']) && ($key['RUBRO'] == $_GET['rubro'])) ? 'selected' : '' ?>><?= $key['RUBRO'] ?></option>
+        <?php
+        }
+        ?>
+    </select>
+</div>
                                             <div class="col-3">
                                                 <label for="inputState2">Temporada</label>
                                                 <select id="inputTemp" class="form-control form-control-sm" name="temporada">
