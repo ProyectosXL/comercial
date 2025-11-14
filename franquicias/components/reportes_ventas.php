@@ -206,7 +206,7 @@ function inicializarSelectorPeriodos() {
     const fechaActual = new Date();
     
     // Mes anterior al actual
-    const mesAnterior = new Date(fechaActual.getFullYear(), fechaActual.getMonth() - 1, 1);
+    const mesAnterior = new Date(fechaActual.getFullYear(), fechaActual.getMonth(), 1);
     
     // Fecha de inicio: Enero 2023
     const fechaInicio = new Date(2023, 0, 1); // Enero 2023
