@@ -97,7 +97,9 @@ class Dashboard
         // Construir la consulta SQL base usando FECHA_MODIF
         $sql = "SELECT g.ID_CONC, g.SEMANA, g.ANIO, g.SUPERVISORA, c.CONCEPTO, 
                 ROUND(g.IMPORTE, 0) as IMPORTE, ROUND(g.IMPORTE_TARJETA, 0) as IMPORTE_TARJETA,
-                g.FECHA_MODIF
+                g.FECHA_MODIF,
+                MONTH(g.FECHA_MODIF) as MES,
+                YEAR(g.FECHA_MODIF) as ANIO_FECHA
                 FROM RO_T_GASTOS_SUPERVISION g
                 JOIN RO_T_CONCEPTOS_GASTOS_SUP c ON g.ID_CONC = c.ID_CONC
                 WHERE g.ESTADO = 1";
@@ -192,7 +194,9 @@ class Dashboard
         // Construir la consulta SQL base usando FECHA_MODIF
         $sql = "SELECT g.ID_CONC, g.SEMANA, g.ANIO, g.SUPERVISORA, c.CONCEPTO, 
                 ROUND(g.IMPORTE, 0) as IMPORTE, ROUND(g.IMPORTE_TARJETA, 0) as IMPORTE_TARJETA,
-                g.FECHA_MODIF
+                g.FECHA_MODIF,
+                MONTH(g.FECHA_MODIF) as MES,
+                YEAR(g.FECHA_MODIF) as ANIO_FECHA
                 FROM RO_T_GASTOS_SUPERVISION g
                 JOIN RO_T_CONCEPTOS_GASTOS_SUP c ON g.ID_CONC = c.ID_CONC
                 WHERE g.ESTADO = 1";

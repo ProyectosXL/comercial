@@ -9,10 +9,19 @@ const DashboardTables = {
             return;
         }
         
+        console.log('Datos recibidos en actualizarTabla:', datos[0]); // Debug
+        
         const dataTable = window.dashboardTables.dataTable;
         dataTable.clear();
         
+        // Nombres de meses en español
+        const nombresMeses = [
+            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ];
+        
         datos.forEach(dato => {
+            const mes = dato.MES ? nombresMeses[dato.MES - 1] : '';
             const semana = dato.SEMANA || '';
             const anio = dato.ANIO || '';
             const supervisora = dato.SUPERVISORA || '';
@@ -22,8 +31,9 @@ const DashboardTables = {
             const total = efectivo + tarjeta;
             
             dataTable.row.add([
-                semana,
+                mes,
                 anio,
+                semana,
                 supervisora,
                 concepto,
                 DashboardUtils.formatearImporte(efectivo),

@@ -9,6 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
@@ -334,8 +335,9 @@
                                     <table class="table table-striped table-hover" id="datosTable">
                                         <thead>
                                             <tr>
-                                                <th>Semana</th>
+                                                <th>Mes</th>
                                                 <th>Año</th>
+                                                <th>Semana</th>
                                                 <th>Supervisora</th>
                                                 <th>Concepto</th>
                                                 <th>Efectivo</th>
@@ -366,7 +368,7 @@
     <script src="js/dashboard-charts.js"></script>
     <script src="js/dashboard-presupuesto.js"></script>
     <script src="js/dashboard-metrics.js"></script>
-    <script src="js/dashboard-tables.js "></script>
+    <script src="js/dashboard-tables.js"></script>
     <script src="js/dashboard-utils.js"></script>
 </body>
 </html>

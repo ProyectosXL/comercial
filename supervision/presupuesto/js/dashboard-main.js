@@ -9,7 +9,7 @@ $(document).ready(function() {
         language: {
             url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json'
         },
-        order: [[0, 'desc'], [1, 'desc']],
+        order: [[1, 'desc'], [0, 'desc'], [2, 'desc']], // Ordenar por Año desc, Mes desc, Semana desc
         pageLength: 10
     });
     
