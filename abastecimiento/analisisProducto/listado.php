@@ -235,45 +235,108 @@ $(document).ready(function() {
         });
 
         // Manejar click en botón Excel
-        $('#exportExcel').on('click', function() {
-            if (dataTable.data().count() === 0) {
-                alert('No hay datos para exportar. Por favor, realice una búsqueda primero.');
-                return;
+    $('#exportExcel').on('click', function() {
+        
+        // 1. Crear un identificador único para esta descarga
+        const token = new Date().getTime(); 
+
+        // 2. Recopilar filtros
+        const paramsObj = {
+            rubro: $('#rubro').val(),
+            categoria: $('#categoria').val(),
+            temporada: $('#temporada').val(),
+            destino: $('#destino').val(),
+            search: dataTable ? dataTable.search() : '',
+            download_token: token // <--- Enviamos el token
+        };
+
+        const params = $.param(paramsObj);
+
+        // 3. Mostrar el Spinner y bloquear botón para evitar doble click
+        $('#spinner').css('display', 'flex');
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Generando...');
+
+        // 4. Iniciar la descarga
+        window.location.href = 'controller/exportar_productos_excel.php?' + params;
+
+        // 5. INICIAR TEMPORIZADOR: Busca la cookie cada 500ms para saber si terminó
+        const checkDescarga = setInterval(function() {
+            if (document.cookie.indexOf('download_token_completo=' + token) > -1) {
+                // ¡La cookie apareció! El servidor terminó de procesar
+                finishDownload();
             }
-            dataTable.button(0).trigger();
-        });
+        }, 500);
 
+        // Función para limpiar todo cuando termine
+        function finishDownload() {
+            clearInterval(checkDescarga); // Detener temporizador
+            
+            // Ocultar spinner y restaurar botón
+            $('#spinner').hide();
+            $('#exportExcel').prop('disabled', false).html('<i class="fas fa-file-excel me-2"></i>Excel');
+            
+            // Borrar la cookie para que no interfiera en la próxima
+            document.cookie = 'download_token_completo=; Max-Age=0; path=/';
+        }
 
-    function initDataTable() {
+        // Seguridad: Si pasaron 60 segundos y no bajó nada (error), restaurar todo
+        setTimeout(function() {
+            finishDownload(); 
+        }, 60000); // 1 minuto maximo de espera visual
+    });
+
+function initDataTable() {
+        // 1. Si la tabla ya existe, la eliminamos para volver a crearla limpia
+        if ($.fn.DataTable.isDataTable('#productosTable')) {
+            $('#productosTable').DataTable().destroy();
+        }
+
+        // 2. Inicializamos el DataTable
         dataTable = $('#productosTable').DataTable({
-            scrollY: '70vh',
-            // scrollCollapse: true,
-            pageLength: 100,
-            // paging: false,
-            language: {
-                url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json',
-                emptyTable: 'Seleccione los filtros y presione buscar'
+            processing: false, 
+            serverSide: true, 
+            deferLoading: 0,  // IMPORTANTE: Esto evita que cargue al entrar a la pagina
+            
+            // ======================================================
+            // AQUÍ VA LO QUE NO ENTENDISTE:
+            // Se ejecuta automágicamente cada vez que la tabla termina de dibujar datos
+            drawCallback: function(settings) {
+                 $('#spinner').hide(); // Oculta el spinner cuando termina de cargar
             },
-            dom: 'Bfrtip',
-            buttons: [
-                {
-                    extend: 'excel',
-                    text: 'Excel',
-                    className: 'd-none',
-                    exportOptions: {
-                        columns: ':visible'
-                    },
-                    title: 'Análisis Comercial de Producto',
-                    filename: 'Analisis_Comercial_' + new Date().toLocaleDateString('es-AR').replace(/\//g, '-')
+            // ======================================================
+
+            ajax: {
+                url: 'controller/obtener_productos.php',
+                type: 'POST',
+                data: function(d) {
+                    // Leemos los filtros actuales del formulario
+                    d.rubro = $('#rubro').val();
+                    d.categoria = $('#categoria').val();
+                    d.temporada = $('#temporada').val();
+                    d.destino = $('#destino').val();
+                },
+                error: function(xhr, error, thrown) {
+                    console.error('Error:', xhr.responseText);
+                    $('#spinner').hide(); // Si falla, ocultamos el spinner también
                 }
-            ],
+            },
+            scrollY: '70vh',
+            pageLength: 100,
+            lengthMenu: [[50, 100, 200], [50, 100, 200]],
+            language: {
+                url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+            },
+            //dom: 'Bfrtip',
+            //buttons: [ 'excel' ], // Tus botones
+            
+            // Tus columnas...
             columns: [
                 { data: 'RUBRO' },
                 { data: 'CATEGORIA' },
                 { data: 'TEMPORADA' },
                 { data: 'DESTINO' },
                 { data: 'LIQUIDACION' },
-                { data: 'FECHA_INGRESO_SUC' },
+                { data: 'FECHA_INGRESO_SUC', orderable: false }, 
                 {
                     data: 'COD_EQUIVALENCIA',
                     render: function(data, type, row) {
@@ -283,62 +346,16 @@ $(document).ready(function() {
                 { data: 'ARTICULO' },
                 { data: 'DESCRIPCIO' },
                 { data: 'COLOR' },
-                { 
-                    data: 'PRECIO',
-                    render: function(data) {
-                        return data ? '$ ' + Number(data).toLocaleString('es-AR') : '';
-                    }
-                },
-                { 
-                    data: 'STOCK_LOCALES',
-                    render: function(data) {
-                        return data ? Number(data).toLocaleString('es-AR') : '';
-                    }
-                },
-                { 
-                    data: 'STOCK_CENTRAL',
-                    render: function(data) {
-                        return data ? Number(data).toLocaleString('es-AR') : '';
-                    }
-                },
-                { 
-                    data: 'STOCK_CENTRAL_FISCAL',
-                    render: function(data) {
-                        return data ? Number(data).toLocaleString('es-AR') : '';
-                    }
-                },
-                { 
-                    data: 'STOCK_TOTAL',
-                    render: function(data) {
-                        return data ? Number(data).toLocaleString('es-AR') : '';
-                    }
-                },
-                { 
-                    data: 'STOCK_RESERVA',
-                    render: function(data) {
-                        return data ? Number(data).toLocaleString('es-AR') : '';
-                    }
-                },
-                { 
-                    data: 'STOCK_EXCLUIDO',
-                    render: function(data) {
-                        return data ? Number(data).toLocaleString('es-AR') : '';
-                    }
-                },
-                { 
-                    data: 'CANT_VENTA',
-                    render: function(data) {
-                        return data ? Number(data).toLocaleString('es-AR') : '';
-                    }
-                },
-                { 
-                    data: 'IMP_VENTA',
-                    render: function(data) {
-                        return data ? '$ ' + Number(data).toLocaleString('es-AR') : '';
-                    }
-                }
-            ],
-            data: []
+                { data: 'PRECIO' },
+                { data: 'STOCK_LOCALES' },
+                { data: 'STOCK_CENTRAL' },
+                { data: 'STOCK_CENTRAL_FISCAL' },
+                { data: 'STOCK_TOTAL' },
+                { data: 'STOCK_RESERVA' },
+                { data: 'STOCK_EXCLUIDO' },
+                { data: 'CANT_VENTA' },
+                { data: 'IMP_VENTA' }
+            ]
         });
     }
 
@@ -435,60 +452,22 @@ $(document).ready(function() {
         // alert(mensaje);
     }
 
-    function buscarProductos() {
-        $('#spinner').css('display', 'flex');
+function buscarProductos() {
+        $('#spinner').css('display', 'flex'); // Mostrar spinner
 
-        // Obtener valores seleccionados
-        const rubros = $('#rubro').val() || ['%'];
-        const categorias = $('#categoria').val() || ['%'];
-        const temporadas = $('#temporada').val() || ['%'];
-        const destinos = $('#destino').val() || ['%'];
+        // Validamos si dataTable existe.
+        if ($.fn.DataTable.isDataTable('#productosTable')) {
+            // .draw() fuerza a DataTables a ir al servidor (ignorando el bloqueo inicial)
+            dataTable.draw(); 
+        } else {
+            initDataTable();
+            dataTable.draw();
+        }
         
-        $.ajax({
-            url: 'controller/obtener_productos.php',
-            method: 'GET',
-            data: {
-                rubro: rubros,
-                categoria: categorias,
-                temporada: temporadas,
-                destino: destinos
-            },
-            dataType: 'json',
-            success: function(response) {
-                if (response.success) {
-                    response.data.forEach(producto => {
-                        if(producto.FECHA_INGRESO_SUC != null){
-                            producto.FECHA_INGRESO_SUC = convertirFecha(producto.FECHA_INGRESO_SUC);
-                        }else{
-                            producto.FECHA_INGRESO_SUC = '';
-                        }
-                    });
-                    dataTable.clear().rows.add(response.data).draw();
-                    if (response.data.length === 0) {
-                        alert('No se encontraron productos con los filtros seleccionados');
-                    }
-                } else {
-                    alert('Error: ' + response.message);
-                }
-                $('#spinner').hide();
-            },
-            error: function(xhr, status, error) {
-                console.error('Error en la petición AJAX:', {xhr, status, error});
-                let errorMessage = 'Error al obtener los productos';
-                try {
-                    const response = JSON.parse(xhr.responseText);
-                    if (response.message) {
-                        errorMessage = response.message;
-                    }
-                } catch(e) {
-                    console.error('Error al parsear la respuesta:', e);
-                }
-                alert(errorMessage);
-                $('#spinner').hide();
-            }
-        });
+        // NOTA: El spinner se debe ocultar en el evento 'drawCallback' 
+        // o 'xhr' del DataTable, no aquí inmediatamente, 
+        // porque draw() es asíncrono.
     }
-
          
     document.querySelector(".toggle").style.width="40px"
     document.querySelector(".toggle-on").style.fontSize="0"

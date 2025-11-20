@@ -1,8 +1,10 @@
-
 <?php
 session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+ini_set('memory_limit', '512M'); // Aumento preventivo
+
+require '../Class/Articulo.php';
 
 try {
     function escape_sql_string($str) {
@@ -12,8 +14,8 @@ try {
     }
 
     function buildCondition($values, $fieldName) {
-        if (in_array('%', $values)) {
-            return "1=1"; // Seleccionar todos
+        if (!is_array($values) || empty($values) || in_array('%', $values)) {
+            return "1=1"; 
         }
         
         $conditions = [];
@@ -23,14 +25,9 @@ try {
         foreach ($values as $value) {
             if ($value === 'NULL') {
                 $hasNull = true;
-                // También incluir los valores literales "Sin Destino", "Sin Temporada", "Sin Rubro"
-                if ($fieldName === 'DESTINO') {
-                    $regularValues[] = 'Sin Destino';
-                } elseif ($fieldName === 'TEMPORADA') {
-                    $regularValues[] = 'Sin Temporada';
-                } elseif ($fieldName === 'RUBRO') {
-                    $regularValues[] = 'Sin Rubro';
-                }
+                if ($fieldName === 'DESTINO') $regularValues[] = 'Sin Destino';
+                elseif ($fieldName === 'TEMPORADA') $regularValues[] = 'Sin Temporada';
+                elseif ($fieldName === 'RUBRO') $regularValues[] = 'Sin Rubro';
             } else {
                 $regularValues[] = escape_sql_string($value);
             }
@@ -45,65 +42,94 @@ try {
             $conditions[] = "$fieldName IS NULL";
         }
         
+        if (empty($conditions)) return "1=1";
+
         return "(" . implode(" OR ", $conditions) . ")";
     }
 
-    error_log("Iniciando obtener_productos.php");
+    // Recibir parámetros POST (DataTables envía POST por defecto cuando se configura ajax type: POST)
+    $request = $_REQUEST; // Usamos REQUEST para soportar GET/POST
+
+    // 1. Filtros personalizados del usuario
+    $rubros = isset($request['rubro']) ? $request['rubro'] : ['%'];
+    $categorias = isset($request['categoria']) ? $request['categoria'] : ['%'];
+    $temporadas = isset($request['temporada']) ? $request['temporada'] : ['%'];
+    $destinos = isset($request['destino']) ? $request['destino'] : ['%'];
+
+    // Construir WHERE base
+    $condiciones = [];
+    $condiciones[] = buildCondition($rubros, 'RUBRO');
+    $condiciones[] = buildCondition($categorias, 'CATEGORIA');
+    $condiciones[] = buildCondition($temporadas, 'TEMPORADA');
+    $condiciones[] = buildCondition($destinos, 'DESTINO');
     
-    require '../Class/Articulo.php';
+    $whereSQL = implode(" AND ", $condiciones);
 
-    $rubros = isset($_GET['rubro']) && is_array($_GET['rubro']) ? $_GET['rubro'] : ['%'];
-    $categorias = isset($_GET['categoria']) && is_array($_GET['categoria']) ? $_GET['categoria'] : ['%'];
-    $temporadas = isset($_GET['temporada']) && is_array($_GET['temporada']) ? $_GET['temporada'] : ['%'];
-    $destinos = isset($_GET['destino']) && is_array($_GET['destino']) ? $_GET['destino'] : ['%'];
+    // 2. Parámetros de DataTables (Paginación, búsqueda global y orden)
+    $start = isset($request['start']) ? intval($request['start']) : 0;
+    $length = isset($request['length']) ? intval($request['length']) : 100;
+    $draw = isset($request['draw']) ? intval($request['draw']) : 1;
+    
+    // Buscador Global (la cajita 'Buscar:' de DataTables)
+    $searchValue = isset($request['search']['value']) ? $request['search']['value'] : '';
+    
+    // Ordenamiento
+    $orderColumnIndex = isset($request['order'][0]['column']) ? intval($request['order'][0]['column']) : 0;
+    $orderDir = isset($request['order'][0]['dir']) ? $request['order'][0]['dir'] : 'ASC';
 
-    error_log("Parámetros recibidos - Rubros: " . json_encode($rubros) .
-              ", Categorías: " . json_encode($categorias) .  
-              ", Temporadas: " . json_encode($temporadas) . 
-              ", Destinos: " . json_encode($destinos));
-
-    if (empty($rubros)) $rubros = ['%'];
-    if (empty($categorias)) $categorias = ['%'];
-    if (empty($temporadas)) $temporadas = ['%'];
-    if (empty($destinos)) $destinos = ['%'];
-
-    // Construir condiciones usando la nueva función
-    $rubroCondition = buildCondition($rubros, 'RUBRO');
-    $categoriaCondition = buildCondition($categorias, 'CATEGORIA');
-    $temporadaCondition = buildCondition($temporadas, 'TEMPORADA');
-    $destinoCondition = buildCondition($destinos, 'DESTINO');
-
-    error_log("Condiciones SQL - Rubro: $rubroCondition, Categoría: $categoriaCondition, Temporada: $temporadaCondition, Destino: $destinoCondition");
-
+    // Ejecutar consulta
     $articulo = new Articulo();
     
-    if (!method_exists($articulo, 'traerProductosMultiple')) {
-        throw new Exception("El método traerProductosMultiple no existe en la clase Articulo");
+    // Verificar método por si no se actualizó la clase
+    if (!method_exists($articulo, 'traerProductosPaginados')) {
+        throw new Exception("Debes actualizar Class/Articulo.php primero (Paso 1).");
     }
-    
-    $productos = $articulo->traerProductosMultiple($rubroCondition, $categoriaCondition, $temporadaCondition, $destinoCondition);
-    
-    $cantidad = is_array($productos) ? count($productos) : 0;
-    error_log("Productos obtenidos: $cantidad");
 
+    $resultado = $articulo->traerProductosPaginados(
+        $whereSQL, 
+        $searchValue, 
+        $orderColumnIndex, 
+        $orderDir, 
+        $start, 
+        $length
+    );
+
+    // Formatear fechas y datos específicos para la vista
+    $dataFormatted = [];
+    foreach ($resultado['data'] as $row) {
+        // Formatear fecha desde el objeto DateTime si SQL Server devuelve eso
+        $fecha = '';
+        if (isset($row['FECHA_INGRESO_SUC_DATE'])) {
+             if ($row['FECHA_INGRESO_SUC_DATE'] instanceof DateTime) {
+                $fecha = $row['FECHA_INGRESO_SUC_DATE']->format('d/m/Y');
+             } else {
+                // Si viene como string YYYY-MM-DD
+                $time = strtotime($row['FECHA_INGRESO_SUC_DATE']);
+                $fecha = $time ? date('d/m/Y', $time) : '';
+             }
+        }
+
+        $row['FECHA_INGRESO_SUC'] = $fecha;
+        $dataFormatted[] = $row;
+    }
+
+    // Respuesta JSON ESTRICTA para DataTables
     header('Content-Type: application/json');
     echo json_encode([
-        'success' => true,
-        'data' => $productos,
-        'count' => $cantidad
+        "draw" => $draw,
+        "recordsTotal" => $resultado['recordsTotal'],
+        "recordsFiltered" => $resultado['recordsFiltered'],
+        "data" => $dataFormatted
     ]);
 
 } catch (Exception $e) {
-    error_log("Error en obtener_productos.php: " . $e->getMessage());
-    error_log("Stack trace: " . $e->getTraceAsString());
-    
     header('Content-Type: application/json');
-    http_response_code(500);
     echo json_encode([
-        'success' => false,
-        'message' => 'Error al obtener productos: ' . $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine()
+        "draw" => isset($_REQUEST['draw']) ? intval($_REQUEST['draw']) : 1,
+        "recordsTotal" => 0,
+        "recordsFiltered" => 0,
+        "data" => [],
+        "error" => $e->getMessage()
     ]);
 }
 ?>

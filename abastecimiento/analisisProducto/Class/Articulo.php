@@ -788,5 +788,106 @@ class Articulo
         }
     }
 
+    /**
+     * Metodo optimizado para DataTables Server-Side
+     */
+    public function traerProductosPaginados($whereFilters, $globalSearch, $orderCol, $orderDir, $start, $length) {
+        try {
+            // 1. Definir base de datos
+            if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
+                $base = 'SUCURSALES_URUGUAY';
+            } else {
+                $base = 'LOCALES_LAKERS';
+            }
+
+            // 2. Búsqueda Global
+            $searchCondition = "1=1";
+            if (!empty($globalSearch)) {
+                $str = $this->escapeSqlString($globalSearch);
+                $searchCondition = "(ARTICULO LIKE '%$str%' OR DESCRIPCIO LIKE '%$str%' OR RUBRO LIKE '%$str%')";
+            }
+
+            // 3. Columnas de ordenamiento
+            $columns = [
+                0 => 'RUBRO', 1 => 'CATEGORIA', 2 => 'TEMPORADA', 3 => 'DESTINO',
+                4 => 'LIQUIDACION', 5 => 'FECHA_INGRESO_SUC', 6 => 'COD_EQUIVALENCIA',
+                7 => 'ARTICULO', 8 => 'DESCRIPCIO' // ... etc
+            ];
+            
+            // FIX DE RENDIMIENTO: Si no especifican orden, usar ARTICULO (Primary Key) que es más rápido que ordenar por RUBRO
+            $campoOrden = isset($columns[$orderCol]) ? $columns[$orderCol] : 'ARTICULO'; 
+            $direccion = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
+
+
+            // --- PASO 1: Contar solo los registros (Consulta liviana) ---
+            // Esta consulta NO trae datos, solo devuelve un número.
+            
+            $sqlCount = "SELECT COUNT(ARTICULO) as Total
+                         FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
+                         WHERE $whereFilters AND $searchCondition";
+                         
+            $rowsCount = $this->retornarArray($sqlCount);
+            $recordsFiltered = ($rowsCount && isset($rowsCount[0]['Total'])) ? intval($rowsCount[0]['Total']) : 0;
+
+            
+            // --- PASO 2: Traer los datos si hay resultados ---
+            
+            $data = [];
+            if ($recordsFiltered > 0) {
+                // Usamos solo las columnas necesarias
+                $sqlData = "SELECT ARTICULO, DESCRIPCIO, COLOR, PRECIO, 
+                            STOCK_CENTRAL, STOCK_CENTRAL_FISCAL, STOCK_LOCALES, 
+                            STOCK_TOTAL, STOCK_EXCLUIDO, STOCK_RESERVA, 
+                            CANT_VENTA, IMP_VENTA, 
+                            CAST(FECHA_INGRESO_SUC AS DATE) as FECHA_INGRESO_SUC_DATE,
+                            RUBRO, CATEGORIA, DESTINO, TEMPORADA, LIQUIDACION,
+                            COD_EQUIVALENCIA
+                        FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
+                        WHERE $whereFilters 
+                        AND $searchCondition
+                        ORDER BY $campoOrden $direccion
+                        OFFSET $start ROWS 
+                        FETCH NEXT $length ROWS ONLY";
+
+                $data = $this->retornarArray($sqlData);
+            }
+
+            return [
+                'data' => $data,
+                'recordsFiltered' => $recordsFiltered,
+                'recordsTotal' => $recordsFiltered // Asumimos mismo total para velocidad
+            ];
+
+        } catch (Exception $e) {
+            error_log("Error en traerProductosPaginados: " . $e->getMessage());
+            // En caso de error, devolver vacío para no romper el JSON del frontend
+            return [
+                'data' => [],
+                'recordsFiltered' => 0,
+                'recordsTotal' => 0
+            ];
+        }
+    }
+        public function traerProductosExportacion($whereFilters) {
+        // Usar configuración de entorno
+        if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
+            $base = 'SUCURSALES_URUGUAY';
+        } else {
+            $base = 'LOCALES_LAKERS';
+        }
+
+        // Query similar al paginado, pero SIN OFFSET ni FETCH
+        // Quitamos el campo TotalFiltrados para ahorrar memoria
+        $sql = "SELECT RUBRO, CATEGORIA, TEMPORADA, DESTINO, LIQUIDACION,
+                    CAST(FECHA_INGRESO_SUC AS DATE) as FECHA,
+                    COD_EQUIVALENCIA, ARTICULO, DESCRIPCIO, COLOR, 
+                    PRECIO, STOCK_LOCALES, STOCK_CENTRAL, STOCK_TOTAL, 
+                    CANT_VENTA, IMP_VENTA
+                FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
+                WHERE $whereFilters 
+                ORDER BY RUBRO, CATEGORIA, ARTICULO";
+
+        return $this->retornarArray($sql);
+    }
 }
     
