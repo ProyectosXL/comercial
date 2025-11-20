@@ -9,7 +9,7 @@ require_once __DIR__ . '/../Services/NotificationService.php';
 
 class SucursalController extends BaseController {
 
-    public function pendientes() {
+public function pendientes() {
         $pageTitle = "Operaciones Pendientes";
         $ventaModel = new VentaModel();
         $auditModel = new AuditModel(); 
@@ -24,13 +24,30 @@ class SucursalController extends BaseController {
         // 2. Obtenemos el N° de sucursal del usuario directamente desde SU sesión.
         $nroSucursalUsuario = $_SESSION['user']['nro_sucursal'];
 
-        // 3. Leemos los filtros opcionales de fecha.
-        $fecha_desde = isset($_GET['fecha_desde']) && !empty($_GET['fecha_desde']) ? $_GET['fecha_desde'] : null;
-        $fecha_hasta = isset($_GET['fecha_hasta']) && !empty($_GET['fecha_hasta']) ? $_GET['fecha_hasta'] : null;
+        // --- CAMBIO CORREGIDO: Definir Rango por defecto de 30 días ---
+        $fechaCorteDefault = '2025-11-24'; 
+        
+        // Calculamos la fecha HASTA sumando 30 días a la fecha de corte
+        $fechaHastaDefault = date('Y-m-d', strtotime($fechaCorteDefault . ' + 30 days'));
+
+        // Si $_GET['fecha_desde'] está vacío, forzamos el inicio del corte.
+        if (empty($_GET['fecha_desde'])) {
+            $_GET['fecha_desde'] = $fechaCorteDefault;
+        }
+        
+        // Si $_GET['fecha_hasta'] está vacío, forzamos la fecha calculada (24/12/2025)
+        if (empty($_GET['fecha_hasta'])) {
+            $_GET['fecha_hasta'] = $fechaHastaDefault;
+        }
+
+        // Asignamos variables locales para pasar al modelo
+        $fecha_desde = $_GET['fecha_desde'];
+        $fecha_hasta = $_GET['fecha_hasta'];
+        // -----------------------------------------------------
 
         $justificadosNComp = $auditModel->getJustificadosNComp();
         
-        // 4. Obtenemos las operaciones, que ya vienen filtradas por fecha.
+        // 4. Obtenemos las operaciones.
         $todasLasOperaciones = $ventaModel->getOperacionesDifPrecio($fecha_desde, $fecha_hasta);
         
         // 5. Filtramos en PHP para quedarnos solo con las de nuestra sucursal y que estén pendientes.
@@ -45,7 +62,7 @@ class SucursalController extends BaseController {
             $operaciones[$key]['DESC_SUCURSAL'] = $sucursales[$nroSucursal] ?? 'Desconocida';
         }
 
-        // 6. Calculamos los KPIs y gráficos SOLO para nuestra sucursal.
+        // 6. Calculamos los KPIs y gráficos SOLO para nuestra sucursal con las fechas filtradas.
         $stats = $ventaModel->getStatsSucursal($nroSucursalUsuario, $justificadosNComp, $fecha_desde, $fecha_hasta);
         $chartRawData = $ventaModel->getPendientesPorFecha($nroSucursalUsuario, $justificadosNComp, $fecha_desde, $fecha_hasta);
         $chartLabels = json_encode(array_column($chartRawData, 'mes'));
@@ -55,6 +72,7 @@ class SucursalController extends BaseController {
 
         require_once __DIR__ . '/../Views/sucursal/pendientes.php';
     }
+
     public function justificar($n_comp) {
         $pageTitle = "Justificar Operación";
         $ventaModel = new VentaModel();
@@ -112,7 +130,6 @@ class SucursalController extends BaseController {
                 $usuario = $_SESSION['user']['name'];
                 $historyModel->registrarAccion($newAuditId, $usuario, 'Creación de solicitud');
 
-                // --- INICIO DE LA NUEVA LÓGICA DE NOTIFICACIÓN ---
                 try {
                     // 2. Obtener detalles para el cuerpo del email
                     $auditoria = $auditModel->getAuditById($newAuditId);
@@ -122,7 +139,7 @@ class SucursalController extends BaseController {
                     
                     // 3. Preparar y enviar el email
                     $notificationService = new NotificationService();
-                    $destinatarios = 'franco.pertus@xl.com.ar'; // Correo hardcodeado como solicitaste
+                    $destinatarios = 'franco.pertus@xl.com.ar';
 
                     $asunto = "Nueva Auditoría Pendiente de Aprobación - #" . $newAuditId;
                     $cuerpo = "Se ha registrado una nueva solicitud de auditoría que requiere su atención.<br><br>" .
@@ -135,10 +152,8 @@ class SucursalController extends BaseController {
                     
                     $notificationService->sendEmail($destinatarios, $asunto, $cuerpo);
                 } catch (Exception $e) {
-                    // Si el email falla, no detenemos la aplicación, solo lo registramos.
                     error_log("Fallo al enviar notificación de nueva auditoría: " . $e->getMessage());
                 }
-                // --- FIN DE LA NUEVA LÓGICA ---
 
                 header('Location: /comercial/auditoria/public/sucursal/pendientes');
                 exit();
