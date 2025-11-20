@@ -1,4 +1,3 @@
-
 <?php
 
 class Articulo
@@ -868,26 +867,63 @@ class Articulo
             ];
         }
     }
-        public function traerProductosExportacion($whereFilters) {
-        // Usar configuración de entorno
+    public function traerProductosExportacion($whereFilters) {
         if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
             $base = 'SUCURSALES_URUGUAY';
         } else {
             $base = 'LOCALES_LAKERS';
         }
 
-        // Query similar al paginado, pero SIN OFFSET ni FETCH
-        // Quitamos el campo TotalFiltrados para ahorrar memoria
         $sql = "SELECT RUBRO, CATEGORIA, TEMPORADA, DESTINO, LIQUIDACION,
                     CAST(FECHA_INGRESO_SUC AS DATE) as FECHA,
                     COD_EQUIVALENCIA, ARTICULO, DESCRIPCIO, COLOR, 
-                    PRECIO, STOCK_LOCALES, STOCK_CENTRAL, STOCK_TOTAL, 
-                    CANT_VENTA, IMP_VENTA
+                    PRECIO, 
+                    STOCK_LOCALES, 
+                    STOCK_CENTRAL, 
+                    STOCK_CENTRAL_FISCAL, -- Faltaba mostrar este
+                    STOCK_TOTAL, 
+                    STOCK_RESERVA,        -- Este es el STOCK ECOMMERCE según tu mapeo
+                    STOCK_EXCLUIDO,       -- Faltaba este
+                    CANT_VENTA, 
+                    IMP_VENTA
                 FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
                 WHERE $whereFilters 
                 ORDER BY RUBRO, CATEGORIA, ARTICULO";
 
         return $this->retornarArray($sql);
+    }
+    public function obtenerStatementExportacion($whereFilters) {
+        if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
+            $base = 'SUCURSALES_URUGUAY';
+        } else {
+            $base = 'LOCALES_LAKERS';
+        }
+
+        // SQL LIMPIO Y SIN ORDENAMIENTO
+        $sql = "SELECT RUBRO, CATEGORIA, TEMPORADA, DESTINO, LIQUIDACION,
+                    CAST(FECHA_INGRESO_SUC AS DATE) as FECHA,
+                    COD_EQUIVALENCIA, ARTICULO, DESCRIPCIO, COLOR, 
+                    PRECIO, 
+                    STOCK_LOCALES, STOCK_CENTRAL, STOCK_CENTRAL_FISCAL, 
+                    STOCK_TOTAL, STOCK_RESERVA, STOCK_EXCLUIDO,
+                    CANT_VENTA, IMP_VENTA
+                FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
+                WHERE $whereFilters";
+                // !!! BORRÉ EL ORDER BY A PROPÓSITO PARA VELOCIDAD !!!
+
+        // Timeouts máximos
+        $options = array(
+            "QueryTimeout" => 3600, 
+            "Scrollable" => SQLSRV_CURSOR_FORWARD
+        );
+
+        $stmt = sqlsrv_query($this->cid_central, $sql, array(), $options);
+
+        if ($stmt === false) {
+            throw new Exception(print_r(sqlsrv_errors(), true));
+        }
+
+        return $stmt;
     }
 }
     

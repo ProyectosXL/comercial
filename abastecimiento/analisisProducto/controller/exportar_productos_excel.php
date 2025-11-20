@@ -1,168 +1,157 @@
 <?php
-// ---------------------------------------------
-// AGREGAR AL INICIO DE: exportar_productos_excel.php
-// ---------------------------------------------
+// --- CONFIGURACIÓN BLINDADA ---
+ignore_user_abort(true);
 set_time_limit(0);
-ini_set('memory_limit', '-1'); 
+ini_set('memory_limit', '2048M');
+
+// Limpieza total de buffers
+while (ob_get_level()) ob_end_clean();
+if (function_exists('apache_setenv')) @apache_setenv('no-gzip', 1);
+@ini_set('zlib.output_compression', 0);
+
 session_start();
 
-// NUEVO: Recibir token de JS y setear Cookie de respuesta
+// Gestión Token
 if (isset($_GET['download_token'])) {
-    $token = $_GET['download_token'];
-    // Creamos una cookie que dura 1 minuto, accesible desde todo el dominio "/"
-    setcookie("download_token_completo", $token, time() + 60, "/");
+    setcookie("download_token_completo", $_GET['download_token'], time() + 60, "/");
 }
 
 require '../Class/Articulo.php';
 
-// --- FUNCIONES DE FILTRO (MISMAS QUE EN EL OTRO CONTROLADOR) ---
-// (Idealmente esto debería estar en un Helper, pero lo repetimos para que funcione ya)
-function escape_sql_string($str) {
-    if (is_null($str)) return '';
-    if (!is_string($str)) $str = (string)$str;
-    return str_replace("'", "''", $str);
+// Helper de limpieza para CSV
+function escape_val($s) { return str_replace("'", "''", (string)$s); }
+
+// Helper condición SQL
+function buildCondition($values, $fieldName) {
+    if (!is_array($values) || empty($values) || in_array('%', $values)) return "1=1";
+    $reg = []; $null = false;
+    foreach ($values as $v) {
+        if ($v === 'NULL') $null = true; else $reg[] = escape_val($v);
+    }
+    $sql = [];
+    if(!empty($reg)) $sql[] = "$fieldName IN ('" . implode("','", $reg) . "')";
+    if($null) {
+         if ($fieldName === 'DESTINO') $sql[] = "($fieldName IS NULL OR $fieldName = 'Sin Destino')";
+        elseif ($fieldName === 'TEMPORADA') $sql[] = "($fieldName IS NULL OR $fieldName = 'Sin Temporada')";
+        elseif ($fieldName === 'RUBRO') $sql[] = "($fieldName IS NULL OR $fieldName = 'Sin Rubro')";
+        else $sql[] = "$fieldName IS NULL";
+    }
+    return empty($sql) ? "1=1" : "(" . implode(" OR ", $sql) . ")";
 }
 
-function buildCondition($values, $fieldName) {
-    if (!is_array($values) || empty($values) || in_array('%', $values)) {
-        return "1=1";
-    }
-    
-    $conditions = [];
-    $hasNull = false;
-    $regularValues = [];
-    
-    foreach ($values as $value) {
-        if ($value === 'NULL') {
-            $hasNull = true;
-            if ($fieldName === 'DESTINO') $regularValues[] = 'Sin Destino';
-            elseif ($fieldName === 'TEMPORADA') $regularValues[] = 'Sin Temporada';
-            elseif ($fieldName === 'RUBRO') $regularValues[] = 'Sin Rubro';
-        } else {
-            $regularValues[] = escape_sql_string($value);
-        }
-    }
-    
-    if (!empty($regularValues)) {
-        $regularValues = array_map('escape_sql_string', $regularValues);
-        $conditions[] = "$fieldName IN ('" . implode("','", $regularValues) . "')";
-    }
-    
-    if ($hasNull) $conditions[] = "$fieldName IS NULL";
-    
-    return empty($conditions) ? "1=1" : "(" . implode(" OR ", $conditions) . ")";
-}
+// --- AQUI EMPIEZA LA MAGIA ---
+
+// Nombre del archivo .csv (Excel lo abre igual)
+$filename = "Reporte_Datos_" . date('Ymd_Hi') . ".csv";
+
+// Headers específicos para forzar descarga y codificación
+header('Content-Type: text/csv; charset=utf-8');
+header('Content-Disposition: attachment; filename="' . $filename . '"');
+header('Pragma: no-cache');
+header('Expires: 0');
+
+// Abrimos el canal de salida de PHP como si fuera un archivo
+$output = fopen('php://output', 'w');
+
+// BOM UTF-8 (Obligatorio para que Excel muestre bien los acentos en CSV)
+fwrite($output, "\xEF\xBB\xBF");
+
+// Definimos el separador: PUNTO Y COMA (Estándar Excel Latinoamérica)
+$delimiter = ";";
+
+// Encabezados
+fputcsv($output, [
+    'Rubro', 'Categoria', 'Temporada', 'Destino', 'Liquidacion', 
+    'Fecha Ingreso', 'Cod. Equiv.', 'Articulo', 'Descripcion', 'Color', 
+    'Precio', 'Stock Locales', 'Stock Central', 'Stock Fiscal', 
+    'Stock Total', 'Stock Ecommerce', 'Stock Excluido', 
+    'Cant. Venta', 'Venta Total'
+], $delimiter);
+
+// Mandar al navegador YA
+fflush($output); 
+flush();
 
 try {
-    // 1. RECUPERAR FILTROS
+    // Preparar filtros...
     $rubros = isset($_GET['rubro']) ? $_GET['rubro'] : ['%'];
     $categorias = isset($_GET['categoria']) ? $_GET['categoria'] : ['%'];
     $temporadas = isset($_GET['temporada']) ? $_GET['temporada'] : ['%'];
     $destinos = isset($_GET['destino']) ? $_GET['destino'] : ['%'];
 
-    // Construir WHERE
-    $condiciones = [];
-    $condiciones[] = buildCondition($rubros, 'RUBRO');
-    $condiciones[] = buildCondition($categorias, 'CATEGORIA');
-    $condiciones[] = buildCondition($temporadas, 'TEMPORADA');
-    $condiciones[] = buildCondition($destinos, 'DESTINO');
-    
-    // Búsqueda textual opcional (si quisieras que el Excel respete lo escrito en el buscador)
-    if (isset($_GET['search']) && !empty($_GET['search'])) {
-        $str = escape_sql_string($_GET['search']);
-        $condiciones[] = "(ARTICULO LIKE '%$str%' OR DESCRIPCIO LIKE '%$str%' OR RUBRO LIKE '%$str%')";
+    $conds = [];
+    $conds[] = buildCondition($rubros, 'RUBRO');
+    $conds[] = buildCondition($categorias, 'CATEGORIA');
+    $conds[] = buildCondition($temporadas, 'TEMPORADA');
+    $conds[] = buildCondition($destinos, 'DESTINO');
+    if (!empty($_GET['search'])) {
+        $s = escape_val($_GET['search']);
+        $conds[] = "(ARTICULO LIKE '%$s%' OR DESCRIPCIO LIKE '%$s%' OR RUBRO LIKE '%$s%')";
+    }
+    $where = implode(" AND ", $conds);
+
+    $art = new Articulo();
+    // Esta consulta (sin order by) es instantanea
+    $stmt = $art->obtenerStatementExportacion($where);
+
+    $contador = 0;
+    while($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+        
+        // Formato Fecha rápido
+        $fecha = '';
+        if(isset($row['FECHA']) && $row['FECHA'] instanceof DateTime) {
+             $fecha = $row['FECHA']->format('d/m/Y');
+        } elseif(isset($row['FECHA'])) {
+             $fecha = $row['FECHA'];
+        }
+
+        // Reemplazamos puntos por comas en los precios para que Excel reconozca el numero decimal
+        $precio = str_replace('.', ',', $row['PRECIO']);
+        $impVenta = str_replace('.', ',', $row['IMP_VENTA']);
+
+        // Preparamos la fila. 
+        // fputcsv se encarga AUTOMATICAMENTE de escapar comillas, saltos de linea, etc.
+        $csvRow = [
+            $row['RUBRO'],
+            $row['CATEGORIA'],
+            $row['TEMPORADA'],
+            $row['DESTINO'],
+            $row['LIQUIDACION'],
+            $fecha,
+            $row['COD_EQUIVALENCIA'],
+            $row['ARTICULO'],
+            $row['DESCRIPCIO'], // Si tiene comillas, fputcsv lo arregla solo
+            $row['COLOR'],
+            $precio, 
+            $row['STOCK_LOCALES'],
+            $row['STOCK_CENTRAL'],
+            $row['STOCK_CENTRAL_FISCAL'],
+            $row['STOCK_TOTAL'],
+            $row['STOCK_RESERVA'],
+            $row['STOCK_EXCLUIDO'],
+            $row['CANT_VENTA'],
+            $impVenta
+        ];
+
+        // Escribimos la linea al CSV
+        fputcsv($output, $csvRow, $delimiter);
+
+        $contador++;
+        // Flush cada 500 líneas para mantener la red activa
+        if ($contador % 500 == 0) {
+            fflush($output);
+            flush();
+        }
     }
 
-    $whereSQL = implode(" AND ", $condiciones);
+    sqlsrv_free_stmt($stmt);
+    fclose($output);
 
-    // 2. CONSULTAR DATOS
-    $articulo = new Articulo();
-    $datos = $articulo->traerProductosExportacion($whereSQL);
-
-    // 3. GENERAR EXCEL (Encabezados HTML para engañar al navegador y que lo abra Excel)
-    $fecha = date('Y-m-d_H-i');
-    $nombreArchivo = "Reporte_Productos_$fecha.xls";
-
-    header('Content-Type: application/vnd.ms-excel; charset=utf-8');
-    header('Content-Disposition: attachment; filename=' . $nombreArchivo);
-    header('Pragma: no-cache');
-    header('Expires: 0');
-
-    // 4. IMPRIMIR TABLA HTML
-    ?>
-    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-    <head>
-        <!-- Este meta charset es vital para los acentos -->
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <style>
-            /* Estilos básicos para que se vea lindo en Excel */
-            table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; }
-            th { background-color: #4CAF50; color: white; border: 1px solid #ddd; padding: 8px; }
-            td { border: 1px solid #ddd; padding: 8px; vertical-align: middle; }
-            .num { mso-number-format:"\#\,\#\#0"; } /* Formato Número Excel */
-            .money { mso-number-format:"$ \#\,\#\#0"; } /* Formato Moneda */
-            .text { mso-number-format:"\@"; } /* Texto plano para códigos y fechas */
-        </style>
-    </head>
-    <body>
-        <table>
-            <thead>
-                <tr>
-                    <th>Rubro</th>
-                    <th>Categoría</th>
-                    <th>Temporada</th>
-                    <th>Destino</th>
-                    <th>Liquidación</th>
-                    <th>Fecha</th>
-                    <th>Equivalencia</th>
-                    <th>Artículo</th>
-                    <th>Descripción</th>
-                    <th>Color</th>
-                    <th>Precio</th>
-                    <th>Stock Locales</th>
-                    <th>Stock Central</th>
-                    <th>Stock Total</th>
-                    <th>Cant. Venta</th>
-                    <th>Imp. Venta</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach($datos as $d): 
-                    // Procesar Fecha si es objeto
-                    $fechaVal = '';
-                    if (isset($d['FECHA'])) {
-                        if ($d['FECHA'] instanceof DateTime) {
-                            $fechaVal = $d['FECHA']->format('d/m/Y');
-                        } else {
-                             $fechaVal = $d['FECHA'];
-                        }
-                    }
-                ?>
-                <tr>
-                    <td><?php echo utf8_decode($d['RUBRO'] ?? ''); ?></td> <!-- Ajustar decode/encode segun tu charset BD -->
-                    <td><?php echo $d['CATEGORIA']; ?></td>
-                    <td><?php echo $d['TEMPORADA']; ?></td>
-                    <td><?php echo $d['DESTINO']; ?></td>
-                    <td><?php echo $d['LIQUIDACION']; ?></td>
-                    <td class="text"><?php echo $fechaVal; ?></td>
-                    <td><?php echo $d['COD_EQUIVALENCIA']; ?></td>
-                    <td class="text"><?php echo $d['ARTICULO']; ?></td>
-                    <td><?php echo $d['DESCRIPCIO']; ?></td>
-                    <td><?php echo $d['COLOR']; ?></td>
-                    <td class="money"><?php echo $d['PRECIO']; ?></td>
-                    <td class="num"><?php echo $d['STOCK_LOCALES']; ?></td>
-                    <td class="num"><?php echo $d['STOCK_CENTRAL']; ?></td>
-                    <td class="num"><?php echo $d['STOCK_TOTAL']; ?></td>
-                    <td class="num"><?php echo $d['CANT_VENTA']; ?></td>
-                    <td class="money"><?php echo $d['IMP_VENTA']; ?></td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </body>
-    </html>
-<?php 
 } catch (Exception $e) {
-    echo "Error al generar el archivo: " . $e->getMessage();
+    // Si hay error, que aparezca dentro del CSV
+    fwrite($output, "ERROR DE EXPORTACION: " . $e->getMessage());
+    fclose($output);
 }
+
+exit; // Terminamos ejecución limpia
 ?>

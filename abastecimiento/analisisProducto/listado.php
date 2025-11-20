@@ -286,30 +286,30 @@ $(document).ready(function() {
     });
 
 function initDataTable() {
-        // 1. Si la tabla ya existe, la eliminamos para volver a crearla limpia
         if ($.fn.DataTable.isDataTable('#productosTable')) {
             $('#productosTable').DataTable().destroy();
         }
 
-        // 2. Inicializamos el DataTable
         dataTable = $('#productosTable').DataTable({
             processing: false, 
-            serverSide: true, 
-            deferLoading: 0,  // IMPORTANTE: Esto evita que cargue al entrar a la pagina
+            serverSide: true,
+            deferLoading: 0, 
             
-            // ======================================================
-            // AQUÍ VA LO QUE NO ENTENDISTE:
-            // Se ejecuta automágicamente cada vez que la tabla termina de dibujar datos
-            drawCallback: function(settings) {
-                 $('#spinner').hide(); // Oculta el spinner cuando termina de cargar
+            // EVENTO 1: Muestra el spinner ANTES de pedir datos (cubre búsqueda rápida, paginación y orden)
+            // Esta es la clave para que aparezca la ruedita al dar Enter
+            "preDrawCallback": function(settings) {
+                $('#spinner').css('display', 'flex'); 
             },
-            // ======================================================
+
+            // EVENTO 2: Oculta el spinner cuando terminan de llegar los datos
+            drawCallback: function(settings) {
+                 $('#spinner').hide();
+            },
 
             ajax: {
                 url: 'controller/obtener_productos.php',
                 type: 'POST',
                 data: function(d) {
-                    // Leemos los filtros actuales del formulario
                     d.rubro = $('#rubro').val();
                     d.categoria = $('#categoria').val();
                     d.temporada = $('#temporada').val();
@@ -317,26 +317,28 @@ function initDataTable() {
                 },
                 error: function(xhr, error, thrown) {
                     console.error('Error:', xhr.responseText);
-                    $('#spinner').hide(); // Si falla, ocultamos el spinner también
+                    $('#spinner').hide();
                 }
             },
+            // CONFIGURACIÓN BUSCADOR: Retraso para que no busque mientras escribes (opcional, pero ayudamos con el evento Enter abajo)
+            searchDelay: 1000, 
             scrollY: '70vh',
             pageLength: 100,
             lengthMenu: [[50, 100, 200], [50, 100, 200]],
             language: {
-                url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+                url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json',
+                search: "Buscar:" 
             },
-            //dom: 'Bfrtip',
-            //buttons: [ 'excel' ], // Tus botones
-            
-            // Tus columnas...
+            dom: 'Bfrtip', // Sin botones nativos
+            buttons: [],   
+            order: [[0, 'asc']],
             columns: [
                 { data: 'RUBRO' },
                 { data: 'CATEGORIA' },
                 { data: 'TEMPORADA' },
                 { data: 'DESTINO' },
                 { data: 'LIQUIDACION' },
-                { data: 'FECHA_INGRESO_SUC', orderable: false }, 
+                { data: 'FECHA_INGRESO_SUC', orderable: false },
                 {
                     data: 'COD_EQUIVALENCIA',
                     render: function(data, type, row) {
@@ -346,17 +348,30 @@ function initDataTable() {
                 { data: 'ARTICULO' },
                 { data: 'DESCRIPCIO' },
                 { data: 'COLOR' },
-                { data: 'PRECIO' },
-                { data: 'STOCK_LOCALES' },
-                { data: 'STOCK_CENTRAL' },
-                { data: 'STOCK_CENTRAL_FISCAL' },
-                { data: 'STOCK_TOTAL' },
-                { data: 'STOCK_RESERVA' },
-                { data: 'STOCK_EXCLUIDO' },
-                { data: 'CANT_VENTA' },
-                { data: 'IMP_VENTA' }
+                { data: 'PRECIO', render: function(data) { return data ? '$ ' + Number(data).toLocaleString('es-AR') : ''; } },
+                { data: 'STOCK_LOCALES', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                { data: 'STOCK_CENTRAL', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                { data: 'STOCK_CENTRAL_FISCAL', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                { data: 'STOCK_TOTAL', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                
+                // En tu código anterior mapeaste 'Stock Ecommerce' a la variable STOCK_RESERVA, seguimos esa lógica:
+                { data: 'STOCK_RESERVA', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } }, 
+                
+                { data: 'STOCK_EXCLUIDO', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                { data: 'CANT_VENTA', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                { data: 'IMP_VENTA', render: function(data) { return data ? '$ ' + Number(data).toLocaleString('es-AR') : ''; } }
             ]
         });
+
+        // === MAGIA PARA EL ENTER EN LA CAJA DE BÚSQUEDA ===
+        // Desvinculamos el comportamiento por defecto y agregamos el evento 'keypress' solo para Enter (código 13)
+        $('.dataTables_filter input')
+            .unbind() // Quita la búsqueda automática al escribir
+            .bind('keypress', function(e) {
+                if(e.which === 13) { // Solo si es ENTER
+                    dataTable.search(this.value).draw();
+                }
+            });
     }
 
     function cargarCategorias() {
