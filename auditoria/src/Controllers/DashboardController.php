@@ -75,29 +75,67 @@ class DashboardController extends BaseController {
 
                 // Guardamos la acción en el historial, AHORA CON EL COMENTARIO
                 $historyModel->registrarAccion($id, $usuario, $accion, $detalleComentario);
+                
+                // INICIO DE CAMBIO PARA OBTENER EMAIL
                 $notificationService = new NotificationService();
                 $auditoria = $auditModel->getAuditById($id);
                 $ventaModel = new VentaModel();
-                $sucursales = $ventaModel->getSucursales();
-                $nombreSucursal = $sucursales[$auditoria['nro_sucursal']] ?? 'Desconocida';
 
-                $emailSucursal = 'franco.pertus@xl.com.ar';
-                $emailRRHH = 'franco.pertus@xl.com.ar';
-                $emailGerencia = 'franco.pertus@xl.com.ar';
+                // Usamos la nueva función para obtener DATOS REALES de la tabla SQL
+                $datosSucursal = $ventaModel->getDatosContactoSucursal($auditoria['nro_sucursal']);
+                
+                // Asignamos los valores (si no encuentra el mail, pone vacío o un mail por defecto)
+                $nombreSucursal = $datosSucursal['DESC_SUCURSAL'] ?? 'Desconocida';
+                
+                // AQUI SE ASIGNA EL EMAIL TRAIDO DE SQL
+                $emailSucursal = $datosSucursal['MAIL'] ?? ''; 
+                
+                // Validamos que sea un email válido, si no, lo dejamos vacío para evitar errores
+                if (!filter_var($emailSucursal, FILTER_VALIDATE_EMAIL)) {
+                    $emailSucursal = ''; 
+                    // Opcional: podrías poner tu email aquí para testear si falla: 'tu_email@xl.com.ar'
+                }
 
-                // --- LÓGICA DE NOTIFICACIONES CORREGIDA ---
-                // Si el estado es final (Aprobado o Rechazado), notificar a la sucursal.
-                if ($nuevoEstado === 'Aprobado' || $nuevoEstado === 'Rechazado') {
+                // Email RRHH (Si lo tienes en código duro o quieres agregarlo después)
+                $emailsRRHH_String = 'barbara.galmarini@xl.com.ar,natalia.fuentes@xl.com.ar,ignacio.gouiric@xl.com.ar';
+                
+                $emailGerencia = 'johanna.bolig@xl.com.ar';
+
+                // --- LÓGICA DE NOTIFICACIONES ---
+                
+                // 1. Notificar a la sucursal (Solo si tenemos email)
+                if (($nuevoEstado === 'Aprobado' || $nuevoEstado === 'Rechazado') && !empty($emailSucursal)) {
                     $asuntoSucursal = "Resolución Auditoría #{$id} - {$auditoria['n_comp']}";
-                    $cuerpoSucursal = "Su solicitud de auditoría #{$id} ha sido resuelta con el estado: <strong>{$nuevoEstado}</strong>.";
+                    $cuerpoSucursal = "Hola <strong>{$nombreSucursal}</strong>,<br><br>Su solicitud de auditoría #{$id} ha sido resuelta con el estado: <strong>{$nuevoEstado}</strong>.";
+                    
+                    // Si hubo un rechazo y hay comentario, es útil mostrarlo
+                    if($detalleComentario) {
+                         $cuerpoSucursal .= "<br><br><strong>Observaciones:</strong> " . htmlspecialchars($detalleComentario);
+                    }
+                    
                     $notificationService->sendEmail($emailSucursal, $asuntoSucursal, $cuerpoSucursal);
                 }
 
                 // Notificar a RRHH si es Rechazado
                 if ($nuevoEstado === 'Rechazado') {
                     $asuntoRRHH = "Auditoría Rechazada - #" . $id;
-                    $cuerpoRRHH = "La auditoría #{$id} de la sucursal {$nombreSucursal} ha sido rechazada.";
-                    $notificationService->sendEmail($emailRRHH, $asuntoRRHH, $cuerpoRRHH);
+                    $cuerpoRRHH = "La auditoría #{$id} de la sucursal <strong>{$nombreSucursal}</strong> ha sido rechazada.";
+                    
+                    if($detalleComentario) {
+                         $cuerpoRRHH .= "<br><br><strong>Observaciones:</strong> " . htmlspecialchars($detalleComentario);
+                    }
+
+                    // AQUI ESTÁ EL TRUCO:
+                    // La función explode convierte tu string de comas en una lista (array)
+                    $listaDestinatarios = explode(',', $emailsRRHH_String);
+
+                    foreach ($listaDestinatarios as $email) {
+                        // trim() elimina espacios accidentales por si escribiste 'email1, email2'
+                        $emailLimpio = trim($email); 
+                        if (!empty($emailLimpio)) {
+                            $notificationService->sendEmail($emailLimpio, $asuntoRRHH, $cuerpoRRHH);
+                        }
+                    }
                 }
 
                 // Notificar a Gerencia si es Derivado

@@ -139,7 +139,7 @@ public function pendientes() {
                     
                     // 3. Preparar y enviar el email
                     $notificationService = new NotificationService();
-                    $destinatarios = 'franco.pertus@xl.com.ar';
+                    $destinatarios = 'barbara.balado@gmail.com';
 
                     $asunto = "Nueva Auditoría Pendiente de Aprobación - #" . $newAuditId;
                     $cuerpo = "Se ha registrado una nueva solicitud de auditoría que requiere su atención.<br><br>" .
