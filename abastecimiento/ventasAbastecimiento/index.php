@@ -62,6 +62,21 @@ $imageOff = ($checkedValue === 'central') ? 'css/UY.jpg' : 'css/bandera_con_sol_
       background-color: #fff; /* Cambia esto al color de fondo deseado */
       z-index: 100;
     }
+    
+    /* Eliminar todas las flechas de DataTables */
+    table.dataTable thead th.sorting:before,
+    table.dataTable thead th.sorting:after,
+    table.dataTable thead th.sorting_asc:before,
+    table.dataTable thead th.sorting_asc:after,
+    table.dataTable thead th.sorting_desc:before,
+    table.dataTable thead th.sorting_desc:after {
+      content: "" !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    
     .toggle-on {
             background-image: url('<?= $imageOn ?>');
             background-size: contain;
@@ -98,81 +113,75 @@ $hoy = date("Y-m-d");
 //die();
 
 ?>
-<div class="alert alert-primary">
-  <div class="form-row">
+<div class="modern-header">
   <div id="boxLoading" class="boxLoading"></div>
-  <a href="http://192.168.0.13:8000/" style="display:inline-block;">
-    <img src="../../image/home-button.png" style="width:50px;height:45px;transition: transform 0.3s;" title="Menú" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-  </a> 
-    <h5 class="alert" style="margin-right:60%">Ventas por canal<h5>
-    <input type="checkbox" checked data-toggle="toggle" data-on="<?= $dataOnValue ?>" data-off="<?= $dataOffValue ?>" class="custom-toggle" style="color:black; font-size: 0; " onchange="cambiarEntorno(this)" id="checkEntorno" >
-  </div>
-  <div class="form-row" style="width:1400px;">   
-   <div class="mr-1">
-		<label>Desde</label>
-			<input type="date" class="form-control form-control-sm inputDate" name="desde" value="<?=$desde?>" id="desde">
-	</div>
-	  
-		<div class="mr-1">
-		<label>Hasta</label>
-			<input type="date" class="form-control form-control-sm inputDate" name="hasta" value="<?=$hasta?>" id="hasta">
-		</div>
-
-    <div>
-      <div for="rubro">Rubro</div>
-      <select class="form-control basic-multiple inputState" name="rubro[]" id="rubro" multiple style="width:200px;height:21px;margin-top:2px;">
-        <option disabled></option>
-        <?php
-      foreach($todosLosRubros as $rubro => $key){
-    ?>
-      <option value="<?= $key['DESCRIP'] ?>" <?= (isset($_GET['rubro']) && in_array($key['DESCRIP'], $_GET['rubro'])) ? 'selected' : '' ?>><?= $key['DESCRIP'] ?></option>
-    <?php
-      }
-    ?>
-    </div>  
-
-      </select>
+  <div class="header-content">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <div class="d-flex align-items-center">
+        <a href="http://192.168.0.13:8000/" class="home-btn">
+          <i class="fa fa-home"></i>
+        </a>
+        <h3 class="page-title mb-0 ms-3"><i class="fa fa-bar-chart me-2"></i>Ventas por Canal</h3>
+      </div>
+      <input type="checkbox" checked data-toggle="toggle" data-on="<?= $dataOnValue ?>" data-off="<?= $dataOffValue ?>" class="custom-toggle" onchange="cambiarEntorno(this)" id="checkEntorno" >
     </div>
-    <div class="col-sm-2">
-      <label for="destino">Destino</label>
-      <select id="destino" class="form-control form-control-sm" name="destino">
-        <option selected></option>
-        <?php
-      foreach($todosLosDestinos as $destino => $key){
-    ?>
-      <option value="<?= $key['DESTINO'] ?>"><?= $key['DESTINO'] ?></option>
-    <?php
-      }
-    ?>
-    </div> 
-        
-      </select>
-         </div>
-           <div class="col-sm-1">
-               <label for="inputZip">Temporada</label>
-              <select id="temporada" class="form-control form-control-sm" name="temporada">
-              <option selected></option>
-          <?php
-        foreach($todasLasTemporadas as $temporada => $key){
-      ?>
-        <option value="<?= $key['TEMPORADA'] ?>"><?= $key['TEMPORADA'] ?></option>
-      <?php
-
+  </div>
+  <div class="filters-container">
+    <div class="row g-3">
+      <div class="col-md-2">
+        <label class="form-label fw-bold"><i class="fa fa-calendar me-1"></i>Desde</label>
+        <input type="date" class="form-control" name="desde" value="<?=$desde?>" id="desde">
+      </div>
       
-        }
-      ?>
-    </select>
-    </div>
+      <div class="col-md-2">
+        <label class="form-label fw-bold"><i class="fa fa-calendar me-1"></i>Hasta</label>
+        <input type="date" class="form-control" name="hasta" value="<?=$hasta?>" id="hasta">
+      </div>
 
+      <div class="col-md-3">
+        <label class="form-label fw-bold"><i class="fa fa-tags me-1"></i>Rubro</label>
+        <select class="form-control basic-multiple" name="rubro[]" id="rubro" multiple>
+          <option disabled></option>
+          <?php foreach($todosLosRubros as $rubro => $key){ ?>
+            <option value="<?= $key['DESCRIP'] ?>" <?= (isset($_GET['rubro']) && in_array($key['DESCRIP'], $_GET['rubro'])) ? 'selected' : '' ?>><?= $key['DESCRIP'] ?></option>
+          <?php } ?>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label fw-bold"><i class="fa fa-map-marker me-1"></i>Destino</label>
+        <select id="destino" class="form-control" name="destino">
+          <option value="" selected>Todos</option>
+          <?php foreach($todosLosDestinos as $destino => $key){ ?>
+            <option value="<?= $key['DESTINO'] ?>"><?= $key['DESTINO'] ?></option>
+          <?php } ?>
+        </select>
+      </div>
+      
+      <div class="col-md-2">
+        <label class="form-label fw-bold"><i class="fa fa-building me-1"></i>Tipo Sucursal</label>
+        <select id="tipoSucursal" class="form-control" name="tipoSucursal">
+          <option value="" selected>Todos</option>
+          <option value="propios">Locales Propios</option>
+          <option value="franquicias">Franquicias</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label fw-bold"><i class="fa fa-clock-o me-1"></i>Temporada</label>
+        <select id="temporada" class="form-control" name="temporada">
+          <option value="" selected>Todas</option>
+          <?php foreach($todasLasTemporadas as $temporada => $key){ ?>
+            <option value="<?= $key['TEMPORADA'] ?>"><?= $key['TEMPORADA'] ?></option>
+          <?php } ?>
+        </select>
+      </div>
 
-
-    
-
-    <div class="col-sm-1 mt-4">
-    <button type="submit" class="btn btn-primary" onclick="buscar()" id="search"><span class="fa fa-search"></span> Buscar </button>
+      <div class="col-md-2 d-flex align-items-end">
+        <button type="button" class="btn btn-primary w-100" onclick="buscar()" id="search">
+          <i class="fa fa-search me-1"></i>Buscar
+        </button>
+      </div>
     </div>
   </div>
-
 </div>
 
 
@@ -181,6 +190,7 @@ $hoy = date("Y-m-d");
      <thead id="sticky-header">
     <tr>
       <th style="width:26%;">Sucursal</th>
+      <th>Tipo</th>
       <th>Artículo</th>
       <th style="width:28%;">Descripcion</th>
 	    <th>Cantidad</th>
@@ -214,6 +224,7 @@ $hoy = date("Y-m-d");
       <td onClick="sweet(this)"></td>
       <td onClick="sweet(this)"></td>
       <td onClick="sweet(this)"></td>
+      <td onClick="sweet(this)"></td>
     </tr>
 
     <?php
@@ -223,6 +234,7 @@ $hoy = date("Y-m-d");
 
    <tr>
 		<td align="center"><h5>TOTAL</h5></td>
+		<td></td>
 		<td>
 			<h5>  <a id="cantidad"> <?= number_format($sum , 0, '', '.') ?> </a> </h5>
 		</td>

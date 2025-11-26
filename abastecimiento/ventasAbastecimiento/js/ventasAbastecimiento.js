@@ -40,6 +40,7 @@ const buscar = () =>{
   let hasta = document.querySelector("#hasta").value;
   let destino = document.querySelector("#destino").value
   let temporada = document.querySelector("#temporada").value
+  let tipoSucursal = document.querySelector("#tipoSucursal").value
   
  let rubrosParaSql = "";
  var dt = $('#mytable').DataTable();
@@ -61,7 +62,8 @@ const buscar = () =>{
       desde: desde,
       hasta: hasta,
       destino: destino,
-      temporada: temporada
+      temporada: temporada,
+      tipoSucursal: tipoSucursal
      },
     success: function (data) {
       document.querySelector("#tbody").innerHTML = '';
@@ -81,6 +83,13 @@ const buscar = () =>{
         tdSucursal.setAttribute("onClick", "sweet(this)");
         tdSucursal.innerHTML = venta.DESC_SUCURSAL;
         tr.appendChild(tdSucursal);
+
+        let tdTipo = document.createElement("td");
+        tdTipo.setAttribute("onClick", "sweet(this)");
+        tdTipo.innerHTML = venta.TIPO_SUCURSAL;
+        tdTipo.style.fontWeight = venta.TIPO_SUCURSAL === 'Franquicia' ? 'bold' : 'normal';
+        tdTipo.style.color = venta.TIPO_SUCURSAL === 'Franquicia' ? '#0066cc' : '#006600';
+        tr.appendChild(tdTipo);
 
         let tdArticulo = document.createElement("td");
         tdArticulo.setAttribute("onClick", "sweet(this)");
@@ -129,6 +138,8 @@ const buscar = () =>{
       spinner.classList.remove('loading')
       $('#mytable').DataTable( {
         dom: 'Bfrtip',
+        ordering: true,
+        orderClasses: false,
         buttons: [
             
       {
@@ -183,6 +194,12 @@ const buscar = () =>{
         ]
       } );
 
+    },
+    error: function(xhr, status, error) {
+      console.error('Error en AJAX:', error);
+      console.error('Respuesta:', xhr.responseText);
+      spinner.classList.remove('loading');
+      alert('Error al cargar las ventas. Ver consola para detalles.');
     }
   });
 
