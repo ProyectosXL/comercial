@@ -19,6 +19,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 } elseif ($route === 'export-template') {
     $controller->exportTemplate();
-} else {
+} 
+// ===== AÑADE ESTE BLOQUE DE CÓDIGO AQUÍ =====
+elseif ($route === 'export-data') {
+    $controller->exportData();
+} 
+// ===== FIN DEL BLOQUE A AÑADIR =====
+else {
     $controller->index();
 }

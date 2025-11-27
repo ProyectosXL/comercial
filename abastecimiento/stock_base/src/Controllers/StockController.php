@@ -29,7 +29,71 @@ class StockController {
         
         require_once __DIR__ . '/../Views/stock/index.view.php';
     }
+        public function exportData() {
+        try {
+            // 1. Obtener los filtros de la URL (igual que en el método index)
+            $filterSucursal = $_GET['filter_sucursal'] ?? null;
+            $filterRubro = $_GET['filter_rubro'] ?? null;
 
+            // 2. Obtener los datos filtrados desde el modelo (REUTILIZAMOS la lógica existente)
+            $stockData = $this->stockModel->getStockBase($filterSucursal, $filterRubro);
+
+            // 3. Crear una nueva hoja de cálculo
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Stock Base Exportado');
+
+            // 4. Escribir los encabezados
+            $headers = [
+                'Código Cliente', 
+                'Nombre Sucursal', 
+                'Rubro', 
+                'Stock Base'
+            ];
+            $sheet->fromArray($headers, null, 'A1');
+
+            // 5. Escribir los datos en el archivo
+            $dataRows = [];
+            foreach ($stockData as $row) {
+                $dataRows[] = [
+                    $row['Codigo_Cliente'],
+                    $row['Nombre_Sucursal'],
+                    $row['Nombre_Rubro'],
+                    $row['Stock_Base']
+                ];
+            }
+            if (!empty($dataRows)) {
+                $sheet->fromArray($dataRows, null, 'A2');
+            }
+
+            // 6. Aplicar estilos (opcional, pero mejora la presentación)
+            $headerStyle = [
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E8449']],
+            ];
+            $sheet->getStyle('A1:D1')->applyFromArray($headerStyle);
+
+            foreach (range('A', 'D') as $columnID) {
+                $sheet->getColumnDimension($columnID)->setAutoSize(true);
+            }
+            
+            // Formatear la columna de Stock Base como número
+            $sheet->getStyle('D')->getNumberFormat()->setFormatCode('#,##0');
+
+            // 7. Configurar cabeceras HTTP y enviar el archivo para descarga
+            $filename = "Export_Stock_Base_" . date('Y-m-d') . ".xlsx";
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment;filename="' . $filename . '"');
+            header('Cache-Control: max-age=0');
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+            exit();
+
+        } catch (\Exception $e) {
+            die("Error al generar el archivo Excel: " . $e->getMessage());
+        }
+    }
     /**
      * Maneja todas las acciones del formulario (POST): agregar, editar y eliminar.
      */

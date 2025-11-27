@@ -80,6 +80,13 @@
                             <i class="fas fa-file-excel"></i> Importar Excel
                         </button>
                     </div>
+<!-- ===== Bloque Exportacion Excel ===== -->
+<div class="btn-group mr-2 mb-2" role="group">
+    <a href="#" id="btnExportar" class="btn btn-success">
+        <i class="fas fa-file-download"></i> Exportar Excel
+    </a>
+</div>
+<!-- ===== FIN DEL BLOQUE A AÑADIR ===== -->
                     <div class="btn-group mr-2 mb-2" role="group">
                         <!-- Ruta corregida para la descarga de plantilla -->
                         <a href="?route=export-template" class="btn btn-outline-secondary">
@@ -259,7 +266,7 @@
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header bg-gradient-primary text-white">
-                    <h5 class="modal-title" id="helpModalLabel"><i class="fas fa-question-circle"></i> Guía de Uso - Gestor Tamaño De Locales </h5>
+                    <h5 class="modal-title" id="helpModalLabel"><i class="fas fa-question-circle"></i> Guía de Uso - Gestor Stock Base </h5>
                     <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -349,5 +356,32 @@
         </div>
     </div>
     <!-- ===== FIN: CÓDIGO DEL OVERLAY DE CARGA ===== -->
+
+<script>
+$(document).ready(function() {
+    // Evento click para el nuevo botón de exportar
+    $('#btnExportar').on('click', function(e) {
+        e.preventDefault(); // Evita que el enlace haga su acción por defecto
+
+        // 1. Obtiene los valores actuales de los filtros
+        var sucursal = $('#filter_sucursal').val();
+        var rubro = $('#filter_rubro').val();
+
+        // 2. Construye la URL para la exportación, incluyendo los filtros
+        var exportUrl = '?route=export-data';
+        
+        if (sucursal) {
+            exportUrl += '&filter_sucursal=' + encodeURIComponent(sucursal);
+        }
+        if (rubro) {
+            exportUrl += '&filter_rubro=' + encodeURIComponent(rubro);
+        }
+
+        // 3. Redirige el navegador a la URL, lo que iniciará la descarga
+        window.location.href = exportUrl;
+    });
+});
+</script>
+
 </body>
 </html>
