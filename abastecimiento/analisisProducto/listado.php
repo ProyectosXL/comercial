@@ -134,14 +134,14 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
                         </select>
                     </div>
                     
-                    <div class="col-md-3 d-flex align-items-end gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-2"></i>Buscar
-                        </button>
-                        <button type="button" id="exportExcel" class="btn btn-success">
-                            <i class="fas fa-file-excel me-2"></i>Excel
-                        </button>
-                    </div>
+<div class="col-md-3 d-flex align-items-end gap-2">
+    <button type="submit" class="btn btn-primary">
+        <i class="fas fa-search me-2"></i>Buscar
+    </button>
+    <button type="button" id="exportXlsx" class="btn btn-success">
+        <i class="fas fa-file-excel me-2"></i>Excel (XLSX)
+    </button>
+</div>
                 </form>
             </div>
         </div>
@@ -195,95 +195,99 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="js/equivalencias.js"></script>
 
-    <script>
-
+<script>
 $(document).ready(function() {
-        // Inicializar Select2 en los selectores
-        $('#rubro, #categoria, #temporada, #destino').select2({
-            theme: 'bootstrap-5',
-            width: '100%',
-            placeholder: 'Seleccionar...',
-            allowClear: true,
-            closeOnSelect: false
-        });
+    // Inicializar Select2 en los selectores
+    $('#rubro, #categoria, #temporada, #destino').select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: 'Seleccionar...',
+        allowClear: true,
+        closeOnSelect: false
+    });
 
-        let dataTable;
+    let dataTable;
 
-        // Inicializar DataTable
-        initDataTable();
+    // Inicializar DataTable
+    initDataTable();
 
-        // Cargar todas las categorías inicialmente
-        cargarCategorias();
+    // Cargar todas las categorías inicialmente
+    cargarCategorias();
 
-        // NUEVO: Event listener para cambio en rubro
-        $('#rubro').on('change', function() {
-            const rubrosSeleccionados = $(this).val() || [];
-            console.log('Rubros seleccionados:', rubrosSeleccionados);
-            
-            // Limpiar selección de categorías
-            $('#categoria').val(null).trigger('change');
-            
-            // Cargar categorías filtradas por rubro
-            cargarCategoriasPorRubro(rubrosSeleccionados);
-        });
+    // Event listener para cambio en rubro
+    $('#rubro').on('change', function() {
+        const rubrosSeleccionados = $(this).val() || [];
+        $('#categoria').val(null).trigger('change');
+        cargarCategoriasPorRubro(rubrosSeleccionados);
+    });
 
+    // Manejar envío del formulario
+    $('#filtroForm').on('submit', function(e) {
+        e.preventDefault();
+        buscarProductos();
+    });
 
-        // Manejar envío del formulario
-        $('#filtroForm').on('submit', function(e) {
-            e.preventDefault();
-            buscarProductos();
-        });
+    // ==============================================================================
+    // NUEVA LÓGICA DE EXPORTACIÓN CENTRALIZADA
+    // ==============================================================================
 
-        // Manejar click en botón Excel
-    $('#exportExcel').on('click', function() {
+    // Función genérica para manejar la exportación
+    function handleExport(button, url) {
+        // 'button' es el objeto jQuery del botón presionado
+        // 'url' es el endpoint del controlador PHP
         
-        // 1. Crear un identificador único para esta descarga
-        const token = new Date().getTime(); 
+        console.log(`Iniciando exportación a: ${url}`); // Para depuración
 
-        // 2. Recopilar filtros
+        const token = new Date().getTime();
+        const buttonOriginalText = button.html();
+
         const paramsObj = {
             rubro: $('#rubro').val(),
             categoria: $('#categoria').val(),
             temporada: $('#temporada').val(),
             destino: $('#destino').val(),
             search: dataTable ? dataTable.search() : '',
-            download_token: token // <--- Enviamos el token
+            download_token: token
         };
 
         const params = $.param(paramsObj);
 
-        // 3. Mostrar el Spinner y bloquear botón para evitar doble click
         $('#spinner').css('display', 'flex');
-        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Generando...');
+        button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Generando...');
 
-        // 4. Iniciar la descarga
-        window.location.href = 'controller/exportar_productos_excel.php?' + params;
+        window.location.href = url + '?' + params;
 
-        // 5. INICIAR TEMPORIZADOR: Busca la cookie cada 500ms para saber si terminó
         const checkDescarga = setInterval(function() {
             if (document.cookie.indexOf('download_token_completo=' + token) > -1) {
-                // ¡La cookie apareció! El servidor terminó de procesar
                 finishDownload();
             }
         }, 500);
 
-        // Función para limpiar todo cuando termine
         function finishDownload() {
-            clearInterval(checkDescarga); // Detener temporizador
-            
-            // Ocultar spinner y restaurar botón
+            clearInterval(checkDescarga);
             $('#spinner').hide();
-            $('#exportExcel').prop('disabled', false).html('<i class="fas fa-file-excel me-2"></i>Excel');
-            
-            // Borrar la cookie para que no interfiera en la próxima
+            button.prop('disabled', false).html(buttonOriginalText);
             document.cookie = 'download_token_completo=; Max-Age=0; path=/';
         }
 
-        // Seguridad: Si pasaron 60 segundos y no bajó nada (error), restaurar todo
         setTimeout(function() {
-            finishDownload(); 
-        }, 60000); // 1 minuto maximo de espera visual
+            finishDownload();
+        }, 60000);
+    }
+
+    // Event listener para el botón CSV
+    $('#exportExcel').on('click', function() {
+        handleExport($(this), 'controller/exportar_productos_excel.php');
     });
+
+    // Event listener para el botón XLSX
+    $('#exportXlsx').on('click', function() {
+        handleExport($(this), 'controller/exportar_productos_xlsx.php');
+    });
+
+    // ==============================================================================
+    // FIN DE LA LÓGICA DE EXPORTACIÓN
+    // ==============================================================================
 
 function initDataTable() {
         if ($.fn.DataTable.isDataTable('#productosTable')) {
