@@ -818,11 +818,11 @@ class Articulo
             $direccion = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
 
 
-            // --- PASO 1: Contar solo los registros (Consulta liviana) ---
+            // --- PASO 1: Contar solo los registros (Consulta liviana con NOLOCK para evitar bloqueos) ---
             // Esta consulta NO trae datos, solo devuelve un número.
             
-            $sqlCount = "SELECT COUNT(ARTICULO) as Total
-                         FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
+            $sqlCount = "SELECT COUNT_BIG(ARTICULO) as Total
+                         FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL WITH (NOLOCK)
                          WHERE $whereFilters AND $searchCondition";
                          
             $rowsCount = $this->retornarArray($sqlCount);
@@ -833,20 +833,21 @@ class Articulo
             
             $data = [];
             if ($recordsFiltered > 0) {
-                // Usamos solo las columnas necesarias
-                $sqlData = "SELECT ARTICULO, DESCRIPCIO, COLOR, PRECIO, 
+                // Usamos solo las columnas necesarias con NOLOCK para mejorar rendimiento
+                $sqlData = "SELECT TOP ($length) ARTICULO, DESCRIPCIO, COLOR, PRECIO, 
                             STOCK_CENTRAL, STOCK_CENTRAL_FISCAL, STOCK_LOCALES, 
                             STOCK_TOTAL, STOCK_EXCLUIDO, STOCK_RESERVA, 
                             CANT_VENTA, IMP_VENTA, 
                             CAST(FECHA_INGRESO_SUC AS DATE) as FECHA_INGRESO_SUC_DATE,
                             RUBRO, CATEGORIA, DESTINO, TEMPORADA, LIQUIDACION,
                             COD_EQUIVALENCIA
-                        FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
-                        WHERE $whereFilters 
-                        AND $searchCondition
-                        ORDER BY $campoOrden $direccion
-                        OFFSET $start ROWS 
-                        FETCH NEXT $length ROWS ONLY";
+                        FROM (
+                            SELECT *, ROW_NUMBER() OVER (ORDER BY $campoOrden $direccion) as RowNum
+                            FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL WITH (NOLOCK)
+                            WHERE $whereFilters AND $searchCondition
+                        ) AS SubQuery
+                        WHERE RowNum > $start AND RowNum <= ($start + $length)
+                        ORDER BY RowNum";
 
                 $data = $this->retornarArray($sqlData);
             }

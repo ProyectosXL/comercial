@@ -65,6 +65,23 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
         height: 60px;
         width: 60px;
     }
+
+    /* Adaptar ancho de selectores Temporada y Destino según contenido */
+    #temporada + .select2-container,
+    #destino + .select2-container {
+        min-width: 120px !important;
+    }
+
+    #temporada + .select2-container .select2-selection--multiple,
+    #destino + .select2-container .select2-selection--multiple {
+        min-height: 38px;
+    }
+
+    /* Hacer que los botones sean más compactos */
+    .btn-compact {
+        white-space: nowrap;
+        padding: 0.375rem 0.75rem;
+    }
     </style>
 
 </head>
@@ -110,7 +127,7 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
                         </select>
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-auto">
                         <label class="form-label">Temporada</label>
                         <select class="form-select" name="temporada[]" id="temporada" multiple="multiple">
                             <option value="NULL">Sin Temporada</option>
@@ -122,7 +139,7 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
                         </select>
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-auto">
                         <label class="form-label">Destino</label>
                         <select class="form-select" name="destino[]" id="destino" multiple="multiple">
                             <option value="NULL">Sin Destino</option>
@@ -134,14 +151,14 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
                         </select>
                     </div>
                     
-<div class="col-md-3 d-flex align-items-end gap-2">
-    <button type="submit" class="btn btn-primary">
-        <i class="fas fa-search me-2"></i>Buscar
-    </button>
-    <button type="button" id="exportXlsx" class="btn btn-success">
-        <i class="fas fa-file-excel me-2"></i>Excel (XLSX)
-    </button>
-</div>
+                    <div class="col-auto d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary btn-compact">
+                            <i class="fas fa-search me-2"></i>Buscar
+                        </button>
+                        <button type="button" id="exportXlsx" class="btn btn-success btn-compact">
+                            <i class="fas fa-file-excel me-2"></i>Excel
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -313,6 +330,7 @@ function initDataTable() {
             ajax: {
                 url: 'controller/obtener_productos.php',
                 type: 'POST',
+                timeout: 120000, // 120 segundos (2 minutos) para consultas pesadas
                 data: function(d) {
                     d.rubro = $('#rubro').val();
                     d.categoria = $('#categoria').val();
@@ -320,15 +338,23 @@ function initDataTable() {
                     d.destino = $('#destino').val();
                 },
                 error: function(xhr, error, thrown) {
-                    console.error('Error:', xhr.responseText);
+                    console.error('Error Ajax:', error, thrown);
+                    console.error('Respuesta del servidor:', xhr.responseText);
                     $('#spinner').hide();
+                    
+                    // Mostrar mensaje de error al usuario
+                    if (xhr.status === 504 || error === 'timeout') {
+                        alert('La consulta tardó demasiado tiempo. Por favor, intente aplicar más filtros (Rubro, Categoría, etc.) para reducir la cantidad de datos.');
+                    } else {
+                        alert('Error al cargar los datos: ' + error);
+                    }
                 }
             },
             // CONFIGURACIÓN BUSCADOR: Retraso para que no busque mientras escribes (opcional, pero ayudamos con el evento Enter abajo)
             searchDelay: 1000, 
-            scrollY: '70vh',
-            pageLength: 100,
-            lengthMenu: [[50, 100, 200], [50, 100, 200]],
+            scrollCollapse: true,
+            pageLength: 50, // Reducido de 100 a 50 para consultas más rápidas
+            lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
             language: {
                 url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json',
                 search: "Buscar:" 

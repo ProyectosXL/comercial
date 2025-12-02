@@ -63,10 +63,37 @@
     height: auto;
 }
 
-/* Asegurar que el contenedor tenga scroll */
-.table-responsive {
-    max-height: calc(100vh - 300px); /* Ajusta este valor según necesites */
+/* Eliminar scroll horizontal de la página */
+body, html {
+    overflow-x: hidden !important;
     overflow-y: auto;
+}
+
+.container-fluid {
+    overflow-x: hidden !important;
+    max-width: 100vw;
+}
+
+/* Asegurar que solo el contenedor de tabla tenga scroll */
+.table-responsive {
+    max-height: calc(100vh - 300px);
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+/* Evitar que DataTables agregue scrolls adicionales */
+.dataTables_wrapper {
+    overflow-x: hidden !important;
+}
+
+.dataTables_scrollBody {
+    overflow-x: hidden !important;
+}
+
+/* Asegurar que la tabla no genere overflow */
+.table {
+    width: 100% !important;
+    table-layout: auto;
 }
 
 /* Estilo para el título */
