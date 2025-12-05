@@ -77,9 +77,14 @@
                         <button type="submit" class="btn btn-success mb-2 w-100"><i class="fas fa-check"></i> Aprobar Directo</button>
                     </form>
                     
-                    <!-- Botón que abre la ventana modal -->
-                    <button type="button" class="btn btn-warning w-100" data-toggle="modal" data-target="#derivarModal">
+                    <!-- Botón para Derivar que abre la ventana modal -->
+                    <button type="button" class="btn btn-warning mb-2 w-100" data-toggle="modal" data-target="#derivarModal">
                         <i class="fas fa-share-square"></i> Derivar a Gerencia...
+                    </button>
+
+                    <!-- Botón para Rechazar que abre su propia modal -->
+                    <button type="button" class="btn btn-danger w-100" data-toggle="modal" data-target="#rechazarModal">
+                        <i class="fas fa-times"></i> Rechazar...
                     </button>
                 <?php endif; ?>
 
@@ -164,12 +169,42 @@
                 <input type="hidden" name="estado" value="Derivado a Gerencia">
                 <div class="form-group">
                     <label for="comentario_derivacion"><strong>Comentario para Gerencia (Opcional):</strong></label>
-                    <textarea class="form-control" id="comentario_derivacion" name="comentario_derivacion" rows="4" placeholder="Ej: El descuento es muy alto, requiere supervisión..."></textarea>
+                    <!-- AJUSTE: Renombrado a 'comentario' para ser genérico -->
+                    <textarea class="form-control" id="comentario_derivacion" name="comentario" rows="4" placeholder="Ej: El descuento es muy alto, requiere supervisión..."></textarea>
                 </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
             <button type="submit" class="btn btn-warning"><i class="fas fa-share-square"></i> Confirmar Derivación</button>
+          </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Ventana Modal para Rechazar -->
+<div class="modal fade" id="rechazarModal" tabindex="-1" role="dialog" aria-labelledby="rechazarModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="rechazarModalLabel">Rechazar Auditoría</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form action="/comercial/auditoria/public/dashboard/actualizarEstado" method="POST">
+          <div class="modal-body">
+                <input type="hidden" name="id" value="<?php echo $auditoria['id']; ?>">
+                <input type="hidden" name="estado" value="Rechazado">
+                <div class="form-group">
+                    <label for="comentario_rechazo"><strong>Motivo del Rechazo (Obligatorio):</strong></label>
+                    <!-- Usa 'comentario' para ser consistente con el controlador -->
+                    <textarea class="form-control" id="comentario_rechazo" name="comentario" rows="4" placeholder="Ej: Falta documentación de respaldo..." required></textarea>
+                </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger"><i class="fas fa-times"></i> Confirmar Rechazo</button>
           </div>
       </form>
     </div>

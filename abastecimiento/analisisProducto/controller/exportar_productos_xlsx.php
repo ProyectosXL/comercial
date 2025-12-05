@@ -5,8 +5,8 @@ ignore_user_abort(true);
 set_time_limit(0);
 ini_set('memory_limit', '2048M');
 
-// Requerir el autoload de Composer
-require '../../vendor/autoload.php';
+// Requerir el autoload de Composer (Asegúrate que la ruta es correcta)
+require_once $_SERVER['DOCUMENT_ROOT'] . '/comercial/abastecimiento/vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -60,7 +60,7 @@ try {
         $s = escape_val($_GET['search']);
         $conds[] = "(ARTICULO LIKE '%$s%' OR DESCRIPCIO LIKE '%$s%' OR RUBRO LIKE '%$s%')";
     }
-    $where = implode(" AND ", $conds);
+    $where = implode(" AND ", $conds); // La variable correcta es $where
 
     // 2. Crear instancia de Spreadsheet
     $spreadsheet = new Spreadsheet();
@@ -69,7 +69,7 @@ try {
 
     // 3. Definir encabezados
     $headers = [
-        'Rubro', 'Categoria', 'Temporada', 'Destino', 'Liquidacion','Cod. Equiv.', 'Articulo', 'Descripcion', 'Fecha De Ingreso', 'Precio','Color', 
+        'Rubro', 'Categoria', 'Temporada', 'Destino', 'Liquidacion', 'Fecha De Ingreso', 'Cod. Equiv.', 'Articulo', 'Descripcion', 'Color', 'Precio', 
         'Stock Locales', 'Stock Central', 'Stock Fiscal', 
         'Stock Total', 'Stock Ecommerce', 'Stock Excluido', 
         'Cant. Venta', 'Venta Total'
@@ -79,27 +79,30 @@ try {
 
     // 4. Obtener datos de la BD
     $art = new Articulo();
-    $stmt = $art->obtenerStatementExportacion($where);
+    // *** CORRECCIÓN 1: Usar la variable correcta '$where' ***
+    $resultados = $art->traerProductosExportacion($where);
 
     // 5. Llenar el archivo Excel
     $rowNum = 2;
-    while($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    // *** CORRECCIÓN 2: Usar un bucle 'foreach' para recorrer el array '$resultados' ***
+    foreach($resultados as $row) {
         $fecha = '';
         if(isset($row['FECHA']) && $row['FECHA'] instanceof DateTime) {
              $fecha = $row['FECHA']->format('d/m/Y');
         }
 
+        // Reorganicé el array para que coincida con tu nuevo orden de encabezados
         $sheet->fromArray([
             $row['RUBRO'], $row['CATEGORIA'], $row['TEMPORADA'], $row['DESTINO'], $row['LIQUIDACION'],
-            $row['COD_EQUIVALENCIA'], $row['ARTICULO'], $row['DESCRIPCIO'], $fecha,
-            $row['PRECIO'], $row['COLOR'], $row['STOCK_LOCALES'], $row['STOCK_CENTRAL'], $row['STOCK_CENTRAL_FISCAL'],
+            $fecha, $row['COD_EQUIVALENCIA'], $row['ARTICULO'], $row['DESCRIPCIO'], $row['COLOR'],
+            $row['PRECIO'], $row['STOCK_LOCALES'], $row['STOCK_CENTRAL'], $row['STOCK_CENTRAL_FISCAL'],
             $row['STOCK_TOTAL'], $row['STOCK_RESERVA'], $row['STOCK_EXCLUIDO'], $row['CANT_VENTA'],
             $row['IMP_VENTA']
         ], NULL, 'A'.$rowNum);
 
-        // Aplicar formato a las celdas de moneda
-        $sheet->getStyle('K'.$rowNum)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_CURRENCY_USD_SIMPLE);
-        $sheet->getStyle('S'.$rowNum)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_CURRENCY_USD_SIMPLE);
+        // Aplicar formato a las celdas de moneda (ajusté las columnas según el nuevo orden)
+        $sheet->getStyle('K'.$rowNum)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_CURRENCY_USD_SIMPLE); // Columna Precio
+        $sheet->getStyle('S'.$rowNum)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_CURRENCY_USD_SIMPLE); // Columna Venta Total
         
         $rowNum++;
     }
@@ -108,8 +111,9 @@ try {
         $sheet->getColumnDimension($columnID)->setAutoSize(true);
     }
     
-    sqlsrv_free_stmt($stmt);
-    
+    // *** CORRECCIÓN 3: Eliminar la llamada a sqlsrv_free_stmt($stmt) ya que $stmt no existe ***
+    // sqlsrv_free_stmt($stmt); // <--- LÍNEA ELIMINADA
+
     // ======================================================================
     // PUNTO CLAVE: Limpiar cualquier salida anterior (errores, espacios)
     // ======================================================================
@@ -120,7 +124,6 @@ try {
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     header('Content-Disposition: attachment;filename="' . $filename . '"');
     header('Cache-Control: max-age=0');
-    // Forzar la no-cacheabilidad en navegadores antiguos
     header('Expires: 0');
     header('Pragma: public');
 
@@ -129,7 +132,6 @@ try {
     $writer->save('php://output');
 
 } catch (Exception $e) {
-    // Si algo falla catastróficamente, limpiar buffer y mostrar error claro
     if (ob_get_contents()) ob_end_clean();
     header('Content-Type: text/plain');
     die("ERROR DE EXPORTACION: " . $e->getMessage());

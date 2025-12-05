@@ -24,21 +24,25 @@ class Articulo
     } 
 
 
-    private function retornarArray($sqlEnviado){
+private function retornarArray($sqlEnviado){
 
-        $sql = $sqlEnviado;
+    $sql = $sqlEnviado;
 
-        $stmt = sqlsrv_query( $this->cid_central, $sql );
+    $stmt = sqlsrv_query( $this->cid_central, $sql );
 
-        $rows = array();
-
-        while( $v = sqlsrv_fetch_array( $stmt, SQLSRV_FETCH_ASSOC) ) {
-            $rows[] = $v;
-        }
-
-        return $rows;  
-
+    // Para ver el error exacto de SQL Server
+    if ($stmt === false) {
+        die(print_r(sqlsrv_errors(), true));
     }
+
+    $rows = array();
+
+    while( $v = sqlsrv_fetch_array( $stmt, SQLSRV_FETCH_ASSOC) ) {
+        $rows[] = $v;
+    }
+
+    return $rows;  
+}
 
     public function traerArticulos($rubro, $temporada){
 
@@ -868,63 +872,29 @@ class Articulo
             ];
         }
     }
-    public function traerProductosExportacion($whereFilters) {
-        if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
-            $base = 'SUCURSALES_URUGUAY';
-        } else {
-            $base = 'LOCALES_LAKERS';
-        }
-
-        $sql = "SELECT RUBRO, CATEGORIA, TEMPORADA, DESTINO, LIQUIDACION,
-                    CAST(FECHA_INGRESO_SUC AS DATE) as FECHA,
-                    COD_EQUIVALENCIA, ARTICULO, DESCRIPCIO, COLOR, 
-                    PRECIO, 
-                    STOCK_LOCALES, 
-                    STOCK_CENTRAL, 
-                    STOCK_CENTRAL_FISCAL, -- Faltaba mostrar este
-                    STOCK_TOTAL, 
-                    STOCK_RESERVA,        -- Este es el STOCK ECOMMERCE según tu mapeo
-                    STOCK_EXCLUIDO,       -- Faltaba este
-                    CANT_VENTA, 
-                    IMP_VENTA
-                FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
-                WHERE $whereFilters 
-                ORDER BY RUBRO, CATEGORIA, ARTICULO";
-
-        return $this->retornarArray($sql);
+public function traerProductosExportacion($whereFilters) {
+    if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
+        $base = 'SUCURSALES_URUGUAY';
+    } else {
+        $base = 'LOCALES_LAKERS';
     }
-    public function obtenerStatementExportacion($whereFilters) {
-        if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
-            $base = 'SUCURSALES_URUGUAY';
-        } else {
-            $base = 'LOCALES_LAKERS';
-        }
 
-        // SQL LIMPIO Y SIN ORDENAMIENTO
-        $sql = "SELECT RUBRO, CATEGORIA, TEMPORADA, DESTINO, LIQUIDACION,
-                    CAST(FECHA_INGRESO_SUC AS DATE) as FECHA,
-                    COD_EQUIVALENCIA, ARTICULO, DESCRIPCIO, COLOR, 
-                    PRECIO, 
-                    STOCK_LOCALES, STOCK_CENTRAL, STOCK_CENTRAL_FISCAL, 
-                    STOCK_TOTAL, STOCK_RESERVA, STOCK_EXCLUIDO,
-                    CANT_VENTA, IMP_VENTA
-                FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
-                WHERE $whereFilters";
-                // !!! BORRÉ EL ORDER BY A PROPÓSITO PARA VELOCIDAD !!!
+    // AÑADIMOS "TOP 100" PARA LIMITAR LOS RESULTADOS DRÁSTICAMENTE
+    $sql = "SELECT RUBRO, CATEGORIA, TEMPORADA, DESTINO, LIQUIDACION,
+                CAST(FECHA_INGRESO_SUC AS DATE) as FECHA,
+                COD_EQUIVALENCIA, ARTICULO, DESCRIPCIO, COLOR, 
+                PRECIO, 
+                STOCK_LOCALES, 
+                STOCK_CENTRAL, 
+                STOCK_CENTRAL_FISCAL,
+                STOCK_TOTAL, 
+                STOCK_RESERVA,
+                STOCK_EXCLUIDO,
+                CANT_VENTA, 
+                IMP_VENTA
+            FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
+            WHERE $whereFilters";
 
-        // Timeouts máximos
-        $options = array(
-            "QueryTimeout" => 3600, 
-            "Scrollable" => SQLSRV_CURSOR_FORWARD
-        );
-
-        $stmt = sqlsrv_query($this->cid_central, $sql, array(), $options);
-
-        if ($stmt === false) {
-            throw new Exception(print_r(sqlsrv_errors(), true));
-        }
-
-        return $stmt;
-    }
+    return $this->retornarArray($sql);
 }
-    
+}

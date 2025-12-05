@@ -223,7 +223,6 @@ $(document).ready(function() {
         closeOnSelect: false
     });
 
-    let dataTable;
 
     // Inicializar DataTable
     initDataTable();
@@ -238,59 +237,50 @@ $(document).ready(function() {
         cargarCategoriasPorRubro(rubrosSeleccionados);
     });
 
-    // Manejar envío del formulario
-    $('#filtroForm').on('submit', function(e) {
-        e.preventDefault();
-        buscarProductos();
-    });
-
+});
     // ==============================================================================
     // NUEVA LÓGICA DE EXPORTACIÓN CENTRALIZADA
     // ==============================================================================
 
     // Función genérica para manejar la exportación
-    function handleExport(button, url) {
-        // 'button' es el objeto jQuery del botón presionado
-        // 'url' es el endpoint del controlador PHP
-        
-        console.log(`Iniciando exportación a: ${url}`); // Para depuración
+function handleExport(button, url) {
+    console.log(`Iniciando exportación ASÍNCRONA`);
+    
+    const buttonOriginalText = button.html();
+    const paramsObj = {
+        rubro: $('#rubro').val(),
+        categoria: $('#categoria').val(),
+        temporada: $('#temporada').val(),
+        destino: $('#destino').val(),
+        search: dataTable ? dataTable.search() : ''
+    };
 
-        const token = new Date().getTime();
-        const buttonOriginalText = button.html();
+    // Mostrar spinner y deshabilitar botón
+    $('#spinner').css('display', 'flex').find('.spinner-border').after('<p id="spinner-msg" style="margin-top:20px;">Iniciando generación de Excel...</p>');
+    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Generando...');
 
-        const paramsObj = {
-            rubro: $('#rubro').val(),
-            categoria: $('#categoria').val(),
-            temporada: $('#temporada').val(),
-            destino: $('#destino').val(),
-            search: dataTable ? dataTable.search() : '',
-            download_token: token
-        };
-
-        const params = $.param(paramsObj);
-
-        $('#spinner').css('display', 'flex');
-        button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Generando...');
-
-        window.location.href = url + '?' + params;
-
-        const checkDescarga = setInterval(function() {
-            if (document.cookie.indexOf('download_token_completo=' + token) > -1) {
-                finishDownload();
+    // PASO A: Iniciar la generación del archivo en el servidor
+    $.ajax({
+        url: 'controller/iniciar_exportacion.php', // NUEVO SCRIPT
+        type: 'POST',
+        data: paramsObj,
+        dataType: 'json',
+        success: function(response) {
+            if (response && response.success && response.taskId) {
+                // PASO C: Iniciar el sondeo para verificar si el archivo está listo
+                $('#spinner-msg').text('El servidor está procesando tu archivo Excel. Esto puede tardar varios minutos...');
+                pollForExport(response.taskId);
+            } else {
+                alert('Error al iniciar la exportación: ' + (response.error || 'Respuesta inválida'));
+                resetExportUI();
             }
-        }, 500);
-
-        function finishDownload() {
-            clearInterval(checkDescarga);
-            $('#spinner').hide();
-            button.prop('disabled', false).html(buttonOriginalText);
-            document.cookie = 'download_token_completo=; Max-Age=0; path=/';
+        },
+        error: function() {
+            alert('No se pudo comunicar con el servidor para iniciar la exportación.');
+            resetExportUI();
         }
-
-        setTimeout(function() {
-            finishDownload();
-        }, 60000);
-    }
+    });
+}
 
     // Event listener para el botón CSV
     $('#exportExcel').on('click', function() {
@@ -302,107 +292,107 @@ $(document).ready(function() {
         handleExport($(this), 'controller/exportar_productos_xlsx.php');
     });
 
-    // ==============================================================================
-    // FIN DE LA LÓGICA DE EXPORTACIÓN
-    // ==============================================================================
+// Variable para la instancia de DataTable, debe estar fuera de la función
+// para que otras partes del script puedan acceder a ella.
+let dataTable; 
 
-function initDataTable() {
-        if ($.fn.DataTable.isDataTable('#productosTable')) {
-            $('#productosTable').DataTable().destroy();
-        }
-
-        dataTable = $('#productosTable').DataTable({
-            processing: false, 
-            serverSide: true,
-            deferLoading: 0, 
-            
-            // EVENTO 1: Muestra el spinner ANTES de pedir datos (cubre búsqueda rápida, paginación y orden)
-            // Esta es la clave para que aparezca la ruedita al dar Enter
-            "preDrawCallback": function(settings) {
-                $('#spinner').css('display', 'flex'); 
-            },
-
-            // EVENTO 2: Oculta el spinner cuando terminan de llegar los datos
-            drawCallback: function(settings) {
-                 $('#spinner').hide();
-            },
-
-            ajax: {
-                url: 'controller/obtener_productos.php',
-                type: 'POST',
-                timeout: 120000, // 120 segundos (2 minutos) para consultas pesadas
-                data: function(d) {
-                    d.rubro = $('#rubro').val();
-                    d.categoria = $('#categoria').val();
-                    d.temporada = $('#temporada').val();
-                    d.destino = $('#destino').val();
-                },
-                error: function(xhr, error, thrown) {
-                    console.error('Error Ajax:', error, thrown);
-                    console.error('Respuesta del servidor:', xhr.responseText);
-                    $('#spinner').hide();
-                    
-                    // Mostrar mensaje de error al usuario
-                    if (xhr.status === 504 || error === 'timeout') {
-                        alert('La consulta tardó demasiado tiempo. Por favor, intente aplicar más filtros (Rubro, Categoría, etc.) para reducir la cantidad de datos.');
-                    } else {
-                        alert('Error al cargar los datos: ' + error);
-                    }
-                }
-            },
-            // CONFIGURACIÓN BUSCADOR: Retraso para que no busque mientras escribes (opcional, pero ayudamos con el evento Enter abajo)
-            searchDelay: 1000, 
-            scrollCollapse: true,
-            pageLength: 50, // Reducido de 100 a 50 para consultas más rápidas
-            lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
-            language: {
-                url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json',
-                search: "Buscar:" 
-            },
-            dom: 'Bfrtip', // Sin botones nativos
-            buttons: [],   
-            order: [[0, 'asc']],
-            columns: [
-                { data: 'RUBRO' },
-                { data: 'CATEGORIA' },
-                { data: 'TEMPORADA' },
-                { data: 'DESTINO' },
-                { data: 'LIQUIDACION' },
-                { data: 'FECHA_INGRESO_SUC', orderable: false },
-                {
-                    data: 'COD_EQUIVALENCIA',
-                    render: function(data, type, row) {
-                        return window.renderColumnEquivalencia(data, type, row);
-                    }
-                },
-                { data: 'ARTICULO' },
-                { data: 'DESCRIPCIO' },
-                { data: 'COLOR' },
-                { data: 'PRECIO', render: function(data) { return data ? '$ ' + Number(data).toLocaleString('es-AR') : ''; } },
-                { data: 'STOCK_LOCALES', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                { data: 'STOCK_CENTRAL', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                { data: 'STOCK_CENTRAL_FISCAL', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                { data: 'STOCK_TOTAL', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                
-                // En tu código anterior mapeaste 'Stock Ecommerce' a la variable STOCK_RESERVA, seguimos esa lógica:
-                { data: 'STOCK_RESERVA', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } }, 
-                
-                { data: 'STOCK_EXCLUIDO', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                { data: 'CANT_VENTA', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                { data: 'IMP_VENTA', render: function(data) { return data ? '$ ' + Number(data).toLocaleString('es-AR') : ''; } }
-            ]
-        });
-
-        // === MAGIA PARA EL ENTER EN LA CAJA DE BÚSQUEDA ===
-        // Desvinculamos el comportamiento por defecto y agregamos el evento 'keypress' solo para Enter (código 13)
-        $('.dataTables_filter input')
-            .unbind() // Quita la búsqueda automática al escribir
-            .bind('keypress', function(e) {
-                if(e.which === 13) { // Solo si es ENTER
-                    dataTable.search(this.value).draw();
-                }
-            });
+/**
+ * Inicializa o reinicia la DataTable con un conjunto de datos ya cargado.
+ * Esta versión funciona en modo "client-side".
+ * @param {Array} dataArray - El array de objetos con los datos de los productos.
+ */
+function initDataTable(dataArray) {
+    
+    // 1. Destruimos la tabla si ya existe para poder reiniciarla con nuevos datos.
+    if ($.fn.DataTable.isDataTable('#productosTable')) {
+        $('#productosTable').DataTable().destroy();
+        // Es una buena práctica vaciar el cuerpo de la tabla para evitar un "parpadeo" de datos viejos.
+        $('#productosTable tbody').empty();
     }
+
+    // 2. Inicializamos DataTables.
+    dataTable = $('#productosTable').DataTable({
+        // ==============================================================================
+        // CAMBIOS PRINCIPALES PARA EL MODO CLIENT-SIDE
+        // ==============================================================================
+        
+        // ¡LA LÍNEA MÁS IMPORTANTE! Le decimos a DataTables que use el array que le pasamos.
+        data: dataArray,
+
+        // Ya no necesitamos 'serverSide', 'ajax', ni callbacks relacionados con la carga.
+        // serverSide: false, // Se comenta porque 'false' es el valor por defecto.
+        // deferLoading: 0,  // Ya no aplica.
+        // preDrawCallback: function(settings) { ... }, // Se elimina, el spinner se maneja fuera.
+        // drawCallback: function(settings) { ... },  // Se elimina, el spinner se maneja fuera.
+        // ajax: { ... }, // ¡SE ELIMINA COMPLETAMENTE! Los datos ya los tenemos.
+
+        // ==============================================================================
+        // CONFIGURACIONES QUE SE MANTIENEN PORQUE AFECTAN LA INTERFAZ
+        // ==============================================================================
+
+        processing: true, // Muestra "Procesando..." cuando el usuario ordena o busca en los datos ya cargados.
+        scrollCollapse: true,
+        pageLength: 50,
+        lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
+        
+        // El idioma se mantiene igual.
+        language: {
+            url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json',
+            search: "Buscar:" 
+        },
+        
+        // La configuración del DOM y los botones se mantiene.
+        dom: 'Bfrtip', 
+        buttons: [],   
+        
+        // El orden inicial se mantiene.
+        order: [[0, 'asc']],
+
+        // ¡IMPORTANTE! La definición de las columnas es exactamente la misma que tenías,
+        // ya que los nombres de las propiedades en el 'dataArray' deben coincidir.
+        columns: [
+            { data: 'RUBRO' },
+            { data: 'CATEGORIA' },
+            { data: 'TEMPORADA' },
+            { data: 'DESTINO' },
+            { data: 'LIQUIDACION' },
+            { data: 'FECHA_INGRESO_SUC', orderable: false },
+            {
+                data: 'COD_EQUIVALENCIA',
+                render: function(data, type, row) {
+                    return window.renderColumnEquivalencia(data, type, row);
+                }
+            },
+            { data: 'ARTICULO' },
+            { data: 'DESCRIPCIO' },
+            { data: 'COLOR' },
+            { data: 'PRECIO', render: function(data) { return data ? '$ ' + Number(data).toLocaleString('es-AR') : ''; } },
+            { data: 'STOCK_LOCALES', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+            { data: 'STOCK_CENTRAL', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+            { data: 'STOCK_CENTRAL_FISCAL', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+            { data: 'STOCK_TOTAL', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+            { data: 'STOCK_RESERVA', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } }, 
+            { data: 'STOCK_EXCLUIDO', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+            { data: 'CANT_VENTA', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+            { data: 'IMP_VENTA', render: function(data) { return data ? '$ ' + Number(data).toLocaleString('es-AR') : ''; } }
+        ]
+    });
+
+    // 3. Re-aplicamos la lógica para que la búsqueda global se active solo con la tecla "Enter".
+    // Esto es útil porque ahora la búsqueda es instantánea (en el cliente) y no queremos
+    // que se ejecute con cada tecla si hay miles de filas.
+    $('.dataTables_filter input')
+        .unbind() // Quita el comportamiento por defecto de DataTables
+        .bind('keypress', function(e) {
+            if(e.which === 13) { // Si la tecla presionada es Enter
+                dataTable.search(this.value).draw();
+            }
+        });
+        
+    // 4. Ocultamos el spinner, ya que la tabla está completamente renderizada.
+    // Aunque la función `resetUI` también lo hace, es bueno asegurarlo aquí.
+    $('#spinner').hide();
+}
 
     function cargarCategorias() {
         console.log('=== Cargando todas las categorías ===');
@@ -497,26 +487,245 @@ function initDataTable() {
         // alert(mensaje);
     }
 
-function buscarProductos() {
-        $('#spinner').css('display', 'flex'); // Mostrar spinner
+let pollingInterval;
 
-        // Validamos si dataTable existe.
-        if ($.fn.DataTable.isDataTable('#productosTable')) {
-            // .draw() fuerza a DataTables a ir al servidor (ignorando el bloqueo inicial)
-            dataTable.draw(); 
-        } else {
-            initDataTable();
-            dataTable.draw();
-        }
-        
-        // NOTA: El spinner se debe ocultar en el evento 'drawCallback' 
-        // o 'xhr' del DataTable, no aquí inmediatamente, 
-        // porque draw() es asíncrono.
+function buscarProductos() {
+    console.log("1. 'buscarProductos' ha sido llamada."); // LOG 1
+
+    $('#spinner').css('display', 'flex');
+    $('#filtroForm button[type="submit"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Iniciando...');
+
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
     }
-         
-    document.querySelector(".toggle").style.width="40px"
-    document.querySelector(".toggle-on").style.fontSize="0"
-    document.querySelector(".toggle-off").style.fontSize="0"
+
+    const postData = {
+        rubro: $('#rubro').val(),
+        categoria: $('#categoria').val(),
+        temporada: $('#temporada').val(),
+        destino: $('#destino').val()
+    };
+    
+    console.log("2. Enviando datos al servidor:", postData); // LOG 2
+
+    $.ajax({
+        url: 'controller/iniciar_consulta.php',
+        type: 'POST',
+        data: postData,
+        dataType: 'json', // Esperamos un JSON estricto
+        success: function(response) {
+            console.log("4. ¡ÉXITO! Respuesta del servidor recibida:", response); // LOG 4
+            
+            if (response && response.success && response.taskId) {
+                console.log("5. La respuesta es válida. Iniciando sondeo (polling)..."); // LOG 5
+                $('#spinner p').remove();
+                $('#spinner').append('<p style="margin-top: 20px;">Tu consulta se está procesando...</p>');
+                pollForResults(response.taskId);
+            } else {
+                alert('La respuesta del servidor no fue la esperada. Revisa la consola.');
+                console.error("Error lógico en la respuesta:", response);
+                resetUI();
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error("3. ¡ERROR! La llamada AJAX a iniciar_consulta.php falló."); // LOG 3
+            console.error("Status:", status);
+            console.error("Error:", error);
+            console.error("Response Text:", xhr.responseText); // MUY IMPORTANTE
+            alert('Ocurrió un error al comunicarse con el servidor. Revisa la consola (F12) para más detalles.');
+            resetUI();
+        }
+    });
+}
+
+let pollingTimeoutId;
+
+function pollForResults(taskId) {
+    console.log("6. Iniciando sondeo INTELIGENTE para taskId:", taskId);
+    
+    // Limpiar cualquier sondeo anterior por si acaso
+    if (pollingTimeoutId) {
+        clearTimeout(pollingTimeoutId);
+    }
+    
+    // Poner el mensaje de espera en la tabla
+    $('#productosTable tbody').html(
+        '<tr><td colspan="19" class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div> La consulta se está procesando en el servidor, esto puede tardar varios minutos...</td></tr>'
+    );
+
+    // Función que se llamará a sí misma para verificar el resultado
+    function checkStatus() {
+        console.log("7. Preguntando al servidor por el resultado...");
+
+        $.ajax({
+            url: 'controller/verificar_resultado.php',
+            type: 'POST',
+            data: { taskId: taskId },
+            dataType: 'json',
+            // El timeout aquí ahora es solo para esta petición específica
+            // Lo ponemos un poco más alto que el timeout del servidor (60s) para estar seguros
+            timeout: 70000, // 70 segundos
+
+            success: function(response) {
+                if (response.status === 'complete') {
+                    // ¡ÉXITO! Lo encontramos.
+                    console.log("¡Resultados recibidos! Cargando tabla.");
+                    initDataTable(response.data); 
+                    resetUI();
+                    // No llamamos a checkStatus() de nuevo, terminando el ciclo.
+                } else if (response.status === 'processing') {
+                    // El servidor respondió que sigue trabajando. Esperamos 5 segundos y volvemos a preguntar.
+                    console.log("El servidor sigue procesando. Volveremos a preguntar en 5 segundos.");
+                    pollingTimeoutId = setTimeout(checkStatus, 5000); 
+                } else {
+                    // El servidor respondió con un error en el JSON
+                    alert('Ocurrió un error en el servidor al procesar la consulta: ' + response.error);
+                    resetUI();
+                }
+            },
+            error: function(xhr, status, error) {
+                // Si la petición de verificación falla (ej. timeout de 60s del servidor),
+                // no lo tratamos como un error fatal. Simplemente esperamos y lo intentamos de nuevo.
+                if (status === 'timeout' || xhr.status === 504) {
+                    console.warn("La verificación del resultado falló por timeout. Reintentando en 5 segundos...");
+                    pollingTimeoutId = setTimeout(checkStatus, 5000); // Volvemos a llamar a la función
+                } else {
+                    // Un error real (ej. red caída, error 500)
+                    alert('Se perdió la conexión al verificar el resultado. Error: ' + status);
+                    console.error("Error grave en la llamada de sondeo:", status, error);
+                    resetUI();
+                }
+            }
+        });
+    }
+
+    // Iniciar el primer chequeo inmediatamente
+    checkStatus();
+}
+
+let pollingExportTimeoutId;
+
+function pollForExport(taskId) {
+    console.log("Iniciando sondeo de EXPORTACIÓN INTELIGENTE para taskId:", taskId);
+    
+    // Limpiar cualquier sondeo anterior
+    if (pollingExportTimeoutId) {
+        clearTimeout(pollingExportTimeoutId);
+    }
+    
+    // Función que se llamará a sí misma para verificar el resultado
+    function checkExportStatus() {
+        console.log("Preguntando al servidor por el archivo Excel...");
+
+        $.ajax({
+            url: 'controller/verificar_exportacion.php',
+            type: 'POST',
+            data: { taskId: taskId },
+            dataType: 'json',
+            // Timeout del cliente para esta petición específica
+            timeout: 70000, // 70 segundos
+
+            success: function(response) {
+                if (response.status === 'complete') {
+                    // ¡ÉXITO! El archivo está listo.
+                    console.log("¡Archivo listo para descargar!", response.fileUrl);
+                    
+                    // --- AQUÍ VA LA SOLUCIÓN AL PUNTO 2 ---
+                    // Disparamos la descarga y finalizamos la UI
+                    downloadFileAndFinish(response.fileUrl);
+
+                } else if (response.status === 'processing') {
+                    // El servidor respondió que sigue trabajando. Volvemos a preguntar en 5 segundos.
+                    console.log("El servidor sigue generando el archivo. Reintentando en 5 segundos.");
+                    pollingExportTimeoutId = setTimeout(checkExportStatus, 5000); 
+                } else {
+                    // El servidor respondió con un error en el JSON
+                    alert('Ocurrió un error en el servidor al generar el archivo: ' + response.error);
+                    resetExportUI();
+                }
+            },
+            error: function(xhr, status, error) {
+                // Si la petición falla por timeout del servidor (504), reintentamos.
+                if (status === 'timeout' || xhr.status === 504) {
+                    console.warn("La verificación de la exportación falló por timeout. Reintentando en 5 segundos...");
+                    pollingExportTimeoutId = setTimeout(checkExportStatus, 5000);
+                } else {
+                    // Un error de red real
+                    alert('Se perdió la conexión al verificar el estado de la exportación. Error: ' + status);
+                    console.error("Error grave en el sondeo de exportación:", status, error);
+                    resetExportUI();
+                }
+            }
+        });
+    }
+
+    // Iniciar el primer chequeo
+    checkExportStatus();
+}
+
+// ESTA ES LA FUNCIÓN CLAVE QUE HACE LA DESCARGA Y LUEGO LIMPIA
+function downloadFileAndFinish(fileUrl) {
+    $('#spinner-msg').text('¡Archivo listo! Iniciando descarga...');
+    console.log("Iniciando descarga desde la URL:", fileUrl);
+
+    // 1. Iniciar la descarga en el navegador del usuario
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.setAttribute('download', ''); 
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // 2. Esperar un tiempo prudencial (ej. 10-15 segundos) para que la descarga comience
+    // y luego enviar la petición para borrar el archivo del servidor.
+    const cleanupDelay = 15000; // 15 segundos
+    console.log(`Esperando ${cleanupDelay / 1000} segundos antes de solicitar la limpieza del archivo.`);
+    
+    setTimeout(function() {
+        // Extraemos solo el nombre del archivo de la URL
+        const filename = fileUrl.split('/').pop();
+        
+        console.log("Enviando petición para limpiar el archivo del servidor:", filename);
+
+        $.ajax({
+            url: 'controller/limpiar_exportacion.php', // El script de limpieza que ya creamos
+            type: 'POST',
+            data: { filename: filename },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    console.log("Respuesta del script de limpieza:", response.message);
+                } else {
+                    console.error("El script de limpieza reportó un error:", response.error);
+                }
+            },
+            error: function() {
+                console.error("Falló la petición Ajax para limpiar el archivo del servidor.");
+            }
+        });
+
+    }, cleanupDelay);
+
+    // 3. Limpiar la interfaz de usuario (esto se hace rápido, independientemente de la limpieza)
+    setTimeout(function() {
+        resetExportUI();
+    }, 2000); 
+}
+
+function resetExportUI() {
+    $('#spinner').hide();
+    $('#filtroForm button[type="submit"]').prop('disabled', false).html('<i class="fas fa-search me-2"></i>Buscar');
+}
+
+function resetUI() {
+    $('#spinner').hide();
+    $('#filtroForm button[type="submit"]').prop('disabled', false).html('<i class="fas fa-search me-2"></i>Buscar');
+}
+
+// Asegúrate de que tu formulario llame a buscarProductos()
+$('#filtroForm').on('submit', function(e) {
+    e.preventDefault();
+    buscarProductos();
 });
 
 const convertirFecha = (fechaObj) => {

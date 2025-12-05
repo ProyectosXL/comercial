@@ -63,7 +63,7 @@ class DashboardController extends BaseController {
             $nuevoEstado = $_POST['estado'];
             // --- INICIO DE CÓDIGO NUEVO ---
             // Capturamos el comentario de derivación si existe.
-            $detalleComentario = isset($_POST['comentario_derivacion']) ? trim($_POST['comentario_derivacion']) : null;
+            $detalleComentario = isset($_POST['comentario']) ? trim($_POST['comentario']) : null;
             // --- FIN DE CÓDIGO NUEVO ---
 
             $auditModel = new AuditModel();
