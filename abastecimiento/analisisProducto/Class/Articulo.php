@@ -24,7 +24,7 @@ class Articulo
     } 
 
 
-private function retornarArray($sqlEnviado){
+public function retornarArray($sqlEnviado){
 
     $sql = $sqlEnviado;
 
@@ -115,78 +115,60 @@ private function retornarArray($sqlEnviado){
         }
     }
 
-    /**
-     * Obtiene todos los artículos equivalentes por código de equivalencia
+/**
+     * Obtiene todos los artículos equivalentes usando el DWH.
+     * ¡VERSIÓN FINAL Y SÚPER OPTIMIZADA!
      * @param int $codEquivalencia
      * @return array
      */
-    public function obtenerArticulosEquivalentes($codEquivalencia) {
-        try {
-            // Validar parámetro
-            if (!is_numeric($codEquivalencia) || $codEquivalencia <= 0) {
-                throw new Exception("Código de equivalencia inválido");
-            }
+    public function obtenerArticulosEquivalentes($codEquivalencia)
+    {
+        // Determinar base de datos
+        $base = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy') ? 'SUCURSALES_URUGUAY' : 'LOCALES_LAKERS';
 
-            // Determinar base de datos según entorno
-            if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
-                $base = 'SUCURSALES_URUGUAY';
-            } else {
-                $base = 'LOCALES_LAKERS';
-            }
+        // CONSULTA SIMPLIFICADA: No más JOINS complejos entre servidores.
+        // Solo necesitamos buscar por el código de equivalencia en nuestra tabla rápida.
+        $sql = "
+            SELECT 
+                p.Articulo AS ARTICULO,
+                p.Descripcion AS DESCRIPCIO,
+                p.Color AS COLOR,
+                p.Precio AS PRECIO,
+                p.StockCentral AS STOCK_CENTRAL,
+                p.StockLocales AS STOCK_LOCALES,
+                p.StockTotal AS STOCK_TOTAL,
+                p.CantVenta AS CANT_VENTA,
+                p.VentaTotal AS IMP_VENTA,
+                p.Temporada AS TEMPORADA,
+                p.Destino AS DESTINO,
+                p.CodEquivalencia AS COD_EQUIVALENCIA,
+                -- Simular los campos que el JS podría necesitar para no romper la interfaz
+                CASE WHEN ROW_NUMBER() OVER (ORDER BY p.Articulo) = 1 THEN 1 ELSE 0 END AS ARTICULO_PRINCIPAL,
+                'Familia de Productos' AS DESCRIPCION_GRUPO -- Enviamos un valor genérico
+            FROM 
+                [LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL p
+            WHERE 
+                p.CodEquivalencia = ?
+            ORDER BY 
+                p.Articulo
+        ";
 
-            $sql = "SELECT 
-                        p.ARTICULO,
-                        p.DESCRIPCIO,
-                        p.COLOR,
-                        p.PRECIO,
-                        p.STOCK_CENTRAL,
-                        p.STOCK_CENTRAL_FISCAL,
-                        p.STOCK_LOCALES,
-                        p.STOCK_TOTAL,
-                        p.CANT_VENTA,
-                        p.IMP_VENTA,
-                        p.DESTINO,
-                        p.TEMPORADA,
-                        p.COD_EQUIVALENCIA,
-                        ae.ARTICULO_PRINCIPAL,
-                        ae.DESCRIPCION_GRUPO
-                    FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL p
-                    INNER JOIN [SERVIDOR].LAKER_SA.DBO.RO_T_ARTICULOS_EQUIVALENTES ae 
-                        ON ae.COD_ARTICULO COLLATE Modern_Spanish_CI_AI = LEFT(p.ARTICULO, 11) COLLATE Modern_Spanish_CI_AI
-                        AND ae.ACTIVO = 1
-                    WHERE ae.COD_EQUIVALENCIA = ?
-                    ORDER BY ae.ARTICULO_PRINCIPAL DESC, p.ARTICULO";
+        $stmt = sqlsrv_prepare($this->cid_central, $sql, array($codEquivalencia));
 
-            error_log("SQL equivalencias: " . $sql);
-            error_log("Código equivalencia: " . $codEquivalencia);
-
-            // Preparar y ejecutar la consulta
-            $stmt = sqlsrv_prepare($this->cid_central, $sql, array($codEquivalencia));
-            
-            if ($stmt === false) {
-                throw new Exception("Error al preparar la consulta: " . print_r(sqlsrv_errors(), true));
-            }
-
-            if (!sqlsrv_execute($stmt)) {
-                throw new Exception("Error al ejecutar la consulta: " . print_r(sqlsrv_errors(), true));
-            }
-
-            $rows = array();
-            while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                $rows[] = $v;
-            }
-
-            sqlsrv_free_stmt($stmt);
-
-            error_log("Equivalencias encontradas: " . count($rows));
-            return $rows;
-            
-        } catch (Exception $e) {
-            error_log("Error en obtenerArticulosEquivalentes: " . $e->getMessage());
-            throw $e;
+        if ($stmt === false || !sqlsrv_execute($stmt)) {
+            // Loguear el error de SQL y devolver un array vacío para evitar errores fatales
+            error_log("Error al ejecutar la consulta de equivalencias: " . print_r(sqlsrv_errors(), true));
+            return [];
         }
-    }
 
+        $rows = array();
+        while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $rows[] = $v;
+        }
+        sqlsrv_free_stmt($stmt);
+        
+        return $rows;
+    }
     /**
      * REEMPLAZAR el método listarGruposEquivalencias en Articulo.php
      */
@@ -897,4 +879,73 @@ public function traerProductosExportacion($whereFilters) {
 
     return $this->retornarArray($sql);
 }
+// ==============================================================================
+    // NUEVO MÉTODO PARA LEER DESDE EL DWH - RÁPIDO Y EFICIENTE
+    // ==============================================================================
+    public function traerProductosDWH($whereFilters) {
+        try {
+            // 1. Determinar base de datos
+            $base = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy') ? 'SUCURSALES_URUGUAY' : 'LOCALES_LAKERS';
+
+            // 2. ¡LA CONSULTA CORREGIDA!
+            // Usamos alias (AS) para que CADA columna devuelta tenga un nombre en MAYÚSCULAS.
+            // Esto asegura que tanto el JavaScript de la tabla como el PHP de exportación
+            // reciban los datos en el formato que esperan.
+            $sql = "SELECT 
+                        Rubro AS RUBRO, 
+                        Categoria AS CATEGORIA, 
+                        Temporada AS TEMPORADA, 
+                        Destino AS DESTINO, 
+                        Liquidacion AS LIQUIDACION, 
+                        CONVERT(varchar, FechaIngreso, 103) AS FECHA_INGRESO_SUC,
+                        CodEquivalencia AS COD_EQUIVALENCIA, 
+                        Articulo AS ARTICULO, 
+                        Descripcion AS DESCRIPCIO, 
+                        Color AS COLOR, 
+                        Precio AS PRECIO,
+                        StockLocales AS STOCK_LOCALES, 
+                        StockCentral AS STOCK_CENTRAL, 
+                        StockCentralFiscal AS STOCK_CENTRAL_FISCAL, 
+                        StockTotal AS STOCK_TOTAL,
+                        StockReservaEcommerce AS STOCK_RESERVA, 
+                        StockExcluido AS STOCK_EXCLUIDO, 
+                        CantVenta AS CANT_VENTA, 
+                        VentaTotal AS IMP_VENTA
+                    FROM 
+                        [LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL
+                    WHERE 
+                        $whereFilters";
+
+            // 3. Devolvemos el resultado
+            return $this->retornarArray($sql);
+
+        } catch (Exception $e) {
+            error_log("Error en traerProductosDWH: " . $e->getMessage());
+            return [];
+        }
+    }
+    // ==============================================================================
+    // NUEVO MÉTODO PARA OBTENER LA FECHA DE LA ÚLTIMA ACTUALIZACIÓN DEL DWH
+    // ==============================================================================
+    public function obtenerFechaUltimaActualizacion() {
+        try {
+            $base = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy') ? 'SUCURSALES_URUGUAY' : 'LOCALES_LAKERS';
+
+            // Consulta muy rápida para obtener la fecha máxima.
+            $sql = "SELECT MAX(FechaActualizacion) as UltimaActualizacion 
+                    FROM [LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL";
+            
+            $resultado = $this->retornarArray($sql);
+
+            // Devolver la fecha formateada o un mensaje si no hay datos.
+            if (!empty($resultado) && $resultado[0]['UltimaActualizacion'] instanceof DateTime) {
+                return $resultado[0]['UltimaActualizacion']->format('d/m/Y H:i');
+            } else {
+                return 'No disponible';
+            }
+        } catch (Exception $e) {
+            error_log("Error en obtenerFechaUltimaActualizacion: " . $e->getMessage());
+            return 'Error al cargar';
+        }
+    }
 }

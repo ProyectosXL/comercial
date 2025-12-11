@@ -8,6 +8,9 @@ require '../Class/Rubro.php';
 require '../Class/Destino.php';
 require '../Class/Temporada.php';
 
+$articuloObj = new Articulo(); // Instanciamos la clase
+$ultimaActualizacionDWH = $articuloObj->obtenerFechaUltimaActualizacion(); // Llamamos al nuevo método
+
 $rubroObj = new Rubro();
 $todosLosRubros = $rubroObj->traerRubrosDestinos();
 
@@ -100,7 +103,7 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
             <div class="card-body">
                 <h4 class="card-title mb-4">
                     <i class="fas fa-chart-line me-2"></i>
-                    <span style="margin-right:50%">Consulta Analisis de Producto</span>
+                    <span style="margin-right:50%">Consulta Analisis de Producto</span><span class="text-muted small">Última actualización DWH: <?php echo $ultimaActualizacionDWH; ?> hs</span>
                     <input type="checkbox" checked data-toggle="toggle" data-on="<?= $dataOnValue ?>" data-off="<?= $dataOffValue ?>" class="custom-toggle" style="color:black; font-size: 0; " onchange="cambiarEntorno(this)" id="checkEntorno" >
                 </h4>
 
@@ -243,43 +246,38 @@ $(document).ready(function() {
     // ==============================================================================
 
     // Función genérica para manejar la exportación
-function handleExport(button, url) {
-    console.log(`Iniciando exportación ASÍNCRONA`);
-    
-    const buttonOriginalText = button.html();
-    const paramsObj = {
-        rubro: $('#rubro').val(),
-        categoria: $('#categoria').val(),
-        temporada: $('#temporada').val(),
-        destino: $('#destino').val(),
-        search: dataTable ? dataTable.search() : ''
+function exportarDirectoExcel() {
+    console.log("Iniciando exportación directa con filtros...");
+
+    const button = $('#exportXlsx');
+    const buttonOriginalHtml = button.html();
+    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Preparando...');
+
+    // 1. Recolectar TODOS los filtros actuales de los selectores y la búsqueda.
+    //    Usamos .val() que para los selectores múltiples devuelve un array.
+    const params = {
+        rubro: $('#rubro').val() || [],
+        categoria: $('#categoria').val() || [],
+        temporada: $('#temporada').val() || [],
+        destino: $('#destino').val() || [],
+        search: dataTable ? dataTable.search() : '' // Incluye la búsqueda de la tabla
     };
 
-    // Mostrar spinner y deshabilitar botón
-    $('#spinner').css('display', 'flex').find('.spinner-border').after('<p id="spinner-msg" style="margin-top:20px;">Iniciando generación de Excel...</p>');
-    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Generando...');
+    // 2. Construir la cadena de consulta (query string).
+    //    jQuery.param maneja correctamente los arrays para que PHP los reciba bien.
+    const queryString = $.param(params);
 
-    // PASO A: Iniciar la generación del archivo en el servidor
-    $.ajax({
-        url: 'controller/iniciar_exportacion.php', // NUEVO SCRIPT
-        type: 'POST',
-        data: paramsObj,
-        dataType: 'json',
-        success: function(response) {
-            if (response && response.success && response.taskId) {
-                // PASO C: Iniciar el sondeo para verificar si el archivo está listo
-                $('#spinner-msg').text('El servidor está procesando tu archivo Excel. Esto puede tardar varios minutos...');
-                pollForExport(response.taskId);
-            } else {
-                alert('Error al iniciar la exportación: ' + (response.error || 'Respuesta inválida'));
-                resetExportUI();
-            }
-        },
-        error: function() {
-            alert('No se pudo comunicar con el servidor para iniciar la exportación.');
-            resetExportUI();
-        }
-    });
+    // 3. Construir la URL final y redirigir para iniciar la descarga.
+    const url = `controller/exportar_dwh_excel.php?${queryString}`;
+    console.log("URL de exportación generada:", url);
+    
+    // 4. Iniciar la descarga.
+    window.location.href = url;
+
+    // 5. Restaurar el botón después de unos segundos.
+    setTimeout(function() {
+        button.prop('disabled', false).html(buttonOriginalHtml);
+    }, 4000); // 4 segundos para dar tiempo a que inicie la descarga.
 }
 
     // Event listener para el botón CSV
@@ -287,86 +285,49 @@ function handleExport(button, url) {
         handleExport($(this), 'controller/exportar_productos_excel.php');
     });
 
-    // Event listener para el botón XLSX
-    $('#exportXlsx').on('click', function() {
-        handleExport($(this), 'controller/exportar_productos_xlsx.php');
-    });
+// REEMPLAZA EL ANTIGUO EVENT LISTENER DEL BOTÓN DE EXCEL POR ESTE:
+$('#exportXlsx').on('click', function(e) {
+    e.preventDefault();
+    exportarDirectoExcel();
+});
 
 // Variable para la instancia de DataTable, debe estar fuera de la función
 // para que otras partes del script puedan acceder a ella.
 let dataTable; 
 
-/**
- * Inicializa o reinicia la DataTable con un conjunto de datos ya cargado.
- * Esta versión funciona en modo "client-side".
- * @param {Array} dataArray - El array de objetos con los datos de los productos.
- */
+// La función initDataTable se mantiene casi igual, es perfecta para datos del lado del cliente.
 function initDataTable(dataArray) {
-    
-    // 1. Destruimos la tabla si ya existe para poder reiniciarla con nuevos datos.
     if ($.fn.DataTable.isDataTable('#productosTable')) {
         $('#productosTable').DataTable().destroy();
-        // Es una buena práctica vaciar el cuerpo de la tabla para evitar un "parpadeo" de datos viejos.
         $('#productosTable tbody').empty();
     }
 
-    // 2. Inicializamos DataTables.
     dataTable = $('#productosTable').DataTable({
-        // ==============================================================================
-        // CAMBIOS PRINCIPALES PARA EL MODO CLIENT-SIDE
-        // ==============================================================================
-        
-        // ¡LA LÍNEA MÁS IMPORTANTE! Le decimos a DataTables que use el array que le pasamos.
         data: dataArray,
-
-        // Ya no necesitamos 'serverSide', 'ajax', ni callbacks relacionados con la carga.
-        // serverSide: false, // Se comenta porque 'false' es el valor por defecto.
-        // deferLoading: 0,  // Ya no aplica.
-        // preDrawCallback: function(settings) { ... }, // Se elimina, el spinner se maneja fuera.
-        // drawCallback: function(settings) { ... },  // Se elimina, el spinner se maneja fuera.
-        // ajax: { ... }, // ¡SE ELIMINA COMPLETAMENTE! Los datos ya los tenemos.
-
-        // ==============================================================================
-        // CONFIGURACIONES QUE SE MANTIENEN PORQUE AFECTAN LA INTERFAZ
-        // ==============================================================================
-
-        processing: true, // Muestra "Procesando..." cuando el usuario ordena o busca en los datos ya cargados.
-        scrollCollapse: true,
+        processing: true,
         pageLength: 50,
-        lengthMenu: [[25, 50, 100, 200], [25, 50, 100, 200]],
-        
-        // El idioma se mantiene igual.
-        language: {
-            url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json',
-            search: "Buscar:" 
-        },
-        
-        // La configuración del DOM y los botones se mantiene.
-        dom: 'Bfrtip', 
-        buttons: [],   
-        
-        // El orden inicial se mantiene.
+        lengthMenu: [[25, 50, 100, 200, -1], [25, 50, 100, 200, "Todos"]],
+        language: { url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json', search: "Buscar en resultados:" },
+        dom: 'Bfrtip',
+        buttons: [],
         order: [[0, 'asc']],
-
-        // ¡IMPORTANTE! La definición de las columnas es exactamente la misma que tenías,
-        // ya que los nombres de las propiedades en el 'dataArray' deben coincidir.
         columns: [
-            { data: 'RUBRO' },
-            { data: 'CATEGORIA' },
-            { data: 'TEMPORADA' },
-            { data: 'DESTINO' },
-            { data: 'LIQUIDACION' },
-            { data: 'FECHA_INGRESO_SUC', orderable: false },
+            { data: 'RUBRO', defaultContent: '' },
+            { data: 'CATEGORIA', defaultContent: '' },
+            { data: 'TEMPORADA', defaultContent: '' },
+            { data: 'DESTINO', defaultContent: '' },
+            { data: 'LIQUIDACION', defaultContent: '' },
+            { data: 'FECHA_INGRESO_SUC', defaultContent: '' },
             {
                 data: 'COD_EQUIVALENCIA',
                 render: function(data, type, row) {
-                    return window.renderColumnEquivalencia(data, type, row);
+                    return window.renderColumnEquivalencia ? window.renderColumnEquivalencia(data, type, row) : (data || '');
                 }
             },
-            { data: 'ARTICULO' },
-            { data: 'DESCRIPCIO' },
-            { data: 'COLOR' },
-            { data: 'PRECIO', render: function(data) { return data ? '$ ' + Number(data).toLocaleString('es-AR') : ''; } },
+            { data: 'ARTICULO', defaultContent: '' },
+            { data: 'DESCRIPCIO', defaultContent: '' },
+            { data: 'COLOR', defaultContent: '' },
+            { data: 'PRECIO', render: function(data) { return data ? '$ ' + Number(data).toLocaleString('es-AR') : '$ 0'; } },
             { data: 'STOCK_LOCALES', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
             { data: 'STOCK_CENTRAL', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
             { data: 'STOCK_CENTRAL_FISCAL', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
@@ -374,24 +335,15 @@ function initDataTable(dataArray) {
             { data: 'STOCK_RESERVA', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } }, 
             { data: 'STOCK_EXCLUIDO', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
             { data: 'CANT_VENTA', render: function(data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-            { data: 'IMP_VENTA', render: function(data) { return data ? '$ ' + Number(data).toLocaleString('es-AR') : ''; } }
+            { data: 'IMP_VENTA', render: function(data) { return data ? '$ ' + Number(data).toLocaleString('es-AR') : '$ 0'; } }
         ]
     });
 
-    // 3. Re-aplicamos la lógica para que la búsqueda global se active solo con la tecla "Enter".
-    // Esto es útil porque ahora la búsqueda es instantánea (en el cliente) y no queremos
-    // que se ejecute con cada tecla si hay miles de filas.
-    $('.dataTables_filter input')
-        .unbind() // Quita el comportamiento por defecto de DataTables
-        .bind('keypress', function(e) {
-            if(e.which === 13) { // Si la tecla presionada es Enter
-                dataTable.search(this.value).draw();
-            }
-        });
-        
-    // 4. Ocultamos el spinner, ya que la tabla está completamente renderizada.
-    // Aunque la función `resetUI` también lo hace, es bueno asegurarlo aquí.
-    $('#spinner').hide();
+    $('.dataTables_filter input').unbind().bind('keypress', function(e) {
+        if (e.which === 13) {
+            dataTable.search(this.value).draw();
+        }
+    });
 }
 
     function cargarCategorias() {
@@ -489,15 +441,14 @@ function initDataTable(dataArray) {
 
 let pollingInterval;
 
+// ==============================================================================
+// ¡NUEVA FUNCIÓN DE BÚSQUEDA SIMPLIFICADA!
+// ==============================================================================
 function buscarProductos() {
-    console.log("1. 'buscarProductos' ha sido llamada."); // LOG 1
+    console.log("Iniciando búsqueda directa en el DWH...");
 
     $('#spinner').css('display', 'flex');
-    $('#filtroForm button[type="submit"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Iniciando...');
-
-    if (pollingInterval) {
-        clearInterval(pollingInterval);
-    }
+    $('#filtroForm button[type="submit"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Buscando...');
 
     const postData = {
         rubro: $('#rubro').val(),
@@ -505,38 +456,32 @@ function buscarProductos() {
         temporada: $('#temporada').val(),
         destino: $('#destino').val()
     };
-    
-    console.log("2. Enviando datos al servidor:", postData); // LOG 2
 
+    // UNA SOLA LLAMADA AJAX. NO MÁS POLLING.
     $.ajax({
-        url: 'controller/iniciar_consulta.php',
+        url: 'controller/obtener_productos_dwh.php', // ¡Llamamos a nuestro nuevo script!
         type: 'POST',
         data: postData,
-        dataType: 'json', // Esperamos un JSON estricto
+        dataType: 'json',
+        timeout: 90000, // 90 segundos de timeout, por si acaso
         success: function(response) {
-            console.log("4. ¡ÉXITO! Respuesta del servidor recibida:", response); // LOG 4
-            
-            if (response && response.success && response.taskId) {
-                console.log("5. La respuesta es válida. Iniciando sondeo (polling)..."); // LOG 5
-                $('#spinner p').remove();
-                $('#spinner').append('<p style="margin-top: 20px;">Tu consulta se está procesando...</p>');
-                pollForResults(response.taskId);
-            } else {
-                alert('La respuesta del servidor no fue la esperada. Revisa la consola.');
-                console.error("Error lógico en la respuesta:", response);
-                resetUI();
-            }
+            console.log("Datos recibidos:", response.length, "registros.");
+            // Directamente cargamos los datos en la tabla. ¡Listo!
+            initDataTable(response);
         },
-        error: function(xhr, status, error) {
-            console.error("3. ¡ERROR! La llamada AJAX a iniciar_consulta.php falló."); // LOG 3
-            console.error("Status:", status);
-            console.error("Error:", error);
-            console.error("Response Text:", xhr.responseText); // MUY IMPORTANTE
-            alert('Ocurrió un error al comunicarse con el servidor. Revisa la consola (F12) para más detalles.');
-            resetUI();
+        error: function(xhr) {
+            alert('Ocurrió un error al buscar los productos. Revisa la consola (F12).');
+            console.error("Error en la llamada AJAX:", xhr.responseText);
+            initDataTable([]); // Limpiamos la tabla en caso de error
+        },
+        complete: function() {
+            // Se ejecuta siempre al final (éxito o error), para limpiar la UI.
+            $('#spinner').hide();
+            $('#filtroForm button[type="submit"]').prop('disabled', false).html('<i class="fas fa-search me-2"></i>Buscar');
         }
     });
 }
+
 
 let pollingTimeoutId;
 
