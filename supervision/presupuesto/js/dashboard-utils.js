@@ -216,4 +216,32 @@ const DashboardUtils = {
         }
         return false;
     }
+
+    // --- AGREGA ESTAS DOS NUEVAS FUNCIONES AQUÍ ---
+
+    /**
+     * Calcula la fecha de inicio (Lunes) y fin (Domingo) para un número de semana ISO 8601 y año dados.
+     * @param {number} year - El año.
+     * @param {number} week - El número de la semana.
+     * @returns {{start: Date, end: Date}}Un objeto con las fechas de inicio y fin.
+     */
+    ,getWeekDateRange(year, week) {
+        const d = new Date(Date.UTC(year, 0, 4)); // Empezamos en un día que siempre está en la semana 1
+        d.setUTCDate(d.getUTCDate() + (week - 1) * 7 - (d.getUTCDay() || 7) + 1);
+        const startDate = new Date(d);
+        const endDate = new Date(d.setDate(d.getDate() + 6));
+        return { start: startDate, end: endDate };
+    },
+
+    /**
+     * Formatea una fecha a un string "dd/mm".
+     * @param {Date} date - La fecha a formatear.
+     * @returns {string} La fecha formateada.
+     */
+    formatDateDDMM(date) {
+        const day = ('0' + date.getUTCDate()).slice(-2);
+        const month = ('0' + (date.getUTCMonth() + 1)).slice(-2);
+        return `${day}/${month}`;
+    },
+
 };
