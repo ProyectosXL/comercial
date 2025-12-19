@@ -13,7 +13,28 @@
                 <div class="col-md-2"><label for="estado"><strong>Estado:</strong></label><select name="estado" id="estado" class="form-control"><option value="">-- Todos --</option><?php foreach ($estadosPosibles as $estado): ?><option value="<?php echo $estado; ?>" <?php echo (isset($_GET['estado']) && $_GET['estado'] == $estado) ? 'selected' : ''; ?>><?php echo $estado; ?></option><?php endforeach; ?></select></div>
                 <div class="col-md-2"><label for="fecha_desde"><strong>Desde:</strong></label><input type="date" name="fecha_desde" id="fecha_desde" class="form-control" value="<?php echo $_GET['fecha_desde'] ?? ''; ?>"></div>
                 <div class="col-md-2"><label for="fecha_hasta"><strong>Hasta:</strong></label><input type="date" name="fecha_hasta" id="fecha_hasta" class="form-control" value="<?php echo $_GET['fecha_hasta'] ?? ''; ?>"></div>
-                <div class="col-md-3"><button type="submit" class="btn btn-primary mr-2 w-100"><i class="fas fa-filter mr-1"></i>Filtrar</button><a href="/comercial/auditoria/public/dashboard" class="btn btn-secondary w-100 mt-2">Limpiar</a></div>
+                <div class="col-md-3">
+    <?php
+    // Mantenemos la lógica PHP aquí para tenerla lista
+    $filters = $_GET;
+    unset($filters['url']);
+    $queryParams = http_build_query($filters);
+    ?>
+
+    <!-- Botón de Filtrar, ocupa todo el ancho -->
+    <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-filter mr-1"></i>Filtrar</button>
+    
+    <!-- Contenedor Flex para los botones de abajo -->
+    <div class="d-flex mt-2">
+        <!-- Botón Limpiar, ocupa la mitad del espacio -->
+        <a href="/comercial/auditoria/public/dashboard" class="btn btn-secondary flex-fill mr-1">Limpiar</a>
+        
+        <!-- Botón Descargar, ocupa la otra mitad -->
+        <a href="/comercial/auditoria/public/dashboard/exportarExcel?<?php echo $queryParams; ?>" class="btn btn-success flex-fill ml-1">
+            <i class="fas fa-file-excel"></i> Descargar
+        </a>
+    </div>
+</div>
             </div>
         </form>
     </div>

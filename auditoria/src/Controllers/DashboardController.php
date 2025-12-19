@@ -6,6 +6,9 @@ require_once __DIR__ . '/../Models/VentaModel.php';
 
 require_once 'BaseController.php';
 
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+
 class DashboardController extends BaseController {
     public function index() {
         $pageTitle = "Dashboard de Auditorías";
@@ -151,5 +154,67 @@ class DashboardController extends BaseController {
                 die("Error al intentar actualizar el estado.");
             }
         }
+    }
+    // ===============================================
+    // ====== MÉTODO NUEVO PARA EXPORTAR A EXCEL ======
+    // ===============================================
+    public function exportarExcel() {
+        // 1. OBTENER LOS DATOS (Exactamente como en el método index())
+        $auditModel = new AuditModel();
+        $ventaModel = new VentaModel();
+
+        $filters = [
+            'sucursal' => $_GET['sucursal'] ?? null,
+            'estado' => $_GET['estado'] ?? null,
+            'fecha_desde' => $_GET['fecha_desde'] ?? null,
+            'fecha_hasta' => $_GET['fecha_hasta'] ?? null,
+        ];
+
+        // Usamos el mismo método del modelo para obtener los datos filtrados
+        $auditorias = $auditModel->getAllAudits($filters);
+
+        // Obtenemos las sucursales para poder poner el nombre en el Excel
+        $sucursales = $ventaModel->getSucursales();
+
+        // Replicamos el bucle para añadir el nombre de la sucursal
+        foreach ($auditorias as $key => $audit) {
+            $nroSucursal = $audit['nro_sucursal'];
+            $auditorias[$key]['DESC_SUCURSAL'] = $sucursales[$nroSucursal] ?? 'Desconocida';
+        }
+
+        // 2. CREAR Y LLENAR EL ARCHIVO EXCEL
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Escribir los encabezados
+        $sheet->setCellValue('A1', 'N° Comprobante');
+        $sheet->setCellValue('B1', 'Sucursal');
+        $sheet->setCellValue('C1', 'Observación (Sucursal)');
+
+        // Poner los encabezados en negrita
+        $sheet->getStyle('A1:C1')->getFont()->setBold(true);
+
+        // Llenar el archivo con los datos
+        $fila = 2; // Empezamos a escribir en la fila 2
+        foreach ($auditorias as $solicitud) {
+            $sheet->setCellValue('A' . $fila, $solicitud['n_comp']);
+            $sheet->setCellValue('B' . $fila, $solicitud['DESC_SUCURSAL']);
+            $sheet->setCellValue('C' . $fila, $solicitud['observaciones']);
+            $fila++;
+        }
+        
+        // Ajustar el ancho de las columnas automáticamente
+        foreach (range('A', 'C') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // 3. ENVIAR EL ARCHIVO AL NAVEGADOR PARA DESCARGA
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="Reporte_Auditorias.xlsx"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
     }
 }

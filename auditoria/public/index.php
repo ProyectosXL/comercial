@@ -1,9 +1,9 @@
 <?php
-// public/index.php
-// VERSIÓN FINAL - Punto de entrada y enrutador principal de la aplicación.
-
 // 1. Iniciar la sesión. Esto es crucial y debe ser la primera línea de código.
 session_start();
+
+// AÑADE ESTA LÍNEA AQUÍ
+require_once __DIR__ . '/../vendor/autoload.php';
 
 // 2. Cargar las dependencias y la configuración del entorno.
 // Carga la clase para leer el archivo .env

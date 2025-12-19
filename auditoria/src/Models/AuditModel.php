@@ -54,7 +54,7 @@ class AuditModel {
 
     public function getAllAudits($filters = []) {
         $params = [];
-        $sql = "SELECT a.id, a.fecha_creacion, a.n_comp, a.motivo, a.estado, a.nro_sucursal FROM FP_AUDITORIA_DIF_PRECIO a WHERE 1=1";
+        $sql = "SELECT a.id, a.fecha_creacion, a.n_comp, a.motivo, a.estado, a.nro_sucursal, a.observaciones FROM FP_AUDITORIA_DIF_PRECIO a WHERE 1=1";
         
         $this->applyFilters($sql, $params, $filters);
         
