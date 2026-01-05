@@ -73,9 +73,16 @@ public function pendientes() {
         require_once __DIR__ . '/../Views/sucursal/pendientes.php';
     }
 
-    public function justificar($n_comp) {
-        $pageTitle = "Justificar Operación";
-        $ventaModel = new VentaModel();
+public function justificar($n_comp) {
+    $pageTitle = "Justificar Operación";
+    $ventaModel = new VentaModel();
+    $auditModel = new AuditModel(); // Instanciamos el modelo
+
+    // 1. VERIFICACIÓN DE SEGURIDAD: Si ya existe, lo expulsamos a la lista
+    if ($auditModel->existeJustificacion($n_comp)) {
+        header('Location: /comercial/auditoria/public/sucursal/pendientes');
+        exit();
+    }
         $operacion = $ventaModel->getOperacionPorNComp($n_comp);
         if (!$operacion) { die("Error: Operación no encontrada."); }
         $sucursales = $ventaModel->getSucursales();
@@ -85,8 +92,20 @@ public function pendientes() {
         require_once __DIR__ . '/../Views/sucursal/justificar.php';
     }
 
-    public function guardar() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+public function guardar() {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        
+        $n_comp = $_POST['n_comp']; // Capturamos el n_comp primero
+        $auditModel = new AuditModel();
+
+        // --- VALIDACIÓN ANTI-DUPLICADOS ---
+        // Verificamos si ya existe antes de procesar nada.
+        if ($auditModel->existeJustificacion($n_comp)) {
+            // Si ya existe, redirigimos silenciosamente a pendientes.
+            // Esto evita el error de "multiplicación" por doble clic.
+            header('Location: /comercial/auditoria/public/sucursal/pendientes');
+            exit();
+        }
             $path_adjunto = null; // Valor por defecto
 
             // --- LÓGICA DE SUBIDA DE ARCHIVO ---

@@ -82,10 +82,16 @@ $pageScripts = "
 $(document).ready(function() {
     $('#auditsTable').DataTable({
         'language': { 'url': '//cdn.datatables.net/plug-ins/1.10.21/i18n/Spanish.json' },
-        'order': [[ 0, 'desc' ]],
-        'searching': false, // Desactivamos la búsqueda de DataTables para usar nuestros filtros
-        'lengthChange': false, // Opcional: Desactivar el cambio de N° de entradas
-        'pageLength': 15 // Opcional: Mostrar 15 entradas por página
+        'order': [[ 0, 'desc' ]], // Ordenar por fecha descendente
+        'searching': false,       // Usamos tus filtros PHP, no el buscador de JS
+        
+        // --- CAMBIO 1: PERMITIR SELECCIONAR CANTIDAD DE REGISTROS ---
+        'lengthChange': true,     // Habilitamos el selector
+        'lengthMenu': [ [15, 25, 50, 100, -1], [15, 25, 50, 100, 'Todos'] ], // Opciones
+        'pageLength': 15,         // Valor por defecto inicial
+
+        // --- CAMBIO 2: RECORDAR LA PÁGINA AL VOLVER ---
+        'stateSave': true         // Esto guarda la página (ej: pág 2) en la memoria del navegador
     });
 });
 </script>

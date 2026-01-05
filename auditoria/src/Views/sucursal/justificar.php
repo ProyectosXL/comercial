@@ -81,9 +81,16 @@ $(document).ready(function() {
             $('#adjunto_container').slideDown();
         } else {
             $('#adjunto_container').slideUp();
-            // Limpiamos el valor del input de archivo si el usuario cambia a 'No'
             $('#adjunto').val(''); 
         }
+    });
+
+    // --- NUEVO CÓDIGO: Prevenir doble envío ---
+    $('form').on('submit', function() {
+        var btn = $(this).find('button[type=\"submit\"]');
+        // Cambiar texto y deshabilitar botón
+        btn.prop('disabled', true);
+        btn.html('<i class=\"fas fa-spinner fa-spin\"></i> Guardando...');
     });
 });
 </script>

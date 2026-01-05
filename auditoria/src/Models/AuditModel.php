@@ -52,6 +52,22 @@ class AuditModel {
         if (!empty($filters['fecha_hasta'])) { $sql .= " AND a.fecha_creacion <= ? "; $params[] = $filters['fecha_hasta']; }
     }
 
+    public function existeJustificacion($n_comp) {
+    $sql = "SELECT COUNT(*) as cantidad FROM FP_AUDITORIA_DIF_PRECIO WHERE n_comp = :n_comp";
+    try {
+        $pdo = Database::getConnectionSistemas();
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':n_comp', $n_comp, PDO::PARAM_STR);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Si cantidad es mayor a 0, significa que ya existe (devuelve true)
+        return $result['cantidad'] > 0;
+    } catch (PDOException $e) {
+        die("Error al verificar existencia: " . $e->getMessage());
+    }
+}
+
     public function getAllAudits($filters = []) {
         $params = [];
         $sql = "SELECT a.id, a.fecha_creacion, a.n_comp, a.motivo, a.estado, a.nro_sucursal, a.observaciones FROM FP_AUDITORIA_DIF_PRECIO a WHERE 1=1";

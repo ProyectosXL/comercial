@@ -2,9 +2,9 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>Detalle de Auditoría #<?php echo $auditoria['id']; ?></h3>
-    <a href="/comercial/auditoria/public/dashboard" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Volver al Dashboard
-    </a>
+<a href="javascript:history.back()" class="btn btn-secondary">
+    <i class="fas fa-arrow-left"></i> Volver
+</a>
 </div>
 <hr>
 
