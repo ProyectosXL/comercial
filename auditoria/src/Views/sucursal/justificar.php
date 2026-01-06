@@ -3,6 +3,18 @@
 <h3>Justificar Operación</h3>
 <hr>
 
+<!-- ALERTA DE RECHAZO: Solo aparece si estamos corrigiendo -->
+<?php if (isset($justificacionPrevia) && $justificacionPrevia['estado'] === 'Rechazado'): ?>
+    <div class="alert alert-warning border-warning shadow-sm">
+        <h4><i class="fas fa-exclamation-triangle"></i> Solicitud Rechazada</h4>
+        <p>Esta justificación fue rechazada anteriormente. Los datos han sido precargados para que pueda corregirlos y volver a enviarla.</p>
+        <?php if (!empty($justificacionPrevia['observaciones_rechazo'])): // Opcional: si guardas el motivo del rechazo en BD ?>
+            <hr>
+            <strong>Motivo del rechazo:</strong> <?php echo htmlspecialchars($justificacionPrevia['observaciones_rechazo']); ?>
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
+
 <!-- Tarjeta con la información de la operación -->
 <div class="card mb-4">
     <div class="card-header">
@@ -36,28 +48,43 @@
                 <select class="form-control" id="motivo" name="motivo" required>
                     <option value="">-- Seleccione un motivo --</option>
                     <?php foreach ($motivos as $motivo): ?>
-                        <option value="<?php echo htmlspecialchars($motivo); ?>"><?php echo htmlspecialchars($motivo); ?></option>
+                        <?php 
+                            // Lógica para preseleccionar si venimos de un rechazo
+                            $selected = (isset($justificacionPrevia['motivo']) && $justificacionPrevia['motivo'] == $motivo) ? 'selected' : ''; 
+                        ?>
+                        <option value="<?php echo htmlspecialchars($motivo); ?>" <?php echo $selected; ?>>
+                            <?php echo htmlspecialchars($motivo); ?>
+                        </option>
                     <?php endforeach; ?>
                 </select>
             </div>
 
             <div class="form-group">
                 <label for="observaciones"><strong>Observaciones Adicionales</strong></label>
-                <textarea class="form-control" id="observaciones" name="observaciones" rows="4" placeholder="Añada cualquier detalle relevante aquí..."></textarea>
+                <!-- Lógica para rellenar el texto anterior -->
+                <textarea class="form-control" id="observaciones" name="observaciones" rows="4" placeholder="Añada cualquier detalle relevante aquí..."><?php echo isset($justificacionPrevia['observaciones']) ? htmlspecialchars($justificacionPrevia['observaciones']) : ''; ?></textarea>
             </div>
 
             <!-- Nuevos campos para la aprobación de la supervisora y el adjunto -->
             <div class="form-group">
                 <label for="aprobado_supervisora"><strong>¿Aprobado por supervisora?</strong></label>
                 <select class="form-control" id="aprobado_supervisora" name="aprobado_supervisora">
-                    <option value="No">No</option>
-                    <option value="Sí">Sí</option>
+                    <?php 
+                        $selNo = (isset($justificacionPrevia['aprobado_supervisora']) && $justificacionPrevia['aprobado_supervisora'] == 'No') ? 'selected' : '';
+                        $selSi = (isset($justificacionPrevia['aprobado_supervisora']) && $justificacionPrevia['aprobado_supervisora'] == 'Sí') ? 'selected' : '';
+                    ?>
+                    <option value="No" <?php echo $selNo; ?>>No</option>
+                    <option value="Sí" <?php echo $selSi; ?>>Sí</option>
                 </select>
             </div>
 
             <div class="form-group" id="adjunto_container" style="display: none;">
                 <label for="adjunto"><strong>Adjuntar comprobante (foto, PDF, etc.)</strong></label>
+                <!-- Nota: No se puede precargar un input file por seguridad. Si ya había uno, se debe subir de nuevo o manejar en backend que si viene vacío conserve el anterior -->
                 <input type="file" class="form-control-file" id="adjunto" name="adjunto">
+                <?php if (!empty($justificacionPrevia['path_adjunto'])): ?>
+                    <small class="text-info"><i class="fas fa-info-circle"></i> Ya existe un archivo adjunto previo. Si no selecciona uno nuevo, se mantendrá el anterior.</small>
+                <?php endif; ?>
             </div>
 
             <a href="/comercial/auditoria/public/sucursal/pendientes" class="btn btn-secondary">
@@ -85,7 +112,11 @@ $(document).ready(function() {
         }
     });
 
-    // --- NUEVO CÓDIGO: Prevenir doble envío ---
+    // --- NUEVO: Disparar el evento change al cargar la página ---
+    // Esto hace que si cargamos datos previos y dice 'Sí', aparezca el campo de adjunto inmediatamente.
+    $('#aprobado_supervisora').trigger('change');
+
+    // --- Prevenir doble envío ---
     $('form').on('submit', function() {
         var btn = $(this).find('button[type=\"submit\"]');
         // Cambiar texto y deshabilitar botón
@@ -97,4 +128,4 @@ $(document).ready(function() {
 ";
 ?>
 
-<?php require_once __DIR__ . '/../layouts/footer.php'; // Ahora el footer se incluye AL FINAL y usará la variable $pageScripts. ?>
+<?php require_once __DIR__ . '/../layouts/footer.php'; ?>

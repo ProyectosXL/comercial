@@ -14,55 +14,53 @@ public function pendientes() {
         $ventaModel = new VentaModel();
         $auditModel = new AuditModel(); 
 
-        // --- INICIO DE LA LÓGICA DINÁMICA ---
-
-        // 1. Verificamos que el usuario sea del rol 'sucursal' y tenga un nro_sucursal asignado.
+        // --- VALIDACIONES ---
         if ($_SESSION['user']['role'] !== 'sucursal' || empty($_SESSION['user']['nro_sucursal'])) {
             die('Acceso no autorizado para este rol.');
         }
-
-        // 2. Obtenemos el N° de sucursal del usuario directamente desde SU sesión.
         $nroSucursalUsuario = $_SESSION['user']['nro_sucursal'];
 
-        // --- CAMBIO CORREGIDO: Definir Rango por defecto de 30 días ---
+        // --- FECHAS ---
         $fechaCorteDefault = '2025-11-24'; 
-        
-        // Calculamos la fecha HASTA sumando 30 días a la fecha de corte
-        $fechaHastaDefault = date('Y-m-d', strtotime($fechaCorteDefault . ' + 30 days'));
+        $fechaHastaDefault = date('Y-m-d'); // Fecha hoy automática
 
-        // Si $_GET['fecha_desde'] está vacío, forzamos el inicio del corte.
-        if (empty($_GET['fecha_desde'])) {
-            $_GET['fecha_desde'] = $fechaCorteDefault;
-        }
-        
-        // Si $_GET['fecha_hasta'] está vacío, forzamos la fecha calculada (24/12/2025)
-        if (empty($_GET['fecha_hasta'])) {
-            $_GET['fecha_hasta'] = $fechaHastaDefault;
-        }
+        if (empty($_GET['fecha_desde'])) { $_GET['fecha_desde'] = $fechaCorteDefault; }
+        if (empty($_GET['fecha_hasta'])) { $_GET['fecha_hasta'] = $fechaHastaDefault; }
 
-        // Asignamos variables locales para pasar al modelo
         $fecha_desde = $_GET['fecha_desde'];
         $fecha_hasta = $_GET['fecha_hasta'];
-        // -----------------------------------------------------
 
+        // --- OBTENCIÓN DE DATOS ---
+        // 1. Obtenemos los que NO hay que mostrar (Pendientes enviados y Aprobados)
         $justificadosNComp = $auditModel->getJustificadosNComp();
         
-        // 4. Obtenemos las operaciones.
+        // 2. Obtenemos los que SI hay que mostrar pero marcados como RECHAZADOS
+        $rechazadosIds = $auditModel->getRechazadosIds();
+        
+        // 3. Traemos todo de PowerBI
         $todasLasOperaciones = $ventaModel->getOperacionesDifPrecio($fecha_desde, $fecha_hasta);
         
-        // 5. Filtramos en PHP para quedarnos solo con las de nuestra sucursal y que estén pendientes.
+        // 4. Filtramos: Dejamos pasar lo que NO está en $justificadosNComp
+        // (Esto deja pasar los "Nuevos" y los "Rechazados")
         $operaciones = array_filter($todasLasOperaciones, function($op) use ($justificadosNComp, $nroSucursalUsuario) {
             return !in_array($op['N_COMP'], $justificadosNComp) && $op['NRO_SUCURS'] == $nroSucursalUsuario;
         });
 
-        // Obtenemos los nombres de todas las sucursales para el mapeo.
         $sucursales = $ventaModel->getSucursales();
+        
+        // 5. Procesamos para la vista: Asignamos Estado Visual
         foreach ($operaciones as $key => $op) {
             $nroSucursal = $op['NRO_SUCURS'];
             $operaciones[$key]['DESC_SUCURSAL'] = $sucursales[$nroSucursal] ?? 'Desconocida';
+            
+            // Lógica de Estado Visual
+            if (in_array($op['N_COMP'], $rechazadosIds)) {
+                $operaciones[$key]['ESTADO_VISUAL'] = 'Rechazado';
+            } else {
+                $operaciones[$key]['ESTADO_VISUAL'] = 'Sin Justificar';
+            }
         }
 
-        // 6. Calculamos los KPIs y gráficos SOLO para nuestra sucursal con las fechas filtradas.
         $stats = $ventaModel->getStatsSucursal($nroSucursalUsuario, $justificadosNComp, $fecha_desde, $fecha_hasta);
         $chartRawData = $ventaModel->getPendientesPorFecha($nroSucursalUsuario, $justificadosNComp, $fecha_desde, $fecha_hasta);
         $chartLabels = json_encode(array_column($chartRawData, 'mes'));
@@ -74,56 +72,56 @@ public function pendientes() {
     }
 
 public function justificar($n_comp) {
-    $pageTitle = "Justificar Operación";
-    $ventaModel = new VentaModel();
-    $auditModel = new AuditModel(); // Instanciamos el modelo
+        $pageTitle = "Justificar Operación";
+        $ventaModel = new VentaModel();
+        $auditModel = new AuditModel(); 
 
-    // 1. VERIFICACIÓN DE SEGURIDAD: Si ya existe, lo expulsamos a la lista
-    if ($auditModel->existeJustificacion($n_comp)) {
-        header('Location: /comercial/auditoria/public/sucursal/pendientes');
-        exit();
-    }
+        // 1. Buscamos si existe una justificación previa (aunque esté rechazada)
+        $justificacionPrevia = $auditModel->getJustificacionPorNComp($n_comp);
+        
+        // 2. VERIFICACIÓN: Si existe y NO está rechazada, no debería poder entrar aquí.
+        // Si está rechazada, permitimos pasar para editarla.
+        if ($justificacionPrevia && $justificacionPrevia['estado'] !== 'Rechazado') {
+            header('Location: /comercial/auditoria/public/sucursal/pendientes');
+            exit();
+        }
+
         $operacion = $ventaModel->getOperacionPorNComp($n_comp);
         if (!$operacion) { die("Error: Operación no encontrada."); }
+        
         $sucursales = $ventaModel->getSucursales();
         $nroSucursal = $operacion['NRO_SUCURS'];
         $operacion['DESC_SUCURSAL'] = $sucursales[$nroSucursal] ?? 'Desconocida';
         $motivos = ['Compra anterior a rebaja', 'Precio mal colocado', 'No aplicó descuento', 'Compra Ecommerce', 'Otro'];
+        
+        // La variable $justificacionPrevia ahora está disponible para la vista
         require_once __DIR__ . '/../Views/sucursal/justificar.php';
     }
 
 public function guardar() {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        
-        $n_comp = $_POST['n_comp']; // Capturamos el n_comp primero
-        $auditModel = new AuditModel();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            
+            $n_comp = $_POST['n_comp'];
+            $auditModel = new AuditModel();
 
-        // --- VALIDACIÓN ANTI-DUPLICADOS ---
-        // Verificamos si ya existe antes de procesar nada.
-        if ($auditModel->existeJustificacion($n_comp)) {
-            // Si ya existe, redirigimos silenciosamente a pendientes.
-            // Esto evita el error de "multiplicación" por doble clic.
-            header('Location: /comercial/auditoria/public/sucursal/pendientes');
-            exit();
-        }
-            $path_adjunto = null; // Valor por defecto
+            // --- PASO 1: VERIFICAR SI YA EXISTE (Y SU ESTADO) ---
+            $justificacionPrevia = $auditModel->getJustificacionPorNComp($n_comp);
 
-            // --- LÓGICA DE SUBIDA DE ARCHIVO ---
+            // Si existe y NO está rechazado, bloqueamos (ya está pendiente o aprobado)
+            if ($justificacionPrevia && $justificacionPrevia['estado'] !== 'Rechazado') {
+                header('Location: /comercial/auditoria/public/sucursal/pendientes');
+                exit();
+            }
+
+            $path_adjunto = null;
+
+            // --- LÓGICA DE SUBIDA DE ARCHIVO (IGUAL QUE ANTES) ---
             if (isset($_POST['aprobado_supervisora']) && $_POST['aprobado_supervisora'] === 'Sí' && isset($_FILES['adjunto']) && $_FILES['adjunto']['error'] === UPLOAD_ERR_OK) {
-                
                 $uploadDir = __DIR__ . '/../../public/uploads/';
-                // Crear el directorio si no existe
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0777, true);
-                }
-                
-                // Crear un nombre de archivo único para evitar sobreescrituras
+                if (!is_dir($uploadDir)) { mkdir($uploadDir, 0777, true); }
                 $fileName = time() . '_' . basename($_FILES['adjunto']['name']);
                 $targetFile = $uploadDir . $fileName;
-
-                // Mover el archivo desde la ubicación temporal a nuestro directorio
                 if (move_uploaded_file($_FILES['adjunto']['tmp_name'], $targetFile)) {
-                    // Guardamos la ruta relativa para la base de datos y el acceso web
                     $path_adjunto = 'uploads/' . $fileName;
                 }
             }
@@ -141,28 +139,47 @@ public function guardar() {
                 'fecha_creacion' => date('Y-m-d H:i:s')
             ];
 
-            $auditModel = new AuditModel();
-            if ($newAuditId = $auditModel->guardarJustificacion($datos)) {
-                
-                // 1. Registrar en el historial
+            // Variables para controlar el flujo
+            $auditIdFinal = 0;
+            $exito = false;
+            $accionHistorial = '';
+
+            // --- DECISIÓN: ACTUALIZAR O INSERTAR ---
+            if ($justificacionPrevia) {
+                // MODO EDICIÓN (Era Rechazado)
+                $auditIdFinal = $justificacionPrevia['id'];
+                $accionHistorial = 'Corrección y reenvío de solicitud';
+                // Si llamamos a actualizar, el modelo se encarga de no borrar el archivo viejo si path_adjunto es null
+                $exito = $auditModel->actualizarJustificacion($auditIdFinal, $datos);
+            } else {
+                // MODO NUEVO
+                $accionHistorial = 'Creación de solicitud';
+                $newId = $auditModel->guardarJustificacion($datos);
+                if ($newId) {
+                    $auditIdFinal = $newId;
+                    $exito = true;
+                }
+            }
+
+            if ($exito) {
+                // 1. Registrar en historial
                 $historyModel = new AuditHistoryModel();
                 $usuario = $_SESSION['user']['name'];
-                $historyModel->registrarAccion($newAuditId, $usuario, 'Creación de solicitud');
+                $historyModel->registrarAccion($auditIdFinal, $usuario, $accionHistorial);
 
+                // 2. Notificaciones (Email)
                 try {
-                    // 2. Obtener detalles para el cuerpo del email
-                    $auditoria = $auditModel->getAuditById($newAuditId);
+                    $auditoria = $auditModel->getAuditById($auditIdFinal);
                     $ventaModel = new VentaModel();
                     $sucursales = $ventaModel->getSucursales();
                     $nombreSucursal = $sucursales[$auditoria['nro_sucursal']] ?? 'Desconocida';
                     
-                    // 3. Preparar y enviar el email
                     $notificationService = new NotificationService();
                     $destinatarios = 'barbara.balado@gmail.com';
 
-                    $asunto = "Nueva Auditoría Pendiente de Aprobación - #" . $newAuditId;
-                    $cuerpo = "Se ha registrado una nueva solicitud de auditoría que requiere su atención.<br><br>" .
-                              "<strong>ID de Auditoría:</strong> {$newAuditId}<br>" .
+                    $asunto = "Auditoría Pendiente (NUEVA/CORREGIDA) - #" . $auditIdFinal;
+                    $cuerpo = "Se ha registrado o corregido una solicitud de auditoría.<br><br>" .
+                              "<strong>ID:</strong> {$auditIdFinal}<br>" .
                               "<strong>Sucursal:</strong> {$nombreSucursal}<br>" .
                               "<strong>N° Comprobante:</strong> {$auditoria['n_comp']}<br>" .
                               "<strong>Motivo:</strong> {$auditoria['motivo']}<br><br>" .
@@ -171,13 +188,13 @@ public function guardar() {
                     
                     $notificationService->sendEmail($destinatarios, $asunto, $cuerpo);
                 } catch (Exception $e) {
-                    error_log("Fallo al enviar notificación de nueva auditoría: " . $e->getMessage());
+                    error_log("Fallo al enviar notificación: " . $e->getMessage());
                 }
 
                 header('Location: /comercial/auditoria/public/sucursal/pendientes');
                 exit();
             } else {
-                die("Hubo un error al guardar la justificación.");
+                die("Hubo un error al guardar/actualizar la justificación.");
             }
         }
     }

@@ -32,8 +32,10 @@ class AuditModel {
         }
     }
 
-    public function getJustificadosNComp() {
-        $sql = "SELECT n_comp FROM FP_AUDITORIA_DIF_PRECIO";
+public function getJustificadosNComp() {
+        // CAMBIO: Filtramos para que NO traiga los rechazados.
+        // Así los rechazados no se consideran "ya hechos" y aparecen de nuevo en la lista.
+        $sql = "SELECT n_comp FROM FP_AUDITORIA_DIF_PRECIO WHERE estado != 'Rechazado'";
         try {
             $pdo = Database::getConnectionSistemas();
             $stmt = $pdo->prepare($sql);
@@ -124,6 +126,71 @@ class AuditModel {
             return $stmt->execute();
         } catch (PDOException $e) { 
             die("Error al actualizar el estado: " . $e->getMessage()); 
+        }
+    }
+        public function getJustificacionPorNComp($n_comp) {
+        $sql = "SELECT * FROM FP_AUDITORIA_DIF_PRECIO WHERE n_comp = :n_comp";
+        try {
+            $pdo = Database::getConnectionSistemas();
+            $stmt = $pdo->prepare($sql);
+            $stmt->bindParam(':n_comp', $n_comp, PDO::PARAM_STR);
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            die("Error al buscar justificación: " . $e->getMessage());
+        }
+    }
+
+    // --- NUEVO MÉTODO: Para hacer UPDATE en lugar de INSERT cuando corregimos ---
+    public function actualizarJustificacion($id, $datos) {
+        $sql = "UPDATE FP_AUDITORIA_DIF_PRECIO 
+                SET nro_sucursal = :nro_sucursal, 
+                    fecha_operacion = :fecha_operacion, 
+                    importe = :importe, 
+                    motivo = :motivo, 
+                    observaciones = :observaciones, 
+                    aprobado_supervisora = :aprobado_supervisora, 
+                    estado = 'Pendiente', 
+                    fecha_actualizacion = GETDATE()
+                WHERE id = :id";
+        
+        // Si hay archivo nuevo, agregamos dinámicamente el campo al SQL
+        if (!empty($datos['path_adjunto'])) {
+            // Inyectamos la actualización del path antes del WHERE
+            $sql = str_replace("WHERE id = :id", ", path_adjunto = :path_adjunto WHERE id = :id", $sql);
+        }
+
+        try {
+            $pdo = Database::getConnectionSistemas();
+            $stmt = $pdo->prepare($sql);
+            $stmt->bindParam(':nro_sucursal', $datos['nro_sucursal']);
+            $stmt->bindParam(':fecha_operacion', $datos['fecha_operacion']);
+            $stmt->bindParam(':importe', $datos['importe']);
+            $stmt->bindParam(':motivo', $datos['motivo']);
+            $stmt->bindParam(':observaciones', $datos['observaciones']);
+            $stmt->bindParam(':aprobado_supervisora', $datos['aprobado_supervisora']);
+            $stmt->bindParam(':id', $id);
+            
+            // Solo vinculamos el parámetro si realmente vamos a actualizar el archivo
+            if (!empty($datos['path_adjunto'])) {
+                $stmt->bindParam(':path_adjunto', $datos['path_adjunto']);
+            }
+
+            return $stmt->execute();
+        } catch (PDOException $e) { 
+            die("Error al actualizar la justificación: " . $e->getMessage()); 
+        }
+    }
+        public function getRechazadosIds() {
+        $sql = "SELECT n_comp FROM FP_AUDITORIA_DIF_PRECIO WHERE estado = 'Rechazado'";
+        try {
+            $pdo = Database::getConnectionSistemas();
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return array_column($results, 'n_comp');
+        } catch (PDOException $e) {
+            return [];
         }
     }
 }
