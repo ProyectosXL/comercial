@@ -14,7 +14,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'download') {
 
 $anioActual = date('Y');
 // Período reducido: últimos 3 meses para evitar timeout
-$fechaDesdeDefault = date('Y-m-01', strtotime('-2 months'));
+$fechaDesdeDefault = date('Y-m-01', strtotime('-3 months'));
 $fechaHastaDefault = date('Y-m-d');
 ?>
 <!DOCTYPE html>

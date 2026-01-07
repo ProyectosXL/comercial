@@ -380,7 +380,7 @@ class Gasto
 public function obtenerGastosAutorizados($semana, $anio, $supervisora = null)
     {
         $sql = "SELECT g.ID_CONC, g.SUPERVISORA, c.CONCEPTO, g.IMPORTE, g.IMPORTE_TARJETA, 
-                       g.CAE_Tarjeta, g.CAE_Efectivo, g.CARGADO, g.CARGADO_TARJ 
+                       g.CAE_Tarjeta, g.CAE_Efectivo, g.CARGADO, g.CARGADO_TARJ, g.OBSERVACIONES 
                 FROM RO_T_GASTOS_SUPERVISION g
                 JOIN RO_T_CONCEPTOS_GASTOS_SUP c ON g.ID_CONC = c.ID_CONC
                 WHERE g.SEMANA = ? AND g.ANIO = ? AND g.ESTADO = 1";

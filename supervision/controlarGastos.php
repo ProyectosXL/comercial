@@ -99,7 +99,7 @@ session_start();
         </div>
 
         <div class="table-responsive">
-            <table id="gastosTable" class="table table-striped table-bordered">
+<table id="gastosTable" class="table table-striped table-bordered">
                 <thead>
                     <tr>
                         <th>Supervisora</th>
@@ -112,6 +112,7 @@ session_start();
                         <th>CAE Efectivo</th>
                         <th>Fotos Efectivo</th>
                         <th>Cargado Efectivo</th>
+                        <th>Observaciones</th> <!-- COLUMNA NUEVA -->
                     </tr>
                 </thead>
                 <tbody>
@@ -164,5 +165,24 @@ session_start();
     <script src="js/image-rotation-helper.js"></script>
     <script src="js/diagnostico-imagenes.js"></script>
     <script src="js/controlarGastos.js"></script>
+
+<!-- Modal para ver Observaciones -->
+    <div class="modal fade" id="observacionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-comment-alt me-2"></i>Observación Completa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="textoObservacionCompleta" class="fs-5 p-2"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

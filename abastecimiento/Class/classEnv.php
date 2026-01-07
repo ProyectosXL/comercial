@@ -51,9 +51,11 @@ class DotEnv
 
             'HOST_CENTRAL' => getenv('HOST_CENTRAL'),
             'HOST_LOCALES' => getenv('HOST_LOCALES'),
+            'HOST_APPS' => getenv('HOST_APPS'),
             'DATABASE_CENTRAL' => getenv('DATABASE_CENTRAL'),
             'DATABASE_LOCALES' => getenv('DATABASE_LOCALES'),
             'DATABASE_UY' => getenv('DATABASE_UY'),
+            'DATABASE_APPS' => getenv('DATABASE_APPS'),
             'DATABASE_POWER' => getenv('DATABASE_POWER'),
             'USER' => getenv('USER'),
             'PASS' => getenv('PASS'),

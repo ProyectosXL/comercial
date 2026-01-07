@@ -53,6 +53,22 @@ $(document).ready(function() {
                     return '<input type="checkbox" class="form-check-input cargadoCheck" ' + (row.cargado ? 'checked ' + disabled : '') + '>';
                 },
                 className: 'text-center cargado-column'
+            },
+            // --- NUEVA COLUMNA ---
+            { 
+                data: 'observaciones',
+                className: 'text-center',
+                render: function(data, type, row) {
+                    // Si hay datos y no son espacios vacíos
+                    if (data && data.trim() !== '') {
+                        // Reemplazamos comillas dobles para que no rompan el HTML del botón
+                        let safeText = data.replace(/"/g, '&quot;');
+                        return `<button class="btn btn-warning btn-sm verObservacion" data-texto="${safeText}" title="Leer observación">
+                                    <i class="fas fa-eye"></i>
+                                </button>`;
+                    }
+                    return ''; // Si no hay observación, celda vacía
+                }
             }
         ],
         order: [[0, 'asc']],
@@ -76,6 +92,18 @@ $(document).ready(function() {
         let id = $(this).data('id');
         let type = $(this).attr('attr-type');
         mostrarImagenes(id, type);
+    });
+    
+    // Evento para abrir el modal de observación
+    $(document).on('click', '.verObservacion', function() {
+        // Obtenemos el texto guardado en el botón
+        let texto = $(this).data('texto');
+        
+        // Lo ponemos en el cuerpo del modal
+        $('#textoObservacionCompleta').text(texto);
+        
+        // Abrimos el modal
+        $('#observacionModal').modal('show');
     });
 
     $(document).on('change', '.cargadoCheck', function() {

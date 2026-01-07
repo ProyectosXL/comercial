@@ -3,7 +3,7 @@
 class DisneyReport
 {
     private $cid;
-    private $cid_central;
+    private $cid_apps;
 
     function __construct()
     {
@@ -14,11 +14,11 @@ class DisneyReport
             session_start();
         }
         
-        $db = 'central';
-        $this->cid_central = $this->cid->conectar($db);
+        $db = 'power';
+        $this->cid_apps = $this->cid->conectar($db);
         
-        if ($this->cid_central  === false) {
-            throw new Exception("Error al conectar a la base de datos tangobis: " . print_r(sqlsrv_errors(), true));
+        if ($this->cid_apps  === false) {
+            throw new Exception("Error al conectar a la base de datos POWER_BI_CONTROL: " . print_r(sqlsrv_errors(), true));
         }
     }
     
@@ -35,7 +35,7 @@ class DisneyReport
                 MONTH(FECHA) AS MES,
                 SUM(CANTIDAD) AS CANTIDAD,
                 CAST(SUM(IMPORTE) AS INT) AS IMPORTE
-            FROM [LAKERBIS].LOCALES_LAKERS.dbo.BI_SALES_LAKERS_ARTICULO WITH (NOLOCK)
+            FROM BI_T_SALES_LAKERS_ARTICULO WITH (NOLOCK)
             WHERE DESC_CTA_ARTICULO LIKE 'DISNEY%' 
                 AND COD_ARTICU NOT LIKE 'XPAK%'
                 AND FECHA BETWEEN ? AND ?
@@ -53,7 +53,7 @@ class DisneyReport
         ";
         
         $params = array($fechaDesde, $fechaHasta);
-        $stmt = sqlsrv_query($this->cid_central, $sql, $params, array('QueryTimeout' => 240));
+        $stmt = sqlsrv_query($this->cid_apps, $sql, $params, array('QueryTimeout' => 240));
 
         if ($stmt === false) {
             throw new Exception("Error al ejecutar la consulta: " . print_r(sqlsrv_errors(), true));
@@ -70,8 +70,8 @@ class DisneyReport
 
     public function cerrarConexion()
     {
-        if ($this->cid_central) {
-            sqlsrv_close($this->cid_central);
+        if ($this->cid_apps) {
+            sqlsrv_close($this->cid_apps);
         }
     }
 }
