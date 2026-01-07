@@ -2,6 +2,10 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="mb-0"><?php echo $panelTitle; ?></h3>
+    <!-- Botón de Ayuda -->
+    <button type="button" class="btn btn-info shadow-sm" data-toggle="modal" data-target="#modalAyuda">
+        <i class="fas fa-question-circle mr-1"></i> Guía de Uso
+    </button>
 </div>
 
 <!-- Filtros de Fecha -->
@@ -110,6 +114,83 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Modal de Ayuda / Instructivo -->
+<div class="modal fade" id="modalAyuda" tabindex="-1" role="dialog" aria-labelledby="modalAyudaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document"> <!-- modal-lg para que sea ancho -->
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title" id="modalAyudaLabel"><i class="fas fa-book-open mr-2"></i> Instructivo de Auditoría de Diferencias de Precio</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        
+        <div class="alert alert-light border-left-info" role="alert">
+            <strong>¿Para qué sirve esta herramienta?</strong><br>
+            Este sistema permite gestionar y justificar las diferencias de precio detectadas automáticamente en las ventas de su sucursal.
+        </div>
+
+        <h5 class="text-primary mt-4"><i class="fas fa-list-ol"></i> Paso 1: Identificar Pendientes</h5>
+        <p>En la pantalla principal verá dos pestañas:</p>
+        <ul>
+            <li><strong>Resumen por Mes:</strong> Un gráfico para ver la evolución de sus pendientes.</li>
+            <li><strong>Gestión de Operaciones:</strong> La lista detallada de comprobantes que requieren su atención.</li>
+        </ul>
+        <p>Puede usar el filtro <strong>"Filtrar por Estado"</strong> sobre la tabla para ver:</p>
+        <ul>
+            <li><span class="badge badge-secondary">Sin Justificar</span>: Operaciones nuevas que ingresaron recientemente.</li>
+            <li><span class="badge badge-danger">Rechazados</span>: Justificaciones que envió anteriormente pero fueron rechazadas por Auditoría (requieren corrección).</li>
+        </ul>
+
+        <hr>
+
+        <h5 class="text-primary mt-4"><i class="fas fa-edit"></i> Paso 2: Justificar una Operación</h5>
+        <p>Para procesar un pendiente, haga clic en el botón azul <strong>"Justificar"</strong> (o "Corregir"). Se abrirá un formulario donde deberá:</p>
+        
+        <ol>
+            <li><strong>Seleccionar el Motivo:</strong> Elija la opción que mejor describa por qué ocurrió la diferencia (ej: <em>"Precio mal colocado", "No aplicó descuento"</em>).</li>
+            <li><strong>Observaciones:</strong> Escriba una explicación breve pero clara. Cuantos más detalles brinde, menos probable es que se lo rechacen.</li>
+            <li><strong>Aprobación de Supervisora:</strong>
+                <ul>
+                    <li>Si su supervisora autorizó esta diferencia, seleccione <strong>"Sí"</strong>.</li>
+                    <li>Al seleccionar "Sí", aparecerá un campo para <strong>adjuntar la foto</strong> del chat, mail o comprobante de dicha autorización.</li>
+                </ul>
+            </li>
+        </ol>
+
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i> <strong>Importante:</strong> Si declara que tiene aprobación de supervisora, es <strong>obligatorio</strong> adjuntar la evidencia.
+        </div>
+
+        <hr>
+
+        <h5 class="text-primary mt-4"><i class="fas fa-traffic-light"></i> Paso 3: Estados del Proceso</h5>
+        <p>Una vez enviada la justificación, la operación desaparecerá de su lista de pendientes y pasará a revisión por el área de Auditoría.</p>
+        <ul>
+            <li><i class="fas fa-check-circle text-success"></i> <strong>Aprobado:</strong> La justificación fue aceptada. El proceso termina aquí.</li>
+            <li><i class="fas fa-times-circle text-danger"></i> <strong>Rechazado:</strong> La justificación no fue suficiente o faltan datos.</li>
+        </ul>
+
+        <hr>
+
+        <h5 class="text-primary mt-4"><i class="fas fa-redo"></i> ¿Qué hacer si me rechazan una justificación?</h5>
+        <p>Si recibe un aviso de rechazo:</p>
+        <ol>
+            <li>La operación <strong>volverá a aparecer</strong> en su listado de pendientes con el estado <span class="badge badge-danger">Rechazado</span>.</li>
+            <li>Haga clic en el botón <strong>"Corregir"</strong>.</li>
+            <li>Verá una alerta indicando que es una corrección.</li>
+            <li>Modifique el motivo, amplíe la observación o adjunte el archivo correcto y vuelva a enviar el formulario.</li>
+        </ol>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Entendido</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <?php
