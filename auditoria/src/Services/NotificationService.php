@@ -35,6 +35,10 @@ class NotificationService {
 
     public function sendEmail($to, $subject, $body) {
         try {
+                        // --- CORRECCIÓN: LIMPIAR DESTINATARIOS PREVIOS ---
+            $this->mailer->clearAddresses();
+            $this->mailer->clearCCs();
+            $this->mailer->clearBCCs();
             // Destinatario
             $this->mailer->addAddress($to);
 
