@@ -1,0 +1,337 @@
+body {
+    background-color: #f8f9fa;
+}
+
+#tablaHorariosContainer {
+    max-height: 75vh;
+    overflow: auto;
+    border: 1px solid #dee2e6;
+}
+
+.table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table th, 
+.table td {
+    border: 1px solid #dee2e6;
+    text-align: center;
+    padding: 0.5rem;
+    min-width: 45px;
+    height: 40px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* --- LÓGICA DE POSICIONAMIENTO FIJO (STICKY) --- */
+
+/* 1. ANCHOS DE COLUMNAS FIJAS */
+.table th:nth-child(1), .table td:nth-child(1) { width: 190px; min-width: 190px; }
+.table th:nth-child(2), .table td:nth-child(2) { width: 80px;  min-width: 80px; }
+
+/* 2. COLORES DE FONDO */
+.table thead th,
+.table tfoot th,
+.table tfoot td {
+    background-color: #e9ecef;
+}
+
+.table tbody td {
+    background-color: #ffffff;
+}
+
+/* === LA CORRECCIÓN CLAVE ESTÁ AQUÍ === */
+
+/* 3. REGLAS STICKY GENERALES */
+/* Todas las celdas de la cabecera son sticky y se pegan arriba */
+.table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+/* Todas las celdas del pie son sticky y se pegan abajo */
+.table tfoot th, .table tfoot td {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+}
+
+/* La primera columna es sticky y se pega a la izquierda */
+.table th:nth-child(1), .table td:nth-child(1) {
+    position: sticky;
+    left: 0;
+    z-index: 15;
+}
+
+/* La segunda columna es sticky y se pega a la izquierda (desplazada) */
+.table th:nth-child(2), .table td:nth-child(2) {
+    position: static;
+    left: 190px;
+    z-index: 10;
+}
+
+/* 4. ESQUINAS (PARA EVITAR SOBREPOSICIÓN) */
+/* Las 4 esquinas deben tener el z-index más alto para estar siempre visibles */
+.table thead th:nth-child(1),
+.table thead th:nth-child(2),
+.table tfoot th:nth-child(1),
+.table tfoot td:nth-child(1),
+.table tfoot th:nth-child(2),
+.table tfoot td:nth-child(2) {
+    z-index: 30;
+}
+/* === FIN DE LA CORRECCIÓN === */
+
+/* 5. MEJORAS VISUALES */
+.table th:nth-child(1), .table td:nth-child(1) {
+    text-align: left;
+    padding-left: 10px;
+}
+.table tfoot td:nth-child(1) {
+    text-align: right;
+    padding-right: 10px;
+    font-weight: bold;
+}
+.table th:nth-child(2), .table td:nth-child(2) {
+    border-right: 2px solid #adb5bd !important;
+    font-weight: bold;
+}
+
+/* --- ESTILOS DE CELDAS ESPECÍFICAS (SIN CAMBIOS) --- */
+.hora-celda { cursor: pointer; user-select: none; }
+.hora-celda.marcado { background-color: #198754; color: white; }
+.table tbody tr:hover .hora-celda:not(.marcado) { background-color: #e9f5e9; }
+
+.dia-franco { 
+    padding: 0.3rem; 
+    background-color: #cad0d6 !important;
+}
+
+.form-check-input.franco-radio { cursor: pointer; width: 1.3em; height: 1.3em; }
+td.franco-activo { background-color: #d1ecf1 !important; }
+.hora-celda.dia-franco { background-color: #f8f9fa !important; pointer-events: none; }
+
+.promo-cell, .obs-diaria {
+    padding: 2px 5px !important;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    text-align: left;
+    vertical-align: top;
+    resize: none;
+    border: none;
+    background-color: transparent;
+    width: 100%;
+    height: 100%;
+}
+
+.obs-diaria {
+    background-color: #ffffff !important;
+    border: 1px solid #ced4da !important;
+}
+
+.table tfoot tr {
+    height: 50px;
+}
+/* --- ESTILOS PARA HORAS EXTRAS --- */
+.hora-celda.hora-extra {
+    background-color: #0d6efd; /* Azul de Bootstrap */
+    color: white;
+    font-weight: bold;
+}
+
+.table tbody tr:hover .hora-celda.hora-extra {
+    background-color: #0b5ed7; /* Azul más oscuro al pasar el mouse */
+}
+/* --- ESTILO PARA HORA DEVUELVE (D) --- */
+.hora-celda.hora-devuelve {
+    background-color: #fd7e14; /* Naranja fuerte */
+    color: white;
+    font-weight: bold;
+}
+
+.table tbody tr:hover .hora-celda.hora-devuelve {
+    background-color: #e36d0d; /* Naranja más oscuro al pasar el mouse */
+}
+/* --- BLOQUEO EXTERNO (Trabaja en otro local) --- */
+.hora-celda.bloqueo-externo {
+    background-color: #343a40 !important; /* Gris Oscuro / Negro */
+    color: #adb5bd;
+    cursor: not-allowed;
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 5px,
+        #495057 5px,
+        #495057 10px
+    );
+}
+/* --- ESTILOS PARA PROMOCIONES (MEJORADOS) --- */
+
+/* La celda contenedora */
+.promo-cell {
+    vertical-align: top !important;
+    padding: 4px !important;
+    background-color: #f8f9fa; /* Fondo muy suave */
+}
+
+/* El contenedor flex para que se acomoden solas */
+.promo-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px; /* Espacio entre etiquetas */
+    justify-content: flex-start;
+}
+
+/* La etiqueta individual (La pastilla) */
+.promo-badge {
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-left: 3px solid #0d6efd; /* Un borde azul a la izquierda para decorar */
+    border-radius: 3px;
+    color: #495057;
+    font-size: 0.9rem; /* Letra pequeña y nítida */
+    padding: 2px 6px;
+    font-weight: 600;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+    white-space: nowrap; /* Que no se corte el texto de la promo */
+    cursor: default;
+}
+
+/* Efecto al pasar el mouse para leer mejor */
+.promo-badge:hover {
+    background-color: #e7f1ff;
+    border-color: #0d6efd;
+    z-index: 1;
+}
+/* --- ESTILOS DE NOTAS --- */
+.btn-nota {
+    border: none;
+    background: transparent;
+    color: #ced4da; /* Gris muy claro por defecto (vacío) */
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-nota:hover {
+    color: #0d6efd; /* Azul al pasar el mouse */
+    transform: scale(1.2);
+}
+
+/* Estado ACTIVO (Cuando tiene texto) */
+.btn-nota.tiene-nota {
+    color: #fd7e14 !important; /* Naranja fuerte */
+    transform: scale(1.1);
+}
+/* --- VISTA LOCAL (ESTILO AGENDA) --- */
+.timeline-day {
+    position: relative;
+    padding-left: 20px;
+    margin-bottom: 30px;
+    border-left: 4px solid #dee2e6;
+}
+
+.timeline-date {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #343a40;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.promo-tag-local {
+    background-color: #6610f2;
+    color: white;
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: normal;
+    letter-spacing: 0.5px;
+}
+
+/* Tarjeta de Empleado */
+.staff-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 5px solid; /* El color lo define JS */
+    transition: transform 0.2s;
+}
+
+.staff-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.staff-time {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #212529;
+}
+
+.staff-name {
+    font-size: 0.95rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.staff-note {
+    background-color: #fff3cd;
+    border: 1px solid #ffecb5;
+    color: #664d03;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    margin-top: 8px;
+    display: flex;
+    align-items: start;
+    gap: 8px;
+}
+/* --- ARREGLO VISUAL SELECT2 (Igualar a Bootstrap LG) --- */
+
+/* Contenedor principal */
+.select2-container .select2-selection--single {
+    height: 48px !important; /* Altura estándar de un input-lg */
+    border: 1px solid #ced4da !important;
+    border-radius: 0.5rem !important; /* Bordes redondeados */
+    display: flex !important;
+    align-items: center !important;
+}
+
+/* El texto dentro del select */
+.select2-container .select2-selection--single .select2-selection__rendered {
+    padding-left: 15px !important;
+    font-size: 1.1rem !important; /* Tamaño de letra LG */
+    color: #212529 !important;
+    line-height: normal !important;
+}
+
+/* La flechita de la derecha */
+.select2-container .select2-selection--single .select2-selection__arrow {
+    height: 46px !important;
+    right: 10px !important;
+}
+
+/* Cuando está seleccionado/foco */
+.select2-container--bootstrap-5 .select2-selection--single:focus,
+.select2-container--default.select2-container--open .select2-selection--single {
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+/* Borde Violeta para Francos */
+.border-purple {
+    border-left-color: #6f42c1 !important;
+}
+
+/* Badge Franco (Opcional, para que se vea lindo) */
+.badge-franco {
+    background-color: #6f42c1;
+    color: white;
+}
