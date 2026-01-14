@@ -1,6 +1,6 @@
 /* Modern Header */
 .modern-header {
-    background: #2c3e50;
+    background: #667eea;
     padding: 20px;
     border-radius: 10px;
     margin-bottom: 20px;
@@ -15,6 +15,30 @@
     color: white;
     font-weight: 600;
     font-size: 1.75rem;
+}
+
+/* País Actual Badge */
+.pais-actual-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.pais-label {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.pais-nombre {
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.5px;
 }
 
 .home-btn {
@@ -59,13 +83,13 @@
 }
 
 .form-control:focus {
-    border-color: #2c3e50;
-    box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 /* Table Styles */
 th {
-    background: #34495e !important;
+    background: #667eea !important;
     color: white !important;
     text-align: center;
     font-weight: 600;
@@ -143,7 +167,7 @@ td {
 }
 
 .select2-container--default .select2-selection--multiple .select2-selection__choice {
-    background-color: #2c3e50;
+    background-color: #667eea;
     border: none;
     border-radius: 6px;
 }
@@ -155,7 +179,7 @@ td {
 
 /* Search Button */
 #search {
-    background: #2c3e50 !important;
+    background: #667eea !important;
     border: none !important;
     color: white !important;
     border-radius: 8px;
@@ -165,9 +189,9 @@ td {
 }
 
 #search:hover {
-    background: #34495e !important;
+    background: #764ba2 !important;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(44, 62, 80, 0.3);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 /* Loading Spinner */

@@ -28,6 +28,7 @@ $dataOnValue = ($checkedValue === 'uy') ? 'UY' : 'ARG';
 $dataOffValue = ($checkedValue === 'uy') ? 'ARG' : 'UY';
 $imageOn = ($checkedValue === 'central') ? 'css/bandera_con_sol__55757_std.jpg' : 'css/UY.jpg';
 $imageOff = ($checkedValue === 'central') ? 'css/UY.jpg' : 'css/bandera_con_sol__55757_std.jpg';
+$paisActual = ($checkedValue === 'central') ? 'ARGENTINA' : 'URUGUAY';
 
 ?>    
 
@@ -56,6 +57,66 @@ $imageOff = ($checkedValue === 'central') ? 'css/UY.jpg' : 'css/bandera_con_sol_
             ?>
 </head>
 <style> 
+    .container {
+      max-width: 95% !important;
+      width: 95% !important;
+    }
+    
+    #mytable {
+      width: 100% !important;
+    }
+    
+    .table-responsive {
+      overflow-x: auto;
+    }
+    
+    /* Ajustes de ancho para filtros */
+    .filters-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      flex-wrap: nowrap;
+    }
+    
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .filter-item label {
+      margin-bottom: 0.5rem;
+    }
+    
+    .filter-desde,
+    .filter-hasta {
+      flex: 0 0 150px;
+    }
+    
+    .filter-rubro {
+      flex: 1 1 300px;
+      min-width: 250px;
+    }
+    
+    .filter-destino {
+      flex: 0 0 180px;
+    }
+    
+    .filter-tipo {
+      flex: 0 0 180px;
+    }
+    
+    .filter-temporada {
+      flex: 0 0 140px;
+    }
+    
+    .filter-buscar {
+      flex: 0 0 100px;
+    }
+    
+    input[type="date"] {
+      width: 100% !important;
+    }
+    
     #sticky-header{
       position: sticky;
       top: 0;
@@ -123,22 +184,28 @@ $hoy = date("Y-m-d");
         </a>
         <h3 class="page-title mb-0 ms-3"><i class="fa fa-bar-chart me-2"></i>Ventas por Canal</h3>
       </div>
-      <input type="checkbox" checked data-toggle="toggle" data-on="<?= $dataOnValue ?>" data-off="<?= $dataOffValue ?>" class="custom-toggle" onchange="cambiarEntorno(this)" id="checkEntorno" >
+      <div class="d-flex align-items-center gap-3">
+        <div class="pais-actual-badge">
+          <span class="pais-label">País actual:</span>
+          <span class="pais-nombre"><?= $paisActual ?></span>
+        </div>
+        <input type="checkbox" checked data-toggle="toggle" data-on="<?= $dataOnValue ?>" data-off="<?= $dataOffValue ?>" class="custom-toggle" onchange="cambiarEntorno(this)" id="checkEntorno" >
+      </div>
     </div>
   </div>
   <div class="filters-container">
-    <div class="row g-3">
-      <div class="col-md-2">
+    <div class="filters-row">
+      <div class="filter-item filter-desde">
         <label class="form-label fw-bold"><i class="fa fa-calendar me-1"></i>Desde</label>
         <input type="date" class="form-control" name="desde" value="<?=$desde?>" id="desde">
       </div>
       
-      <div class="col-md-2">
+      <div class="filter-item filter-hasta">
         <label class="form-label fw-bold"><i class="fa fa-calendar me-1"></i>Hasta</label>
         <input type="date" class="form-control" name="hasta" value="<?=$hasta?>" id="hasta">
       </div>
 
-      <div class="col-md-3">
+      <div class="filter-item filter-rubro">
         <label class="form-label fw-bold"><i class="fa fa-tags me-1"></i>Rubro</label>
         <select class="form-control basic-multiple" name="rubro[]" id="rubro" multiple>
           <option disabled></option>
@@ -147,7 +214,8 @@ $hoy = date("Y-m-d");
           <?php } ?>
         </select>
       </div>
-      <div class="col-md-2">
+      
+      <div class="filter-item filter-destino">
         <label class="form-label fw-bold"><i class="fa fa-map-marker me-1"></i>Destino</label>
         <select id="destino" class="form-control" name="destino">
           <option value="" selected>Todos</option>
@@ -157,7 +225,7 @@ $hoy = date("Y-m-d");
         </select>
       </div>
       
-      <div class="col-md-2">
+      <div class="filter-item filter-tipo">
         <label class="form-label fw-bold"><i class="fa fa-building me-1"></i>Tipo Sucursal</label>
         <select id="tipoSucursal" class="form-control" name="tipoSucursal">
           <option value="" selected>Todos</option>
@@ -165,7 +233,8 @@ $hoy = date("Y-m-d");
           <option value="franquicias">Franquicias</option>
         </select>
       </div>
-      <div class="col-md-2">
+      
+      <div class="filter-item filter-temporada">
         <label class="form-label fw-bold"><i class="fa fa-clock-o me-1"></i>Temporada</label>
         <select id="temporada" class="form-control" name="temporada">
           <option value="" selected>Todas</option>
@@ -175,7 +244,7 @@ $hoy = date("Y-m-d");
         </select>
       </div>
 
-      <div class="col-md-2 d-flex align-items-end">
+      <div class="filter-item filter-buscar">
         <button type="button" class="btn btn-primary w-100" onclick="buscar()" id="search">
           <i class="fa fa-search me-1"></i>Buscar
         </button>
@@ -184,7 +253,8 @@ $hoy = date("Y-m-d");
   </div>
 </div>
 
-
+<div class="container">
+<div class="table-responsive">
 <table class="table table-striped table-condensed " id="mytable" data-page-length="100">
      
      <thead id="sticky-header">
@@ -248,7 +318,8 @@ $hoy = date("Y-m-d");
 
 
     </table>
-
+</div>
+</div>
 
 <script src="js/sweetAlert.js"></script>
 <?php  require_once $_SERVER['DOCUMENT_ROOT'] .'/comercial/assets/js/js.php'; ?>
