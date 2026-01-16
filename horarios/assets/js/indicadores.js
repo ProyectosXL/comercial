@@ -1,15 +1,20 @@
 $(document).ready(function() {
     const apiDatosURL = 'api/obtener_datos.php';
     const apiIndicadoresURL = 'api/indicadores_handler.php';
+    const apiExportarURL = 'api/exportar_indicadores.php';
     let myChart = null;
 
-    // 1. Cargar Sucursales (Igual que en index)
+// Cargar Sucursales
     $.getJSON(`${apiDatosURL}?accion=sucursales`, function(data) {
-        $('#sucursalSelector').append('<option value="">Seleccione...</option>');
-        $.each(data, (key, suc) => $('#sucursalSelector').append(`<option value="${suc.NRO_SUCURSAL}">${suc.DESC_SUCURSAL}</option>`));
+        // Limpiamos y agregamos opción por defecto
+        $('#ind_sucursalSelector').empty().append('<option value="">-- Todas las Sucursales --</option>');
+        
+        $.each(data, (key, suc) => {
+            // Verifica que estas propiedades existan en el console.log(data)
+            $('#ind_sucursalSelector').append(`<option value="${suc.NRO_SUCURSAL}">${suc.DESC_SUCURSAL}</option>`);
+        });
     });
-
-    // 2. Función de Fecha (ISO 8601 - Regla del 4 de Enero)
+    
     function getPrimerDiaDeSemana(year, week) {
         const d = new Date(year, 0, 4);
         const day = d.getDay() || 7; 
@@ -18,14 +23,14 @@ $(document).ready(function() {
         return d;
     }
 
-    // 3. Evento Filtrar
-    $('#btnFiltrar').on('click', function() {
-        const sucursal = $('#sucursalSelector').val();
-        const semana = $('#semanaSelector').val();
+    // --- EVENTO FILTRAR (Prefijo ind_) ---
+    $('#ind_btnFiltrar').on('click', function() {
+        const sucursal = $('#ind_sucursalSelector').val();
+        const semana = $('#ind_semanaSelector').val();
+        const tipoFiltro = $('#ind_tipoHoraFiltro').val();
 
-        if (!sucursal || !semana) return alert("Seleccione sucursal y semana.");
+        if (!semana) return alert("Seleccione una semana.");
 
-        // Calcular fechas
         const [year, weekNum] = semana.split('-W');
         const primerDia = getPrimerDiaDeSemana(year, weekNum);
         let ultimoDia = new Date(primerDia);
@@ -34,101 +39,120 @@ $(document).ready(function() {
         const fechaInicio = primerDia.toISOString().split('T')[0];
         const fechaFin = ultimoDia.toISOString().split('T')[0];
 
-        // Llamar API
+        // Link reporte >9hs
+        let urlRep = `api/reporte_exceso.php?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+        if(sucursal) urlRep += `&sucursal=${sucursal}`;
+        $('#ind_btnDescargarReporte9hs').attr('href', urlRep);
+
+        $('#ind_btnFiltrar').prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+
         $.getJSON(`${apiIndicadoresURL}?sucursal=${sucursal}&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`, function(data) {
-            renderDashboard(data);
-        }).fail(function() {
-            alert("Error al obtener indicadores.");
-        });
+            renderDashboard(data, tipoFiltro, sucursal);
+        })
+        .fail(function() { alert("Error al obtener datos."); })
+        .always(function() { $('#ind_btnFiltrar').prop('disabled', false).html('<i class="bi bi-graph-up-arrow"></i> Ver Indicadores'); });
     });
 
-    function renderDashboard(data) {
+    function renderDashboard(data, filtroTipo, sucursalSeleccionada) {
         $('#kpiContainer, #chartsContainer').fadeIn();
 
-        // A. Calcular Totales KPI
-        let totalN = 0, totalE = 0, totalD = 0, granTotal = 0;
-        let labels = [];
-        let dataN = [];
-        let dataE = [];
-        let dataD = [];
+        let tH = 0, tC = 0, tP = 0, tE = 0, tD = 0, tTotal = 0;
         let tableHTML = '';
+        let dataGrafico = {}; 
+        const esVistaGlobal = (sucursalSeleccionada === "");
+
+        // HEADER DE TABLA
+        let thead = `<tr>`;
+        if (esVistaGlobal) thead += `<th class="text-start">Sucursal</th>`;
+        thead += `<th class="text-start">Vendedor</th><th class="text-success">H</th><th class="text-info">C</th><th style="color:#d63384">P</th><th class="text-primary">E</th><th class="text-warning">D</th><th>Total</th></tr>`;
+        $('#ind_tablaDetalleBody').parent().find('thead').html(thead);
 
         data.forEach(item => {
-            // Sumar KPIs
-            totalN += item.normal;
-            totalE += item.extra;
-            totalD += item.devuelve;
-            granTotal += item.total;
+            if (filtroTipo !== 'todos' && item[filtroTipo] == 0) return;
 
-            // Preparar Gráfico
-            labels.push(item.nombre);
-            dataN.push(item.normal);
-            dataE.push(item.extra);
-            dataD.push(item.devuelve);
+            tH += item.normal; tC += item.caja; tP += item.permiso;
+            tE += item.extra; tD += item.devuelve; tTotal += item.total;
 
-            // Llenar Tabla
-            tableHTML += `
-                <tr>
-                    <td class="text-start small fw-bold text-truncate" style="max-width: 120px;" title="${item.nombre}">${item.nombre}</td>
-                    <td>${item.normal}</td>
-                    <td class="fw-bold text-primary">${item.extra}</td>
-                    <td class="fw-bold text-warning">${item.devuelve}</td>
-                    <td class="fw-bold">${item.total}</td>
-                </tr>
-            `;
+            tableHTML += `<tr>`;
+            if (esVistaGlobal) tableHTML += `<td class="text-start small text-muted">${item.sucursal_nombre}</td>`;
+            tableHTML += `<td class="text-start small fw-bold text-truncate" style="max-width: 150px;" title="${item.nombre}">${item.nombre}</td>
+                <td class="text-success">${item.normal}</td><td class="text-info fw-bold">${item.caja}</td>
+                <td class="fw-bold" style="color:#d63384">${item.permiso}</td><td class="text-primary fw-bold">${item.extra}</td>
+                <td class="text-warning fw-bold">${item.devuelve}</td><td class="fw-bold">${item.total}</td></tr>`;
+
+            let keyGrafico = esVistaGlobal ? item.sucursal_nombre : item.nombre;
+            if (!dataGrafico[keyGrafico]) dataGrafico[keyGrafico] = { h:0, c:0, p:0, e:0, d:0 };
+            dataGrafico[keyGrafico].h += item.normal;
+            dataGrafico[keyGrafico].c += item.caja;
+            dataGrafico[keyGrafico].p += item.permiso;
+            dataGrafico[keyGrafico].e += item.extra;
+            dataGrafico[keyGrafico].d += item.devuelve;
         });
 
-        // Actualizar KPIs en pantalla
-        $('#kpiNormal').text(totalN);
-        $('#kpiExtra').text(totalE);
-        $('#kpiDevuelve').text(totalD);
-        $('#kpiTotal').text(granTotal);
-        $('#tablaDetalleBody').html(tableHTML);
-
-        // B. Renderizar Gráfico (Chart.js)
-        const ctx = document.getElementById('graficoVendedores').getContext('2d');
+        // Actualizar KPIs
+        $('#ind_kpiNormal').text(tH); $('#ind_kpiCaja').text(tC); $('#ind_kpiPermiso').text(tP);
+        $('#ind_kpiExtra').text(tE); $('#ind_kpiDevuelve').text(tD); $('#ind_kpiTotal').text(tTotal);
         
-        if (myChart) {
-            myChart.destroy(); // Destruir gráfico anterior si existe
+        $('#ind_tablaDetalleBody').html(tableHTML || '<tr><td colspan="8" class="text-center py-3">No hay datos.</td></tr>');
+
+        // Botones
+        if (tTotal > 0) {
+            $('#ind_btnDescargarReporte9hs').removeClass('disabled');
+            $('#ind_btnExportarDetalle').removeClass('disabled');
+        } else {
+            $('#ind_btnDescargarReporte9hs').addClass('disabled');
+            $('#ind_btnExportarDetalle').addClass('disabled');
         }
+
+        // Gráfico
+        let labels = Object.keys(dataGrafico);
+        let datasetH=[], datasetC=[], datasetP=[], datasetE=[], datasetD=[];
+
+        // Filtro visual gráfico
+        if (filtroTipo==='todos' || filtroTipo==='normal') datasetH = labels.map(k => dataGrafico[k].h);
+        if (filtroTipo==='todos' || filtroTipo==='caja') datasetC = labels.map(k => dataGrafico[k].c);
+        if (filtroTipo==='todos' || filtroTipo==='permiso') datasetP = labels.map(k => dataGrafico[k].p);
+        if (filtroTipo==='todos' || filtroTipo==='extra') datasetE = labels.map(k => dataGrafico[k].e);
+        if (filtroTipo==='todos' || filtroTipo==='devuelve') datasetD = labels.map(k => dataGrafico[k].d);
+
+        const ctx = document.getElementById('ind_graficoVendedores').getContext('2d');
+        if (myChart) myChart.destroy();
+
+        const tituloGrafico = esVistaGlobal ? 'Horas Totales por Sucursal' : 'Horas por Vendedor';
+        $('#ind_graficoTitulo').text(tituloGrafico);
 
         myChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [
-                    {
-                        label: 'Normales',
-                        data: dataN,
-                        backgroundColor: '#198754', // Success Green
-                    },
-                    {
-                        label: 'Extras',
-                        data: dataE,
-                        backgroundColor: '#0d6efd', // Primary Blue
-                    },
-                    {
-                        label: 'Devuelve',
-                        data: dataD,
-                        backgroundColor: '#ffc107', // Warning Yellow
-                    }
+                    { label: 'H', data: datasetH, backgroundColor: '#198754' },
+                    { label: 'C', data: datasetC, backgroundColor: '#0dcaf0' },
+                    { label: 'P', data: datasetP, backgroundColor: '#d63384' },
+                    { label: 'E', data: datasetE, backgroundColor: '#0d6efd' },
+                    { label: 'D', data: datasetD, backgroundColor: '#ffc107' }
                 ]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { stacked: true },
-                    y: { stacked: true, beginAtZero: true }
-                },
-                plugins: {
-                    legend: { position: 'top' },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                    }
-                }
-            }
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
         });
     }
+
+    // Exportar Excel
+    $('#ind_btnExportarDetalle').on('click', function() {
+        if ($(this).hasClass('disabled')) return;
+        const sucursal = $('#ind_sucursalSelector').val();
+        const semana = $('#ind_semanaSelector').val();
+        const tipoFiltro = $('#ind_tipoHoraFiltro').val();
+        
+        const [year, weekNum] = semana.split('-W');
+        const primerDia = getPrimerDiaDeSemana(year, weekNum);
+        let ultimoDia = new Date(primerDia);
+        ultimoDia.setDate(primerDia.getDate() + 6);
+        const fechaInicio = primerDia.toISOString().split('T')[0];
+        const fechaFin = ultimoDia.toISOString().split('T')[0];
+
+        let url = `${apiExportarURL}?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&tipo=${tipoFiltro}`;
+        if (sucursal) url += `&sucursal=${sucursal}`;
+        window.location.href = url;
+    });
 });

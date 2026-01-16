@@ -52,6 +52,56 @@ $(document).ready(function() {
             });
     });
 
+// --- MOSTRAR MODAL FEEDBACK (SOLO LECTURA) ---
+    $('#tablaHorariosContainer').on('click', '.icono-feedback', function() {
+        // 1. Extraer datos del icono
+        const mensaje = $(this).attr('title');
+        const nombre = $(this).closest('tr').find('.text-truncate > div').text();
+        
+        // 2. Usar el modal genérico para mostrar el mensaje
+        // (Verificamos que no sea el tooltip por defecto)
+        if (mensaje && !mensaje.toLowerCase().includes('sin feedback')) {
+            // Ponemos el nombre en el título del modal para contexto
+            const titulo = `Feedback de Local para ${nombre}`;
+            const msgFormateado = mensaje.replace('Feedback del Local: ', '');
+            
+            // Usamos una función para mostrar el modal de Bootstrap que ya tienes
+            mostrarModalConTitulo(titulo, msgFormateado, 'info'); 
+        }
+    });
+
+    // --- FUNCIÓN PARA MOSTRAR MENSAJES LINDOS (CON TÍTULO) ---
+function mostrarModalConTitulo(titulo, mensaje, tipo = 'info') {
+    const header = $('#modalMensajeHeader');
+    const modalTitulo = $('#modalMensajeTitulo');
+    const icono = $('#modalMensajeIcono');
+    const texto = $('#modalMensajeTexto');
+
+    header.removeClass('bg-success bg-danger bg-warning bg-info');
+    icono.html('');
+
+    let colorClase = 'bg-info';
+    let iconoClase = 'bi bi-info-circle-fill text-info';
+    
+    if (tipo === 'success') {
+        colorClase = 'bg-success';
+        iconoClase = 'bi bi-check-circle-fill text-success';
+    } else if (tipo === 'error') {
+        colorClase = 'bg-danger';
+        iconoClase = 'bi bi-x-circle-fill text-danger';
+    } else if (tipo === 'warning') {
+        colorClase = 'bg-warning text-dark';
+        iconoClase = 'bi bi-exclamation-triangle-fill text-warning';
+    }
+
+    header.addClass(colorClase);
+    modalTitulo.text(titulo);
+    icono.html(`<i class="${iconoClase}"></i>`);
+    texto.html(mensaje); // Usamos .html() por si el mensaje tiene formato
+
+    new bootstrap.Modal(document.getElementById('modalMensaje')).show();
+}
+
     /**
      * FUNCIÓN NUEVA: 
      * 1. Descarga los horarios/francos guardados.
@@ -138,8 +188,18 @@ function agregarFilasRefuerzos(listaVendedores) {
                 filasHTML += `<tr data-vendedor-id="${vendedorId}">`;
                 
                 // Columna Nombre
-                filasHTML += `<td class="fw-bold ps-2"><div>${vendedor.NOMBRE_VEN}</div><small class="d-block text-muted fw-normal">${vendedor.TAREA_HABITUAL} <span class="badge bg-warning text-dark">Refuerzo</span></small></td>`;
-                
+                filasHTML += `<td class="fw-bold text-start ps-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="text-truncate" style="max-width: 180px;" title="${vendedor.NOMBRE_VEN}">
+                                        <div>${vendedor.NOMBRE_VEN}</div>
+                                        <small class="d-block text-muted fw-normal">${vendedor.TAREA_HABITUAL} <span class="badge bg-warning text-dark">Refuerzo</span></small>
+                                    </div>
+<span class="icono-feedback d-none ms-auto" data-vendedor-id="${vendedorId}" title="Sin Feedback" style="cursor:pointer;">
+    <i class="bi bi-chat-left-dots-fill text-secondary fs-5"></i>
+</span>
+                                </div>
+                             </td>`;
+
                 // Columna Totales (CORREGIDO: N ahora es H)
                 filasHTML += `<td class="total-horas-empleado align-middle p-1">`;
                 filasHTML +=     `<div class="d-flex flex-column align-items-center" style="font-size: 0.85rem; line-height: 1.1;">`;
@@ -262,8 +322,16 @@ function generarTablaHorarios(vendedores, semana) {
         bodyHTML += `<tr data-vendedor-id="${vendedorId}">`;
         
         // Columna Nombre
-        bodyHTML += `<td class="fw-bold text-start ps-2"><div>${vendedor.NOMBRE_VEN}</div><small class="d-block text-muted fw-normal">${vendedor.TAREA_HABITUAL}${badgeRefuerzo}</small></td>`;
-        
+        bodyHTML += `<td class="fw-bold text-start ps-2">
+<div style="white-space: normal; word-wrap: break-word;" title="${vendedor.NOMBRE_VEN}">
+    <div class="fw-bold">${vendedor.NOMBRE_VEN}</div>
+                                <small class="d-block text-muted fw-normal">${vendedor.TAREA_HABITUAL}</small>
+                            </div>
+                            <span class="icono-feedback ms-auto" data-vendedor-id="${vendedorId}" title="Sin Feedback" style="cursor:pointer; opacity: 0.2;">
+                                <i class="bi bi-chat-left-dots-fill text-secondary fs-5"></i>
+                            </span>
+                        </div>
+                     </td>`;
         // Columna Totales (Punto 2: N -> H)
         bodyHTML += `<td class="total-horas-empleado align-middle p-1">`;
         bodyHTML +=     `<div class="d-flex flex-column align-items-center" style="font-size: 0.85rem; line-height: 1.1;">`;
@@ -328,63 +396,47 @@ function generarTablaHorarios(vendedores, semana) {
     return { inicio: primerDia.toISOString().split('T')[0], fin: ultimoDia.toISOString().split('T')[0] };
 }
     
-    function cargarDatosEnGrilla(data) {
-if (data.horarios) {
-    data.horarios.forEach(h => {
-        const celda = $(`tr[data-vendedor-id="${h.COD_VENDED}"] td[data-fecha="${h.FECHA}"][data-hora="${h.HORA}"]`);
-        
-        if (h.TIPO_HORA === 'extra') {
-            celda.addClass('hora-extra').text('E');
-        } else if (h.TIPO_HORA === 'devuelve') {  // <--- NUEVO BLOQUE
-            celda.addClass('hora-devuelve').text('D');
-        } else {
-            celda.addClass('marcado').text('X');
-        }
-    });
-}
-    if (data.francos) {
-        data.francos.forEach(franco => {
-            const vendedorId = franco.COD_VENDED;
-            const fecha = franco.FECHA_FRANCO;
-            
-            // 1. Buscanos la fila y el radio button
-            const fila = $(`tr[data-vendedor-id="${vendedorId}"]`);
-            const radio = fila.find(`input.franco-radio[value="${fecha}"]`);
-            
-            // 2. Marcamos el tilde
-            radio.prop('checked', true);
-            
-            // 3. Pintamos el fondo del tilde (Azulito)
-            radio.closest('td').addClass('franco-activo');
+function cargarDatosEnGrilla(data) {
+        // Carga de Horarios (N, C, P, E, D)
+        if (data.horarios) {
+            data.horarios.forEach(h => {
+                const celda = $(`tr[data-vendedor-id="${h.COD_VENDED}"] td[data-fecha="${h.FECHA}"][data-hora="${h.HORA}"]`);
+                celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja');
+                const tipo = h.TIPO_HORA.toLowerCase();
 
-            // 4. ¡EL CANDADO! Forzamos el bloqueo de las horas
-            // Le ponemos la clase 'dia-franco' (que es la que bloquea el clic)
-            // Y borramos cualquier color o texto que haya quedado abajo
-            fila.find(`.hora-celda[data-fecha="${fecha}"]`)
-                .addClass('dia-franco') 
-                .removeClass('marcado hora-extra hora-devuelve')
-                .text('');
-        });
-    }
+                if (tipo === 'extra') celda.addClass('hora-extra').text('E');
+                else if (tipo === 'devuelve') celda.addClass('hora-devuelve').text('D');
+                else if (tipo === 'permiso') celda.addClass('hora-permiso').text('P');
+                else if (tipo === 'caja') celda.addClass('hora-caja').text('C');
+                else celda.addClass('marcado').text('X');
+            });
+        }
+
+        // Carga de Francos
+        if (data.francos) {
+            data.francos.forEach(franco => {
+                const fila = $(`tr[data-vendedor-id="${franco.COD_VENDED}"]`);
+                const radio = fila.find(`input.franco-radio[value="${franco.FECHA_FRANCO}"]`);
+                radio.prop('checked', true);
+                radio.closest('td').addClass('franco-activo');
+                fila.find(`.hora-celda[data-fecha="${franco.FECHA_FRANCO}"]`)
+                    .addClass('dia-franco')
+                    .removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja')
+                    .text('');
+            });
+        }
+
+        // Carga de Observaciones de Semana
         if (data.observaciones) {
             $('#observacionesSemana').val(data.observaciones);
         }
-        if (data.observacionesDiarias) {
-            data.observacionesDiarias.forEach(obs => {
-                $(`.obs-diaria[data-fecha="${obs.FECHA}"]`).val(obs.OBSERVACION);
-            });
-        }
+
+        // Carga de Promociones
         if (data.promociones) {
             for (const [fecha, listaPromos] of Object.entries(data.promociones)) {
                 const cell = $(`.promo-cell[data-fecha="${fecha}"]`);
-                
                 if (listaPromos && listaPromos.length > 0) {
-                    // 1. Convertimos cada texto en una etiqueta HTML
-                    const badgesHTML = listaPromos.map(textoPromo => {
-                        return `<span class="promo-badge" title="${textoPromo}">${textoPromo}</span>`;
-                    }).join('');
-                    
-                    // 2. Insertamos dentro de un contenedor flexible
+                    const badgesHTML = listaPromos.map(textoPromo => `<span class="promo-badge" title="${textoPromo}">${textoPromo}</span>`).join('');
                     cell.html(`<div class="promo-container">${badgesHTML}</div>`);
                 } else {
                     cell.html('<span class="text-muted small">-</span>');
@@ -392,45 +444,57 @@ if (data.horarios) {
             }
         }
 
-    // BLOQUEOS POR CRUCE DE SUCURSAL
-    if (data.bloqueosExternos) {
-        for (const [vendedorId, fechas] of Object.entries(data.bloqueosExternos)) {
-            for (const [fecha, horasOcupadas] of Object.entries(fechas)) {
-                
-                const fila = $(`tr[data-vendedor-id="${vendedorId}"]`);
-                
-                // Iteramos solo sobre las HORAS ocupadas (Ej: 15, 16...)
-                for (const [hora, sucursalOrigen] of Object.entries(horasOcupadas)) {
-                    
-                    // Buscamos LA celda específica
-                    const celdaHora = fila.find(`.hora-celda[data-fecha="${fecha}"][data-hora="${hora}"]`);
-                    
-                    // La bloqueamos visualmente
-                    celdaHora
-                        .removeClass('marcado hora-extra hora-devuelve dia-franco') 
-                        .addClass('bloqueo-externo') 
-                        .attr('title', `Ocupado en Sucursal ${sucursalOrigen}`) 
-                        .text('Ø');
+        // Carga de Bloqueos Externos
+        if (data.bloqueosExternos) {
+            for (const [vendedorId, fechas] of Object.entries(data.bloqueosExternos)) {
+                for (const [fecha, horasOcupadas] of Object.entries(fechas)) {
+                    const fila = $(`tr[data-vendedor-id="${vendedorId}"]`);
+                    for (const [hora, sucursalOrigen] of Object.entries(horasOcupadas)) {
+                        const celdaHora = fila.find(`.hora-celda[data-fecha="${fecha}"][data-hora="${hora}"]`);
+                        celdaHora
+                            .removeClass('marcado hora-extra hora-devuelve dia-franco')
+                            .addClass('bloqueo-externo')
+                            .attr('title', `Ocupado en Sucursal ${sucursalOrigen}`)
+                            .text('Ø');
+                    }
                 }
-                
+            }
+        }
+
+        // --- CORRECCIÓN AQUÍ: MOVER ESTE BLOQUE AFUERA ---
+        // Cargar Feedback (Mostrar Ícono)
+        if (data.feedback) {
+            for (const [vendedorId, mensaje] of Object.entries(data.feedback)) {
+                if (mensaje && mensaje.trim() !== '') {
+                    // 1. Buscamos el SPAN
+                    const spanIcono = $(`span.icono-feedback[data-vendedor-id="${vendedorId}"]`);
+                    
+                    // 2. Buscamos el ícono <i> DENTRO del span
+                    const icono = spanIcono.find('i');
+                    
+                    // 3. Activamos
+                    spanIcono.attr('title', `Feedback: "${mensaje}"`); // Actualizar tooltip
+                    spanIcono.css('opacity', 1); // Hacerlo 100% visible
+                    icono.removeClass('text-secondary').addClass('text-primary'); // Pintarlo de Azul
+                }
+            }
+        }
+        
+        // Cargar Notas Diarias Individuales
         if (data.notasVendedor) {
             for (const [vid, fechas] of Object.entries(data.notasVendedor)) {
                 for (const [fecha, texto] of Object.entries(fechas)) {
                     if (texto && texto.trim() !== '') {
                         const btn = $(`button.btn-nota[data-vendedor="${vid}"][data-fecha="${fecha}"]`);
-                        
-                        btn.data('texto', texto); // Guardamos el texto en memoria
-                        btn.addClass('tiene-nota'); // Color Naranja
-                        btn.html('<i class="bi bi-chat-square-text-fill"></i>'); // Icono Lleno
+                        btn.data('texto', texto);
+                        btn.addClass('tiene-nota');
+                        btn.html('<i class="bi bi-chat-square-text-fill"></i>');
                     }
                 }
             }
         }
-            }
-        }
-    }
 
-    actualizarSumatorias();
+        actualizarSumatorias();
     }
     
     // Abrir Modal
@@ -438,7 +502,7 @@ if (data.horarios) {
         const btn = $(this);
         const vid = btn.data('vendedor');
         const fecha = btn.data('fecha');
-        const nombre = btn.closest('tr').find('td:first div').text();
+        const nombre = btn.closest('tr').find('td:first .text-truncate > div').text();
         const notaActual = btn.data('texto') || '';
 
         // Pasamos datos al modal
@@ -545,32 +609,31 @@ function mostrarModal(mensaje, tipo = 'success') {
 }
 
 function actualizarSumatorias() {
-    let granTotalSemanal = 0; // Este será solo el costo LOCAL
+    let granTotalSemanal = 0;
     let totalesDiarios = Array(7).fill(0);
 
     $('tbody tr').each(function() {
         const fila = $(this);
         
-        // 1. Contamos las horas cargadas en ESTA sucursal
-        const nLocal = fila.find('.hora-celda.marcado').length;
+        // 1. Contar tipos
+        const n = fila.find('.hora-celda.marcado').length;
+        const c = fila.find('.hora-celda.hora-caja').length; // Caja
+        const p = fila.find('.hora-celda.hora-permiso').length; // Permiso
+        
         const e = fila.find('.hora-celda.hora-extra').length;
         const d = fila.find('.hora-celda.hora-devuelve').length;
 
-        // 2. Contamos las horas que trae de OTRA sucursal (Bloqueadas)
         const nExterno = fila.find('.hora-celda.bloqueo-externo').length;
 
-        // 3. Calculamos el Total "H" (Contractual)
-        // Sumamos lo que trabaja acá + lo que trabaja allá
-        const totalH_Visual = nLocal + nExterno;
+        // 2. Calcular H (Normal + Caja + Permiso + Externo)
+        const totalH_Visual = n + c + p + nExterno;
 
-        // 4. Actualizamos los numeritos de la fila
-        fila.find('.total-n').text(totalH_Visual); // H muestra el total real de la persona
+        // 3. Actualizar
+        fila.find('.total-n').text(totalH_Visual); 
         fila.find('.total-e').text(e);
         fila.find('.total-d').text(d);
 
-        // 5. Calculamos el Total Semanal del Local (Badge azul arriba)
-        // IMPORTANTE: Aquí SOLO sumamos lo local, para no inflar el costo de esta sucursal
-        granTotalSemanal += (nLocal + e + d);
+        granTotalSemanal += (n + c + p + e + d); // Sumamos todo al costo del local
     });
 
     // Calcular totales verticales (por día) - Solo locales
@@ -629,18 +692,24 @@ function actualizarSumatorias() {
     });
 
 function toggleCelda(celda) {
-    // Primero limpiamos todo
+    // 1. Limpiamos TODAS las clases de colores y el texto
     if (modoPintado === 'desmarcar') {
-        celda.removeClass('marcado hora-extra hora-devuelve').text('');
+        celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja').text('');
     } else {
-        celda.removeClass('marcado hora-extra hora-devuelve'); // Limpiar antes de pintar
+        // Primero limpiamos para evitar mezclas
+        celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja');
         
-        // Pintar según el modo seleccionado
+        // 2. Aplicamos la clase y letra según el selector
         if (modoPintadoHoras === 'extra') {
             celda.addClass('hora-extra').text('E');
-        } else if (modoPintadoHoras === 'devuelve') { // <--- NUEVO BLOQUE
+        } else if (modoPintadoHoras === 'devuelve') {
             celda.addClass('hora-devuelve').text('D');
+        } else if (modoPintadoHoras === 'permiso') {
+            celda.addClass('hora-permiso').text('P'); // Rosa
+        } else if (modoPintadoHoras === 'caja') {
+            celda.addClass('hora-caja').text('C'); // Celeste
         } else {
+            // Normal
             celda.addClass('marcado').text('X');
         }
     }
@@ -673,7 +742,7 @@ function getPrimerDiaDeSemana(year, week) {
         // 1. VALIDACIONES
         // =========================================================
         $('tbody tr').each(function() {
-            const nombre = $(this).find('td:first div').text();
+            const nombre = $(this).closest('tr').find('td:first .text-truncate div:first-child').text();
             
             // Leemos el total H que ya calculamos visualmente (Suma Local + Externo)
             const totalH_Semanal = parseInt($(this).find('.total-n').text()) || 0; 
@@ -730,21 +799,27 @@ function getPrimerDiaDeSemana(year, week) {
         // Arrays para guardar
         let horarios = [], francos = [], notas = [], vendedores = [];
 
-        // A. Recolectar Horarios
-        $('.hora-celda.marcado, .hora-celda.hora-extra, .hora-celda.hora-devuelve').each(function() {
+// A. Recolectar Horarios
+        // IMPORTANTE: Agregamos .hora-permiso y .hora-caja al selector para que las encuentre
+        $('.hora-celda.marcado, .hora-celda.hora-extra, .hora-celda.hora-devuelve, .hora-celda.hora-permiso, .hora-celda.hora-caja').each(function() {
             const celda = $(this);
-            // IMPORTANTE: NO guardamos las celdas "bloqueo-externo", esas ya están en su sucursal original
+            
+            // Ignoramos las celdas bloqueadas (ya están en otra sucursal)
             if (celda.hasClass('bloqueo-externo')) return;
 
-            let tipo = 'normal';
+            // DEFINICIÓN DE VARIABLE (Aquí estaba el error, faltaba el 'let')
+            let tipo = 'normal'; 
+            
             if (celda.hasClass('hora-extra')) tipo = 'extra';
-            if (celda.hasClass('hora-devuelve')) tipo = 'devuelve';
+            else if (celda.hasClass('hora-devuelve')) tipo = 'devuelve';
+            else if (celda.hasClass('hora-permiso')) tipo = 'permiso'; // Nuevo
+            else if (celda.hasClass('hora-caja')) tipo = 'caja';       // Nuevo
 
             horarios.push({
                 codVended: celda.closest('tr').data('vendedor-id'),
                 fecha: celda.data('fecha'),
                 hora: celda.data('hora'),
-                tipo: tipo
+                tipo: tipo // Ahora 'tipo' existe y tiene valor
             });
         });
 

@@ -196,16 +196,19 @@ function cargarDatos() {
 
     $respuesta = [];
 // =================================================================================
-    // PASO 1: CARGAR PROMOCIONES BANCARIAS
+    // PASO 1: CARGAR PROMOCIONES BANCARIAS (Corrección Fechas 2026)
     // =================================================================================
     
-    // CAMBIO CRÍTICO: Usamos getConexionCentral() para ir a LAKER_SA (SERVIDOR)
-    // Antes usábamos getConexionLocales() que iba a lakerbis.
     $connPromos = getConexionCentral(); 
-    
     $sucursalString = strval($nroSucursal); 
 
-    // CONSULTA SQL (Sin filtro de fechas para no errar formato, filtramos en PHP)
+    // 1. CONVERSIÓN DE FECHAS A FORMATO ANSI (YYYYMMDD)
+    // Esto es fundamental para que SQL Server reconozca fechas futuras correctamente
+    // sin importar la configuración regional del servidor.
+    $fIniSQL = date('Ymd', strtotime($fechaInicio));
+    $fFinSQL = date('Ymd', strtotime($fechaFin));
+
+    // 2. CONSULTA SQL
     $sqlPromociones = "
         SELECT 
             A.DESC_PROMOCION_TARJETA AS DESC_PROMOCION,
@@ -220,12 +223,14 @@ function cargarDatos() {
             SUCURSAL C ON B.ID_SUCURSAL = C.ID_SUCURSAL
         WHERE
             C.NRO_SUCURSAL = ?
+            AND A.DESFE_VIGENCIA <= ?  -- La promo debe haber empezado antes de que termine la semana
+            AND A.HASFE_VIGENCIA >= ?  -- La promo debe terminar después de que empiece la semana
             AND A.HABILITADO = 'S'
     ";
 
-    $paramsPromo = [$sucursalString];
+    // 3. PARÁMETROS (Usamos las fechas formateadas)
+    $paramsPromo = [$sucursalString, $fFinSQL, $fIniSQL];
     
-    // Ejecutamos en la conexión correcta
     $stmtPromociones = sqlsrv_query($connPromos, $sqlPromociones, $paramsPromo);
     
     $promocionesPorDia = [];
@@ -238,7 +243,7 @@ function cargarDatos() {
             $promocionesPotenciales[] = $row;
         }
         
-        // Filtrado de Fechas en PHP (Más seguro)
+        // Filtrado día por día en PHP
         $diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
         $fechaActual = new DateTime($fechaInicio);
         $fechaFinDT = new DateTime($fechaFin);
@@ -250,16 +255,17 @@ function cargarDatos() {
             $columnaDia = 'APLICA_' . strtoupper($diasSemana[$diaDeLaSemanaNum]);
 
             foreach ($promocionesPotenciales as $promo) {
-                // Convertir fechas SQL a PHP
+                // Convertir fechas SQL a Objetos PHP para comparar con precisión
                 $desde = ($promo['DESFE_VIGENCIA'] instanceof DateTime) ? $promo['DESFE_VIGENCIA'] : new DateTime($promo['DESFE_VIGENCIA']);
                 $hasta = ($promo['HASFE_VIGENCIA'] instanceof DateTime) ? $promo['HASFE_VIGENCIA'] : new DateTime($promo['HASFE_VIGENCIA']);
                 
-                // Normalizar horas
+                // Normalizar horas a 00:00:00
                 $desde->setTime(0,0,0);
                 $hasta->setTime(0,0,0);
                 $fechaCheck = clone $fechaActual;
                 $fechaCheck->setTime(0,0,0);
 
+                // Verificar si la fecha actual está dentro de la vigencia de la promo
                 if ($fechaCheck >= $desde && $fechaCheck <= $hasta) {
                     $aplica = $promo[$columnaDia];
                     if (!empty($aplica) && ($aplica === 'S' || $aplica === 's' || $aplica == 1)) {
@@ -335,6 +341,22 @@ function cargarDatos() {
     }
     $respuesta['notasVendedor'] = $notasVendedor;
     sqlsrv_free_stmt($stmtNotas);
+
+    // --- Cargar FEEDBACK de la semana ---
+    $feedbackVendedor = [];
+    $sqlFeed = "SELECT COD_VENDED, MENSAJE FROM FP_GESTION_FEEDBACK 
+                WHERE NRO_SUCURSAL = ? AND FECHA_SEMANA = ?";
+                
+    $stmtFeed = sqlsrv_query($connSistemas, $sqlFeed, [$nroSucursal, $fechaInicio]);
+    
+    if ($stmtFeed) {
+        while ($row = sqlsrv_fetch_array($stmtFeed, SQLSRV_FETCH_ASSOC)) {
+            $feedbackVendedor[trim($row['COD_VENDED'])] = $row['MENSAJE'];
+        }
+        sqlsrv_free_stmt($stmtFeed);
+    }
+    
+    $respuesta['feedback'] = $feedbackVendedor;
 
     // --- DETECTAR BLOQUEOS EXTERNOS ---
     // Buscamos si los vendedores de esta grilla tienen horas en OTRAS sucursales
