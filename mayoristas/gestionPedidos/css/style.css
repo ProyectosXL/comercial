@@ -1,0 +1,412 @@
+*, ::after, ::before {
+    box-sizing: border-box;
+    margin-left: 0.3rem;
+}
+
+.contenedor-info{
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-evenly;
+        margin:0 auto;
+}
+
+.form-control.text-center.total
+{
+    width: 8rem;
+    margin-inline: 0.5rem;
+}
+
+.contenedor-info2{
+    width: auto;
+    display: flex;
+    flex-direction: row;
+    margin:auto auto;
+}
+.contenedor-info3{
+    
+    display: flex;
+    flex-direction: row;
+    margin:0 20rem 0 10rem;
+}
+
+.contenedor-info2 button{
+    margin-top: 20px;
+  }
+
+
+.contenedor-info4{
+      width: auto;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-around;
+      margin:auto auto;
+  }
+
+.contenedor-info2 label{
+   margin-bottom: 0;
+  }
+
+  .contenedor-info2 button{
+    margin-top:20px;
+   }
+
+#nomCliente
+{
+    color:dimgray;
+    font-size: 1.5rem;
+}
+
+#title_nota
+{
+    text-transform: uppercase;
+    font-size: 1.5rem;
+}
+
+.form-inline{
+    margin-left: 4rem;
+}
+
+@media only screen and (min-width: 1401px) and (max-width: 3000px) {
+
+
+/*Fijar encabezado de tabla*/ 
+
+thead tr th { 
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table .thead-dark th {
+    color: white;
+    background-color: #343a40;
+}
+
+.table-responsive { 
+    height:600px;
+    width: 1500px;
+    margin-left: 3.5%;
+    margin-top: 1%;
+    font-size: small;
+    overflow-x: hidden;
+}
+
+#totalClientes
+{
+    position: absolute;
+    margin-left: 25%;
+    margin-top: -0.2%;
+}
+
+#totalArticulos
+{
+    position: absolute;
+    margin-left: 37%;
+    margin-top: -0.2%;
+}
+
+#totalImporte
+{
+    position: absolute;
+    margin-left: 49%;
+    margin-top: -0.2%;
+}
+
+#totalArticulos2
+{
+    position: absolute;
+    margin-left: 53%;
+    margin-top: -0.5%;
+}
+
+#totalImporte2
+{
+    position: absolute;
+    margin-left: 65%;
+    margin-top: -0.5%;
+}
+
+#totalArticulos3
+{
+    position: absolute;
+    margin-left: 52%;
+    margin-top: 0%;
+}
+
+#totalImporte3
+{
+    position: absolute;
+    margin-left: 62%;
+    margin-top: 0%;
+}
+
+/* #contvendedor
+{
+    position: absolute;
+    margin-left: 5%;
+    display: flex;
+    flex-direction: row;
+} */
+
+#btn_filtro
+{
+   margin-left: 0.2rem;
+}
+
+#btnExport
+{
+    margin-left: 3%;
+}
+
+#btn_filtro2
+{
+  /*   position: absolute; */
+    margin-left:10%;
+    margin-top: 22%;
+}
+
+#title_cliente
+{
+    /* position: absolute; */
+    margin-top: 1%;
+    margin-left: 4%;
+}
+
+#contDate
+{
+    /* position: absolute; */
+    margin-left: 18%;
+    margin-top: -0.85%;
+}
+
+#btn_save
+{
+    position: absolute;
+    margin-left:25%;
+    margin-top: 1.6%;
+}
+
+#btn_back
+{
+    width: 100px;
+    height: 39px;
+    position: absolute;
+    margin-top: 18%;
+    margin-left: 50%;
+    
+}
+
+#busqRapida
+{
+    margin-top: -0.28%;
+    margin-left: 62%;
+    width: 17%;
+}
+
+#busqRapida2
+{
+    margin-top: 0%;
+    margin-left: 25%;
+    width: 17%;
+}
+
+.total
+{
+    height: calc(1.5em + 0.5rem + 2px);
+    padding: 0.25rem 0.5rem;
+    font-size: .875rem;
+    line-height: 1.5;
+    border-radius: 0.2rem;
+}
+
+h3{
+    margin-top: 1%;
+    margin-left: 3%;
+}
+
+.semaforo
+{
+    font-size: 22px;
+    margin-left: 0.3%;
+    margin-top: 0.5%;
+}
+
+#title_vendedor
+{
+    margin-top: 1%;
+    margin-left: 5%;
+}
+
+nav
+{
+    margin-left: 3.5%;
+    width: 1500px;
+};
+
+}
+
+
+@media only screen and (min-width: 300px) and (max-width: 1400px) {
+
+
+        /*Fijar encabezado de tabla*/ 
+
+    thead tr th { 
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .table .thead-dark th {
+        color: white;
+        background-color: #343a40;
+    }
+
+    .table-responsive nav{ 
+        height:600px;
+        width: 1200px;
+        margin-left: 3.5%;
+        margin-top: 1%;
+        font-size: small;
+    }
+
+    #totalClientes
+    {
+        position: absolute;
+        margin-left: 25%;
+        margin-top: -0.2%;
+    }
+
+    #totalArticulos
+    {
+        position: absolute;
+        margin-left: 37%;
+        margin-top: -0.2%;
+    }
+
+    #totalImporte
+    {
+        position: absolute;
+        margin-left: 49%;
+        margin-top: -0.2%;
+    }
+
+    #totalArticulos2
+    {
+        position: absolute;
+        margin-left: 47%;
+        margin-top: -0.5%;
+    }
+
+    #totalImporte2
+    {
+        position: absolute;
+        margin-left: 59%;
+        margin-top: -0.5%;
+    }
+
+ /*    #contvendedor
+    {
+      
+    position: absolute;
+    margin-left: 5%;
+    display: flex;
+    flex-direction: row;
+
+    }
+ */
+    #btn_filtro
+    {
+        /* position: absolute; */
+       /*  margin-left:10.5%; */
+       margin-left: 0.2rem;
+      /*   margin-top: 10.5%; */
+    }
+
+    #btn_filtro2
+    {
+       /*  position: absolute; */
+        margin-left:1%;
+        margin-top: 1%;
+    }
+
+    #title_cliente
+    {
+        /* position: absolute; */
+        margin-top: 1%;
+        margin-left: 4%;
+    }
+
+    #contDate
+    {
+        position: absolute;
+        margin-left: 18%;
+        margin-top: -0.85%;
+    }
+
+    #btn_save
+    {
+        position: absolute;
+        margin-left:25%;
+        margin-top: 1.6%;
+    }
+
+    #btn_back
+    {
+        width: 100px;
+        height: 39px;
+        position: absolute;
+        margin-top: 18%;
+        margin-left: 50%;
+        
+    }
+
+    #busqRapida
+    {
+        margin-top: -0.28%;
+        margin-left: 62%;
+        width: 17%;
+    }
+
+    #busqRapida2
+    {
+        margin-top: 0%;
+        margin-left: 25%;
+        width: 17%;
+    }
+
+    .total
+    {
+        height: calc(1.5em + 0.5rem + 2px);
+        padding: 0.25rem 0.5rem;
+        font-size: .875rem;
+        line-height: 1.5;
+        border-radius: 0.2rem;
+    }
+
+    h3{
+        margin-top: 1%;
+        margin-left: 4%;
+    }
+
+    .semaforo
+    {
+        font-size: 22px;
+        margin-left: 0.3%;
+        margin-top: 0.5%;
+    }
+
+    #title_vendedor
+    {
+        margin-top: 1%;
+        margin-left: 5%;
+    }
+
+    nav
+    {
+        width: 1360px;
+    };
+    
+    }
+    
