@@ -1,13 +1,24 @@
+/* =========================================
+   ESTILOS GENERALES
+   ========================================= */
 body {
     background-color: #f8f9fa;
 }
 
-#tablaHorariosContainer {
+/* =========================================
+   CONTENEDOR DE TABLAS (SCROLL Y POSICIÓN)
+   ========================================= */
+#tablaHorariosContainer,
+#tablaVistaLocal {
     max-height: 75vh;
     overflow: auto;
+    position: relative;
     border: 1px solid #dee2e6;
 }
 
+/* =========================================
+   ESTRUCTURA BÁSICA DE TABLA
+   ========================================= */
 .table {
     border-collapse: separate;
     border-spacing: 0;
@@ -24,13 +35,9 @@ body {
     white-space: nowrap;
 }
 
-/* --- LÓGICA DE POSICIONAMIENTO FIJO (STICKY) --- */
-
-/* 1. ANCHOS DE COLUMNAS FIJAS */
-.table th:nth-child(1), .table td:nth-child(1) { width: 190px; min-width: 190px; }
-.table th:nth-child(2), .table td:nth-child(2) { width: 80px;  min-width: 80px; }
-
-/* 2. COLORES DE FONDO */
+/* =========================================
+   COLORES DE FONDO BASE
+   ========================================= */
 .table thead th,
 .table tfoot th,
 .table tfoot td {
@@ -41,78 +48,186 @@ body {
     background-color: #ffffff;
 }
 
-/* === LA CORRECCIÓN CLAVE ESTÁ AQUÍ === */
+/* =========================================
+   FIJAR CABECERAS (STICKY HEADERS)
+   ========================================= */
 
-/* 3. REGLAS STICKY GENERALES */
-/* Todas las celdas de la cabecera son sticky y se pegan arriba */
-.table thead th {
+/* 1. Primera Fila (Días) -> Pegada al techo */
+#tablaHorariosContainer thead tr:nth-child(1) th,
+#tablaVistaLocal thead tr:nth-child(1) th {
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: 100;
+    background-color: #f8f9fa;
+    box-shadow: inset 0 -1px 0 #dee2e6;
 }
 
-/* Todas las celdas del pie son sticky y se pegan abajo */
-.table tfoot th, .table tfoot td {
+/* 2. Segunda Fila (Horas) -> Pegada debajo de la primera */
+#tablaHorariosContainer thead tr:nth-child(2) th,
+#tablaVistaLocal thead tr:nth-child(2) th {
     position: sticky;
-    bottom: 0;
-    z-index: 20;
+    top: 41px; /* Ajuste según altura de fila 1 */
+    z-index: 90;
+    background-color: #f8f9fa;
+    box-shadow: inset 0 -1px 0 #dee2e6;
 }
 
-/* La primera columna es sticky y se pega a la izquierda */
-.table th:nth-child(1), .table td:nth-child(1) {
+/* =========================================
+   FIJAR COLUMNAS IZQUIERDA (STICKY COLUMNS)
+   ========================================= */
+
+/* 1. Primera Columna (Vendedor) */
+#tablaHorariosContainer .table tr > :first-child,
+#tablaVistaLocal .table tr > :first-child {
     position: sticky;
     left: 0;
-    z-index: 15;
+    z-index: 50;
+    background-color: #ffffff;
+    border-right: 2px solid #dee2e6;
+    min-width: 280px; /* Ancho suficiente para nombres largos */
+    width: 280px;
+    max-width: 280px;
 }
 
-/* La segunda columna es sticky y se pega a la izquierda (desplazada) */
-.table th:nth-child(2), .table td:nth-child(2) {
-    position: static;
-    left: 190px;
-    z-index: 10;
+/* 2. Segunda Columna (Total Hs) */
+#tablaHorariosContainer .table tr > :nth-child(2),
+#tablaVistaLocal .table tr > :nth-child(2) {
+    position: sticky;
+    left: 280px; /* Debe coincidir con el ancho de la 1ra columna */
+    z-index: 50;
+    background-color: #ffffff;
+    border-right: 2px solid #dee2e6;
+    min-width: 80px;
 }
 
-/* 4. ESQUINAS (PARA EVITAR SOBREPOSICIÓN) */
-/* Las 4 esquinas deben tener el z-index más alto para estar siempre visibles */
-.table thead th:nth-child(1),
-.table thead th:nth-child(2),
-.table tfoot th:nth-child(1),
-.table tfoot td:nth-child(1),
-.table tfoot th:nth-child(2),
-.table tfoot td:nth-child(2) {
-    z-index: 30;
-}
-/* === FIN DE LA CORRECCIÓN === */
+/* =========================================
+   CORRECCIONES DE Z-INDEX (ESQUINAS)
+   ========================================= */
 
-/* 5. MEJORAS VISUALES */
-.table th:nth-child(1), .table td:nth-child(1) {
-    text-align: left;
-    padding-left: 10px;
-}
-.table tfoot td:nth-child(1) {
-    text-align: right;
-    padding-right: 10px;
-    font-weight: bold;
-}
-.table th:nth-child(2), .table td:nth-child(2) {
-    border-right: 2px solid #adb5bd !important;
-    font-weight: bold;
+/* A. ESQUINA SUPERIOR IZQUIERDA (Cruce de Header y Columna Fija) */
+/* Deben estar por encima de todo */
+#tablaHorariosContainer thead tr > :first-child,
+#tablaHorariosContainer thead tr > :nth-child(2),
+#tablaVistaLocal thead tr > :first-child,
+#tablaVistaLocal thead tr > :nth-child(2) {
+    z-index: 200 !important; 
+    background-color: #f8f9fa !important;
 }
 
-/* --- ESTILOS DE CELDAS ESPECÍFICAS (SIN CAMBIOS) --- */
+/* B. ESQUINA INFERIOR IZQUIERDA (Footer / Promociones) */
+#tablaHorariosContainer tfoot tr > :first-child,
+#tablaHorariosContainer tfoot tr > :nth-child(2),
+#tablaVistaLocal tfoot tr > :first-child,
+#tablaVistaLocal tfoot tr > :nth-child(2) {
+    position: sticky;
+    bottom: 0;
+    z-index: 60;
+    background-color: #e9ecef !important;
+    border-top: 2px solid #adb5bd;
+    color: #212529;
+}
+
+/* =========================================
+   FOOTER FIJO (PROMOCIONES)
+   ========================================= */
+
+/* 1. Fijar TODAS las celdas del pie de página al fondo */
+#tablaHorariosContainer tfoot td,
+#tablaVistaLocal tfoot td {
+    position: sticky;
+    bottom: 0;
+    z-index: 60; /* Encima de las horas */
+    background-color: #e9ecef !important; /* Gris sólido para tapar el contenido */
+    border-top: 2px solid #adb5bd; /* Borde superior fuerte */
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.05); /* Sombrita para dar efecto flotante */
+}
+
+/* 2. Las primeras dos columnas del footer (Vendedor/Total) deben estar AÚN MÁS ARRIBA */
+/* Esto es para que cuando hagas scroll horizontal, la esquina inferior izquierda no se tape */
+#tablaHorariosContainer tfoot tr > :first-child,
+#tablaHorariosContainer tfoot tr > :nth-child(2),
+#tablaVistaLocal tfoot tr > :first-child,
+#tablaVistaLocal tfoot tr > :nth-child(2) {
+    z-index: 70 !important; /* Mayor que el resto del footer (60) y que las columnas laterales (50) */
+    background-color: #dee2e6 !important; /* Un gris un pelín más oscuro para diferenciar la esquina */
+}
+
+/* Ajuste específico para la segunda celda del footer */
+#tablaHorariosContainer tfoot tr > :nth-child(2),
+#tablaVistaLocal tfoot tr > :nth-child(2) {
+    left: 280px;
+}
+
+/* =========================================
+   ESTILOS DE CELDAS DE HORARIOS
+   ========================================= */
 .hora-celda { cursor: pointer; user-select: none; }
+
+/* Normal (H) - Verde */
 .hora-celda.marcado { background-color: #198754; color: white; }
 .table tbody tr:hover .hora-celda:not(.marcado) { background-color: #e9f5e9; }
 
-.dia-franco { 
-    padding: 0.3rem; 
-    background-color: #cad0d6 !important;
+/* Extra (E) - Azul */
+.hora-celda.hora-extra { background-color: #0d6efd; color: white; font-weight: bold; }
+.table tbody tr:hover .hora-celda.hora-extra { background-color: #0b5ed7; }
+
+/* Devuelve (D) - Naranja */
+.hora-celda.hora-devuelve { background-color: #fd7e14; color: white; font-weight: bold; }
+.table tbody tr:hover .hora-celda.hora-devuelve { background-color: #e36d0d; }
+
+/* Permiso (P) - Rosa */
+.hora-celda.hora-permiso { background-color: #d63384 !important; color: white; font-weight: bold; }
+.table tbody tr:hover .hora-celda.hora-permiso { background-color: #a61e61; }
+
+/* Caja (C) - Celeste */
+.hora-celda.hora-caja { background-color: #0dcaf0 !important; color: black; font-weight: bold; }
+.table tbody tr:hover .hora-celda.hora-caja { background-color: #0aa2c0; }
+
+/* Bloqueo Externo (Gris Oscuro Rayado) */
+.hora-celda.bloqueo-externo {
+    background-color: #343a40 !important;
+    color: #adb5bd;
+    cursor: not-allowed;
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, #495057 5px, #495057 10px);
 }
 
-.form-check-input.franco-radio { cursor: pointer; width: 1.3em; height: 1.3em; }
-td.franco-activo { background-color: #d1ecf1 !important; }
-.hora-celda.dia-franco { background-color: #f8f9fa !important; pointer-events: none; }
+/* =========================================
+   ESTILOS DE FRANCOS
+   ========================================= */
+.dia-franco { 
+    padding: 0.3rem; 
+    background-color: #c2a2fd !important; /* Violeta */
+    color: white;
+}
 
+td.franco-activo { background-color: #e0cffc !important; }
+
+/* Celda bloqueada por franco */
+.hora-celda.dia-franco { background-color: #e2e3e5 !important; pointer-events: none; cursor: not-allowed; }
+
+/* Franco en Vista Local (Celda completa) */
+.bg-franco-activo {
+    background-color: #6f42c1 !important;
+    color: white !important;
+    vertical-align: middle !important;
+    text-align: center !important;
+}
+
+/* Check visual para franco (usado antes, mantenido por si acaso) */
+.franco-visual-check {
+    width: 1.1em;
+    height: 1.1em;
+    background-color: #c2a2fd;
+    border-radius: 50%;
+    margin: auto;
+    border: 2px solid white;
+}
+
+/* =========================================
+   ELEMENTOS INTERNOS (NOTAS, PROMOS, VENDEDOR)
+   ========================================= */
+
+/* Promo y Obs (Inputs) */
 .promo-cell, .obs-diaria {
     padding: 2px 5px !important;
     font-size: 0.9rem;
@@ -125,213 +240,75 @@ td.franco-activo { background-color: #d1ecf1 !important; }
     width: 100%;
     height: 100%;
 }
+.obs-diaria { background-color: #ffffff !important; border: 1px solid #ced4da !important; }
 
-.obs-diaria {
-    background-color: #ffffff !important;
-    border: 1px solid #ced4da !important;
-}
+/* Badges de Promociones */
+.promo-container { display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-start; }
 
-.table tfoot tr {
-    height: 50px;
-}
-/* --- ESTILOS PARA HORAS EXTRAS --- */
-.hora-celda.hora-extra {
-    background-color: #0d6efd; /* Azul de Bootstrap */
-    color: white;
-    font-weight: bold;
-}
-
-.table tbody tr:hover .hora-celda.hora-extra {
-    background-color: #0b5ed7; /* Azul más oscuro al pasar el mouse */
-}
-/* --- ESTILO PARA HORA DEVUELVE (D) --- */
-.hora-celda.hora-devuelve {
-    background-color: #fd7e14; /* Naranja fuerte */
-    color: white;
-    font-weight: bold;
-}
-
-.table tbody tr:hover .hora-celda.hora-devuelve {
-    background-color: #e36d0d; /* Naranja más oscuro al pasar el mouse */
-}
-/* --- BLOQUEO EXTERNO (Trabaja en otro local) --- */
-.hora-celda.bloqueo-externo {
-    background-color: #343a40 !important; /* Gris Oscuro / Negro */
-    color: #adb5bd;
-    cursor: not-allowed;
-    background-image: repeating-linear-gradient(
-        45deg,
-        transparent,
-        transparent 5px,
-        #495057 5px,
-        #495057 10px
-    );
-}
-/* --- ESTILOS PARA PROMOCIONES (MEJORADOS) --- */
-
-/* La celda contenedora */
-.promo-cell {
-    vertical-align: top !important;
-    padding: 4px !important;
-    background-color: #f8f9fa; /* Fondo muy suave */
-}
-
-/* El contenedor flex para que se acomoden solas */
-.promo-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 3px; /* Espacio entre etiquetas */
-    justify-content: flex-start;
-}
-
-/* La etiqueta individual (La pastilla) */
 .promo-badge {
     background-color: #ffffff;
     border: 1px solid #dee2e6;
-    border-left: 3px solid #0d6efd; /* Un borde azul a la izquierda para decorar */
+    border-left: 3px solid #0d6efd;
     border-radius: 3px;
     color: #495057;
-    font-size: 0.9rem; /* Letra pequeña y nítida */
+    font-size: 0.7rem;
     padding: 2px 6px;
     font-weight: 600;
     box-shadow: 0 1px 1px rgba(0,0,0,0.05);
-    white-space: nowrap; /* Que no se corte el texto de la promo */
+    white-space: nowrap;
     cursor: default;
 }
+.promo-badge:hover { background-color: #e7f1ff; border-color: #0d6efd; z-index: 1; }
 
-/* Efecto al pasar el mouse para leer mejor */
-.promo-badge:hover {
-    background-color: #e7f1ff;
-    border-color: #0d6efd;
-    z-index: 1;
-}
-/* --- ESTILOS DE NOTAS --- */
+/* Botones de Nota */
 .btn-nota {
     border: none;
     background: transparent;
-    color: #ced4da; /* Gris muy claro por defecto (vacío) */
+    color: #ced4da;
     font-size: 1.1rem;
     cursor: pointer;
     transition: all 0.2s;
 }
+.btn-nota:hover { color: #0d6efd; transform: scale(1.2); }
+.btn-nota.tiene-nota { color: #fd7e14 !important; transform: scale(1.1); }
 
-.btn-nota:hover {
-    color: #0d6efd; /* Azul al pasar el mouse */
-    transform: scale(1.2);
-}
+/* Icono Feedback */
+.icono-feedback.visible { display: inline-block !important; opacity: 1 !important; }
 
-/* Estado ACTIVO (Cuando tiene texto) */
-.btn-nota.tiene-nota {
-    color: #fd7e14 !important; /* Naranja fuerte */
-    transform: scale(1.1);
-}
-/* --- VISTA LOCAL (ESTILO AGENDA) --- */
-.timeline-day {
-    position: relative;
-    padding-left: 20px;
-    margin-bottom: 30px;
-    border-left: 4px solid #dee2e6;
-}
-
-.timeline-date {
-    font-size: 1.2rem;
-    font-weight: 800;
-    color: #343a40;
-    margin-bottom: 15px;
+/* Alineación Columna Vendedor */
+.vendedor-info-container {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 10px;
+    width: 100%;
+    min-height: 40px;
 }
 
-.promo-tag-local {
-    background-color: #6610f2;
-    color: white;
-    font-size: 0.75rem;
-    padding: 3px 8px;
-    border-radius: 20px;
-    font-weight: normal;
-    letter-spacing: 0.5px;
-}
-
-/* Tarjeta de Empleado */
-.staff-card {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    padding: 15px;
-    margin-bottom: 10px;
-    border-left: 5px solid; /* El color lo define JS */
-    transition: transform 0.2s;
-}
-
-.staff-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-.staff-time {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #212529;
-}
-
-.staff-name {
-    font-size: 0.95rem;
-    color: #6c757d;
-    text-transform: uppercase;
-    font-weight: 600;
-}
-
-.staff-note {
-    background-color: #fff3cd;
-    border: 1px solid #ffecb5;
-    color: #664d03;
-    padding: 8px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    margin-top: 8px;
-    display: flex;
-    align-items: start;
-    gap: 8px;
-}
-/* --- ARREGLO VISUAL SELECT2 (Igualar a Bootstrap LG) --- */
-
-/* Contenedor principal */
+/* =========================================
+   SELECT2 (BUSCADOR)
+   ========================================= */
 .select2-container .select2-selection--single {
-    height: 48px !important; /* Altura estándar de un input-lg */
+    height: 48px !important;
     border: 1px solid #ced4da !important;
-    border-radius: 0.5rem !important; /* Bordes redondeados */
+    border-radius: 0.5rem !important;
     display: flex !important;
     align-items: center !important;
 }
 
-/* El texto dentro del select */
 .select2-container .select2-selection--single .select2-selection__rendered {
     padding-left: 15px !important;
-    font-size: 1.1rem !important; /* Tamaño de letra LG */
+    font-size: 1.1rem !important;
     color: #212529 !important;
     line-height: normal !important;
 }
 
-/* La flechita de la derecha */
 .select2-container .select2-selection--single .select2-selection__arrow {
     height: 46px !important;
     right: 10px !important;
 }
 
-/* Cuando está seleccionado/foco */
 .select2-container--bootstrap-5 .select2-selection--single:focus,
 .select2-container--default.select2-container--open .select2-selection--single {
     border-color: #86b7fe !important;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
-}
-/* Borde Violeta para Francos */
-.border-purple {
-    border-left-color: #6f42c1 !important;
-}
-
-/* Badge Franco (Opcional, para que se vea lindo) */
-.badge-franco {
-    background-color: #6f42c1;
-    color: white;
 }

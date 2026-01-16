@@ -61,4 +61,20 @@ function getConexionSistemas() {
     if ($conn === false) { die(print_r(sqlsrv_errors(), true)); }
     return $conn;
 }
+/**
+ * CONEXIÓN A RRHH (LAKERS_CORP_SA)
+ */
+function getConexionCorp() {
+    // Usamos el mismo servidor que la Central (192.168.0.143)
+    $serverName = $_ENV['HOST_SUELDOS']; 
+    $connectionInfo = array(
+        "Database" => $_ENV['DATABASE_SUELDOS'], // <--- Base Nueva
+        "UID" => $_ENV['USER'],
+        "PWD" => $_ENV['PASS_SUELDOS'],
+        "CharacterSet" => "UTF-8"
+    );
+    $conn = sqlsrv_connect($serverName, $connectionInfo);
+    if ($conn === false) { die(print_r(sqlsrv_errors(), true)); }
+    return $conn;
+}
 ?>

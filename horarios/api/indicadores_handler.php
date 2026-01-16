@@ -2,122 +2,160 @@
 header('Content-Type: application/json');
 require_once 'conexion.php';
 
-$nroSucursal = $_GET['sucursal'] ?? 0;
+$nroSucursal = $_GET['sucursal'] ?? '';
 $fechaInicio = $_GET['fechaInicio'] ?? '';
 $fechaFin = $_GET['fechaFin'] ?? '';
 
-if (!$nroSucursal || !$fechaInicio || !$fechaFin) {
+// Validación: Solo fechas obligatorias. Sucursal es opcional.
+if (!$fechaInicio || !$fechaFin) {
     echo json_encode([]);
     exit;
 }
 
 // =========================================================
-// PASO 1: Obtener CANTIDAD DE HORAS (Base Sistemas)
+// PASO 1: OBTENER HORAS (Base Sistemas)
 // =========================================================
 $connSistemas = getConexionSistemas();
 
-// Agrupamos por Vendedor y Tipo
+// Construcción dinámica de la consulta
 $sqlHorarios = "
     SELECT 
         COD_VENDED,
         TIPO_HORA,
+        NRO_SUCURSAL,
         COUNT(*) AS TOTAL_HORAS
     FROM 
         FP_GESTION_HORARIOS
     WHERE 
-        NRO_SUCURSAL = ? 
-        AND FECHA BETWEEN ? AND ?
-    GROUP BY 
-        COD_VENDED, TIPO_HORA
+        FECHA BETWEEN ? AND ?
 ";
 
-$stmt = sqlsrv_query($connSistemas, $sqlHorarios, [$nroSucursal, $fechaInicio, $fechaFin]);
+$params = [$fechaInicio, $fechaFin];
+
+// Solo filtramos por sucursal si el usuario eligió una
+if (!empty($nroSucursal)) {
+    $sqlHorarios .= " AND NRO_SUCURSAL = ?";
+    $params[] = $nroSucursal;
+}
+
+$sqlHorarios .= " GROUP BY COD_VENDED, TIPO_HORA, NRO_SUCURSAL";
+
+$stmt = sqlsrv_query($connSistemas, $sqlHorarios, $params);
 
 if ($stmt === false) {
-    // Si falla, devolvemos array vacío para que no rompa el JS
     die(json_encode([]));
 }
 
 $reporte = [];
 $listaIDs = [];
+$listaSucursalesIDs = [];
 
 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    $id = trim($row['COD_VENDED']); // Quitamos espacios
-    $tipo = strtolower($row['TIPO_HORA']); // normal, extra, devuelve
+    $id = trim($row['COD_VENDED']);
+    $sucID = intval($row['NRO_SUCURSAL']);
+    
+    // Normalizamos el tipo
+    $tipo = strtolower(trim($row['TIPO_HORA'])); 
+    if ($tipo == 'norm' || $tipo == 'normal' || $tipo == 'x') $tipo = 'normal';
+    if ($tipo == 'perm' || $tipo == 'permiso' || $tipo == 'p') $tipo = 'permiso';
+    if ($tipo == 'caja' || $tipo == 'c') $tipo = 'caja';
+    if ($tipo == 'extra' || $tipo == 'e') $tipo = 'extra';
+    if ($tipo == 'devuelve' || $tipo == 'dev' || $tipo == 'd') $tipo = 'devuelve';
+
     $cantidad = intval($row['TOTAL_HORAS']);
 
-    // Inicializamos al vendedor si no existe
-    if (!isset($reporte[$id])) {
-        $reporte[$id] = [
+    // Clave única: Vendedor + Sucursal (por si trabaja en dos lados)
+    $key = $id . '_' . $sucID;
+
+    if (!isset($reporte[$key])) {
+        $reporte[$key] = [
             'id' => $id,
-            'nombre' => "Vendedor ($id)", // Nombre temporal
-            'normal' => 0,
-            'extra' => 0,
-            'devuelve' => 0,
-            'total' => 0
+            'sucursal_id' => $sucID,
+            'sucursal_nombre' => "Sucursal $sucID", // Placeholder
+            'nombre' => "($id)",
+            'normal' => 0, 'extra' => 0, 'devuelve' => 0, 'caja' => 0, 'permiso' => 0, 'total' => 0
         ];
-        $listaIDs[] = $id; // Guardamos ID para buscar nombre después
+        $listaIDs[$id] = true; // Usamos keys para evitar duplicados
+        $listaSucursalesIDs[$sucID] = true;
     }
 
-    // Sumamos según el tipo
-    if (isset($reporte[$id][$tipo])) {
-        $reporte[$id][$tipo] += $cantidad;
+    if (isset($reporte[$key][$tipo])) {
+        $reporte[$key][$tipo] += $cantidad;
     }
-    
-    // Sumamos al total general del vendedor
-    $reporte[$id]['total'] += $cantidad;
+    $reporte[$key]['total'] += $cantidad;
 }
 sqlsrv_free_stmt($stmt);
 sqlsrv_close($connSistemas);
 
-// Si no hay datos, devolvemos vacío y terminamos
-if (empty($listaIDs)) {
+if (empty($reporte)) {
     echo json_encode([]);
     exit;
 }
 
 // =========================================================
-// PASO 2: Obtener NOMBRES REALES (Base Central)
+// PASO 2: NOMBRES VENDEDORES (Base Central / GVA23)
 // =========================================================
-$connCentral = getConexionCentral();
+if (!empty($listaIDs)) {
+    $connCentral = getConexionCentral();
+    $idsStr = implode("','", array_keys($listaIDs));
+    $sqlNom = "SELECT COD_VENDED, NOMBRE_VEN FROM GVA23 WHERE COD_VENDED IN ('$idsStr')";
+    $stmtNom = sqlsrv_query($connCentral, $sqlNom);
+    
+    $mapaNombres = [];
+    if ($stmtNom) {
+        while ($r = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
+            $nom = trim($r['NOMBRE_VEN']);
+            $nom = preg_replace('/[\s-]*[0-9]+$/', '', $nom); // Limpiar números
+            $mapaNombres[trim($r['COD_VENDED'])] = $nom;
+        }
+        sqlsrv_free_stmt($stmtNom);
+    }
+    sqlsrv_close($connCentral);
 
-// Preparamos los IDs para la consulta IN (?,?,?)
-$placeholders = implode(',', array_fill(0, count($listaIDs), '?'));
-$sqlNombres = "SELECT COD_VENDED, NOMBRE_VEN FROM GVA23 WHERE COD_VENDED IN ($placeholders)";
-
-// IMPORTANTE: Los parámetros deben ser strings para GVA23
-$paramsNombres = array_map('strval', $listaIDs);
-
-$stmtNombres = sqlsrv_query($connCentral, $sqlNombres, $paramsNombres);
-
-if ($stmtNombres) {
-    while ($row = sqlsrv_fetch_array($stmtNombres, SQLSRV_FETCH_ASSOC)) {
-        $id = trim($row['COD_VENDED']);
-        $nombreReal = $row['NOMBRE_VEN'];
-        
-        // Limpieza estética del nombre
-        // Quitamos números y guiones que suelen venir en el nombre del ERP
-        $nombreLimpio = preg_replace('/[0-9]+/', '', $nombreReal);
-        $nombreLimpio = str_replace('-', '', $nombreLimpio);
-        $nombreLimpio = trim($nombreLimpio);
-
-        if (isset($reporte[$id])) {
-            $reporte[$id]['nombre'] = $nombreLimpio;
+    // Asignar nombres al reporte
+    foreach ($reporte as $k => $v) {
+        if (isset($mapaNombres[$v['id']])) {
+            $reporte[$k]['nombre'] = $mapaNombres[$v['id']];
         }
     }
-    sqlsrv_free_stmt($stmtNombres);
 }
-sqlsrv_close($connCentral);
 
 // =========================================================
-// PASO 3: Devolver JSON
+// PASO 3: NOMBRES SUCURSALES (Base Corp / DEPARTAMENTO)
 // =========================================================
+if (!empty($listaSucursalesIDs)) {
+    // Usamos la nueva conexión a LAKERS_CORP_SA
+    $connCorp = getConexionCorp(); 
+    
+    // IDs numéricos seguros
+    $idsSucStr = implode(",", array_keys($listaSucursalesIDs));
+    
+    $sqlSuc = "SELECT ID_DEPARTAMENTO, DESC_DEPARTAMENTO FROM DEPARTAMENTO WHERE ID_DEPARTAMENTO IN ($idsSucStr)";
+    $stmtSuc = sqlsrv_query($connCorp, $sqlSuc);
+    
+    $mapaSucursales = [];
+    if ($stmtSuc) {
+        while ($r = sqlsrv_fetch_array($stmtSuc, SQLSRV_FETCH_ASSOC)) {
+            $mapaSucursales[intval($r['ID_DEPARTAMENTO'])] = trim($r['DESC_DEPARTAMENTO']);
+        }
+        sqlsrv_free_stmt($stmtSuc);
+    }
+    sqlsrv_close($connCorp);
 
-// Ordenamos alfabéticamente por nombre
+    // Asignar nombres sucursales
+    foreach ($reporte as $k => $v) {
+        if (isset($mapaSucursales[$v['sucursal_id']])) {
+            $reporte[$k]['sucursal_nombre'] = $mapaSucursales[$v['sucursal_id']];
+        }
+    }
+}
+
+// Ordenar por Sucursal y luego por Nombre
 usort($reporte, function($a, $b) {
+    $cmpSuc = strcmp($a['sucursal_nombre'], $b['sucursal_nombre']);
+    if ($cmpSuc !== 0) return $cmpSuc;
     return strcmp($a['nombre'], $b['nombre']);
 });
 
-// Devolvemos solo los valores (quitamos las claves de array asociativo)
 echo json_encode(array_values($reporte));
 ?>

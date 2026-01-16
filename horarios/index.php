@@ -19,17 +19,17 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active fw-bold" href="index.php">Gestión</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="indicadores.php">Indicadores</a>
-                    </li>
-                    <li class="nav-item">
-                         <a class="nav-link" href="comparacion.php">Asistencia</a>
-                    </li>
-                    <li class="nav-item"><a class="nav-link fw-bold text-warning" href="local.php"><i class="bi bi-shop"></i> Vista Local</a></li>
+<ul class="navbar-nav ms-auto">
+    <li class="nav-item">
+        <a class="nav-link" href="index.php">Gestión</a>
+    </li>
+    <!-- UNIFICADO -->
+    <li class="nav-item">
+        <a class="nav-link" href="rrhh.php">RRHH</a> 
+    </li>
+    <li class="nav-item">
+        <a class="nav-link text-warning" href="local.php">Mi Local</a>
+    </li>
                     <li class="nav-item ms-lg-3">
     <button class="btn btn-outline-info text-white border-white btn-sm mt-1" data-bs-toggle="modal" data-bs-target="#modalAyuda">
         <i class="bi bi-question-circle-fill"></i> Ayuda
@@ -61,17 +61,24 @@
     </div>
 
     <!-- 3. Columna Tipos de Hora (Ancho 3) -->
-    <div class="col-md-3">
+<div class="col-md-5"> <!-- Aumenté el ancho de la columna de 3 a 5 -->
         <label class="form-label fw-bold">Tipo de Hora</label>
         <div id="tipoHoraSelector" class="btn-group w-100" role="group">
+            
             <input type="radio" class="btn-check" name="tipoHora" id="tipoNormal" value="normal" autocomplete="off" checked>
-            <label class="btn btn-outline-success btn-lg" for="tipoNormal">X (NORMAL)</label> <!-- Texto corto para que entre -->
+            <label class="btn btn-outline-success" for="tipoNormal">X (NORM)</label>
+
+            <input type="radio" class="btn-check" name="tipoHora" id="tipoCaja" value="caja" autocomplete="off">
+            <label class="btn btn-outline-info" for="tipoCaja">C (CAJA)</label>
+
+            <input type="radio" class="btn-check" name="tipoHora" id="tipoPermiso" value="permiso" autocomplete="off">
+            <label class="btn btn-outline-danger" for="tipoPermiso" style="border-color:#d63384; color:#d63384;">P (PERM)</label>
 
             <input type="radio" class="btn-check" name="tipoHora" id="tipoExtra" value="extra" autocomplete="off">
-            <label class="btn btn-outline-primary btn-lg" for="tipoExtra">E (EXTRA)</label>
+            <label class="btn btn-outline-primary" for="tipoExtra">E (EXTRA)</label>
 
             <input type="radio" class="btn-check" name="tipoHora" id="tipoDevuelve" value="devuelve" autocomplete="off">
-            <label class="btn btn-outline-warning btn-lg" for="tipoDevuelve">D (DEVUELVE)</label>
+            <label class="btn btn-outline-warning" for="tipoDevuelve">D (DEV)</label>
         </div>
     </div>
     
@@ -97,7 +104,31 @@
 </div>
             </div>
         </div>
-
+<!-- LEYENDA RÁPIDA DE CÁLCULO -->
+    <div class="alert alert-light border border-secondary-subtle d-flex align-items-center py-2 mb-4 small shadow-sm" role="alert">
+        <i class="bi bi-info-circle-fill text-primary fs-4 me-3"></i>
+        <div class="d-flex flex-wrap gap-4">
+            <div>
+                <strong class="text-success">H (Normal):</strong> Horas Base + Caja + Permiso.
+            </div>
+            <div class="vr"></div> <!-- Separador vertical -->
+            <div>
+                <strong class="text-info text-dark">C (Caja):</strong> Se suma a las horas normales (H).
+            </div>
+            <div class="vr"></div>
+            <div>
+                <strong style="color:#d63384">P (Permiso):</strong> Justificación paga. Se suma a (H).
+            </div>
+            <div class="vr"></div>
+            <div>
+                <strong class="text-primary">E (Extra):</strong> Horas adicionales fuera de contrato.
+            </div>
+            <div class="vr"></div>
+            <div>
+                <strong class="text-warning text-dark">D (Devuelve):</strong> Recupero de horas adeudadas.
+            </div>
+        </div>
+    </div>
         <!-- Card de la Tabla de Horarios -->
         <div class="card shadow-sm">
  <div class="card-header d-flex justify-content-between align-items-center">
