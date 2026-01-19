@@ -90,7 +90,9 @@ $(document).ready(function() {
         // Determinar si es búsqueda por vendedor para mostrar sucursales por día
         const esBusquedaPorVendedor = $('#vendedorSelector').val();
         
-for (let i = 0; i < 7; i++) {
+// --- HEADER CON DETALLE DE SUCURSALES ---
+        
+        for (let i = 0; i < 7; i++) {
             let fechaActual = new Date(primerDia);
             fechaActual.setDate(primerDia.getDate() + i);
             const fechaISO = fechaActual.toISOString().split('T')[0];
@@ -99,30 +101,46 @@ for (let i = 0; i < 7; i++) {
             const diaNum = String(fechaActual.getDate()).padStart(2, '0');
             const mesNum = String(fechaActual.getMonth() + 1).padStart(2, '0');
             
-            // --- Lógica para mostrar la sucursal del día ---
-            let badgeSucursal = '';
-            // Si hay un vendedor seleccionado en el filtro...
+            let infoSucursalesHTML = "";
+
+            // Solo si filtramos por vendedor, mostramos el detalle
             if ($('#vendedorSelector').val()) {
-                // ...tomamos el ID de ese único vendedor
                 const idVendedor = Object.keys(agenda)[0];
-                const datosVendedor = agenda[idVendedor];
-                
-                // Buscamos si tiene sucursal asignada ESE DÍA en particular
-                if (datosVendedor && datosVendedor.sucursales_por_dia && datosVendedor.sucursales_por_dia[fechaISO]) {
-                    const sucID = datosVendedor.sucursales_por_dia[fechaISO];
+                const datos = agenda[idVendedor];
+
+                if (datos && datos.sucursal_detalle && datos.sucursal_detalle[fechaISO]) {
+                    // Agrupar horas por sucursal
+                    // Ej: { 45: [10,11,12], 66: [15,16] }
+                    let sucursalesDia = {};
                     
-                    // Traducimos el ID (ej: 45) a su nombre ("ABASTO") usando el mapa
-                    const nomSuc = nombresSucursales[sucID] || `Suc. ${sucID}`;
-                    
-                    // Creamos la etiqueta HTML del badge
-                    badgeSucursal = `<br><span class="badge bg-dark fw-normal">${nomSuc}</span>`;
+                    for (const [hora, sucID] of Object.entries(datos.sucursal_detalle[fechaISO])) {
+                        if (!sucursalesDia[sucID]) sucursalesDia[sucID] = [];
+                        sucursalesDia[sucID].push(parseInt(hora));
+                    }
+
+                    // Generar etiquetas
+                    let badges = [];
+                    for (const [sucID, horas] of Object.entries(sucursalesDia)) {
+                        const nombreSuc = nombresSucursales[sucID] || `Suc ${sucID}`;
+                        
+                        // Calcular rango (min - max+1)
+                        horas.sort((a,b) => a-b);
+                        const min = horas[0];
+                        const max = horas[horas.length - 1] + 1;
+                        const rango = `${min}-${max}`;
+
+                        badges.push(`<div class="badge bg-dark fw-normal d-block mt-1" style="font-size:0.65rem; white-space:normal;">
+                                        ${nombreSuc} (${rango})
+                                     </div>`);
+                    }
+                    infoSucursalesHTML = badges.join('');
                 }
             }
             
-            // Construimos la celda del encabezado (th) con la fecha y el badge (si existe)
-            htmlHeader += `<th colspan="18" style="border-left: 2px solid #dee2e6;">
-                                ${diasSemanaNombres[i]} ${diaNum}/${mesNum}
-                                ${badgeSucursal}
+            // Construir TH
+            htmlHeader += `<th colspan="18" style="border-left: 2px solid #dee2e6; vertical-align: top;">
+                                <div class="mb-1">${diasSemanaNombres[i]} ${diaNum}/${mesNum}</div>
+                                ${infoSucursalesHTML}
                            </th>`;
         }
         
@@ -194,10 +212,31 @@ for (let i = 0; i < 7; i++) {
                 
                 let styleBorder = (index > 0) ? 'border-left: 2px solid #dee2e6;' : '';
                 
+// A. Horas (Con color diferente si es otra sucursal)
                 for (let h = 7; h <= 22; h++) {
                     let clase = '', texto = '', extraStyle = (h==7) ? styleBorder : '';
-                    if (esFranco) clase = 'dia-franco';
-                    else if (datos.horarios && datos.horarios[fecha] && datos.horarios[fecha][h]) {
+                    let tooltip = '';
+
+                    // Detectar si hay cambio de sucursal
+                    let sucursalHoraID = 0;
+                    if (datos.sucursal_detalle && datos.sucursal_detalle[fecha] && datos.sucursal_detalle[fecha][h]) {
+                        sucursalHoraID = datos.sucursal_detalle[fecha][h];
+                    }
+
+                    // Si hay filtro de vendedor y la sucursal de esta hora es distinta a la "base"
+                    // Le ponemos un borde rojo fuerte para destacar.
+                    if ($('#vendedorSelector').val() && sucursalHoraID > 0 && sucursalHoraID !== datos.sucursal_defecto) {
+                        extraStyle += ' border: 2px solid #dc3545 !important;'; 
+                        
+                        // Buscamos el nombre para el tooltip
+                        const nomSuc = nombresSucursales[sucursalHoraID] || `Suc ${sucursalHoraID}`;
+                        tooltip = ` title="En: ${nomSuc}"`;
+                    }
+
+                    // Asignar clases normales
+                    if (esFranco) {
+                        clase = 'dia-franco';
+                    } else if (datos.horarios && datos.horarios[fecha] && datos.horarios[fecha][h]) {
                         const tipo = datos.horarios[fecha][h];
                         if (tipo === 'extra') { clase = 'hora-extra'; texto = 'E'; }
                         else if (tipo === 'devuelve') { clase = 'hora-devuelve'; texto = 'D'; }
@@ -205,7 +244,11 @@ for (let i = 0; i < 7; i++) {
                         else if (tipo === 'caja') { clase = 'hora-caja'; texto = 'C'; }
                         else { clase = 'marcado'; texto = 'X'; }
                     }
-                    htmlBody += `<td class="hora-celda ${clase}" style="pointer-events:none; ${extraStyle}" title="${notaDiaria || ''}">${texto}</td>`;
+                    
+                    // Si ya había tooltip de nota, ese gana
+                    const titleFinal = (notaDiaria && notaDiaria.trim() !== '') ? `Nota: ${notaDiaria}` : tooltip;
+
+                    htmlBody += `<td class="hora-celda ${clase}" style="pointer-events:none; ${extraStyle}" ${titleFinal}>${texto}</td>`;
                 }
                 
 // B. Franco (Celda Violeta Sólida)

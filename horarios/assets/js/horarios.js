@@ -319,7 +319,7 @@ function generarTablaHorarios(vendedores, semana) {
              badgeRefuerzo = ' <span class="badge bg-warning text-dark" style="font-size:0.7em">Refuerzo</span>';
         }
 
-        bodyHTML += `<tr data-vendedor-id="${vendedorId}">`;
+        bodyHTML += `<tr data-vendedor-id="${vendedorId}" data-nombre="${vendedor.NOMBRE_VEN}">`;
         
         // Columna Nombre
         bodyHTML += `<td class="fw-bold text-start ps-2">
@@ -604,7 +604,7 @@ function mostrarModal(mensaje, tipo = 'success') {
         icono.html('<i class="bi bi-exclamation-triangle-fill text-warning"></i>');
     }
 
-    texto.text(mensaje);
+    texto.html(mensaje); // Usamos .html() para que reconozca <br> y <b>
     new bootstrap.Modal(modalEl).show();
 }
 
@@ -742,7 +742,12 @@ function getPrimerDiaDeSemana(year, week) {
         // 1. VALIDACIONES
         // =========================================================
         $('tbody tr').each(function() {
-            const nombre = $(this).closest('tr').find('td:first .text-truncate div:first-child').text();
+           // Leemos del atributo data, si falla, intentamos leer del HTML visual
+let nombre = $(this).data('nombre');
+if (!nombre || nombre === "undefined") {
+    // Fallback al texto visual
+    nombre = $(this).find('td:first .text-truncate > div').first().text().trim();
+}
             
             // Leemos el total H que ya calculamos visualmente (Suma Local + Externo)
             const totalH_Semanal = parseInt($(this).find('.total-n').text()) || 0; 

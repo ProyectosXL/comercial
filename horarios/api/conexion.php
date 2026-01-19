@@ -16,7 +16,7 @@ function load_env($path) {
 }
 
 // CAMBIO: Apuntamos dos niveles arriba para llegar a /COMERCIAL/
-load_env(__DIR__ . '/../../.env');
+load_env(__DIR__ . '/../../.env2');
 
 function getConexionLocales() {
     $serverName = $_ENV['HOST_LOCALES'];

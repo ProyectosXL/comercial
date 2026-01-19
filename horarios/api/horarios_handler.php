@@ -81,6 +81,90 @@ function guardarDatos($usuario) {
             }
         }
     }
+
+// --- VALIDACIÓN DE SALDO DE HORAS (P vs D) ---
+    // Regla: No se puede devolver (D) más de lo que se pidió (P) históricamente.
+
+    // 1. Identificar si hay devoluciones en lo que se quiere guardar
+    $vendedoresConDevolucion = [];
+    foreach ($horarios as $h) {
+        if ($h['tipo'] === 'devuelve') {
+            $vendedoresConDevolucion[$h['codVended']] = true;
+        }
+    }
+
+    if (!empty($vendedoresConDevolucion)) {
+        foreach (array_keys($vendedoresConDevolucion) as $legajo) {
+            
+            // A. Calcular Histórico en Base de Datos (EXCLUYENDO la semana actual)
+            $sqlSaldo = "
+                SELECT TIPO_HORA, COUNT(*) as CANTIDAD
+                FROM FP_GESTION_HORARIOS
+                WHERE COD_VENDED = ? 
+                AND (FECHA < ? OR FECHA > ?) 
+                AND (TIPO_HORA = 'permiso' OR TIPO_HORA = 'devuelve')
+                GROUP BY TIPO_HORA
+            ";
+            
+            $stmtSaldo = sqlsrv_query($conn, $sqlSaldo, [$legajo, $fechaInicio, $fechaFin]);
+            
+            $historialP = 0;
+            $historialD = 0;
+            
+            if ($stmtSaldo) {
+                while ($row = sqlsrv_fetch_array($stmtSaldo, SQLSRV_FETCH_ASSOC)) {
+                    $t = strtolower(trim($row['TIPO_HORA']));
+                    if ($t === 'permiso' || $t === 'perm' || $t === 'p') $historialP = intval($row['CANTIDAD']);
+                    if ($t === 'devuelve' || $t === 'dev' || $t === 'd') $historialD = intval($row['CANTIDAD']);
+                }
+                sqlsrv_free_stmt($stmtSaldo);
+            }
+
+            // B. Sumar lo Nuevo (Lo que viene del formulario para esta semana)
+            $nuevoP = 0;
+            $nuevoD = 0;
+            foreach ($horarios as $h) {
+                if ($h['codVended'] == $legajo) {
+                    if ($h['tipo'] === 'permiso') $nuevoP++;
+                    if ($h['tipo'] === 'devuelve') $nuevoD++;
+                }
+            }
+
+            // C. Validación Matemática
+            $totalP = $historialP + $nuevoP;
+            $totalD = $historialD + $nuevoD;
+            $saldo = $totalP - $totalD;
+
+if ($saldo < 0) {
+                // --- BUSCAR NOMBRE PARA EL ERROR (LÓGICA CORREGIDA) ---
+                $connNombres = getConexionCorp(); 
+                $nombreError = "Vendedor $legajo";
+
+                // Usamos 'BLOQUE' como el identificador del vendedor
+                $sqlNom = "SELECT NOMBRE, APELLIDO FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE = ?";
+                $stmtNom = sqlsrv_query($connNombres, $sqlNom, [strval($legajo)]);
+                
+                if ($stmtNom !== false) {
+                    if ($rowNom = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
+                        $nombreError = trim($rowNom['APELLIDO']) . ' ' . trim($rowNom['NOMBRE']);
+                        $nombreError = utf8_encode($nombreError);
+"";
+                "";
+                    }
+                    sqlsrv_free_stmt($stmtNom);
+                }
+                
+                sqlsrv_close($connNombres);
+                sqlsrv_close($conn); 
+
+                die(json_encode([
+                    'status' => 'error',
+                    'message' => "ERROR DE SALDO: <b>$nombreError</b> intenta devolver $nuevoD horas, pero su saldo histórico no lo permite.<br><br>Histórico Pedido (P): $historialP<br>Histórico Devuelto (D): $historialD<br>Saldo Disponible: " . ($historialP - $historialD) . "<br><br>No alcanza para cubrir las $nuevoD horas nuevas."
+                ]));
+            }
+        }
+    }
+
     // --- SI PASA LA VALIDACIÓN, GUARDAMOS ---
     if (sqlsrv_begin_transaction($conn) === false) {
         die(json_encode(['status' => 'error', 'message' => 'Error transacción.']));

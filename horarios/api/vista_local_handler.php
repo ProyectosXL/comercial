@@ -72,17 +72,23 @@ try {
             $vendedoresIds[$id] = true;
             $sucursalesInvolucradas[$suc] = true;
 
-    if (!isset($agenda[$id])) {
+if (!isset($agenda[$id])) {
                 $agenda[$id] = [
                     'horarios' => [], 
                     'francos' => [], 
                     'notas' => [], 
                     'feedback' => '', 
-                    'sucursales_por_dia' => [] // <--- ARRAY NUEVO
+                    'sucursal_detalle' => [] // CAMBIO DE NOMBRE: Ahora es detalle por hora
                 ];
             }
             $agenda[$id]['horarios'][$fecha][$row['HORA']] = strtolower($row['TIPO_HORA']);
-            $agenda[$id]['sucursales_por_dia'][$fecha] = $suc; // <--- GUARDAMOS LA SUCURSAL DEL DÍA
+            
+            // Guardamos la sucursal específica para esa HORA
+            // Estructura: [fecha][hora] = id_sucursal
+            if (!isset($agenda[$id]['sucursal_detalle'][$fecha])) {
+                $agenda[$id]['sucursal_detalle'][$fecha] = [];
+            }
+            $agenda[$id]['sucursal_detalle'][$fecha][intval($row['HORA'])] = $suc;
         }
         sqlsrv_free_stmt($stmtH);
     }
@@ -221,12 +227,14 @@ if ($stmtFeed) {
     // =========================================================
     $nombresSucursales = [];
 
-    // 1. Recolectar IDs únicos de sucursales de la agenda
+// 1. Recolectar IDs únicos de sucursales de la agenda (Estructura Detallada)
     $idsDeSucursales = [];
     foreach($agenda as $legajoData) {
-        if(isset($legajoData['sucursales_por_dia'])) {
-            foreach($legajoData['sucursales_por_dia'] as $sucId) {
-                if ($sucId > 0) $idsDeSucursales[$sucId] = true;
+        if(isset($legajoData['sucursal_detalle'])) {
+            foreach($legajoData['sucursal_detalle'] as $dia => $horas) {
+                foreach($horas as $h => $sucId) {
+                    if ($sucId > 0) $idsDeSucursales[$sucId] = true;
+                }
             }
         }
     }
