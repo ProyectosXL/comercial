@@ -159,7 +159,7 @@ if ($saldo < 0) {
 
                 die(json_encode([
                     'status' => 'error',
-                    'message' => "ERROR DE SALDO: <b>$nombreError</b> intenta devolver $nuevoD horas, pero su saldo histórico no lo permite.<br><br>Histórico Pedido (P): $historialP<br>Histórico Devuelto (D): $historialD<br>Saldo Disponible: " . ($historialP - $historialD) . "<br><br>No alcanza para cubrir las $nuevoD horas nuevas."
+                    'message' => "ERROR DE SALDO: <b>$nombreError</b> intenta devolver $nuevoD horas, pero su saldo histórico no lo permite.<br><br>Histórico Pedido (P): $historialP<br>Histórico Devuelto (D): $historialD<br>Saldo Disponible: " . ($historialP - $historialD) . "<br><br>Se esta solicitando devolver más de lo pedido."
                 ]));
             }
         }

@@ -1,4 +1,8 @@
 <?php
+
+set_time_limit(120);
+
+
 header('Content-Type: application/json');
 require_once 'conexion.php';
 
@@ -113,6 +117,7 @@ $ch = curl_init($fullUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
+curl_setopt($ch, CURLOPT_TIMEOUT, 120);
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

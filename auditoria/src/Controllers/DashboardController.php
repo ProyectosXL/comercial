@@ -143,8 +143,33 @@ class DashboardController extends BaseController {
 
                 // Notificar a Gerencia si es Derivado
                 if ($nuevoEstado === 'Derivado a Gerencia') {
+                    // 1. Formatear el Importe
+                    // Asumo que el campo en la BD se llama 'importe'. Si se llama 'monto', cambialo aquí.
+                    $importeRaw = $auditoria['importe'] ?? 0; 
+                    $importeFormateado = '$ ' . number_format($importeRaw, 2, ',', '.');
+
+                    // 2. Generar el Link
+                    // Construimos la URL basándonos en tu estructura de carpetas
+                    // Si el dominio cambia, podés usar $_SERVER['HTTP_HOST'] o dejarlo fijo
+                    $dominio = "https://app.xl.com.ar"; 
+                    $linkAuditoria = "{$dominio}/comercial/auditoria/public/dashboard/detalle?id={$id}";
+
                     $asuntoGerencia = "Auditoría Derivada para su Revisión - #" . $id;
-                    $cuerpoGerencia = "El Asistente Comercial ha derivado la auditoría #{$id} para su revisión final.<br><br><strong>Sucursal:</strong> {$nombreSucursal}<br><strong>Motivo:</strong> {$auditoria['motivo']}";
+                    
+                    // 3. Armar el cuerpo del correo con Importe y Botón
+                    $cuerpoGerencia = "El Asistente Comercial ha derivado la auditoría #{$id} para su revisión final.<br><br>";
+                    $cuerpoGerencia .= "<strong>Sucursal:</strong> {$nombreSucursal}<br>";
+                    $cuerpoGerencia .= "<strong>Motivo:</strong> {$auditoria['motivo']}<br>";
+                    $cuerpoGerencia .= "<strong>Importe:</strong> <span style='color: #d9534f;'>{$importeFormateado}</span><br>";
+                    
+                    if($detalleComentario) {
+                        $cuerpoGerencia .= "<strong>Observaciones:</strong> " . htmlspecialchars($detalleComentario) . "<br>";
+                    }
+
+                    $cuerpoGerencia .= "<br><br>";
+                    $cuerpoGerencia .= "<a href='{$linkAuditoria}' style='background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;'>Ir a la Auditoría</a>";
+                    $cuerpoGerencia .= "<br><br><small>Si el botón no funciona, copia y pega este link: {$linkAuditoria}</small>";
+
                     $notificationService->sendEmail($emailGerencia, $asuntoGerencia, $cuerpoGerencia);
                 }
                 
