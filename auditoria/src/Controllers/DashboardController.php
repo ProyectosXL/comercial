@@ -13,14 +13,11 @@ class DashboardController extends BaseController {
         $auditModel = new AuditModel();
         $ventaModel = new VentaModel();
 
-        // --- CÓDIGO NUEVO: Filtros Predeterminados ---
-        // Si no se han enviado parámetros GET (es la primera carga), aplicamos defaults
         if (!isset($_GET['estado']) && !isset($_GET['fecha_desde'])) {
             $_GET['estado'] = 'Pendiente';
-            $_GET['fecha_desde'] = date('Y-m-01'); // Primer día del mes actual
-            $_GET['fecha_hasta'] = date('Y-m-d');  // Hoy
+            $_GET['fecha_desde'] = date('Y-m-01'); 
+            $_GET['fecha_hasta'] = date('Y-m-d');  
         }
-        // ---------------------------------------------
 
         $filters = [
             'sucursal' => $_GET['sucursal'] ?? null,
@@ -48,13 +45,25 @@ class DashboardController extends BaseController {
         require_once __DIR__ . '/../Models/AuditModel.php';
         require_once __DIR__ . '/../Models/VentaModel.php';
         require_once __DIR__ . '/../Models/AuditHistoryModel.php';
+        
         $auditModel = new AuditModel();
         $ventaModel = new VentaModel();
         $historyModel = new AuditHistoryModel();
+        
         $auditoria = $auditModel->getAuditById($id);
         if (!$auditoria) {
             die("Error: Auditoría no encontrada con el ID #" . htmlspecialchars($id));
         }
+
+        // --- CORRECCIÓN VISUAL: FORZAR EL IMPORTE REAL ---
+        // Consultamos PowerBI para obtener el importe original correcto
+        $datosReales = $ventaModel->getOperacionPorNComp($auditoria['n_comp']);
+        if ($datosReales) {
+            // Sobreescribimos el importe visual con el dato real (Ej: -8000 en vez de 59900)
+            $auditoria['importe'] = $datosReales['IMPORTE'];
+        }
+        // -------------------------------------------------
+
         $sucursales = $ventaModel->getSucursales();
         $nroSucursal = $auditoria['nro_sucursal'];
         $auditoria['DESC_SUCURSAL'] = $sucursales[$nroSucursal] ?? 'Desconocida';
@@ -62,30 +71,24 @@ class DashboardController extends BaseController {
         require_once __DIR__ . '/../Views/dashboard/detalle.php';
     }
 
-    // --- NUEVA FUNCIÓN: APROBACIÓN MASIVA ---
     public function aprobarMasivo() {
         require_once __DIR__ . '/../Models/AuditHistoryModel.php';
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['ids'])) {
-            $ids = $_POST['ids']; // Array de IDs seleccionados
+            $ids = $_POST['ids']; 
             $auditModel = new AuditModel();
             $historyModel = new AuditHistoryModel();
             $usuario = $_SESSION['user']['name'] ?? 'Sistema';
 
             foreach ($ids as $id) {
-                // Actualizamos a 'Aprobado'
                 if ($auditModel->updateAuditStatus($id, 'Aprobado')) {
-                    // Guardamos en el historial
                     $historyModel->registrarAccion($id, $usuario, "Cambio de estado a: Aprobado", "Aprobación Masiva desde Listado");
                 }
             }
         }
-
-        // Redirigir al dashboard
         header('Location: /comercial/auditoria/public/dashboard');
         exit();
     }
-    // ----------------------------------------
 
     public function actualizarEstado() {
         require_once __DIR__ . '/../Models/AuditHistoryModel.php';
@@ -121,7 +124,11 @@ class DashboardController extends BaseController {
                 $emailsRRHH_String = 'barbara.galmarini@xl.com.ar,natalia.fuentes@xl.com.ar,ignacio.gouiric@xl.com.ar';
                 $emailGerencia = 'johanna.bolig@xl.com.ar';
 
-                // Notificar a la sucursal
+                // --- CORRECCIÓN EN MAILS: Usar también el importe real aquí ---
+                $datosReales = $ventaModel->getOperacionPorNComp($auditoria['n_comp']);
+                $importeRealEmail = $datosReales ? $datosReales['IMPORTE'] : $auditoria['importe'];
+                // -------------------------------------------------------------
+
                 if (($nuevoEstado === 'Aprobado' || $nuevoEstado === 'Rechazado') && !empty($emailSucursal)) {
                     $asuntoSucursal = "Resolución Auditoría #{$id} - {$auditoria['n_comp']}";
                     $cuerpoSucursal = "Hola <strong>{$nombreSucursal}</strong>,<br><br>Su solicitud de auditoría #{$id} ha sido resuelta con el estado: <strong>{$nuevoEstado}</strong>.";
@@ -131,7 +138,6 @@ class DashboardController extends BaseController {
                     $notificationService->sendEmail($emailSucursal, $asuntoSucursal, $cuerpoSucursal);
                 }
 
-                // Notificar a RRHH si es Rechazado
                 if ($nuevoEstado === 'Rechazado') {
                     $asuntoRRHH = "Auditoría Rechazada - #" . $id;
                     $cuerpoRRHH = "La auditoría #{$id} de la sucursal <strong>{$nombreSucursal}</strong> ha sido rechazada.";
@@ -147,10 +153,8 @@ class DashboardController extends BaseController {
                     }
                 }
 
-                // Notificar a Gerencia si es Derivado
                 if ($nuevoEstado === 'Derivado a Gerencia') {
-                    $importeRaw = $auditoria['importe'] ?? 0; 
-                    $importeFormateado = '$ ' . number_format($importeRaw, 2, ',', '.');
+                    $importeFormateado = '$ ' . number_format($importeRealEmail, 2, ',', '.');
                     $dominio = "https://app.xl.com.ar"; 
                     $linkAuditoria = "{$dominio}/comercial/auditoria/public/dashboard/detalle?id={$id}";
 

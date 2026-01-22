@@ -4,7 +4,7 @@
 <hr>
 
 <!-- ALERTA DE RECHAZO: Solo aparece si estamos corrigiendo -->
-<?php if (isset($justificacionPrevia) && $justificacionPrevia['estado'] === 'Rechazado'): ?>
+<?php if ($justificacionPrevia && $justificacionPrevia['estado'] === 'Rechazado'): ?>
     <div class="alert alert-warning border-warning shadow-sm">
         <h4><i class="fas fa-exclamation-triangle"></i> Solicitud Rechazada</h4>
         <p>Esta justificación fue rechazada anteriormente. Los datos han sido precargados para que pueda corregirlos y volver a enviarla.</p>
