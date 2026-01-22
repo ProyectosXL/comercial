@@ -25,7 +25,7 @@ class Venta
             $hasta = date('Y-m-d');
         }
 
-        $sql = "EXEC [LAKERBIS].[LOCALES_LAKERS].[dbo].[SJ_VENTAS_LOCALES_PROPIOS_MOBILE] @DESDE = ?, @HASTA = ?, @SUC = ?";
+        $sql = "EXEC [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].[SJ_VENTAS_LOCALES_PROPIOS_MOBILE] @DESDE = ?, @HASTA = ?, @SUC = ?";
         $params = array($desde, $hasta, $suc);
         
         // Habilitar el manejo de errores de SQL Server
@@ -67,7 +67,7 @@ class Venta
         $desde = $desde ? date('Y-m-d', strtotime($desde)) : date('Y-m-d', strtotime('-30 days'));
         $hasta = $hasta ? date('Y-m-d', strtotime($hasta)) : date('Y-m-d');
     
-        $sql = "EXEC [LAKERBIS].[FRANQUICIAS_LAKERS].[dbo].[SJ_VENTAS_FRANQUICIAS_MOBILE] @DESDE = ?, @HASTA = ?, @SUC = ?";
+        $sql = "EXEC [XL-LAKERBIS].[FRANQUICIAS_LAKERS].[dbo].[SJ_VENTAS_FRANQUICIAS_MOBILE] @DESDE = ?, @HASTA = ?, @SUC = ?";
         $params = array($desde, $hasta, $suc);
         
         // Habilitar el manejo de errores de SQL Server
@@ -151,7 +151,7 @@ class Venta
             $hasta = date('Y-m-d');
         }
 
-        $sql = "EXEC [LAKERBIS].[LOCALES_LAKERS].[dbo].[SJ_VENTAS_LOCALES_TODOS_MOBILE] @DESDE = ?, @HASTA = ?, @SUC = ?";
+        $sql = "EXEC [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].[SJ_VENTAS_LOCALES_TODOS_MOBILE] @DESDE = ?, @HASTA = ?, @SUC = ?";
         $params = array($desde, $hasta, $suc);
         
         // Habilitar el manejo de errores de SQL Server
@@ -193,7 +193,7 @@ class Venta
             $hasta = date('Y-m-d');
         }
 
-        $sql = "EXEC [192.168.0.143,1433].[POWER_BI_CONTROL].[dbo].[RO_SP_VENTAS_VS_OBJETIVOS_PROPIOS_PPP] @DESDE = ?, @HASTA = ?";
+        $sql = "EXEC [XL–APPS].[POWER_BI_CONTROL].[dbo].[RO_SP_VENTAS_VS_OBJETIVOS_PROPIOS_PPP] @DESDE = ?, @HASTA = ?";
         $params = array($desde, $hasta);
         
         // Habilitar el manejo de errores de SQL Server
@@ -235,7 +235,7 @@ class Venta
             $hasta = date('Y-m-d');
         }
 
-        $sql = "EXEC [192.168.0.143,1433].[POWER_BI_CONTROL].[dbo].[RO_SP_VENTAS_VS_OBJETIVOS_PROPIOS_PPP_CUMP_OBJ] @DESDE = ?, @HASTA = ?";
+        $sql = "EXEC [XL-APPS].[POWER_BI_CONTROL].[dbo].[RO_SP_VENTAS_VS_OBJETIVOS_PROPIOS_PPP_CUMP_OBJ] @DESDE = ?, @HASTA = ?";
         $params = array($desde, $hasta);
         
         // Habilitar el manejo de errores de SQL Server
@@ -278,7 +278,7 @@ class Venta
             $hasta = date('Y-m-d');
         }
 
-        $sql = "EXEC [192.168.0.143,1433].[POWER_BI_CONTROL_FRANQUICIAS].[dbo].[RO_SP_VENTAS_VS_OBJETIVOS_FRANQUICIAS_PPP] @DESDE = ?, @HASTA = ?";
+        $sql = "EXEC [XL-APPS].[POWER_BI_CONTROL_FRANQUICIAS].[dbo].[RO_SP_VENTAS_VS_OBJETIVOS_FRANQUICIAS_PPP] @DESDE = ?, @HASTA = ?";
         $params = array($desde, $hasta);
         
         // Habilitar el manejo de errores de SQL Server
@@ -320,7 +320,7 @@ class Venta
             $hasta = date('Y-m-d');
         }
 
-        $sql = "EXEC [192.168.0.143,1433].[POWER_BI_CONTROL_URUGUAY].[dbo].[RO_SP_VENTAS_VS_OBJETIVOS_URUGUAY_PPP] @DESDE = ?, @HASTA = ?";
+        $sql = "EXEC [XL-APPS].[POWER_BI_CONTROL_URUGUAY].[dbo].[RO_SP_VENTAS_VS_OBJETIVOS_URUGUAY_PPP] @DESDE = ?, @HASTA = ?";
         $params = array($desde, $hasta);
         
         // Habilitar el manejo de errores de SQL Server
@@ -362,7 +362,7 @@ class Venta
             $hasta = date('Y-m-d');
         }
 
-        $sql = "EXEC [192.168.0.143,1433].[POWER_BI_CONTROL].[dbo].[RO_SP_VENTAS_VS_OBJETIVOS_TODOS_PPP] @DESDE = ?, @HASTA = ?";
+        $sql = "EXEC [XL-APPS].[POWER_BI_CONTROL].[dbo].[RO_SP_VENTAS_VS_OBJETIVOS_TODOS_PPP] @DESDE = ?, @HASTA = ?";
         $params = array($desde, $hasta);
         
         // Habilitar el manejo de errores de SQL Server

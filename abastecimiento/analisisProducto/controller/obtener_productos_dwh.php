@@ -55,12 +55,12 @@ try {
                 CantVenta AS CANT_VENTA, 
                 VentaTotal AS IMP_VENTA
             FROM 
-                [LAKERBIS].[LOCALES_LAKERS].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL
+                [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL
             WHERE 
                 $where";
 
     $articulo = new Articulo();
-    // Reutilizamos el método de Articulo.php, que ahora se conecta a LAKERBIS
+    // Reutilizamos el método de Articulo.php, que ahora se conecta a XL-LAKERBIS
     $resultados = $articulo->retornarArray($sql);
 
     echo json_encode($resultados);

@@ -11,7 +11,7 @@ class LocalModel {
     }
 
     public function getSucursales() {
-        $sql = "SELECT NRO_SUCURSAL ID_SUCURSAL, COD_CLIENT, DESC_SUCURSAL FROM [LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS WHERE HABILITADO = 1 ORDER BY NRO_SUCURSAL";
+        $sql = "SELECT NRO_SUCURSAL ID_SUCURSAL, COD_CLIENT, DESC_SUCURSAL FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS WHERE HABILITADO = 1 ORDER BY NRO_SUCURSAL";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -22,7 +22,7 @@ class LocalModel {
         $orderBy = in_array($orderBy, $validColumns) ? $orderBy : 'NRO_SUCURS';
         $orderDir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
 
-        $sql = "SELECT sm.NRO_SUCURS, sm.M2_VENTA, sm.M2_DEPOSITO, sm.M2_BAULERA, s.COD_CLIENT, s.DESC_SUCURSAL AS NOMBRE_SUCURSAL FROM FP_T_SUCURSALES_MEDIDAS sm LEFT JOIN [LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS s ON sm.NRO_SUCURS = CAST(s.NRO_SUCURSAL AS INT)";
+        $sql = "SELECT sm.NRO_SUCURS, sm.M2_VENTA, sm.M2_DEPOSITO, sm.M2_BAULERA, s.COD_CLIENT, s.DESC_SUCURSAL AS NOMBRE_SUCURSAL FROM FP_T_SUCURSALES_MEDIDAS sm LEFT JOIN [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS s ON sm.NRO_SUCURS = CAST(s.NRO_SUCURSAL AS INT)";
         
         $params = [];
         if ($filterSucursal) {

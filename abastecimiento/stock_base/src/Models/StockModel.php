@@ -23,7 +23,7 @@ class StockModel {
 
     public function getSucursales() {
         $sql = "SELECT NRO_SUCURSAL ID_SUCURSAL, COD_CLIENT, DESC_SUCURSAL
-                FROM [LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS
+                FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS
                 WHERE HABILITADO = 1 ORDER BY NRO_SUCURSAL";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute();
@@ -39,7 +39,7 @@ public function getStockBase($filterSucursal = null, $filterRubro = null, $order
                 ISNULL(sb.Nombre_Sucursal, suc.DESC_SUCURSAL) AS Nombre_Sucursal,
                 ISNULL(sb.Nombre_Rubro, rub.DESCRIP) AS Nombre_Rubro
             FROM EB_StockBase sb
-            LEFT JOIN [LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS suc 
+            LEFT JOIN [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS suc 
                 ON sb.Codigo_Sucursal = CAST(suc.NRO_SUCURSAL AS INT)
             LEFT JOIN STA11FLD rub 
                 ON sb.Id_Rubro = CAST(rub.IDFOLDER AS INT)
@@ -68,7 +68,7 @@ public function getStockBase($filterSucursal = null, $filterRubro = null, $order
 
     public function addStock($codigoSucursal, $idRubro, $stockBase) {
         try {
-            $sqlSuc = "SELECT COD_CLIENT, DESC_SUCURSAL FROM [LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS WHERE NRO_SUCURSAL = :sucursal";
+            $sqlSuc = "SELECT COD_CLIENT, DESC_SUCURSAL FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS WHERE NRO_SUCURSAL = :sucursal";
             $stmtSuc = $this->pdo->prepare($sqlSuc);
             $stmtSuc->execute([':sucursal' => $codigoSucursal]);
             $sucursal = $stmtSuc->fetch(PDO::FETCH_ASSOC);
@@ -99,7 +99,7 @@ public function getStockBase($filterSucursal = null, $filterRubro = null, $order
 
     public function updateStock($codigoSucursal, $idRubro, $stockBase) {
          try {
-            $sqlSuc = "SELECT COD_CLIENT, DESC_SUCURSAL FROM [LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS WHERE NRO_SUCURSAL = :sucursal";
+            $sqlSuc = "SELECT COD_CLIENT, DESC_SUCURSAL FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS WHERE NRO_SUCURSAL = :sucursal";
             $stmtSuc = $this->pdo->prepare($sqlSuc);
             $stmtSuc->execute([':sucursal' => $codigoSucursal]);
             $sucursal = $stmtSuc->fetch(PDO::FETCH_ASSOC);

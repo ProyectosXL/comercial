@@ -23,7 +23,7 @@ class Conexion{
     function __construct(){
         require_once(__DIR__.'/classEnv.php');
 
-        $vars = new DotEnv(__DIR__ . '/../../.env');
+        $vars = new DotEnv(__DIR__ . '/../../../.env');
         $this->envVars = $vars->listVars();
         
         $this->host_central = $this->envVars['HOST_CENTRAL'];
@@ -40,7 +40,7 @@ class Conexion{
         $this->pass_locales = $this->envVars['PASS_LOCALES'];
         $this->character = $this->envVars['CHARACTER'];
         $this->env = $this->envVars['ENV'];
-        $this->prefix = ($this->env == 'DEV') ? '[LAKERBIS].locales_lakers.dbo.' : '';
+        $this->prefix = ($this->env == 'DEV') ? '[XL-LAKERBIS].locales_lakers.dbo.' : '';
     }
 
     private function servidor($nameServer) {
@@ -82,7 +82,7 @@ class Conexion{
             
             error_log("Intentando conectar a: " . $serverDB[0] . " - " . $serverDB[1]);
 
-            if($this->env == 'PROD' && (strtolower($serverDB[0]) == strtolower('lakerbis'))){
+            if($this->env == 'PROD' && (strtolower($serverDB[0]) == strtolower('XL-LAKERBIS'))){
                 $pass = $this->pass_locales;
             } else {
                 $pass = $this->pass;
@@ -136,7 +136,7 @@ class Conexion{
             
             error_log("Intentando conectar PDO a: " . $serverDB[0] . " - " . $serverDB[1]);
 
-            if($this->env == 'PROD' && (strtolower($serverDB[0]) == strtolower('lakerbis'))){
+            if($this->env == 'PROD' && (strtolower($serverDB[0]) == strtolower('XL-LAKERBIS'))){
                 $pass = $this->pass_locales;
             } else {
                 $pass = $this->pass;
@@ -159,7 +159,7 @@ class Conexion{
 
     private function buscarLocal($nameLocal){
 
-        $prefix = ($this->env == 'DEV') ? '[LAKERBIS].locales_lakers.dbo.' : '';
+        $prefix = ($this->env == 'DEV') ? '[XL-LAKERBIS].locales_lakers.dbo.' : '';
 
         if($this->env == 'DEV'){
             $database = $this->database_central;

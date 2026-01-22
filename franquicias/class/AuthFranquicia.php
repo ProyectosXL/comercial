@@ -18,7 +18,7 @@ class AuthFranquicia {
     private function cargarConfiguracion() {
         try {
             // Usar ruta relativa desde franquicias/class/ hacia la raíz del proyecto
-            $envPath = __DIR__ . '/../../.env';
+            $envPath = __DIR__ . '/../../../.env';
             
             // Resolver la ruta completa para debugging
             $envPathResolved = realpath($envPath);
@@ -419,7 +419,7 @@ class AuthFranquicia {
     
     /**
      * Obtiene lista de franquicias autorizadas para acceso especial
-     * JOIN entre SOF_USUARIOS.NRO_SUCURS y [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS.NRO_SUCURSAL
+     * JOIN entre SOF_USUARIOS.NRO_SUCURS y [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS.NRO_SUCURSAL
      * con filtro CANAL = 'FRANQUICIAS' AND HABILITADO = 1 AND NRO_SUC_MADRE IS NULL AND TANGO IS NULL
      */
     public function obtenerFranquiciasAutorizadas() {
@@ -440,7 +440,7 @@ class AuthFranquicia {
                     s.NRO_SUC_MADRE,
                     s.TANGO
                 FROM SOF_USUARIOS u
-                INNER JOIN [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s ON CAST(u.NRO_SUCURS AS VARCHAR) = CAST(s.NRO_SUCURSAL AS VARCHAR)
+                INNER JOIN [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s ON CAST(u.NRO_SUCURS AS VARCHAR) = CAST(s.NRO_SUCURSAL AS VARCHAR)
                 WHERE u.TIPO = 'FRANQUICIA'
                 AND UPPER(LTRIM(RTRIM(ISNULL(s.CANAL, '')))) = 'FRANQUICIAS'
                 AND s.HABILITADO = 1
@@ -475,11 +475,11 @@ class AuthFranquicia {
                 $debug_result = $stmt_debug->fetch(PDO::FETCH_ASSOC);
                 error_log("DEBUG AUTH: Total usuarios franquicia: " . $debug_result['total_usuarios']);
                 
-                // Verificar si existe la tabla [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS
-                $sql_tabla = "SELECT COUNT(*) as total_sucursales FROM [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS";
+                // Verificar si existe la tabla [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS
+                $sql_tabla = "SELECT COUNT(*) as total_sucursales FROM [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS";
                 $stmt_tabla = $this->conexion_laker->query($sql_tabla);
                 $tabla_result = $stmt_tabla->fetch(PDO::FETCH_ASSOC);
-                error_log("DEBUG AUTH: Total sucursales en [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS: " . $tabla_result['total_sucursales']);
+                error_log("DEBUG AUTH: Total sucursales en [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS: " . $tabla_result['total_sucursales']);
             }
             
             return $franquicias;
@@ -509,7 +509,7 @@ class AuthFranquicia {
             $sql = "
                 SELECT COUNT(*) as tiene_acceso
                 FROM SOF_USUARIOS u
-                INNER JOIN [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s ON u.NRO_SUCURS = s.NRO_SUCURSAL
+                INNER JOIN [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s ON u.NRO_SUCURS = s.NRO_SUCURSAL
                 WHERE u.TIPO = 'FRANQUICIA'
                 AND u.NOMBRE = ?
                 AND s.CANAL = 'FRANQUICIAS'

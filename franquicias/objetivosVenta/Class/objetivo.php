@@ -52,7 +52,7 @@ class Objetivo
     public function getSucursales() {
         try {
             $sql = "SELECT NRO_SUCURSAL, DESC_SUCURSAL 
-                    FROM [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS 
+                    FROM [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS 
                     WHERE CANAL = 'FRANQUICIAS' 
                     AND HABILITADO = 1 
                     AND NRO_SUC_MADRE IS NULL
@@ -82,7 +82,7 @@ class Objetivo
                         o.importeObjetivos,
                         CONVERT(varchar(23), o.fechaUltMod, 121) AS fechaUltMod,
                         pv.idTango
-                    FROM [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s
+                    FROM [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s
                     LEFT JOIN [Servidortesting].dbXLSales.DBO.PuntosDeVenta pv ON s.NRO_SUCURSAL = pv.idTango
                     LEFT JOIN [Servidortesting].dbXLSales.DBO.Objetivos o ON pv.id = o.idPOS 
                         AND o.mes = $mesActual AND o.anio = $anioActual
