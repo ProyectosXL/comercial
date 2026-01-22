@@ -72,11 +72,8 @@ public function retornarArray($sqlEnviado){
             }
             
             // Determinar base de datos según entorno
-            if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
-                $base = 'SUCURSALES_URUGUAY';
-            } else {
-                $base = 'LOCALES_LAKERS';
-            }
+// COMENTADO: Desactivado cambio de entorno
+$base = 'LOCALES_LAKERS';
 
             error_log("traerProductosMultiple - Base: $base, Condiciones: Rubro=$rubroCondition, Temporada=$temporadaCondition, Destino=$destinoCondition");
 
@@ -685,11 +682,8 @@ public function retornarArray($sqlEnviado){
     public function obtenerCategorias() {
         try {
             // Determinar base de datos según entorno
-            if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
-                $base = 'SUCURSALES_URUGUAY';
-            } else {
-                $base = 'LOCALES_LAKERS';
-            }
+// COMENTADO: Desactivado cambio de entorno
+$base = 'LOCALES_LAKERS';
             
             $sql = "SELECT DISTINCT(CATEGORIA) CATEGORIA 
                     FROM [XL-LAKERBIS].$base.DBO.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
@@ -725,11 +719,8 @@ public function retornarArray($sqlEnviado){
             }
             
             // Determinar base de datos según entorno
-            if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
-                $base = 'SUCURSALES_URUGUAY';
-            } else {
-                $base = 'LOCALES_LAKERS';
-            }
+// COMENTADO: Desactivado cambio de entorno
+$base = 'LOCALES_LAKERS';
             
             // Si no hay rubros específicos, devolver todas las categorías
             if (empty($rubros) || in_array('%', $rubros) || in_array('', $rubros)) {
@@ -779,11 +770,8 @@ public function retornarArray($sqlEnviado){
     public function traerProductosPaginados($whereFilters, $globalSearch, $orderCol, $orderDir, $start, $length) {
         try {
             // 1. Definir base de datos
-            if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
-                $base = 'SUCURSALES_URUGUAY';
-            } else {
-                $base = 'LOCALES_LAKERS';
-            }
+// COMENTADO: Desactivado cambio de entorno
+$base = 'LOCALES_LAKERS';
 
             // 2. Búsqueda Global
             $searchCondition = "1=1";
@@ -855,11 +843,8 @@ public function retornarArray($sqlEnviado){
         }
     }
 public function traerProductosExportacion($whereFilters) {
-    if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
-        $base = 'SUCURSALES_URUGUAY';
-    } else {
-        $base = 'LOCALES_LAKERS';
-    }
+// COMENTADO: Desactivado cambio de entorno
+$base = 'LOCALES_LAKERS';
 
     // AÑADIMOS "TOP 100" PARA LIMITAR LOS RESULTADOS DRÁSTICAMENTE
     $sql = "SELECT RUBRO, CATEGORIA, TEMPORADA, DESTINO, LIQUIDACION,
