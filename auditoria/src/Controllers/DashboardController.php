@@ -121,7 +121,7 @@ class DashboardController extends BaseController {
                     $emailSucursal = ''; 
                 }
 
-                $emailsRRHH_String = 'barbara.galmarini@xl.com.ar,natalia.fuentes@xl.com.ar,ignacio.gouiric@xl.com.ar';
+                $emailsRRHH_String = '';
                 $emailGerencia = 'johanna.bolig@xl.com.ar';
 
                 // --- CORRECCIÓN EN MAILS: Usar también el importe real aquí ---

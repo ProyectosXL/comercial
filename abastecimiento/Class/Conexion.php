@@ -14,6 +14,7 @@ class Conexion{
         $this->database_uy = $this->envVars['DATABASE_UY'];
         $this->host_apps = $this->envVars['HOST_APPS'];
         $this->database_power = $this->envVars['DATABASE_POWER'];
+        $this->database_power_uy = $this->envVars['DATABASE_POWER_UY'];
         $this->database_apps = $this->envVars['DATABASE_APPS'];
         $this->host_locales = $this->envVars['HOST_LOCALES'];
         $this->database_locales = $this->envVars['DATABASE_LOCALES'];
@@ -37,6 +38,8 @@ class Conexion{
             return array($this->host_apps, $this->database_apps);
         }elseif($nameServer == 'power'){
             return array($this->host_apps, $this->database_power);
+        }elseif($nameServer == 'power_uy'){
+            return array($this->host_apps, $this->database_power_uy);
 }else{
     if (session_status() == PHP_SESSION_NONE) {
         session_start();

@@ -3,6 +3,25 @@
 
 class Conexion{
 
+    private $envVars;
+    private $host_central;
+    private $database_central;
+    private $database_uy;
+    private $database_tangobis;
+    private $database_suc_uy;
+    private $host_apps;
+    private $database_power;
+    private $database_power_uy;
+    private $database_apps;
+    private $host_locales;
+    private $database_locales;
+    private $user;
+    private $pass;
+    private $pass_locales;
+    private $character;
+    private $env;
+    private $prefix;
+
     function __construct(){
         require_once(__DIR__.'/classEnv.php');
 
@@ -15,6 +34,8 @@ class Conexion{
         $this->database_tangobis = $this->envVars['DATABASE_TANGOBIS'];
         $this->database_suc_uy = $this->envVars['DATABASE_SUC_UY'];
         $this->host_apps = $this->envVars['HOST_APPS'];
+        $this->database_power = $this->envVars['DATABASE_POWER'];
+        $this->database_power_uy = $this->envVars['DATABASE_POWER_UY'];
         $this->database_apps = $this->envVars['DATABASE_APPS'];
         $this->host_locales = $this->envVars['HOST_LOCALES'];
         $this->database_locales = $this->envVars['DATABASE_LOCALES'];
@@ -40,6 +61,10 @@ class Conexion{
             return array($this->host_central, $this->database_suc_uy);
         }elseif($nameServer == 'apps'){
             return array($this->host_apps, $this->database_apps);
+        }elseif($nameServer == 'power'){
+            return array($this->host_apps, $this->database_power);
+        }elseif($nameServer == 'power_uy'){
+            return array($this->host_apps, $this->database_power_uy);
         }else{
             // Solo usar sesión si no se especifica servidor o si se especifica uno no reconocido
             if (session_status() == PHP_SESSION_NONE) {

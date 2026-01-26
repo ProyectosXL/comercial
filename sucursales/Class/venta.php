@@ -11,7 +11,7 @@ class Venta
 
     function __construct()
     {
-        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
+        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/Class/Conexion.php';
         $this->cid = new Conexion();
         $this->cid_central = $this->cid->conectar('central');
         $this->cid_lakerbis = $this->cid->conectar('locales');
@@ -109,7 +109,7 @@ class Venta
             $hasta = date('Y-m-d');
         }
 
-        $sql = "EXEC SJ_VENTAS_ML_URUGUAY_MOBILE2 @DESDE = ?, @HASTA = ?, @SUC = ?";
+        $sql = "EXEC [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SJ_VENTAS_ML_URUGUAY_MOBILE2 @DESDE = ?, @HASTA = ?, @SUC = ?";
         $params = array($desde, $hasta, $suc);
         
         // Habilitar el manejo de errores de SQL Server
@@ -117,7 +117,7 @@ class Venta
             die(print_r(sqlsrv_errors(), true));
         }
         
-        $stmt = sqlsrv_query($this->cid_lakerbis, $sql, $params);
+        $stmt = sqlsrv_query($this->cid_central, $sql, $params);
         
         if ($stmt === false) {
             // Si la consulta falla, imprime información de depuración
@@ -193,7 +193,7 @@ class Venta
             $hasta = date('Y-m-d');
         }
 
-        $sql = "EXEC [XL–APPS].[POWER_BI_CONTROL].[dbo].[RO_SP_VENTAS_VS_OBJETIVOS_PROPIOS_PPP] @DESDE = ?, @HASTA = ?";
+        $sql = "EXEC [XL-APPS].[POWER_BI_CONTROL].[dbo].RO_SP_VENTAS_VS_OBJETIVOS_PROPIOS_PPP @DESDE = ?, @HASTA = ?";
         $params = array($desde, $hasta);
         
         // Habilitar el manejo de errores de SQL Server
