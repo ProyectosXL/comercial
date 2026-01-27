@@ -1,6 +1,6 @@
 <?php 
 
-require '../Class/temporada.php';
+require '../Class/Temporada.php';
 require '../Class/Articulo.php';
 require '../Class/Rubro.php';
 

@@ -11,7 +11,7 @@ class Presupuesto {
 
     function __construct()
     {
-        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
+        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/Class/Conexion.php';
         $this->cid = new Conexion();
         $this->cid_central = $this->cid->conectar('central');
     } 
@@ -32,7 +32,7 @@ class Presupuesto {
     }
 
      public function traerConceptos(){
-        $sql = "SELECT ID_CONC, CONCEPTO FROM RO_T_CONCEPTOS_GASTOS_SUP";
+        $sql = "SELECT ID_CONC, CONCEPTO FROM " . self::DB_PREFIX . "RO_T_CONCEPTOS_GASTOS_SUP";
         return $this->retornarArray($sql);
     }
     

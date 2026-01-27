@@ -10,7 +10,7 @@ class Pedido
     function __construct()
     {
 
-        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
+        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/Class/Conexion.php';
         $this->cid = new Conexion();
         
         // Iniciar sesión solo si no está iniciada

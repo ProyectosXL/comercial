@@ -7,7 +7,7 @@ class Gasto
 
     function __construct()
     {
-        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
+        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/Class/Conexion.php';
         $this->cid = new Conexion();
         $this->cid_central = $this->cid->conectar('central');
     } 
