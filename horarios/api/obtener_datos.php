@@ -23,37 +23,65 @@ switch ($accion) {
         break;
 }
 
-// ---------------------------------------------------------
-// 1. SUCURSALES (Ahora desde tabla DEPARTAMENTO)
-// ---------------------------------------------------------
+// 1. SUCURSALES (Filtra habilitados + Excluye administrativos)
 function getSucursales() {
-    $conn = getConexionCorp(); 
     
-    // IMPORTANTE: Alias para que el JS no se rompa
-    $sql = "
-        SELECT 
-            ID_DEPARTAMENTO AS NRO_SUCURSAL,     -- Alias Clave
-            DESC_DEPARTAMENTO AS DESC_SUCURSAL   -- Alias Clave
-        FROM DEPARTAMENTO 
-        ORDER BY DESC_DEPARTAMENTO ASC
-    ";
+    // PASO A: Obtener lista de NRO_SUCURSAL habilitados desde LOCALES
+    $connLocales = getConexionLocales();
+    $sqlHab = "SELECT NRO_SUCURSAL FROM SUCURSALES_LAKERS WHERE HABILITADO = 1";
+    $stmtHab = sqlsrv_query($connLocales, $sqlHab);
     
-    $stmt = sqlsrv_query($conn, $sql);
-    $sucursales = [];
-    
-    if ($stmt) {
-        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-            // Aseguramos UTF-8
-            $row['DESC_SUCURSAL'] = utf8_encode($row['DESC_SUCURSAL']);
-            $sucursales[] = $row;
+    $habilitados = [];
+    if ($stmtHab) {
+        while ($row = sqlsrv_fetch_array($stmtHab, SQLSRV_FETCH_ASSOC)) {
+            $habilitados[] = $row['NRO_SUCURSAL'];
         }
+        sqlsrv_free_stmt($stmtHab);
+    }
+    sqlsrv_close($connLocales);
+
+    // PASO B: Obtener lista completa de Departamentos (RRHH)
+    $connCorp = getConexionCorp(); 
+    $sql = "SELECT ID_DEPARTAMENTO, DESC_DEPARTAMENTO, COD_DEPARTAMENTO FROM DEPARTAMENTO ORDER BY DESC_DEPARTAMENTO ASC";
+    $stmt = sqlsrv_query($connCorp, $sql);
+    
+    // --- LISTA NEGRA: Nombres exactos que queremos ocultar ---
+    $excluidos = ['LOGISTICA', 'COMERCIALIZACION', 'ADMINISTRACION', 'FABRICA'];
+
+    $sucursales = [];
+    if ($stmt) {
+while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $nombre = trim($row['DESC_DEPARTAMENTO']);
+
+            // 1. FILTRO DE EXCLUSIÓN
+            if (in_array($nombre, $excluidos)) continue; 
+
+            // 2. OBTENER NÚMERO REAL
+            $codigo = $row['COD_DEPARTAMENTO']; // Ej: LOC005
+            $nroReal = intval(str_ireplace('LOC', '', $codigo)); // Ej: 5
+
+            // --- CORRECCIÓN UNICENTER ---
+            // En RRHH figura como LOC005 (5), pero en Tango es la sucursal 2.
+            // Forzamos el 2 para que cruce bien con la lista de habilitados.
+            if (stripos($nombre, 'UNICENTER') !== false) {
+                $nroReal = 2; 
+            }
+
+            // 3. FILTRO DE HABILITADOS
+            // Ahora verificamos si el 2 (Unicenter) está habilitado
+            if (in_array($nroReal, $habilitados)) {
+                $sucursales[] = [
+                    'NRO_SUCURSAL' => $row['ID_DEPARTAMENTO'],
+                    'DESC_SUCURSAL' => utf8_encode($nombre)
+                ];
+            }
+        }
+        sqlsrv_free_stmt($stmt);
     }
     
     echo json_encode($sucursales);
-    sqlsrv_free_stmt($stmt);
-    sqlsrv_close($conn);
+    sqlsrv_close($connCorp);
 }
-
 // ---------------------------------------------------------
 // 2. VENDEDORES (Ahora desde LEGAJO_CLOUD + RO_LEGAJOS_PERSONAL)
 // ---------------------------------------------------------
@@ -151,7 +179,7 @@ function getVendedoresPorLista() {
         FROM GVA23
         LEFT JOIN RO_T_LEGAJOS_PERSONAL AS LEGAJOS 
             ON GVA23.COD_VENDED COLLATE Modern_Spanish_CI_AI = LEGAJOS.COD_VENDEDOR
-        WHERE GVA23.COD_VENDED IN ($placeholders)
+        WHERE GVA23.COD_VENDED IN ($placeholders) AND GVA23.INHABILITA = 0
         GROUP BY GVA23.COD_VENDED, GVA23.NOMBRE_VEN
         ORDER BY GVA23.NOMBRE_VEN ASC";
     

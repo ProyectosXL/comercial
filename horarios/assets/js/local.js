@@ -281,7 +281,8 @@ $(document).ready(function() {
             if (promociones && Array.isArray(promociones[fecha]) && promociones[fecha].length > 0) {
                 promosHTML = `<div class="d-flex flex-wrap gap-1">${promociones[fecha].map(p => `<span class="promo-badge">${p}</span>`).join('')}</div>`;
             }
-            htmlFooter += `<td colspan="18" class="align-top p-1 bg-light" style="${styleBorder}; min-height:40px;">${promosHTML}</td>`;
+            htmlFooter += `<td colspan="19" class="align-top p-1 bg-light" style="${styleBorder}; min-height:40px;">${promosHTML}</td>`;
+
         });
         htmlFooter += '</tr></tfoot></table>';
 

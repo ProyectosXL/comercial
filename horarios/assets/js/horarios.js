@@ -212,12 +212,12 @@ function agregarFilasRefuerzos(listaVendedores) {
                 // Columnas de Días
                 fechasSemana.forEach(fechaISO => {
                     // 1. Horas (Primero)
-                    for (let h = 7; h <= 22; h++) {
+                    for (let h = 7; h <= 23; h++) {
                         filasHTML += `<td class="hora-celda" data-fecha="${fechaISO}" data-hora="${h}"></td>`;
                     }
                     
                     // 2. Franco (Al final, estilo corregido)
-                    filasHTML += `<td class="dia-franco text-center p-0"><input type="radio" class="form-check-input franco-radio mt-1" name="franco-${vendedorId}" value="${fechaISO}" style="transform: scale(0.8);"></td>`;
+                    filasHTML += `<td class="dia-franco text-center p-0"><input type="checkbox" class="form-check-input franco-checkbox mt-1" value="${fechaISO}" style="transform:scale(0.8)"></td>`;
                     
                     // 3. Nota (Faltaba esta columna)
                     filasHTML += `<td class="text-center p-0"><button class="btn-nota" data-vendedor="${vendedorId}" data-fecha="${fechaISO}"><i class="bi bi-chat-square"></i></button></td>`;
@@ -292,13 +292,13 @@ function generarTablaHorarios(vendedores, semana) {
         const mes = String(fechaActual.getMonth() + 1).padStart(2, '0');
         
         // Colspan aumenta a 18 (16 horas + 1 Franco + 1 Obs)
-        headerHTML += `<th colspan="18">${diasSemana[i]} ${dia}/${mes}</th>`;
+        headerHTML += `<th colspan="19">${diasSemana[i]} ${dia}/${mes}</th>`;
     }
     
     headerHTML += '</tr><tr class="align-middle"><th></th><th></th>';
     for (let d = 0; d < 7; d++) {
         // 1. Horas (7 a 22)
-        for (let h = 7; h <= 22; h++) headerHTML += `<th>${h}</th>`;
+        for (let h = 7; h <= 23; h++) headerHTML += `<th>${h}</th>`;
         
         // 2. Franco (Al final, Punto 6)
         headerHTML += '<th style="width:30px; background-color:#e9ecef;" title="Franco">F</th>';
@@ -344,13 +344,13 @@ function generarTablaHorarios(vendedores, semana) {
         // Columnas Días
         fechasSemana.forEach(fechaISO => {
             // 1. Celdas de Hora
-            for (let h = 7; h <= 22; h++) {
+            for (let h = 7; h <= 23; h++) {
                 bodyHTML += `<td class="hora-celda" data-fecha="${fechaISO}" data-hora="${h}"></td>`;
             }
             
             // 2. Celda Franco (Al final)
             bodyHTML += `<td class="dia-franco text-center align-middle p-0">
-                            <input type="radio" class="form-check-input franco-radio mt-1" name="franco-${vendedorId}" value="${fechaISO}" style="transform: scale(0.8);">
+                            <input type="checkbox" class="form-check-input franco-checkbox mt-1" value="${fechaISO}" style="transform: scale(0.8);">
                          </td>`;
             
             // 3. Celda Nota (Nueva)
@@ -368,11 +368,11 @@ function generarTablaHorarios(vendedores, semana) {
     // (Punto 1: Eliminamos la fila de Totales por Día)
     let footerHTML = '<tfoot>';
     
-    // Fila Promociones
+ // Fila Promociones
     footerHTML += '<tr><td><strong>Promociones</strong></td><td></td>';
     fechasSemana.forEach(fechaISO => {
-        // Colspan 18 para cubrir horas + franco + obs
-        footerHTML += `<td colspan="18" class="promo-cell small text-start align-top p-1" data-fecha="${fechaISO}" style="white-space: normal; min-height: 50px;">-</td>`;
+        // CORRECCIÓN: Colspan ahora es 19
+        footerHTML += `<td colspan="19" class="promo-cell small text-start align-top p-1" data-fecha="${fechaISO}" style="white-space: normal; min-height: 50px;">-</td>`;
     });
     footerHTML += '</tr>';
     
@@ -397,6 +397,9 @@ function generarTablaHorarios(vendedores, semana) {
 }
     
 function cargarDatosEnGrilla(data) {
+            if (data.es_plantilla_base) {
+            mostrarModal("Se cargaron los horarios de la <b>Plantilla Base</b> (Semana " + (data.tipo_semana || 'Automática') + ").<br>Recuerde guardar para confirmar.", "info");
+        }
         // Carga de Horarios (N, C, P, E, D)
         if (data.horarios) {
             data.horarios.forEach(h => {
@@ -413,18 +416,18 @@ function cargarDatosEnGrilla(data) {
         }
 
         // Carga de Francos
-        if (data.francos) {
-            data.francos.forEach(franco => {
-                const fila = $(`tr[data-vendedor-id="${franco.COD_VENDED}"]`);
-                const radio = fila.find(`input.franco-radio[value="${franco.FECHA_FRANCO}"]`);
-                radio.prop('checked', true);
-                radio.closest('td').addClass('franco-activo');
-                fila.find(`.hora-celda[data-fecha="${franco.FECHA_FRANCO}"]`)
-                    .addClass('dia-franco')
-                    .removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja')
-                    .text('');
-            });
-        }
+    if (data.francos) {
+        data.francos.forEach(franco => {
+            const fila = $(`tr[data-vendedor-id="${franco.COD_VENDED}"]`);
+            // Cambiamos el selector a 'franco-checkbox'
+            const checkbox = fila.find(`input.franco-checkbox[value="${franco.FECHA_FRANCO}"]`);
+            
+            // Si no está tildado, lo tildamos
+            if (!checkbox.prop('checked')) {
+                checkbox.click();
+            }
+        });
+    }
 
         // Carga de Observaciones de Semana
         if (data.observaciones) {
@@ -562,19 +565,24 @@ function cargarDatosEnGrilla(data) {
     $('#tablaHorariosContainer').on('mousedown', '.franco-radio', function() {
         wasChecked = $(this).prop('checked');
     });
-    $('#tablaHorariosContainer').on('click', '.franco-radio', function(e) {
+    $('#tablaHorariosContainer').on('click', '.franco-checkbox', function() {
         const fila = $(this).closest('tr');
-        if (wasChecked) {
-            $(this).prop('checked', false);
-            fila.find('.dia-franco').removeClass('franco-activo');
-            fila.find('.hora-celda').removeClass('dia-franco');
-        } else {
-            fila.find('.dia-franco').removeClass('franco-activo');
-            fila.find('.hora-celda').removeClass('dia-franco');
-            const fechaFranco = $(this).val();
-            $(this).closest('td').addClass('franco-activo');
-            fila.find(`.hora-celda[data-fecha="${fechaFranco}"]`).addClass('dia-franco').removeClass('marcado hora-extra').text('');
+        const fecha = $(this).val();
+
+        // Si lo tildo -> Poner franco
+        if ($(this).is(':checked')) {
+            $(this).parent().addClass('franco-activo');
+            fila.find(`.hora-celda[data-fecha="${fecha}"]`)
+                .removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja')
+                .text('')
+                .addClass('dia-franco');
+        } 
+        // Si lo destildo -> Quitar franco
+        else {
+            $(this).parent().removeClass('franco-activo');
+            fila.find(`.hora-celda[data-fecha="${fecha}"]`).removeClass('dia-franco');
         }
+        
         actualizarSumatorias();
     });
     
@@ -833,7 +841,7 @@ if (!nombre || nombre === "undefined") {
             const vid = $(this).data('vendedor-id');
             vendedores.push(vid); 
             
-            const f = $(this).find('.franco-radio:checked');
+            const f = $(this).find('.franco-checkbox:checked');
             if (f.length > 0) {
                 // Solo guardamos si el radio NO está deshabilitado (es decir, es de esta sucursal)
                 if (!f.prop('disabled')) {
