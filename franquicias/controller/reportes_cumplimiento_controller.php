@@ -149,7 +149,7 @@ class ReportesCumplimientoController {
             
             // PRIMERA CONSULTA: Obtener las sucursales reales de franquicias
             $sqlSucursalesReales = "SELECT NRO_SUCURSAL 
-                                   FROM [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS 
+                                   FROM [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS 
                                    WHERE HABILITADO = 1 
                                    AND CANAL = 'FRANQUICIAS' 
                                    AND NRO_SUC_MADRE IS NULL AND NRO_SUCURSAL NOT IN (812, 912)";
@@ -438,7 +438,7 @@ class ReportesCumplimientoController {
                         A.STOCK_ACTUAL,
                         A.fecha_movimiento
                     FROM franquicia_historial_stock A 
-                    INNER JOIN [LAKERBIS].[LOCALES_LAKERS].[DBO].[SUCURSALES_LAKERS] B 
+                    INNER JOIN [XL-LAKERBIS].[LOCALES_LAKERS].[DBO].[SUCURSALES_LAKERS] B 
                         ON A.franquicia_id = B.NRO_SUCURSAL
                     WHERE MONTH(A.fecha_movimiento) = ? 
                     AND YEAR(A.fecha_movimiento) = ?
@@ -546,7 +546,7 @@ class ReportesCumplimientoController {
                         A.CATEGORIA,
                         A.STOCK_ACTUAL
                     FROM franquicia_historial_stock A 
-                    INNER JOIN [LAKERBIS].[LOCALES_LAKERS].[DBO].[SUCURSALES_LAKERS] B 
+                    INNER JOIN [XL-LAKERBIS].[LOCALES_LAKERS].[DBO].[SUCURSALES_LAKERS] B 
                         ON A.franquicia_id = B.NRO_SUCURSAL
                     WHERE MONTH(A.fecha_movimiento) = ? 
                     AND YEAR(A.fecha_movimiento) = ?

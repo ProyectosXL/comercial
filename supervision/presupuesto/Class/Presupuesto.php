@@ -7,11 +7,11 @@ class Presupuesto {
 
     private $cid;
     private $cid_central;
-    private const DB_PREFIX = '[LAKERBIS].LOCALES_LAKERS.DBO.';
+    private const DB_PREFIX = '[XL-LAKERBIS].LOCALES_LAKERS.DBO.';
 
     function __construct()
     {
-        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
+        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/Class/Conexion.php';
         $this->cid = new Conexion();
         $this->cid_central = $this->cid->conectar('central');
     } 
@@ -32,7 +32,7 @@ class Presupuesto {
     }
 
      public function traerConceptos(){
-        $sql = "SELECT ID_CONC, CONCEPTO FROM RO_T_CONCEPTOS_GASTOS_SUP";
+        $sql = "SELECT ID_CONC, CONCEPTO FROM " . self::DB_PREFIX . "RO_T_CONCEPTOS_GASTOS_SUP";
         return $this->retornarArray($sql);
     }
     
@@ -50,7 +50,7 @@ class Presupuesto {
         $sql = "SELECT p.ID_SUPERVISORA, s.NOMBRE AS NOMBRE_SUPERVISORA, 
                     p.ID_CONC, c.CONCEPTO, p.IMP_PRESUPUESTO
                 FROM RO_T_PRESUPUESTOS_SUPERVISION p
-                JOIN [LAKERBIS].LOCALES_LAKERS.DBO.RO_T_SUPERVISORAS_COMERCIAL s ON p.ID_SUPERVISORA = s.ID
+                JOIN [XL-LAKERBIS].LOCALES_LAKERS.DBO.RO_T_SUPERVISORAS_COMERCIAL s ON p.ID_SUPERVISORA = s.ID
                 JOIN RO_T_CONCEPTOS_GASTOS_SUP c ON p.ID_CONC = c.ID_CONC
                 WHERE p.ANIO = ? AND p.MES = ?
                 ORDER BY s.NOMBRE, c.ID_CONC";

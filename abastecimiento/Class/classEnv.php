@@ -45,7 +45,7 @@ class DotEnv
     }
 
     public function listVars(){
-        (new DotEnv(__DIR__ . '/../../.env'))->load();
+        (new DotEnv(__DIR__ . '/../../../.env'))->load();
 
         $vars = array(
 
@@ -57,6 +57,7 @@ class DotEnv
             'DATABASE_UY' => getenv('DATABASE_UY'),
             'DATABASE_APPS' => getenv('DATABASE_APPS'),
             'DATABASE_POWER' => getenv('DATABASE_POWER'),
+            'DATABASE_POWER_UY' => getenv('DATABASE_POWER_UY'),
             'USER' => getenv('USER'),
             'PASS' => getenv('PASS'),
             'PASS_LOCALES' => getenv('PASS_LOCALES'),

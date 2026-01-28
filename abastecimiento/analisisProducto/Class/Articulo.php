@@ -72,11 +72,8 @@ public function retornarArray($sqlEnviado){
             }
             
             // Determinar base de datos según entorno
-            if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
-                $base = 'SUCURSALES_URUGUAY';
-            } else {
-                $base = 'LOCALES_LAKERS';
-            }
+// COMENTADO: Desactivado cambio de entorno
+$base = 'LOCALES_LAKERS';
 
             error_log("traerProductosMultiple - Base: $base, Condiciones: Rubro=$rubroCondition, Temporada=$temporadaCondition, Destino=$destinoCondition");
 
@@ -99,7 +96,7 @@ public function retornarArray($sqlEnviado){
                         TEMPORADA, 
                         LIQUIDACION,
                         COD_EQUIVALENCIA
-                    FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
+                    FROM [XL-LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
                     WHERE $rubroCondition 
                     AND $categoriaCondition 
                     AND $temporadaCondition 
@@ -146,7 +143,7 @@ public function retornarArray($sqlEnviado){
                 CASE WHEN ROW_NUMBER() OVER (ORDER BY p.Articulo) = 1 THEN 1 ELSE 0 END AS ARTICULO_PRINCIPAL,
                 'Familia de Productos' AS DESCRIPCION_GRUPO -- Enviamos un valor genérico
             FROM 
-                [LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL p
+                [XL-LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL p
             WHERE 
                 p.CodEquivalencia = ?
             ORDER BY 
@@ -685,14 +682,11 @@ public function retornarArray($sqlEnviado){
     public function obtenerCategorias() {
         try {
             // Determinar base de datos según entorno
-            if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
-                $base = 'SUCURSALES_URUGUAY';
-            } else {
-                $base = 'LOCALES_LAKERS';
-            }
+// COMENTADO: Desactivado cambio de entorno
+$base = 'LOCALES_LAKERS';
             
             $sql = "SELECT DISTINCT(CATEGORIA) CATEGORIA 
-                    FROM [LAKERBIS].$base.DBO.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
+                    FROM [XL-LAKERBIS].$base.DBO.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
                     WHERE CATEGORIA IS NOT NULL
                     AND CATEGORIA != ''
                     ORDER BY CATEGORIA";
@@ -725,11 +719,8 @@ public function retornarArray($sqlEnviado){
             }
             
             // Determinar base de datos según entorno
-            if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
-                $base = 'SUCURSALES_URUGUAY';
-            } else {
-                $base = 'LOCALES_LAKERS';
-            }
+// COMENTADO: Desactivado cambio de entorno
+$base = 'LOCALES_LAKERS';
             
             // Si no hay rubros específicos, devolver todas las categorías
             if (empty($rubros) || in_array('%', $rubros) || in_array('', $rubros)) {
@@ -752,7 +743,7 @@ public function retornarArray($sqlEnviado){
             $rubroWhere = "(" . implode(" OR ", $rubroConditions) . ")";
             
             $sql = "SELECT DISTINCT(CATEGORIA) CATEGORIA 
-                    FROM [LAKERBIS].$base.DBO.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
+                    FROM [XL-LAKERBIS].$base.DBO.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
                     WHERE CATEGORIA IS NOT NULL
                     AND CATEGORIA != ''
                     AND $rubroWhere
@@ -779,11 +770,8 @@ public function retornarArray($sqlEnviado){
     public function traerProductosPaginados($whereFilters, $globalSearch, $orderCol, $orderDir, $start, $length) {
         try {
             // 1. Definir base de datos
-            if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
-                $base = 'SUCURSALES_URUGUAY';
-            } else {
-                $base = 'LOCALES_LAKERS';
-            }
+// COMENTADO: Desactivado cambio de entorno
+$base = 'LOCALES_LAKERS';
 
             // 2. Búsqueda Global
             $searchCondition = "1=1";
@@ -808,7 +796,7 @@ public function retornarArray($sqlEnviado){
             // Esta consulta NO trae datos, solo devuelve un número.
             
             $sqlCount = "SELECT COUNT_BIG(ARTICULO) as Total
-                         FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL WITH (NOLOCK)
+                         FROM [XL-LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL WITH (NOLOCK)
                          WHERE $whereFilters AND $searchCondition";
                          
             $rowsCount = $this->retornarArray($sqlCount);
@@ -829,7 +817,7 @@ public function retornarArray($sqlEnviado){
                             COD_EQUIVALENCIA
                         FROM (
                             SELECT *, ROW_NUMBER() OVER (ORDER BY $campoOrden $direccion) as RowNum
-                            FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL WITH (NOLOCK)
+                            FROM [XL-LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL WITH (NOLOCK)
                             WHERE $whereFilters AND $searchCondition
                         ) AS SubQuery
                         WHERE RowNum > $start AND RowNum <= ($start + $length)
@@ -855,11 +843,8 @@ public function retornarArray($sqlEnviado){
         }
     }
 public function traerProductosExportacion($whereFilters) {
-    if(isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy'){
-        $base = 'SUCURSALES_URUGUAY';
-    } else {
-        $base = 'LOCALES_LAKERS';
-    }
+// COMENTADO: Desactivado cambio de entorno
+$base = 'LOCALES_LAKERS';
 
     // AÑADIMOS "TOP 100" PARA LIMITAR LOS RESULTADOS DRÁSTICAMENTE
     $sql = "SELECT RUBRO, CATEGORIA, TEMPORADA, DESTINO, LIQUIDACION,
@@ -874,7 +859,7 @@ public function traerProductosExportacion($whereFilters) {
                 STOCK_EXCLUIDO,
                 CANT_VENTA, 
                 IMP_VENTA
-            FROM [LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
+            FROM [XL-LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
             WHERE $whereFilters";
 
     return $this->retornarArray($sql);
@@ -912,7 +897,7 @@ public function traerProductosExportacion($whereFilters) {
                         CantVenta AS CANT_VENTA, 
                         VentaTotal AS IMP_VENTA
                     FROM 
-                        [LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL
+                        [XL-LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL
                     WHERE 
                         $whereFilters";
 
@@ -933,7 +918,7 @@ public function traerProductosExportacion($whereFilters) {
 
             // Consulta muy rápida para obtener la fecha máxima.
             $sql = "SELECT MAX(FechaActualizacion) as UltimaActualizacion 
-                    FROM [LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL";
+                    FROM [XL-LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL";
             
             $resultado = $this->retornarArray($sql);
 

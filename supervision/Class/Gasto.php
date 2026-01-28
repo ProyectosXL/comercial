@@ -7,7 +7,7 @@ class Gasto
 
     function __construct()
     {
-        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
+        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/Class/Conexion.php';
         $this->cid = new Conexion();
         $this->cid_central = $this->cid->conectar('central');
     } 
@@ -301,7 +301,7 @@ class Gasto
 }
 
     public function traerSupervisoras() {
-        $sql = "SELECT ID, NOMBRE NOMBRE_SUPERVISORA FROM [LAKERBIS].LOCALES_LAKERS.DBO.RO_T_SUPERVISORAS_COMERCIAL 
+        $sql = "SELECT ID, NOMBRE NOMBRE_SUPERVISORA FROM [XL-LAKERBIS].LOCALES_LAKERS.DBO.RO_T_SUPERVISORAS_COMERCIAL 
                 WHERE ACTIVA = 1
                 ORDER BY NOMBRE";
         $stmt = sqlsrv_query($this->cid_central, $sql);

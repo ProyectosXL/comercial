@@ -17,10 +17,10 @@ class DatabaseSQLServer {
         if ($this->envVars === null) {
             try {
                 // La ruta correcta al .env desde franquicias/class/ es ../../.env
-                $envPath = realpath(__DIR__ . '/../../.env');
+                $envPath = realpath(__DIR__ . '/../../../.env');
                 
                 if (!$envPath || !file_exists($envPath)) {
-                    error_log("DatabaseSQLServer ERROR: Archivo .env no encontrado. Buscado en: " . __DIR__ . '/../../.env');
+                    error_log("DatabaseSQLServer ERROR: Archivo .env no encontrado. Buscado en: " . __DIR__ . '/../../../.env');
                     throw new Exception("Archivo .env no encontrado en la ruta esperada");
                 }
                 

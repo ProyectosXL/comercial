@@ -121,19 +121,54 @@ $(document).ready(function() {
         const tituloGrafico = esVistaGlobal ? 'Horas Totales por Sucursal' : 'Horas por Vendedor';
         $('#ind_graficoTitulo').text(tituloGrafico);
 
-        myChart = new Chart(ctx, {
+myChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [
-                    { label: 'H', data: datasetH, backgroundColor: '#198754' },
-                    { label: 'C', data: datasetC, backgroundColor: '#0dcaf0' },
-                    { label: 'P', data: datasetP, backgroundColor: '#d63384' },
-                    { label: 'E', data: datasetE, backgroundColor: '#0d6efd' },
-                    { label: 'D', data: datasetD, backgroundColor: '#ffc107' }
+                    { label: 'H (normal)', data: datasetH, backgroundColor: '#198754' },
+                    { label: 'C (caja)', data: datasetC, backgroundColor: '#0dcaf0' },
+                    { label: 'P (permiso)', data: datasetP, backgroundColor: '#d63384' },
+                    { label: 'E (extra)', data: datasetE, backgroundColor: '#0d6efd' },
+                    { label: 'D (devuelve)', data: datasetD, backgroundColor: '#ffc107' }
                 ]
             },
-            options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    title: { display: true, text: tituloGrafico },
+                    
+                    // --- MAGIA DEL TOOLTIP DETALLADO ---
+                    tooltip: {
+                        mode: 'index', // Muestra todos los datos de la barra vertical
+                        intersect: false,
+                        callbacks: {
+                            // Cambia el título para que no muestre la sucursal/vendedor dos veces
+                            title: function() { return ''; }, 
+                            
+                            // Formatea cada línea del tooltip
+                            label: function(tooltipItem) {
+                                return `  ${tooltipItem.dataset.label}: ${tooltipItem.raw}`;
+                            },
+                            
+                            // Agrega el TOTAL al final
+                            footer: function(tooltipItems) {
+                                let total = 0;
+                                tooltipItems.forEach(function(item) {
+                                    total += item.raw;
+                                });
+                                return 'Total: ' + total;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true }
+                }
+            }
         });
     }
 

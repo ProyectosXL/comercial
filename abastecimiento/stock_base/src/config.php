@@ -6,7 +6,7 @@ require_once __DIR__ . '/../classEnv.php';
 
 // 2. Crear el objeto DotEnv para cargar todas las variables de tu .env
 try {
-    new DotEnv(__DIR__ . '/../../../');
+    new DotEnv(__DIR__ . '/../../../../');
 } catch (InvalidArgumentException $e) {
     die("Error Crítico: " . $e->getMessage());
 }

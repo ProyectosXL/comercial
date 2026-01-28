@@ -98,7 +98,7 @@ class CargaVentasSinTangoController {
             $sql = "
                 SELECT COUNT(*) as tiene_acceso
                 FROM SOF_USUARIOS u
-                INNER JOIN [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s ON u.NRO_SUCURS = s.NRO_SUCURSAL
+                INNER JOIN [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s ON u.NRO_SUCURS = s.NRO_SUCURSAL
                 WHERE u.TIPO = 'FRANQUICIA'
                 AND u.NOMBRE = ?
                 AND s.CANAL = 'FRANQUICIAS'
@@ -144,7 +144,7 @@ class CargaVentasSinTangoController {
                     s.CANAL,
                     u.DESCRIPCION as descripcion_usuario
                 FROM SOF_USUARIOS u
-                INNER JOIN [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s ON u.NRO_SUCURS = s.NRO_SUCURSAL
+                INNER JOIN [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s ON u.NRO_SUCURS = s.NRO_SUCURSAL
                 WHERE u.NOMBRE = ? AND u.TIPO = 'FRANQUICIA'
             ";
             

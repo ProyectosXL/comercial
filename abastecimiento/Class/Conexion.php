@@ -6,7 +6,7 @@ class Conexion{
     function __construct(){
         require_once(__DIR__.'/classEnv.php');
 
-        $vars = new DotEnv(__DIR__ . '/../../.env');
+        $vars = new DotEnv(__DIR__ . '/../../../.env');
         $this->envVars = $vars->listVars();
         
         $this->host_central = $this->envVars['HOST_CENTRAL'];
@@ -14,6 +14,7 @@ class Conexion{
         $this->database_uy = $this->envVars['DATABASE_UY'];
         $this->host_apps = $this->envVars['HOST_APPS'];
         $this->database_power = $this->envVars['DATABASE_POWER'];
+        $this->database_power_uy = $this->envVars['DATABASE_POWER_UY'];
         $this->database_apps = $this->envVars['DATABASE_APPS'];
         $this->host_locales = $this->envVars['HOST_LOCALES'];
         $this->database_locales = $this->envVars['DATABASE_LOCALES'];
@@ -22,7 +23,7 @@ class Conexion{
         $this->pass_locales = $this->envVars['PASS_LOCALES'];
         $this->character = $this->envVars['CHARACTER'];
         $this->env = $this->envVars['ENV'];
-        $this->prefix = ($this->env == 'DEV') ? '[LAKERBIS].locales_lakers.dbo.' : '';
+        $this->prefix = ($this->env == 'DEV') ? '[XL-LAKERBIS].locales_lakers.dbo.' : '';
     }
 
     private function servidor($nameServer) {
@@ -37,12 +38,21 @@ class Conexion{
             return array($this->host_apps, $this->database_apps);
         }elseif($nameServer == 'power'){
             return array($this->host_apps, $this->database_power);
-        }else{
-            if (session_status() == PHP_SESSION_NONE) {
-                session_start();
-            }
-            return array($_SESSION['conexion_dns'], $_SESSION['base_nombre']);
-        }
+        }elseif($nameServer == 'power_uy'){
+            return array($this->host_apps, $this->database_power_uy);
+}else{
+    if (session_status() == PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    // NUEVO CÓDIGO: Si la sesión está vacía, usa la conexión CENTRAL por defecto
+    if(empty($_SESSION['conexion_dns']) || empty($_SESSION['base_nombre'])) {
+        // Asumiendo que quieres conectar a la base central por defecto
+        return array($this->host_central, $this->database_central);
+    }
+
+    return array($_SESSION['conexion_dns'], $_SESSION['base_nombre']);
+}
 
     }
 
@@ -51,7 +61,7 @@ class Conexion{
 
             $serverDB = $this->servidor($nameServer);
 
-            if($this->env == 'PROD' && (strtolower($serverDB[0]) == strtolower('lakerbis'))){
+            if($this->env == 'PROD' && (strtolower($serverDB[0]) == strtolower('XL-LAKERBIS'))){
                 $pass = $this->pass_locales;
             } else {
                 $pass = $this->pass;
@@ -64,11 +74,19 @@ class Conexion{
                 "CharacterSet" => $this->character
             );
 
-            $cid = sqlsrv_connect($serverDB[0], $params);
+$cid = sqlsrv_connect($serverDB[0], $params);
 
-            if(!$cid) return false;
+if(!$cid) {
+    // CÓDIGO DE DIAGNÓSTICO (Borrar después de arreglar)
+    echo "<h3>Error Fatal de Conexión SQL</h3>";
+    echo "<b>Intentando conectar a:</b> " . $serverDB[0] . "<br>";
+    echo "<b>Usuario:</b> " . $this->user . "<br>";
+    echo "<b>Base de datos:</b> " . $serverDB[1] . "<br><br>";
+    echo "<b>Detalle del error:</b><br>";
+    die(print_r(sqlsrv_errors(), true));
+}
 
-            // este cid va a cambiar mil veces
+// este cid va a cambiar mil veces
             $_SESSION['cid'] = $cid;
             return $cid;
             
@@ -79,7 +97,7 @@ class Conexion{
 
     private function buscarLocal($nameLocal){
 
-        $prefix = ($this->env == 'DEV') ? '[LAKERBIS].locales_lakers.dbo.' : '';
+        $prefix = ($this->env == 'DEV') ? '[XL-LAKERBIS].locales_lakers.dbo.' : '';
 
         if($this->env == 'DEV'){
             $database = $this->database_central;

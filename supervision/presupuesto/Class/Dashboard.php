@@ -7,7 +7,7 @@ class Dashboard
 
     function __construct()
     {
-        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
+        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/Class/Conexion.php';
         $this->cid = new Conexion();
         $this->cid_central = $this->cid->conectar('central');
     } 
@@ -294,7 +294,7 @@ class Dashboard
                         A.ID_CONC,
                         CAST(A.IMP_PRESUPUESTO AS FLOAT) AS IMP_PRESUPUESTO
                     FROM RO_T_PRESUPUESTOS_SUPERVISION A
-                    INNER JOIN LAKERBIS.LOCALES_LAKERS.DBO.RO_T_SUPERVISORAS_COMERCIAL B 
+                    INNER JOIN XL-LAKERBIS.LOCALES_LAKERS.DBO.RO_T_SUPERVISORAS_COMERCIAL B 
                         ON A.ID_SUPERVISORA = B.ID
                     WHERE ((A.ANIO = ? AND A.MES >= ?) OR (A.ANIO > ?))
                     AND ((A.ANIO = ? AND A.MES <= ?) OR (A.ANIO < ?))";

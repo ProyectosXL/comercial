@@ -226,7 +226,7 @@ $(document).ready(function() {
                     // Si hay filtro de vendedor y la sucursal de esta hora es distinta a la "base"
                     // Le ponemos un borde rojo fuerte para destacar.
                     if ($('#vendedorSelector').val() && sucursalHoraID > 0 && sucursalHoraID !== datos.sucursal_defecto) {
-                        extraStyle += ' border: 2px solid #dc3545 !important;'; 
+                        extraStyle += ''; 
                         
                         // Buscamos el nombre para el tooltip
                         const nomSuc = nombresSucursales[sucursalHoraID] || `Suc ${sucursalHoraID}`;

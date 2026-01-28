@@ -197,7 +197,7 @@ class ReportesVentasController {
                     s.DESC_SUCURSAL as desc_sucursal,
                     u.NOMBRE as usuario_nombre
                 FROM SOF_USUARIOS u
-                INNER JOIN [LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s 
+                INNER JOIN [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s 
                     ON u.NRO_SUCURS = s.NRO_SUCURSAL
                 WHERE u.TIPO = 'FRANQUICIA'
                 AND s.CANAL = 'FRANQUICIAS'

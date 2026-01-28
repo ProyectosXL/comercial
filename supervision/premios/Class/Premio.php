@@ -4,7 +4,7 @@ class Premio
 {
     private $cid;
     private $cid_central;
-    private const DB_PREFIX = '[LAKERBIS].LOCALES_LAKERS.DBO.';
+    private const DB_PREFIX = '[XL-LAKERBIS].LOCALES_LAKERS.DBO.';
 
     function __construct()
     {

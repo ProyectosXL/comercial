@@ -4,7 +4,7 @@
 require_once __DIR__ . '/../classEnv.php';
 
 try {
-    new DotEnv(__DIR__ . '/../../../');
+    new DotEnv(__DIR__ . '/../../../../');
 } catch (InvalidArgumentException $e) {
     die("Error Crítico: " . $e->getMessage());
 }

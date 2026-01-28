@@ -121,7 +121,6 @@ class VentaModel {
     }
 
         public function getDatosContactoSucursal($nro_sucursal) {
-        // Consultamos explícitamente el MAIL y la Descripción usando el NRO_SUCURSAL (ID)
         $sql = "SELECT DESC_SUCURSAL, MAIL 
                 FROM LAKER_SA.dbo.SUCURSALES_LAKERSW 
                 WHERE NRO_SUCURSAL = :nro_sucursal";
@@ -129,20 +128,17 @@ class VentaModel {
         try {
             $pdo = Database::getConnectionLaker();
             $stmt = $pdo->prepare($sql);
-            // Usamos bindParam para mayor seguridad con el ID
             $stmt->bindParam(':nro_sucursal', $nro_sucursal, PDO::PARAM_INT);
             $stmt->execute();
-            
-            // Retorna un array asociativo con MAIL y DESC_SUCURSAL, o false si falla
             return $stmt->fetch(PDO::FETCH_ASSOC); 
         } catch (PDOException $e) { 
-            // En caso de error, retornamos null para que no rompa el flujo, pero podrías loguear el error
             return null; 
         }
     }
 
     public function getOperacionPorNComp($n_comp) {
-        $sql = "SELECT FECHA, N_COMP, NRO_SUCURS, IMPORTE FROM POWER_BI_CONTROL.dbo.BI_SALES_SUCURSALES WHERE N_COMP = :n_comp AND CANAL = 'LOCALES PROPIOS';";
+        // CORRECCIÓN: Se agrega el filtro para asegurar que solo traiga la línea de DIF PRECIO
+        $sql = "SELECT FECHA, N_COMP, NRO_SUCURS, IMPORTE FROM POWER_BI_CONTROL.dbo.BI_SALES_SUCURSALES WHERE N_COMP = :n_comp AND COD_ARTICU = '*****DIF PRECIO' AND CANAL = 'LOCALES PROPIOS';";
         try {
             $pdo = Database::getConnectionPowerBI();
             $stmt = $pdo->prepare($sql);

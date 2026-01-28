@@ -198,15 +198,17 @@ $pedido = new Pedido();
                         </td>
 
                         <td>
-                            <?php if ($value->PRIORIDAD != '') { ?>
+                            <?php if (isset($value->PRIORIDAD) && $value->PRIORIDAD !== null && $value->PRIORIDAD !== '') { ?>
                                 <select name="Prioridad" id="Prioridad" class="form-control form-control-sm edit" style="font-size: small;" disabled>
-                                    <option value="<?= $value->PRIORIDAD == '1' ? '1' : ($value->PRIORIDAD == '2' ? '2' : '3') ?>" selected id="primerSelect"><?= $value->PRIORIDAD == '1' ? '1' : ($value->PRIORIDAD == '2' ? '2' : '3') ?></option>
-                                    <option value="<?= $value->PRIORIDAD == '1' ? '2' : ($value->PRIORIDAD == '3' ? '2' : '3') ?>"><?= $value->PRIORIDAD == '1' ? '2' : ($value->PRIORIDAD == '3' ? '2' : '3')  ?></option>
-                                    <option value="<?= $value->PRIORIDAD == '3' ? '1' : ($value->PRIORIDAD == '1' ? '3' : '1') ?>"><?= $value->PRIORIDAD == '3' ? '1' : ($value->PRIORIDAD == '1' ? '3' : '1') ?></option>
+                                    <option value="0" <?= $value->PRIORIDAD == '0' ? 'selected' : '' ?>>0</option>
+                                    <option value="1" <?= $value->PRIORIDAD == '1' ? 'selected' : '' ?>>1</option>
+                                    <option value="2" <?= $value->PRIORIDAD == '2' ? 'selected' : '' ?>>2</option>
+                                    <option value="3" <?= $value->PRIORIDAD == '3' ? 'selected' : '' ?>>3</option>
                                 </select>
                             <?php } else { ?>
                                 <select name="Prioridad" id="Prioridad" class="form-control form-control-sm" style="font-size: small;" disabled>
-                                    <option value="null" selected></option>
+                                    <option value="" selected></option>
+                                    <option value="0">0</option>
                                     <option value="1">1</option>
                                     <option value="2">2</option>
                                     <option value="3">3</option>

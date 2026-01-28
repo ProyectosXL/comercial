@@ -3,6 +3,10 @@
 
 session_start();
 
+// --- PEGAR ESTO AQUÍ PARA FORZAR EL RESETEO ---
+$_SESSION['entorno'] = 'central'; 
+// ----------------------------------------------
+
 require 'Class/Articulo.php';
 require '../Class/Rubro.php';
 require '../Class/Destino.php';
@@ -25,11 +29,15 @@ $hasta = isset($_GET['hasta']) ? $_GET['hasta'] : date("Y-m-d");
 
 
 
-$checkedValue = isset($_SESSION['entorno']) ? $_SESSION['entorno'] : 'central';
-$dataOnValue = ($checkedValue === 'uy') ? 'UY' : 'ARG';
-$dataOffValue = ($checkedValue === 'uy') ? 'ARG' : 'UY';
-$imageOn = ($checkedValue === 'central') ? '../css/bandera_con_sol__55757_std.jpg' : '../css/UY.png';
-$imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_con_sol__55757_std.jpg';
+// --- CORRECCIÓN TEMPORAL: FORZAR SIEMPRE ARGENTINA ---
+// Esto arregla el error si tu sesión quedó en 'uy' y evita que busque la bandera
+$_SESSION['entorno'] = 'central'; // Reseteamos tu sesión a la fuerza
+$checkedValue = 'central';
+$dataOnValue = 'ARG'; 
+$dataOffValue = 'UY';
+$imageOn = '../css/bandera_con_sol__55757_std.jpg';
+$imageOff = '../css/UY.png';
+// -----------------------------------------------------
 
 ?>
 
@@ -103,8 +111,11 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
             <div class="card-body">
                 <h4 class="card-title mb-4">
                     <i class="fas fa-chart-line me-2"></i>
-                    <span style="margin-right:50%">Consulta Analisis de Producto</span><span class="text-muted small">Última actualización DWH: <?php echo $ultimaActualizacionDWH; ?> hs</span>
-                    <input type="checkbox" checked data-toggle="toggle" data-on="<?= $dataOnValue ?>" data-off="<?= $dataOffValue ?>" class="custom-toggle" style="color:black; font-size: 0; " onchange="cambiarEntorno(this)" id="checkEntorno" >
+<span style="margin-right:50%">Consulta Analisis de Producto</span><span class="text-muted small">Última actualización DWH: <?php echo $ultimaActualizacionDWH; ?> hs</span>
+
+<!-- COMENTADO PARA EVITAR ERROR DE URUGUAY
+<input type="checkbox" checked data-toggle="toggle" data-on="<?= $dataOnValue ?>" data-off="<?= $dataOffValue ?>" class="custom-toggle" style="color:black; font-size: 0; " onchange="cambiarEntorno(this)" id="checkEntorno" >
+-->
                 </h4>
 
                 
