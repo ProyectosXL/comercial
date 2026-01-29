@@ -127,16 +127,15 @@ function guardarDatos($usuario) {
             $saldoFinal = $totalPermisos - $totalDevoluciones;
 
             if ($saldoFinal < 0) {
-                // Buscamos el nombre para el error...
-                $connNombres = getConexionCorp();
-                $nombreError = "Vendedor $legajo";
-                $sqlNom = "SELECT NOMBRE, APELLIDO FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE = ?";
-                $stmtNom = sqlsrv_query($connNombres, $sqlNom, [$legajo]);
-                if ($stmtNom && $rowNom = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
-                    $nombreError = utf8_encode(trim($rowNom['APELLIDO']) . ' ' . trim($rowNom['NOMBRE']));
+                // Buscamos el nombre en el array que nos mandó el JS
+                $nombreError = "Vendedor $legajo"; // Fallback por si acaso
+                foreach ($horarios as $h) {
+                    if ($h['codVended'] == $legajo && isset($h['nombreVendedor'])) {
+                        $nombreError = $h['nombreVendedor'];
+                        break;
+                    }
                 }
-                if($stmtNom) sqlsrv_free_stmt($stmtNom);
-                sqlsrv_close($connNombres);
+                
                 sqlsrv_close($conn);
 
                 die(json_encode([
@@ -461,6 +460,44 @@ function cargarDatos() {
 
     // Convertir keys a lista simple para el frontend
     $respuesta['vendedoresConActividad'] = array_keys($vendedoresConActividad);
+
+        // --- BANCO DE HORAS (SALDO ANTERIOR) ---
+    // Calculamos: (Total P - Total D) acumulado ANTES de la fecha de inicio de esta semana.
+    // Esto es el "Saldo Inicial" con el que arranca la semana.
+    $saldosAnteriores = [];
+    
+    if (!empty($vendedoresConActividad)) {
+        $listaVendedores = implode("','", $vendedoresConActividad); // Ojo: asegurarse que $vendedoresConActividad tenga keys si es array asoc.
+        // Si $vendedoresConActividad es array de IDs (keys), usa array_keys($vendedoresConActividad) si aplica.
+        // En tu código actual $vendedoresConActividad es un array simple de IDs al final del paso 3.
+        
+        // CORRECCIÓN: Si $vendedoresConActividad está vacío, no ejecutamos.
+        // Si usas la versión anterior del código, asegúrate de que sea una lista de IDs.
+        
+        $sqlSaldo = "
+            SELECT 
+                COD_VENDED,
+                SUM(CASE WHEN TIPO_HORA = 'permiso' THEN 1 ELSE 0 END) as TotalP,
+                SUM(CASE WHEN TIPO_HORA = 'devuelve' THEN 1 ELSE 0 END) as TotalD
+            FROM FP_GESTION_HORARIOS
+            WHERE FECHA < ? -- Estrictamente anterior a esta semana
+            AND (TIPO_HORA = 'permiso' OR TIPO_HORA = 'devuelve')
+            GROUP BY COD_VENDED
+        ";
+        
+        $stmtSaldo = sqlsrv_query($connSistemas, $sqlSaldo, [$fechaInicio]);
+        
+        if ($stmtSaldo) {
+            while ($row = sqlsrv_fetch_array($stmtSaldo, SQLSRV_FETCH_ASSOC)) {
+                $p = intval($row['TotalP']);
+                $d = intval($row['TotalD']);
+                $saldosAnteriores[trim($row['COD_VENDED'])] = $p - $d; // Saldo positivo = Debe horas
+            }
+            sqlsrv_free_stmt($stmtSaldo);
+        }
+    }
+    $respuesta['saldosAnteriores'] = $saldosAnteriores;
+
 
     // =================================================================================
     // PASO 4: BLOQUEOS EXTERNOS (Cruce de Sucursales)

@@ -12,26 +12,18 @@
 </head>
 <body class="bg-light">
 
-    <!-- NAVBAR SUPERIOR -->
+    <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#"><i class="bi bi-clock-history"></i> Gestión de Horarios</a>
-            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active fw-bold" href="index.php">Gestión</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="rrhh.php">RRHH</a> 
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link text-warning" href="local.php">Mi Local</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link active fw-bold" href="index.php">Gestión</a></li>
+                    <li class="nav-item"><a class="nav-link" href="rrhh.php">RRHH</a></li>
+                    <li class="nav-item"><a class="nav-link text-warning" href="local.php">Mi Local</a></li>
                     <li class="nav-item ms-lg-3">
                         <button class="btn btn-outline-info text-white border-white btn-sm mt-1" data-bs-toggle="modal" data-bs-target="#modalAyuda">
                             <i class="bi bi-question-circle-fill"></i> Ayuda
@@ -44,7 +36,7 @@
 
     <div class="container-fluid my-4">
         
-        <!-- PESTAÑAS DE GESTIÓN (Semanal / Plantillas) -->
+        <!-- PESTAÑAS PRINCIPALES -->
         <ul class="nav nav-tabs mb-4" id="gestionTabs" role="tablist">
             <li class="nav-item">
                 <button class="nav-link active fw-bold" id="tab-semanal" data-bs-toggle="tab" data-bs-target="#panel-semanal" type="button" role="tab">
@@ -60,192 +52,163 @@
 
         <div class="tab-content" id="gestionTabsContent">
             
-            <!-- PANEL 1: GESTIÓN SEMANAL (Operativa Diaria) -->
+            <!-- PANEL 1: GESTIÓN SEMANAL -->
             <div class="tab-pane fade show active" id="panel-semanal" role="tabpanel">
                 
-<!-- CARD DE FILTROS (DISEÑO FINAL) -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-filter"></i> Filtros de Búsqueda</h5>
-            </div>
-<div class="card-body">
-    
-    <!-- FILA 1: FILTROS DE BÚSQUEDA -->
-    <div class="row g-3 align-items-end">
-        <!-- Sucursal -->
-        <div class="col-md-3">
-            <label for="sucursalSelector" class="form-label fw-bold">Sucursal</label>
-            <select id="sucursalSelector" class="form-select"></select>
-        </div>
+                <!-- CARD FILTROS -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-filter"></i> Filtros de Búsqueda</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Fila 1: Filtros -->
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Sucursal</label>
+                                <select id="sucursalSelector" class="form-select form-select-lg"></select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold">Semana</label>
+                                <input type="week" id="semanaSelector" class="form-control form-control-lg">
+                            </div>
+                            <div class="col-md-5"> 
+                                <label class="form-label fw-bold">Tipo de Hora</label>
+                                <div id="tipoHoraSelector" class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="tipoHora" id="tipoNormal" value="normal" checked><label class="btn btn-outline-success" for="tipoNormal">X (NORM)</label>
+                                    <input type="radio" class="btn-check" name="tipoHora" id="tipoCaja" value="caja"><label class="btn btn-outline-info" for="tipoCaja">C (CAJA)</label>
+                                    <input type="radio" class="btn-check" name="tipoHora" id="tipoPermiso" value="permiso"><label class="btn btn-outline-danger" for="tipoPermiso" style="border-color:#d63384; color:#d63384;">P (PERM)</label>
+                                    <input type="radio" class="btn-check" name="tipoHora" id="tipoExtra" value="extra"><label class="btn btn-outline-primary" for="tipoExtra">E (EXTRA)</label>
+                                    <input type="radio" class="btn-check" name="tipoHora" id="tipoDevuelve" value="devuelve"><label class="btn btn-outline-warning" for="tipoDevuelve">D (DEV)</label>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="d-grid">
+                                    <button id="cargarHorariosBtn" class="btn btn-primary btn-lg">
+                                        <i class="bi bi-calendar-check"></i> Cargar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
 
-        <!-- Semana -->
-        <div class="col-md-3">
-            <label for="semanaSelector" class="form-label fw-bold">Semana</label>
-            <input type="week" id="semanaSelector" class="form-control">
-        </div>
-
-        <!-- Tipos de Hora -->
-        <div class="col-md-4"> 
-            <label class="form-label fw-bold">Tipo de Hora</label>
-            <div id="tipoHoraSelector" class="btn-group w-100" role="group">
-                <input type="radio" class="btn-check" name="tipoHora" id="tipoNormal" value="normal" checked><label class="btn btn-outline-success" for="tipoNormal">X (NORMAL)</label>
-                <input type="radio" class="btn-check" name="tipoHora" id="tipoCaja" value="caja"><label class="btn btn-outline-info" for="tipoCaja">C (CAJA)</label>
-                <input type="radio" class="btn-check" name="tipoHora" id="tipoPermiso" value="permiso"><label class="btn" for="tipoPermiso" style="border-color:#d63384; color:#d63384;">P (PERMISO)</label>
-                <input type="radio" class="btn-check" name="tipoHora" id="tipoExtra" value="extra"><label class="btn btn-outline-primary" for="tipoExtra">E (EXTRA)</label>
-                <input type="radio" class="btn-check" name="tipoHora" id="tipoDevuelve" value="devuelve"><label class="btn btn-outline-warning" for="tipoDevuelve">D (DEVUELVE)</label>
-            </div>
-        </div>
-        
-        <!-- Botón Cargar -->
-        <div class="col-md-2">
-            <button id="cargarHorariosBtn" class="btn btn-primary w-100">
-                <i class="bi bi-search"></i> Cargar
-            </button>
-        </div>
-    </div>
-
-<!-- FILA 2: ACCIONES (Se muestra al cargar) -->
-    <div id="accionesContainer" class="row mt-3 pt-3 border-top">
-        <div class="col-12 d-flex justify-content-end gap-3">
-            <!-- Botón Guardar (VISIBLE y VERDE) -->
-            <button id="guardarHorariosBtn" class="btn btn-success btn-lg px-4">
-                <i class="bi bi-save"></i> Guardar Cambios
-            </button>
-            
-            <!-- Botón Excel (VISIBLE y NEGRO) -->
-            <button id="exportarQuickPassBtn" class="btn btn-dark btn-lg px-4">
-                <i class="bi bi-file-earmark-excel"></i> Descargar Excel QP
-            </button>
-        </div>
-    </div>
-
-</div>
+                        <!-- Fila 2: Acciones (Oculto al inicio) -->
+                        <div id="accionesContainer" class="row mt-3 pt-3 border-top" style="display:none;">
+                            <div class="col-12 d-flex justify-content-end gap-2">
+                                <button id="guardarHorariosBtn" class="btn btn-success btn-lg px-4">
+                                    <i class="bi bi-save"></i> Guardar Cambios
+                                </button>
+                                <button id="exportarQuickPassBtn" class="btn btn-dark btn-lg px-4">
+                                    <i class="bi bi-file-earmark-excel"></i> Descargar Excel QP
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- LEYENDA RÁPIDA -->
-                <div class="alert alert-light border border-secondary-subtle d-flex align-items-center py-2 mb-4 small shadow-sm" role="alert">
+                <div class="alert alert-light border border-secondary-subtle d-flex align-items-center py-2 mb-4 small shadow-sm">
                     <i class="bi bi-info-circle-fill text-primary fs-4 me-3"></i>
                     <div class="d-flex flex-wrap gap-4">
-                        <div><strong class="text-success">H (Normal):</strong> Horas Base + Caja + Permiso.</div>
-                        <div class="vr"></div>
-                        <div><strong class="text-info text-dark">C (Caja):</strong> Se suma a H.</div>
-                        <div class="vr"></div>
-                        <div><strong style="color:#d63384">P (Permiso):</strong> Justificación paga. Se suma a H.</div>
-                        <div class="vr"></div>
-                        <div><strong class="text-primary">E (Extra):</strong> Adicionales.</div>
-                        <div class="vr"></div>
+                        <div><strong class="text-success">H (Normal):</strong> Base + Caja + Permiso.</div><div class="vr"></div>
+                        <div><strong class="text-info text-dark">C (Caja):</strong> Suma a H.</div><div class="vr"></div>
+                        <div><strong style="color:#d63384">P (Permiso):</strong> Justif. paga (Suma a H).</div><div class="vr"></div>
+                        <div><strong class="text-primary">E (Extra):</strong> Adicionales.</div><div class="vr"></div>
                         <div><strong class="text-warning text-dark">D (Devuelve):</strong> Recupero.</div>
                     </div>
                 </div>
 
-                <!-- CARD DE LA GRILLA -->
+                <!-- CARD GRILLA -->
                 <div class="card shadow-sm">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-grid-3x3-gap-fill"></i> Grilla de Horarios</h5>
                         <div>
                             <button id="agregarRefuerzoBtn" class="btn btn-sm btn-outline-secondary me-3" style="display: none;">
-                                <i class="bi bi-person-plus-fill"></i> Agregar Refuerzo
+                                <i class="bi bi-person-plus-fill"></i> Agregar Refuerzo / Personal De Otro Local
                             </button>
                             <h5 class="mb-0 d-inline-block">Total Semanal Local: <span id="totalSemanalLocal" class="badge bg-primary">0</span> hs</h5>
                         </div>
                     </div>
                     <div class="card-body">
                         <div id="loader" class="text-center mt-5" style="display:none;">
-                            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-                                <span class="visually-hidden">Cargando...</span>
-                            </div>
-                            <p class="mt-2">Cargando vendedores...</p>
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2">Cargando...</p>
                         </div>
-                        <div id="tablaHorariosContainer" class="table-responsive">
-                            <!-- La tabla se generará aquí -->
-                        </div>
+                        <div id="tablaHorariosContainer" class="table-responsive"></div>
                         
-                        <!-- Observaciones Semanales -->
                         <div id="observacionesContainer" class="mt-4" style="display:none;">
                             <hr>
                             <div class="mb-3">
-                                <label for="observacionesSemana" class="form-label fw-bold"><i class="bi bi-chat-left-text-fill"></i> Observaciones de la Semana</label>
-                                <textarea class="form-control" id="observacionesSemana" rows="3" placeholder="Añadir notas, comentarios o recordatorios para esta sucursal y esta semana..."></textarea>
+                                <label class="form-label fw-bold">Observaciones de la Semana</label>
+                                <textarea class="form-control" id="observacionesSemana" rows="3"></textarea>
                             </div>
                         </div>
 
-                        <!-- LEYENDA DETALLADA (Pie de Página) -->
+                        <!-- LEYENDA DETALLADA -->
                         <div class="card mt-4" id="leyendaContainer" style="display:none;">
                             <div class="card-body p-3">
-                                <h6 class="card-title text-muted mb-3"><i class="bi bi-palette-fill"></i> Leyenda</h6>
+                                <h6 class="card-title text-muted mb-3"><i class="bi bi-palette-fill"></i> Leyenda Completa</h6>
                                 <div class="d-flex flex-wrap gap-3">
-                                    <span class="badge text-bg-success fs-6">H: Horas Normales</span>
-                                    <span class="badge text-bg-info text-dark fs-6">C: Horas de Caja</span>
-                                    <span class="badge text-white fs-6" style="background-color: #d63384;">P: Permiso</span>
-                                    <span class="badge text-bg-primary fs-6">E: Horas Extras</span>
-                                    <span class="badge text-bg-warning text-dark fs-6">D: Horas a Devolver</span>
-                                    <span class="badge text-white fs-6" style="background-color: #6f42c1;">F: Franco</span>
-                                    <span class="badge bg-light text-dark border d-flex align-items-center gap-2"><i class="bi bi-chat-square-text-fill text-warning"></i> Nota Diaria</span>
-                                    <span class="badge bg-light text-dark border d-flex align-items-center gap-2"><i class="bi bi-chat-left-quote-fill text-primary"></i> Feedback</span>
+                                    <span class="badge text-bg-success">H: Normal</span>
+                                    <span class="badge text-bg-info text-dark">C: Caja</span>
+                                    <span class="badge text-white" style="background:#d63384">P: Permiso</span>
+                                    <span class="badge text-bg-primary">E: Extra</span>
+                                    <span class="badge text-bg-warning text-dark">D: Devuelve</span>
+                                    <span class="badge text-white" style="background:#6f42c1">F: Franco</span>
+                                    <span class="badge bg-light text-dark border"><i class="bi bi-chat-square-text-fill text-warning"></i> Nota</span>
+                                    <span class="badge bg-light text-dark border"><i class="bi bi-chat-left-quote-fill text-primary"></i> Feedback</span>
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div> <!-- FIN PANEL SEMANAL -->
 
-            <!-- PANEL 2: ABM PLANTILLAS BASE (Nuevo) -->
+            <!-- PANEL 2: ABM PLANTILLAS -->
             <div class="tab-pane fade" id="panel-plantillas" role="tabpanel">
                 <div class="card shadow-sm border-primary">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div class="card-header bg-primary text-white">
                         <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Edición de Horarios Base</h5>
-                        <small>Defina aquí los horarios fijos para la rotación automática (Semana A / Semana B).</small>
                     </div>
                     <div class="card-body">
                         <div class="row g-3 align-items-end mb-4">
                             <div class="col-md-4">
-                                <label class="fw-bold form-label">Sucursal</label>
+                                <label class="fw-bold">Sucursal</label>
                                 <select id="base_sucursalSelector" class="form-select form-select-lg"></select>
                             </div>
-                            <div class="col-md-4">
-                                <label class="fw-bold form-label">Tipo de Semana</label>
+                            <div class="col-md-3">
+                                <label class="fw-bold">Tipo de Semana</label>
                                 <select id="base_tipoSemana" class="form-select form-select-lg">
                                     <option value="A">Semana A (Impar)</option>
                                     <option value="B">Semana B (Par)</option>
                                 </select>
                             </div>
-                            <div class="col-md-2">
-                                <button id="base_btnCargar" class="btn btn-outline-primary btn-lg w-100">
-                                    <i class="bi bi-search"></i> Buscar
-                                </button>
+                            <!-- Selector Tipo Hora Plantilla -->
+                            <div class="col-md-3">
+                                <label class="fw-bold">Tipo de Hora</label>
+                                <div id="base_tipoHoraSelector" class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="baseTipoHora" id="baseNormal" value="normal" checked><label class="btn btn-outline-success" for="baseNormal">X (Normal)</label>
+                                    <input type="radio" class="btn-check" name="baseTipoHora" id="baseExtra" value="extra"><label class="btn btn-outline-primary" for="baseExtra">E (Extra)</label>
+                                </div>
                             </div>
-                            <div class="col-md-2">
-                                <button id="base_btnGuardar" class="btn btn-success btn-lg w-100" disabled>
-                                    <i class="bi bi-save"></i> Guardar Base
-                                </button>
+                            <div class="col-md-1">
+                                <button id="base_btnCargar" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i></button>
                             </div>
-                        </div>
-                        
-                        <div class="alert alert-info small d-flex align-items-center">
-                            <i class="bi bi-info-circle-fill me-2 fs-4"></i>
-                            <div>
-                                Pinte las horas en verde (Normal) o marque la casilla de Franco. <br>
-                                Estos horarios se usarán como plantilla al presionar <b>"Cargar Base Automática"</b> en la planificación semanal.
+                            <div class="col-md-1">
+                                <button id="base_btnGuardar" class="btn btn-success w-100" disabled><i class="bi bi-save"></i></button>
                             </div>
                         </div>
-
-                        <!-- GRILLA BASE -->
                         <div id="base_tablaContainer" class="table-responsive border rounded bg-white" style="min-height: 300px;">
-                            <div class="text-center text-muted py-5 mt-5">
-                                <i class="bi bi-arrow-up-circle fs-1 opacity-25"></i>
-                                <p class="mt-3 fs-5">Seleccione Sucursal y Tipo de Semana para editar la base.</p>
-                            </div>
+                            <div class="text-center text-muted py-5 mt-5"><p>Seleccione filtros para editar.</p></div>
                         </div>
                     </div>
                 </div>
             </div> <!-- FIN PANEL PLANTILLAS -->
 
-        </div> <!-- FIN TAB CONTENT -->
-    </div> <!-- Fin Container -->
+        </div>
+    </div>
 
-    <!-- ================= MODALES ================= -->
-
-    <!-- MODAL MENSAJE GENÉRICO -->
+    <!-- MODALES -->
+    
+    <!-- Modal Mensaje -->
     <div class="modal fade" id="modalMensaje" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -264,216 +227,110 @@
       </div>
     </div>
 
-    <!-- MODAL CONFIRMACIÓN EXCEL -->
+    <!-- Modal Confirmar Excel -->
     <div class="modal fade" id="modalConfirmarExcel" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-success">
           <div class="modal-header bg-success text-white">
-            <h5 class="modal-title"><i class="bi bi-file-earmark-excel-fill"></i> Descarga Global</h5>
+            <h5 class="modal-title">Descarga Global</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body text-center p-4">
-            <p class="fs-5">¿Desea descargar el Excel consolidado de <b>TODAS</b> las sucursales para esta semana?</p>
-            <p class="text-muted small">Esto generará un archivo único compatible con QuickPass.</p>
+            <p class="fs-5">¿Desea descargar el Excel consolidado?</p>
           </div>
           <div class="modal-footer justify-content-center">
-            <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
-            <button type="button" class="btn btn-success px-4" id="btnConfirmarDescarga">
-                <i class="bi bi-download"></i> Sí, Descargar
-            </button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-success" id="btnConfirmarDescarga">Sí, Descargar</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- MODAL REFUERZOS -->
+    <!-- Modal Refuerzos -->
     <div class="modal fade" id="modalRefuerzos" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Seleccionar Refuerzos</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
+          <div class="modal-header"><h5 class="modal-title">Seleccionar Refuerzos / Personal De Otro Local</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
           <div class="modal-body">
-            <input type="text" id="buscadorRefuerzos" class="form-control mb-3" placeholder="Buscar refuerzo...">
+            <input type="text" id="buscadorRefuerzos" class="form-control mb-3" placeholder="Buscar...">
             <div id="listaRefuerzosContainer"></div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="button" class="btn btn-primary" id="btnConfirmarAgregarRefuerzo">Agregar Seleccionados</button>
+            <button class="btn btn-primary" id="btnConfirmarAgregarRefuerzo">Agregar</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- MODAL NOTAS DIARIAS -->
+    <!-- Modal Notas -->
     <div class="modal fade" id="modalNotas" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Nota del Día</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
+          <div class="modal-header"><h5 class="modal-title">Nota del Día</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
           <div class="modal-body">
-            <input type="hidden" id="notaCodVended">
-            <input type="hidden" id="notaFecha">
-            <p class="mb-2">Observación para <strong id="notaNombreVendedor"></strong> el día <strong id="notaFechaTexto"></strong>:</p>
-            <textarea id="textoNota" class="form-control" rows="4" placeholder="Escriba aquí..."></textarea>
+            <input type="hidden" id="notaCodVended"><input type="hidden" id="notaFecha">
+            <p>Observación para <strong id="notaNombreVendedor"></strong> el <strong id="notaFechaTexto"></strong>:</p>
+            <textarea id="textoNota" class="form-control" rows="4"></textarea>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" id="btnBorrarNota">Borrar Nota</button>
-            <button type="button" class="btn btn-primary" id="btnGuardarNota">Guardar</button>
+            <button class="btn btn-secondary" id="btnBorrarNota">Borrar</button>
+            <button class="btn btn-primary" id="btnGuardarNota">Guardar</button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- MODAL ERROR VALIDACIÓN -->
+    <!-- Modal Validación -->
     <div class="modal fade" id="modalValidacion" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-danger">
-          <div class="modal-header bg-danger text-white">
-            <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill"></i> Error de Validación</h5>
+          <div class="modal-header bg-danger text-white"><h5 class="modal-title">Error de Validación</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+          <div class="modal-body">
+            <p class="fw-bold">No se puede guardar:</p>
+            <ul id="listaErroresValidacion" class="text-danger mb-3"></ul>
+            <div class="alert alert-warning small">Recuerde las reglas de horas semanales y diarias.</div>
+          </div>
+          <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Entendido</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Ayuda (Premium) -->
+    <div class="modal fade" id="modalAyuda" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+          <div class="modal-header modal-header-help p-4">
+            <div><h4 class="modal-title fw-bold mb-1">Centro de Ayuda</h4><small>Guía rápida del sistema</small></div>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
-          <div class="modal-body">
-            <p class="fw-bold">No se puede guardar. Corrija los siguientes errores:</p>
-            <ul id="listaErroresValidacion" class="text-danger mb-3"></ul>
-            <div class="alert alert-warning small">
-                <strong>Reglas:</strong><br>
-                • Horas H Semanales: 30, 36, 42 o 48.<br>
-                • Máximo 12 horas totales por día.
+          <div class="modal-body p-0">
+            <div class="accordion accordion-help" id="accordionAyuda">
+              <!-- Gestión -->
+              <div class="accordion-item">
+                <h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaGestion">1. Gestión</button></h2>
+                <div id="ayudaGestion" class="accordion-collapse collapse show" data-bs-parent="#accordionAyuda"><div class="accordion-body px-4 pb-4"><p class="text-muted">Planifique horarios, francos y refuerzos.</p></div></div>
+              </div>
+              <!-- RRHH -->
+              <div class="accordion-item">
+                <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaRRHH">2. RRHH</button></h2>
+                <div id="ayudaRRHH" class="accordion-collapse collapse"><div class="accordion-body px-4 pb-4"><p class="text-muted">Indicadores y Asistencia.</p></div></div>
+              </div>
+              <!-- Mi Local -->
+              <div class="accordion-item">
+                <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaLocal">3. Vista Local</button></h2>
+                <div id="ayudaLocal" class="accordion-collapse collapse"><div class="accordion-body px-4 pb-4"><p class="text-muted">Vista de lectura y feedback.</p></div></div>
+              </div>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Entendido</button>
           </div>
         </div>
       </div>
     </div>
 
-<!-- MODAL DE AYUDA (DISEÑO PROFESIONAL) -->
-<div class="modal fade" id="modalAyuda" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content border-0 shadow-lg">
-      
-      <!-- Cabecera Dark -->
-      <div class="modal-header modal-header-help p-4">
-        <div>
-            <h4 class="modal-title fw-bold mb-1"><i class="bi bi-patch-question-fill me-2"></i> Centro de Ayuda</h4>
-            <small class="opacity-75">Guía rápida de funcionalidades del sistema</small>
-        </div>
-        <button type="button" class="btn-close btn-close-white align-self-start" data-bs-dismiss="modal"></button>
-      </div>
-
-      <!-- Cuerpo -->
-      <div class="modal-body p-0">
-        <div class="accordion accordion-help" id="accordionAyuda">
-          
-          <!-- 1. GESTIÓN -->
-          <div class="accordion-item">
-            <h2 class="accordion-header">
-              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaGestion">
-                <div class="help-icon-wrapper"><i class="bi bi-grid-3x3-gap-fill"></i></div>
-                1. Gestión y Planificación
-              </button>
-            </h2>
-            <div id="ayudaGestion" class="accordion-collapse collapse show" data-bs-parent="#accordionAyuda">
-              <div class="accordion-body px-4 pb-4">
-                <p class="text-muted mb-3">Herramienta principal para la carga de horarios semanales.</p>
-                
-                <div class="card bg-light border-0 mb-3">
-                    <div class="card-body p-3">
-                        <h6 class="fw-bold small text-uppercase text-muted mb-2">Referencias de Horas</h6>
-                        <div class="d-flex flex-wrap gap-2">
-                            <span class="badge bg-success">H (Normal)</span>
-                            <span class="badge bg-info text-dark">C (Caja)</span>
-                            <span class="badge text-white" style="background:#d63384">P (Permiso)</span>
-                            <span class="badge bg-primary">E (Extra)</span>
-                            <span class="badge bg-warning text-dark">D (Devuelve)</span>
-                            <span class="badge text-white" style="background:#6f42c1">F (Franco)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <ul class="small text-secondary mb-0">
-                    <li class="mb-2"><strong>Carga Automática:</strong> Al pulsar "Cargar", si la semana está vacía, el sistema aplicará automáticamente la <b>Plantilla Base (A o B)</b> correspondiente.</li>
-                    <li class="mb-2"><strong>Refuerzos:</strong> Puede agregar empleados de otros locales. Si tienen horarios ocupados en su sucursal de origen, aparecerán bloqueados <span class="badge bg-secondary">Ø</span>.</li>
-                    <li><strong>Validaciones:</strong> El sistema impedirá guardar si se excede el límite de 12hs diarias o si no se cumplen las 30/36/42/48hs semanales.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <!-- 2. RRHH (Indicadores + Asistencia) -->
-          <div class="accordion-item">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaRRHH">
-                <div class="help-icon-wrapper"><i class="bi bi-bar-chart-line-fill"></i></div>
-                2. RRHH y Auditoría
-              </button>
-            </h2>
-            <div id="ayudaRRHH" class="accordion-collapse collapse" data-bs-parent="#accordionAyuda">
-              <div class="accordion-body px-4 pb-4">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="p-3 border rounded h-100">
-                            <h6 class="fw-bold text-success"><i class="bi bi-graph-up"></i> Indicadores</h6>
-                            <p class="small text-muted mb-0">Tablero de control de costos. Permite filtrar por tipo de hora (ej: ver solo Extras) y exportar reportes de excesos (>9hs).</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="p-3 border rounded h-100">
-                            <h6 class="fw-bold text-primary"><i class="bi bi-fingerprint"></i> Asistencia</h6>
-                            <p class="small text-muted mb-0">Comparación automática entre lo planificado y la fichada real de <b>QuickPass</b>. Detecta ausencias y llegadas tarde.</p>
-                        </div>
-                    </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 3. VISTA LOCAL -->
-          <div class="accordion-item">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaLocal">
-                <div class="help-icon-wrapper"><i class="bi bi-shop"></i></div>
-                3. Mi Local (Vista)
-              </button>
-            </h2>
-            <div id="ayudaLocal" class="accordion-collapse collapse" data-bs-parent="#accordionAyuda">
-              <div class="accordion-body px-4 pb-4">
-                <p class="text-muted">Vista simplificada de solo lectura para comunicación.</p>
-                <ul>
-                    <li>Permite buscar por <b>Sucursal</b> o por <b>Vendedor</b> específico.</li>
-                    <li>Muestra las <b>Promociones Bancarias</b> vigentes al pie de cada día.</li>
-                    <li>Permite dejar <b>Feedback</b> <i class="bi bi-chat-left-quote-fill text-primary"></i> sobre un empleado para que lo vea Administración.</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-        </div> <!-- Fin Accordion -->
-      </div>
-      
-      <!-- Footer -->
-      <div class="modal-footer bg-light border-0">
-        <div class="d-flex w-100 justify-content-between align-items-center">
-            <small class="text-muted">App Gestion Horarios Sucursales</small>
-            <button type="button" class="btn btn-dark px-4" data-bs-dismiss="modal">Entendido</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-    <!-- Scripts -->
+    <!-- SCRIPTS -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Scripts Propios -->
     <script src="assets/js/horarios.js?v=4.0"></script>
-    <script src="assets/js/plantillas.js?v=1.0"></script>
+    <script src="assets/js/plantillas.js?v=1.1"></script>
 
 </body>
 </html>

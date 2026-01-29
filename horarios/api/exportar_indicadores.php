@@ -79,52 +79,72 @@ if (empty($reporte)) {
     exit;
 }
 
-// 4. OBTENER NOMBRES (Idéntico a indicadores_handler.php)
-// A. Vendedores
+// 4. OBTENER NOMBRES Y LEGAJOS REALES (Base RRHH)
 if (!empty($listaIDs)) {
-    $connCentral = getConexionCentral();
+    // Usamos la conexión de RRHH para obtener el dato real
+    $connCorp = getConexionCorp();
     $idsStr = implode("','", array_keys($listaIDs));
-    $sqlNom = "SELECT COD_VENDED, NOMBRE_VEN FROM GVA23 WHERE COD_VENDED IN ('$idsStr')";
-    $stmtNom = sqlsrv_query($connCentral, $sqlNom);
     
-    $mapaNombres = [];
+    // Buscamos NOMBRE y NRO_LEGAJO usando el COD_VENDEDOR (Bloque)
+    $sqlNom = "SELECT BLOQUE, NRO_LEGAJO, APELLIDO, NOMBRE FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ('$idsStr')";
+    $stmtNom = sqlsrv_query($connCorp, $sqlNom);
+    
+    $mapaDatos = [];
     if ($stmtNom) {
         while ($r = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
-            $nom = trim($r['NOMBRE_VEN']);
-            $nom = preg_replace('/[\s-]*[0-9]+$/', '', $nom);
-            $mapaNombres[trim($r['COD_VENDED'])] = $nom;
+            $nom = trim($r['APELLIDO']) . ' ' . trim($r['NOMBRE']);
+            $nom = utf8_encode($nom);
+            
+            $mapaDatos[trim($r['BLOQUE'])] = [
+                'nombre' => $nom,
+                'legajo' => trim($r['NRO_LEGAJO'])
+            ];
         }
         sqlsrv_free_stmt($stmtNom);
     }
-    sqlsrv_close($connCentral);
+    sqlsrv_close($connCorp);
 
     foreach ($reporte as $k => $v) {
-        if (isset($mapaNombres[$v['id']])) {
-            $reporte[$k]['nombre'] = $mapaNombres[$v['id']];
+        if (isset($mapaDatos[$v['id']])) {
+            $reporte[$k]['nombre'] = $mapaDatos[$v['id']]['nombre'];
+            $reporte[$k]['legajo_real'] = $mapaDatos[$v['id']]['legajo'];
+        } else {
+            $reporte[$k]['legajo_real'] = $v['id']; // Fallback
         }
     }
 }
 
-// B. Sucursales
+
+// B. Sucursales (TRADUCCIÓN DE NOMBRES)
 if (!empty($listaSucursalesIDs)) {
+    // IMPORTANTE: Conectar a la base de RRHH (LAKERS_CORP_SA)
     $connCorp = getConexionCorp();
+    
     $idsSucStr = implode(",", array_keys($listaSucursalesIDs));
     
+    // Buscamos el nombre real en DEPARTAMENTO
     $sqlSuc = "SELECT ID_DEPARTAMENTO, DESC_DEPARTAMENTO FROM DEPARTAMENTO WHERE ID_DEPARTAMENTO IN ($idsSucStr)";
     $stmtSuc = sqlsrv_query($connCorp, $sqlSuc);
     
     $mapaSucursales = [];
     if ($stmtSuc) {
         while ($r = sqlsrv_fetch_array($stmtSuc, SQLSRV_FETCH_ASSOC)) {
-            $mapaSucursales[intval($r['ID_DEPARTAMENTO'])] = trim($r['DESC_DEPARTAMENTO']);
+            $id = intval($r['ID_DEPARTAMENTO']);
+            $nombre = trim($r['DESC_DEPARTAMENTO']);
+            // Convertimos a UTF-8 si es necesario
+            $mapaSucursales[$id] = utf8_encode($nombre);
         }
         sqlsrv_free_stmt($stmtSuc);
     }
     sqlsrv_close($connCorp);
 
+    // Asignamos el nombre al reporte
     foreach ($reporte as $k => $v) {
         if (isset($mapaSucursales[$v['sucursal_id']])) {
             $reporte[$k]['sucursal_nombre'] = $mapaSucursales[$v['sucursal_id']];
+        } else {
+            // Si no encuentra nombre, deja el ID como fallback
+            $reporte[$k]['sucursal_nombre'] = "Sucursal " . $v['sucursal_id'];
         }
     }
 }
@@ -145,6 +165,7 @@ $s = '<style bgcolor="#E9ECEF" color="#212529"><b>'; $e = '</b></style>';
 
 $header = [];
 if ($esVistaGlobal) $header[] = $s . 'Sucursal' . $e;
+$header[] = $s . 'Legajo' . $e;
 $header[] = $s . 'Vendedor' . $e;
 $header[] = $s . 'H' . $e; 
 $header[] = $s . 'C' . $e; 
@@ -161,6 +182,7 @@ foreach ($reporte as $item) {
 
     $fila = [];
     if ($esVistaGlobal) $fila[] = $item['sucursal_nombre'];
+    $fila[] = $item['legajo_real']; // Nueva Columna
     $fila[] = $item['nombre'];
     $fila[] = $item['normal'];
     $fila[] = $item['caja'];

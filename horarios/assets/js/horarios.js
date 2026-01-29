@@ -207,6 +207,9 @@ function agregarFilasRefuerzos(listaVendedores) {
                 filasHTML +=         `<span class="text-success fw-bold">H: <span class="total-n">0</span></span>`;
                 filasHTML +=         `<span class="text-primary fw-bold">E: <span class="total-e">0</span></span>`;
                 filasHTML +=         `<span class="text-warning fw-bold">D: <span class="total-d">0</span></span>`;
+                filasHTML +=         `<span class="badge bg-light text-secondary border mt-1 total-saldo-container" title="Banco de Horas (Deuda)" style="font-size:0.9em;">
+                                Saldo: <span class="total-saldo">0</span>
+                             </span>`;
                 filasHTML +=     `</div>`;
                 filasHTML += `</td>`;
                 
@@ -332,7 +335,7 @@ function generarTablaHorarios(vendedores, semana) {
              badgeRefuerzo = ' <span class="badge bg-warning text-dark" style="font-size:0.7em">Refuerzo</span>';
         }
 
-        bodyHTML += `<tr data-vendedor-id="${vendedorId}" data-nombre="${vendedor.NOMBRE_VEN}">`;
+        bodyHTML += `<tr data-vendedor-id="${vendedorId}" data-nombre="${vendedor.NOMBRE_VEN}" data-saldo-inicial="0">`;
         
         // Columna Nombre
         bodyHTML += `<td class="fw-bold text-start ps-2">
@@ -345,12 +348,19 @@ function generarTablaHorarios(vendedores, semana) {
                             </span>
                         </div>
                      </td>`;
-        // Columna Totales (Punto 2: N -> H)
+// Columna Totales
         bodyHTML += `<td class="total-horas-empleado align-middle p-1">`;
         bodyHTML +=     `<div class="d-flex flex-column align-items-center" style="font-size: 0.85rem; line-height: 1.1;">`;
         bodyHTML +=         `<span class="text-success fw-bold" title="Horas Normales (H)">H: <span class="total-n">0</span></span>`;
         bodyHTML +=         `<span class="text-primary fw-bold" title="Horas Extras (E)">E: <span class="total-e">0</span></span>`;
         bodyHTML +=         `<span class="text-warning fw-bold" title="Horas Devuelve (D)">D: <span class="total-d">0</span></span>`;
+        
+        // --- NUEVO: SALDO DEUDOR ---
+        // Lo iniciamos en 0, luego al cargar datos se actualiza
+        bodyHTML +=         `<span class="badge bg-light text-secondary border mt-3 total-saldo-container" title="Banco de Horas (Deuda)" style="font-size:0.9em;">
+                                Saldo: <span class="total-saldo">0</span>
+                             </span>`;
+        
         bodyHTML +=     `</div>`;
         bodyHTML += `</td>`;
 
@@ -510,6 +520,14 @@ function cargarDatosEnGrilla(data) {
             }
         }
 
+        if (data.saldosAnteriores) {
+        for (const [vendedorId, saldo] of Object.entries(data.saldosAnteriores)) {
+            const fila = $(`tr[data-vendedor-id="${vendedorId}"]`);
+            // Guardamos el dato en la fila para usarlo en la suma en vivo
+            fila.attr('data-saldo-inicial', saldo);
+        }
+    }
+
         actualizarSumatorias();
     }
     
@@ -631,52 +649,88 @@ function mostrarModal(mensaje, tipo = 'success') {
 
 function actualizarSumatorias() {
     let granTotalSemanal = 0;
-    let totalesDiarios = Array(7).fill(0);
+    let totalesDiarios = Array(7).fill(0); // Array para sumar Lunes a Domingo
 
+    // Recorremos cada fila de vendedor
     $('tbody tr').each(function() {
         const fila = $(this);
         
-        // 1. Contar tipos
-        const n = fila.find('.hora-celda.marcado').length;
-        const c = fila.find('.hora-celda.hora-caja').length; // Caja
-        const p = fila.find('.hora-celda.hora-permiso').length; // Permiso
-        
-        const e = fila.find('.hora-celda.hora-extra').length;
-        const d = fila.find('.hora-celda.hora-devuelve').length;
+        // 1. Contar tipos de hora visuales en la grilla
+        const n = fila.find('.hora-celda.marcado').length;          // Normal (X)
+        const c = fila.find('.hora-celda.hora-caja').length;        // Caja (C)
+        const p = fila.find('.hora-celda.hora-permiso').length;     // Permiso (P)
+        const e = fila.find('.hora-celda.hora-extra').length;       // Extra (E)
+        const d = fila.find('.hora-celda.hora-devuelve').length;    // Devuelve (D)
 
+        // 2. Contar horas bloqueadas (trabajo en otra sucursal)
+        // Estas suman para el total contractual de la persona, pero no para el costo del local
         const nExterno = fila.find('.hora-celda.bloqueo-externo').length;
 
-        // 2. Calcular H (Normal + Caja + Permiso + Externo)
+        // 3. Calcular Total "H" (Horas Contractuales)
+        // Sumamos lo que trabaja acá + lo que trabaja allá + licencias pagas (P)
         const totalH_Visual = n + c + p + nExterno;
 
-        // 3. Actualizar
+        // 4. Actualizar los contadores de la fila
         fila.find('.total-n').text(totalH_Visual); 
         fila.find('.total-e').text(e);
         fila.find('.total-d').text(d);
 
-        granTotalSemanal += (n + c + p + e + d); // Sumamos todo al costo del local
+        // 5. CÁLCULO BANCO DE HORAS (NUEVO)
+        // Fórmula: (Deuda Vieja) + (Nuevos Permisos) - (Nuevas Devoluciones)
+        // Leemos el saldo histórico que vino del backend
+        const saldoInicial = parseInt(fila.attr('data-saldo-inicial')) || 0;
+        
+        // Calculamos el saldo final proyectado
+        const saldoActual = saldoInicial + p - d;
+
+        const spanSaldo = fila.find('.total-saldo');
+        const badgeSaldo = fila.find('.total-saldo-container');
+
+        spanSaldo.text(saldoActual);
+
+        // Colores dinámicos para el saldo
+        badgeSaldo.removeClass('bg-light text-secondary bg-danger text-white bg-success');
+        
+        if (saldoActual > 0) {
+            // Debe horas -> Rojo
+            badgeSaldo.addClass('bg-danger text-white').attr('title', `Debe ${saldoActual} horas`);
+        } else if (saldoActual < 0) {
+            // Saldo a favor (Devolvió de más) -> Verde
+            badgeSaldo.addClass('bg-success text-white').attr('title', `Saldo a favor: ${Math.abs(saldoActual)}`);
+        } else {
+            // Al día (0) -> Gris
+            badgeSaldo.addClass('bg-light text-secondary').attr('title', 'Al día');
+        }
+
+        // 6. Sumar al Gran Total Semanal del Local
+        // Solo sumamos lo que paga ESTE local (ignoramos nExterno)
+        granTotalSemanal += (n + c + p + e + d);
     });
 
-    // Calcular totales verticales (por día) - Solo locales
-    $('.hora-celda.marcado, .hora-celda.hora-extra, .hora-celda.hora-devuelve').each(function() {
+    // 7. Calcular Totales Verticales (Por Día)
+    // Recorremos todas las celdas pintadas para sumar por columna
+    $('.hora-celda.marcado, .hora-celda.hora-extra, .hora-celda.hora-devuelve, .hora-celda.hora-permiso, .hora-celda.hora-caja').each(function() {
         const fechaCelda = $(this).data('fecha');
+        // Buscamos en qué índice del array de fechas está esta celda
         const diaIndex = fechasSemana.indexOf(fechaCelda);
+        
         if (diaIndex !== -1) {
             totalesDiarios[diaIndex]++;
         }
     });
 
-    // Actualizar badges globales
+    // 8. Actualizar Badges Globales en la Interfaz
     $('#totalSemanalLocal').text(granTotalSemanal);
     $('.total-semanal-footer').text(granTotalSemanal);
 
+    // Color del badge global (Azul si 0, Verde si hay carga)
     if (granTotalSemanal > 0) {
         $('#totalSemanalLocal').removeClass('bg-primary').addClass('bg-success');
     } else {
         $('#totalSemanalLocal').removeClass('bg-success').addClass('bg-primary');
     }
 
-    // Actualizar footer de días
+    // Actualizar fila del footer con los totales diarios
     $('.total-horas-dia').each(function(index) {
         $(this).text(totalesDiarios[index]);
     });
@@ -841,11 +895,16 @@ if (!nombre || nombre === "undefined") {
             else if (celda.hasClass('hora-permiso')) tipo = 'permiso'; // Nuevo
             else if (celda.hasClass('hora-caja')) tipo = 'caja';       // Nuevo
 
+// Obtenemos el nombre de la fila
+            const nombreVendedor = celda.closest('tr').data('nombre'); // ESTO ES SEGURO
+
+            
             horarios.push({
                 codVended: celda.closest('tr').data('vendedor-id'),
+                nombreVendedor: nombreVendedor, // <--- CAMPO NUEVO
                 fecha: celda.data('fecha'),
                 hora: celda.data('hora'),
-                tipo: tipo // Ahora 'tipo' existe y tiene valor
+                tipo: tipo 
             });
         });
 
