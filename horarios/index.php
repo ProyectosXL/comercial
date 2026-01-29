@@ -63,75 +63,63 @@
             <!-- PANEL 1: GESTIÓN SEMANAL (Operativa Diaria) -->
             <div class="tab-pane fade show active" id="panel-semanal" role="tabpanel">
                 
-                <!-- CARD DE FILTROS -->
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-filter"></i> Filtros de Búsqueda</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3 align-items-end">
-                            <!-- 1. Columna Sucursal -->
-                            <div class="col-md-3">
-                                <label for="sucursalSelector" class="form-label fw-bold">Seleccione Sucursal</label>
-                                <select id="sucursalSelector" class="form-select form-select-lg"></select>
-                            </div>
+<!-- CARD DE FILTROS (DISEÑO FINAL) -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-filter"></i> Filtros de Búsqueda</h5>
+            </div>
+<div class="card-body">
+    
+    <!-- FILA 1: FILTROS DE BÚSQUEDA -->
+    <div class="row g-3 align-items-end">
+        <!-- Sucursal -->
+        <div class="col-md-3">
+            <label for="sucursalSelector" class="form-label fw-bold">Sucursal</label>
+            <select id="sucursalSelector" class="form-select"></select>
+        </div>
 
-                            <!-- 2. Columna Semana -->
-                            <div class="col-md-2">
-                                <label for="semanaSelector" class="form-label fw-bold">Seleccione Semana</label>
-                                <input type="week" id="semanaSelector" class="form-control form-control-lg">
-                            </div>
+        <!-- Semana -->
+        <div class="col-md-3">
+            <label for="semanaSelector" class="form-label fw-bold">Semana</label>
+            <input type="week" id="semanaSelector" class="form-control">
+        </div>
 
-                            <!-- 3. Columna Tipos de Hora -->
-                            <div class="col-md-5"> 
-                                <label class="form-label fw-bold">Tipo de Hora</label>
-                                <div id="tipoHoraSelector" class="btn-group w-100" role="group">
-                                    <input type="radio" class="btn-check" name="tipoHora" id="tipoNormal" value="normal" autocomplete="off" checked>
-                                    <label class="btn btn-outline-success" for="tipoNormal">X (NORM)</label>
+        <!-- Tipos de Hora -->
+        <div class="col-md-4"> 
+            <label class="form-label fw-bold">Tipo de Hora</label>
+            <div id="tipoHoraSelector" class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="tipoHora" id="tipoNormal" value="normal" checked><label class="btn btn-outline-success" for="tipoNormal">X (NORMAL)</label>
+                <input type="radio" class="btn-check" name="tipoHora" id="tipoCaja" value="caja"><label class="btn btn-outline-info" for="tipoCaja">C (CAJA)</label>
+                <input type="radio" class="btn-check" name="tipoHora" id="tipoPermiso" value="permiso"><label class="btn" for="tipoPermiso" style="border-color:#d63384; color:#d63384;">P (PERMISO)</label>
+                <input type="radio" class="btn-check" name="tipoHora" id="tipoExtra" value="extra"><label class="btn btn-outline-primary" for="tipoExtra">E (EXTRA)</label>
+                <input type="radio" class="btn-check" name="tipoHora" id="tipoDevuelve" value="devuelve"><label class="btn btn-outline-warning" for="tipoDevuelve">D (DEVUELVE)</label>
+            </div>
+        </div>
+        
+        <!-- Botón Cargar -->
+        <div class="col-md-2">
+            <button id="cargarHorariosBtn" class="btn btn-primary w-100">
+                <i class="bi bi-search"></i> Cargar
+            </button>
+        </div>
+    </div>
 
-                                    <input type="radio" class="btn-check" name="tipoHora" id="tipoCaja" value="caja" autocomplete="off">
-                                    <label class="btn btn-outline-info" for="tipoCaja">C (CAJA)</label>
+<!-- FILA 2: ACCIONES (Se muestra al cargar) -->
+    <div id="accionesContainer" class="row mt-3 pt-3 border-top">
+        <div class="col-12 d-flex justify-content-end gap-3">
+            <!-- Botón Guardar (VISIBLE y VERDE) -->
+            <button id="guardarHorariosBtn" class="btn btn-success btn-lg px-4">
+                <i class="bi bi-save"></i> Guardar Cambios
+            </button>
+            
+            <!-- Botón Excel (VISIBLE y NEGRO) -->
+            <button id="exportarQuickPassBtn" class="btn btn-dark btn-lg px-4">
+                <i class="bi bi-file-earmark-excel"></i> Descargar Excel QP
+            </button>
+        </div>
+    </div>
 
-                                    <input type="radio" class="btn-check" name="tipoHora" id="tipoPermiso" value="permiso" autocomplete="off">
-                                    <label class="btn btn-outline-danger" for="tipoPermiso" style="border-color:#d63384; color:#d63384;">P (PERM)</label>
-
-                                    <input type="radio" class="btn-check" name="tipoHora" id="tipoExtra" value="extra" autocomplete="off">
-                                    <label class="btn btn-outline-primary" for="tipoExtra">E (EXTRA)</label>
-
-                                    <input type="radio" class="btn-check" name="tipoHora" id="tipoDevuelve" value="devuelve" autocomplete="off">
-                                    <label class="btn btn-outline-warning" for="tipoDevuelve">D (DEV)</label>
-                                </div>
-                            </div>
-                            
-                            <!-- 4. Botón Cargar y Opciones -->
-                            <div class="col-md-2">
-                                <div class="btn-group w-100">
-                                     <button id="cargarHorariosBtn" class="btn btn-primary btn-lg">
-                                        <i class="bi bi-calendar-check"></i> Cargar
-                                    </button>
-                                     <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <span class="visually-hidden">Opciones</span>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#" id="btnCargarBase">
-                                            <i class="bi bi-magic"></i> Cargar Base Automática
-                                        </a></li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <!-- 5. Acciones (Guardar / Excel) -->
-                            <div class="col-md-2 offset-md-10 mt-2">
-                                <button id="guardarHorariosBtn" class="btn btn-success btn-lg w-100 mb-2" style="display:none;">
-                                    <i class="bi bi-save"></i> Guardar
-                                </button>
-                                <button id="exportarQuickPassBtn" class="btn btn-outline-dark btn-lg w-100" style="display:none;">
-                                    <i class="bi bi-file-earmark-excel-fill"></i> Excel QP
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+</div>
 
                 <!-- LEYENDA RÁPIDA -->
                 <div class="alert alert-light border border-secondary-subtle d-flex align-items-center py-2 mb-4 small shadow-sm" role="alert">
@@ -364,65 +352,120 @@
       </div>
     </div>
 
-    <!-- MODAL AYUDA -->
-    <div class="modal fade" id="modalAyuda" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-scrollable modal-lg">
-        <div class="modal-content">
-          <div class="modal-header bg-info text-dark">
-            <h5 class="modal-title fw-bold"><i class="bi bi-info-circle-fill me-2"></i> Manual de Uso</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- MODAL DE AYUDA (DISEÑO PROFESIONAL) -->
+<div class="modal fade" id="modalAyuda" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      
+      <!-- Cabecera Dark -->
+      <div class="modal-header modal-header-help p-4">
+        <div>
+            <h4 class="modal-title fw-bold mb-1"><i class="bi bi-patch-question-fill me-2"></i> Centro de Ayuda</h4>
+            <small class="opacity-75">Guía rápida de funcionalidades del sistema</small>
+        </div>
+        <button type="button" class="btn-close btn-close-white align-self-start" data-bs-dismiss="modal"></button>
+      </div>
+
+      <!-- Cuerpo -->
+      <div class="modal-body p-0">
+        <div class="accordion accordion-help" id="accordionAyuda">
+          
+          <!-- 1. GESTIÓN -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaGestion">
+                <div class="help-icon-wrapper"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+                1. Gestión y Planificación
+              </button>
+            </h2>
+            <div id="ayudaGestion" class="accordion-collapse collapse show" data-bs-parent="#accordionAyuda">
+              <div class="accordion-body px-4 pb-4">
+                <p class="text-muted mb-3">Herramienta principal para la carga de horarios semanales.</p>
+                
+                <div class="card bg-light border-0 mb-3">
+                    <div class="card-body p-3">
+                        <h6 class="fw-bold small text-uppercase text-muted mb-2">Referencias de Horas</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="badge bg-success">H (Normal)</span>
+                            <span class="badge bg-info text-dark">C (Caja)</span>
+                            <span class="badge text-white" style="background:#d63384">P (Permiso)</span>
+                            <span class="badge bg-primary">E (Extra)</span>
+                            <span class="badge bg-warning text-dark">D (Devuelve)</span>
+                            <span class="badge text-white" style="background:#6f42c1">F (Franco)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="small text-secondary mb-0">
+                    <li class="mb-2"><strong>Carga Automática:</strong> Al pulsar "Cargar", si la semana está vacía, el sistema aplicará automáticamente la <b>Plantilla Base (A o B)</b> correspondiente.</li>
+                    <li class="mb-2"><strong>Refuerzos:</strong> Puede agregar empleados de otros locales. Si tienen horarios ocupados en su sucursal de origen, aparecerán bloqueados <span class="badge bg-secondary">Ø</span>.</li>
+                    <li><strong>Validaciones:</strong> El sistema impedirá guardar si se excede el límite de 12hs diarias o si no se cumplen las 30/36/42/48hs semanales.</li>
+                </ul>
+              </div>
+            </div>
           </div>
-          <div class="modal-body p-4">
-            <p class="lead text-center mb-4">Bienvenido al Sistema de Gestión de Horarios.</p>
-            <div class="accordion" id="accordionAyuda">
-              <!-- 1. GESTIÓN -->
-              <div class="accordion-item">
-                <h2 class="accordion-header">
-                  <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaGestion">1. Gestión (Carga)</button>
-                </h2>
-                <div id="ayudaGestion" class="accordion-collapse collapse show">
-                  <div class="accordion-body">
-                    <p>Planifique los horarios semanales.</p>
-                    <ul>
-                        <li>Use <b>Cargar Base Automática</b> para traer la plantilla (Semana A o B).</li>
-                        <li><b>H:</b> Horas Normales (incluye Caja y Permiso).</li>
-                        <li><b>F:</b> Franco (Bloquea el día).</li>
-                        <li><b>Refuerzos:</b> Agregue gente de otros locales. Si tienen horas ocupadas allá, aparecerán tachadas (Ø).</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              <!-- 2. RRHH -->
-              <div class="accordion-item">
-                <h2 class="accordion-header">
-                  <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaRRHH">2. RRHH</button>
-                </h2>
-                <div id="ayudaRRHH" class="accordion-collapse collapse">
-                  <div class="accordion-body">
-                    <ul>
-                        <li><b>Indicadores:</b> Vea costos y excesos. Descargue reportes.</li>
-                        <li><b>Asistencia:</b> Compare Planificado vs QuickPass.</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-              <!-- 3. MI LOCAL -->
-              <div class="accordion-item">
-                <h2 class="accordion-header">
-                  <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaLocal">3. Vista Local</button>
-                </h2>
-                <div id="ayudaLocal" class="accordion-collapse collapse">
-                  <div class="accordion-body">Vista de solo lectura para imprimir o comunicar al equipo. Permite buscar por vendedor y ver dónde trabaja cada día.</div>
+
+          <!-- 2. RRHH (Indicadores + Asistencia) -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaRRHH">
+                <div class="help-icon-wrapper"><i class="bi bi-bar-chart-line-fill"></i></div>
+                2. RRHH y Auditoría
+              </button>
+            </h2>
+            <div id="ayudaRRHH" class="accordion-collapse collapse" data-bs-parent="#accordionAyuda">
+              <div class="accordion-body px-4 pb-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded h-100">
+                            <h6 class="fw-bold text-success"><i class="bi bi-graph-up"></i> Indicadores</h6>
+                            <p class="small text-muted mb-0">Tablero de control de costos. Permite filtrar por tipo de hora (ej: ver solo Extras) y exportar reportes de excesos (>9hs).</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded h-100">
+                            <h6 class="fw-bold text-primary"><i class="bi bi-fingerprint"></i> Asistencia</h6>
+                            <p class="small text-muted mb-0">Comparación automática entre lo planificado y la fichada real de <b>QuickPass</b>. Detecta ausencias y llegadas tarde.</p>
+                        </div>
+                    </div>
                 </div>
               </div>
             </div>
           </div>
-          <div class="modal-footer bg-light">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+
+          <!-- 3. VISTA LOCAL -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaLocal">
+                <div class="help-icon-wrapper"><i class="bi bi-shop"></i></div>
+                3. Mi Local (Vista)
+              </button>
+            </h2>
+            <div id="ayudaLocal" class="accordion-collapse collapse" data-bs-parent="#accordionAyuda">
+              <div class="accordion-body px-4 pb-4">
+                <p class="text-muted">Vista simplificada de solo lectura para comunicación.</p>
+                <ul>
+                    <li>Permite buscar por <b>Sucursal</b> o por <b>Vendedor</b> específico.</li>
+                    <li>Muestra las <b>Promociones Bancarias</b> vigentes al pie de cada día.</li>
+                    <li>Permite dejar <b>Feedback</b> <i class="bi bi-chat-left-quote-fill text-primary"></i> sobre un empleado para que lo vea Administración.</li>
+                </ul>
+              </div>
+            </div>
           </div>
+
+        </div> <!-- Fin Accordion -->
+      </div>
+      
+      <!-- Footer -->
+      <div class="modal-footer bg-light border-0">
+        <div class="d-flex w-100 justify-content-between align-items-center">
+            <small class="text-muted">App Gestion Horarios Sucursales</small>
+            <button type="button" class="btn btn-dark px-4" data-bs-dismiss="modal">Entendido</button>
         </div>
       </div>
     </div>
+  </div>
+</div>
 
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

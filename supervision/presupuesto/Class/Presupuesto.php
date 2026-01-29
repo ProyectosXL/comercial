@@ -8,6 +8,7 @@ class Presupuesto {
     private $cid;
     private $cid_central;
     private const DB_PREFIX = '[XL-LAKERBIS].LOCALES_LAKERS.DBO.';
+    private const DB_PREFIX2 = '[XL-TANGO].LAKER_SA.DBO.';
 
     function __construct()
     {
@@ -16,15 +17,26 @@ class Presupuesto {
         $this->cid_central = $this->cid->conectar('central');
     } 
 
-    private function retornarArray($sqlEnviado){
-        $sql = $sqlEnviado;
-        $stmt = sqlsrv_query($this->cid_central, $sql);
-        $rows = array();
-        while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-            $rows[] = $v;
-        }
-        return $rows;  
+private function retornarArray($sqlEnviado){
+    $sql = $sqlEnviado;
+    $stmt = sqlsrv_query($this->cid_central, $sql);
+
+    // --- ¡AÑADE ESTE BLOQUE! ---
+    if ($stmt === false) {
+        // Detiene el script y muestra el error real de la base de datos
+        die(
+            "Error en la consulta SQL:<br><pre>" . htmlspecialchars($sql) . "</pre><br>" .
+            "Detalle del error:<br><pre>" . print_r(sqlsrv_errors(), true) . "</pre>"
+        );
     }
+    // -------------------------
+
+    $rows = array();
+    while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+        $rows[] = $v;
+    }
+    return $rows;  
+}
 
      public function traerSupervisoras(){
         $sql = "SELECT ID, NOMBRE FROM " . self::DB_PREFIX . "RO_T_SUPERVISORAS_COMERCIAL WHERE ACTIVA = 1 ORDER BY ID";
@@ -32,7 +44,7 @@ class Presupuesto {
     }
 
      public function traerConceptos(){
-        $sql = "SELECT ID_CONC, CONCEPTO FROM " . self::DB_PREFIX . "RO_T_CONCEPTOS_GASTOS_SUP";
+        $sql = "SELECT ID_CONC, CONCEPTO FROM " . self::DB_PREFIX2 . "RO_T_CONCEPTOS_GASTOS_SUP";
         return $this->retornarArray($sql);
     }
     

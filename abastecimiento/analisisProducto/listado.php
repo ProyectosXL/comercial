@@ -5,6 +5,9 @@ session_start();
 
 // --- PEGAR ESTO AQUÍ PARA FORZAR EL RESETEO ---
 $_SESSION['entorno'] = 'central'; 
+
+
+require_once '../Class/Conexion.php';
 // ----------------------------------------------
 
 require 'Class/Articulo.php';

@@ -10,7 +10,7 @@ class Articulo
     function __construct()
     {
 
-        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
+        
         $this->cid = new Conexion();
 
         if (session_status() === PHP_SESSION_NONE) {

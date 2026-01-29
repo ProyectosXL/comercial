@@ -153,28 +153,120 @@
       </div>
     </div>
 
-    <!-- MODAL DE AYUDA (Mismo que en index) -->
-    <div class="modal fade" id="modalAyuda" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-scrollable modal-lg">
-        <div class="modal-content">
-          <div class="modal-header bg-info text-dark">
-            <h5 class="modal-title fw-bold"><i class="bi bi-info-circle-fill me-2"></i> Manual de Uso</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- MODAL DE AYUDA (DISEÑO PROFESIONAL) -->
+<div class="modal fade" id="modalAyuda" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      
+      <!-- Cabecera Dark -->
+      <div class="modal-header modal-header-help p-4">
+        <div>
+            <h4 class="modal-title fw-bold mb-1"><i class="bi bi-patch-question-fill me-2"></i> Centro de Ayuda</h4>
+            <small class="opacity-75">Guía rápida de funcionalidades del sistema</small>
+        </div>
+        <button type="button" class="btn-close btn-close-white align-self-start" data-bs-dismiss="modal"></button>
+      </div>
+
+      <!-- Cuerpo -->
+      <div class="modal-body p-0">
+        <div class="accordion accordion-help" id="accordionAyuda">
+          
+          <!-- 1. GESTIÓN -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaGestion">
+                <div class="help-icon-wrapper"><i class="bi bi-grid-3x3-gap-fill"></i></div>
+                1. Gestión y Planificación
+              </button>
+            </h2>
+            <div id="ayudaGestion" class="accordion-collapse collapse show" data-bs-parent="#accordionAyuda">
+              <div class="accordion-body px-4 pb-4">
+                <p class="text-muted mb-3">Herramienta principal para la carga de horarios semanales.</p>
+                
+                <div class="card bg-light border-0 mb-3">
+                    <div class="card-body p-3">
+                        <h6 class="fw-bold small text-uppercase text-muted mb-2">Referencias de Horas</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="badge bg-success">H (Normal)</span>
+                            <span class="badge bg-info text-dark">C (Caja)</span>
+                            <span class="badge text-white" style="background:#d63384">P (Permiso)</span>
+                            <span class="badge bg-primary">E (Extra)</span>
+                            <span class="badge bg-warning text-dark">D (Devuelve)</span>
+                            <span class="badge text-white" style="background:#6f42c1">F (Franco)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="small text-secondary mb-0">
+                    <li class="mb-2"><strong>Carga Automática:</strong> Al pulsar "Cargar", si la semana está vacía, el sistema aplicará automáticamente la <b>Plantilla Base (A o B)</b> correspondiente.</li>
+                    <li class="mb-2"><strong>Refuerzos:</strong> Puede agregar empleados de otros locales. Si tienen horarios ocupados en su sucursal de origen, aparecerán bloqueados <span class="badge bg-secondary">Ø</span>.</li>
+                    <li><strong>Validaciones:</strong> El sistema impedirá guardar si se excede el límite de 12hs diarias o si no se cumplen las 30/36/42/48hs semanales.</li>
+                </ul>
+              </div>
+            </div>
           </div>
-          <div class="modal-body p-4">
-            <p>Esta es la vista de <b>Solo Lectura</b> para los locales.</p>
-            <ul>
-                <li>Visualice los horarios cargados por Administración.</li>
-                <li>Verifique las <b>Promociones Bancarias</b> al pie de cada día.</li>
-                <li>Utilice el botón <b>Feedback</b> para dejar comentarios o solicitudes de cambio sobre un vendedor específico.</li>
-            </ul>
+
+          <!-- 2. RRHH (Indicadores + Asistencia) -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaRRHH">
+                <div class="help-icon-wrapper"><i class="bi bi-bar-chart-line-fill"></i></div>
+                2. RRHH y Auditoría
+              </button>
+            </h2>
+            <div id="ayudaRRHH" class="accordion-collapse collapse" data-bs-parent="#accordionAyuda">
+              <div class="accordion-body px-4 pb-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded h-100">
+                            <h6 class="fw-bold text-success"><i class="bi bi-graph-up"></i> Indicadores</h6>
+                            <p class="small text-muted mb-0">Tablero de control de costos. Permite filtrar por tipo de hora (ej: ver solo Extras) y exportar reportes de excesos (>9hs).</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded h-100">
+                            <h6 class="fw-bold text-primary"><i class="bi bi-fingerprint"></i> Asistencia</h6>
+                            <p class="small text-muted mb-0">Comparación automática entre lo planificado y la fichada real de <b>QuickPass</b>. Detecta ausencias y llegadas tarde.</p>
+                        </div>
+                    </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="modal-footer bg-light">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+
+          <!-- 3. VISTA LOCAL -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ayudaLocal">
+                <div class="help-icon-wrapper"><i class="bi bi-shop"></i></div>
+                3. Mi Local (Vista)
+              </button>
+            </h2>
+            <div id="ayudaLocal" class="accordion-collapse collapse" data-bs-parent="#accordionAyuda">
+              <div class="accordion-body px-4 pb-4">
+                <p class="text-muted">Vista simplificada de solo lectura para comunicación.</p>
+                <ul>
+                    <li>Permite buscar por <b>Sucursal</b> o por <b>Vendedor</b> específico.</li>
+                    <li>Muestra las <b>Promociones Bancarias</b> vigentes al pie de cada día.</li>
+                    <li>Permite dejar <b>Feedback</b> <i class="bi bi-chat-left-quote-fill text-primary"></i> sobre un empleado para que lo vea Administración.</li>
+                </ul>
+              </div>
+            </div>
           </div>
+
+        </div> <!-- Fin Accordion -->
+      </div>
+      
+      <!-- Footer -->
+      <div class="modal-footer bg-light border-0">
+        <div class="d-flex w-100 justify-content-between align-items-center">
+            <small class="text-muted">App Gestion Horarios Sucursales</small>
+            <button type="button" class="btn btn-dark px-4" data-bs-dismiss="modal">Entendido</button>
         </div>
       </div>
     </div>
+  </div>
+</div>
 
     <!-- MODAL DE MENSAJES (Para Notas Diarias y Alertas) -->
     <div class="modal fade" id="modalMensaje" tabindex="-1" aria-hidden="true" style="z-index: 1060;">

@@ -30,6 +30,7 @@ $(document).ready(function() {
 
         $('#loader').show();
         $('#tablaHorariosContainer').empty();
+        $('#accionesContainer').hide();
         $('#observacionesContainer, #guardarHorariosBtn, #agregarRefuerzoBtn').hide();
         $('#observacionesSemana').val('');
         $('#totalSemanalLocal').text('0');
@@ -230,8 +231,20 @@ function agregarFilasRefuerzos(listaVendedores) {
         $('tbody').append(filasHTML);
     }
 
-    function finalizarCarga() {
-        $('#guardarHorariosBtn, #agregarRefuerzoBtn, #observacionesContainer').show();
+function finalizarCarga() {
+        // Mostramos el contenedor de acciones (donde están Guardar y Excel)
+        $('#accionesContainer').show();
+        
+        // Aseguramos que los botones específicos también se vean
+        $('#guardarHorariosBtn').show(); 
+        $('#exportarQuickPassBtn').show();
+
+        // Mostramos el resto de elementos
+        $('#agregarRefuerzoBtn').show();
+        $('#observacionesContainer').show();
+        $('#leyendaContainer').show();
+
+        // Ocultamos el spinner de carga
         $('#loader').hide();
         console.log("--- CARGA FINALIZADA ---");
     }

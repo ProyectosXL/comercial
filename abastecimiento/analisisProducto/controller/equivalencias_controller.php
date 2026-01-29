@@ -1,5 +1,7 @@
 
 <?php
+require_once '../../Class/Conexion.php'; 
+
 
 // Limpiar completamente cualquier output buffer
 while (ob_get_level()) {

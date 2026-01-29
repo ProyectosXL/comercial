@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
-require '../Class/Articulo.php';
+require_once '../../Class/Conexion.php'; 
+require_once '../Class/Articulo.php'; 
 
 // Helpers (sin cambios)
 function escape_val($s) { return str_replace("'", "''", (string)$s); }
