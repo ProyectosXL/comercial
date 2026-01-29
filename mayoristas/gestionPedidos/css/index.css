@@ -1,0 +1,434 @@
+/* ========================================
+   CSS específico para index.php
+   Gestión de Pedidos - XL Extra
+   ======================================== */
+
+/* ========================================
+   Variables CSS
+   ======================================== */
+:root {
+    --primary-color: #198754;
+    --warning-color: #ffc107;
+    --dark-bg: #343a40;
+    --light-bg: #f8f9fa;
+    --border-color: #dee2e6;
+    --hover-bg: #f1f3f5;
+    --text-muted: #6c757d;
+    --edited-highlight: #d1e7dd;
+    --edited-border: #198754;
+}
+
+/* ========================================
+   Estilos generales de la página
+   ======================================== */
+body {
+    background-color: var(--light-bg);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ========================================
+   Navbar personalizado
+   ======================================== */
+.navbar-brand {
+    border-radius: 8px;
+    padding: 5px;
+}
+
+.navbar-nav .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+/* ========================================
+   Sección de filtros
+   ======================================== */
+.filter-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.filter-section label {
+    font-weight: 600;
+    color: var(--dark-bg);
+    margin-bottom: 0.5rem;
+}
+
+.filter-section select {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    transition: border-color 0.3s ease;
+}
+
+.filter-section select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+.btn-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+}
+
+/* ========================================
+   Cards de totales
+   ======================================== */
+.totals-section {
+    margin-bottom: 2rem;
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.total-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+}
+
+.total-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.total-card .card-body {
+    padding: 1.5rem;
+}
+
+.total-card .icon-wrapper {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.icon-wrapper.primary {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+}
+
+.icon-wrapper.success {
+    background-color: rgba(25, 135, 84, 0.1);
+    color: var(--primary-color);
+}
+
+.icon-wrapper.info {
+    background-color: rgba(13, 202, 240, 0.1);
+    color: #0dcaf0;
+}
+
+.total-card .card-title {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.total-card .card-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--dark-bg);
+    margin: 0;
+}
+
+/* ========================================
+   Búsqueda rápida
+   ======================================== */
+.search-section {
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.search-section .input-group {
+    max-width: 400px;
+}
+
+.search-section input {
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.search-section input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+.search-section .input-group-text {
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-right: none;
+    border-radius: 6px 0 0 6px;
+}
+
+/* ========================================
+   Título del vendedor
+   ======================================== */
+.vendor-title {
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.vendor-title h4 {
+    margin: 0;
+    color: var(--dark-bg);
+    font-weight: 600;
+}
+
+.vendor-title i {
+    color: var(--primary-color);
+    font-size: 1.5rem;
+}
+
+/* ========================================
+   Tabla de pedidos
+   ======================================== */
+.table-container {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow-x: auto;
+    max-width: 1800px;
+    margin: 0 auto;
+    max-height: calc(100vh - 400px);
+    overflow-y: auto;
+}
+
+.table-pedidos {
+    margin-bottom: 0;
+    width: 100%;
+}
+
+.table-pedidos {
+    margin-bottom: 0;
+}
+
+.table-pedidos thead th {
+    background-color: var(--dark-bg);
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    padding: 1rem 0.75rem;
+    border: none;
+    vertical-align: middle;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table-pedidos thead th i {
+    margin-right: 6px;
+    opacity: 0.9;
+}
+
+.table-pedidos tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table-pedidos tbody tr:hover {
+    background-color: var(--hover-bg);
+}
+
+.table-pedidos tbody td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+    font-size: 0.875rem;
+}
+
+/* ========================================
+   Fila editada (marcado temporal)
+   ======================================== */
+.edited-row {
+    border-left: 4px solid var(--edited-border) !important;
+    background-color: var(--edited-highlight) !important;
+    animation: fadeHighlight 0.6s ease;
+}
+
+@keyframes fadeHighlight {
+    0% {
+        background-color: #a3cfbb;
+    }
+    100% {
+        background-color: var(--edited-highlight);
+    }
+}
+
+/* ========================================
+   Botones de acción
+   ======================================== */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.btn-action {
+    padding: 0.4rem 0.7rem;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    min-height: 38px;
+}
+
+.btn-action i {
+    font-size: 1.1rem;
+}
+
+.btn-action.btn-success {
+    background-color: var(--primary-color);
+}
+
+.btn-action.btn-success:hover {
+    background-color: #157347;
+    transform: scale(1.05);
+}
+
+.btn-action.btn-warning {
+    background-color: var(--warning-color);
+    color: #000;
+}
+
+.btn-action.btn-warning:hover {
+    background-color: #ffca2c;
+    transform: scale(1.05);
+}
+
+/* ========================================
+   Badge "Impreso"
+   ======================================== */
+.badge-impreso {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 4px;
+}
+
+/* ========================================
+   Responsive Design
+   ======================================== */
+@media (max-width: 768px) {
+    .filter-section {
+        padding: 1rem;
+    }
+    
+    .total-card .card-body {
+        padding: 1rem;
+    }
+    
+    .total-card .icon-wrapper {
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+    }
+    
+    .total-card .card-value {
+        font-size: 1.5rem;
+    }
+    
+    .table-container {
+        padding: 1rem;
+    }
+    
+    .table-pedidos {
+        font-size: 0.75rem;
+    }
+    
+    .table-pedidos thead th {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.7rem;
+    }
+    
+    .table-pedidos tbody td {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .btn-action {
+        min-width: 34px;
+        min-height: 34px;
+        padding: 0.3rem 0.5rem;
+    }
+    
+    .btn-action i {
+        font-size: 1rem;
+    }
+    
+    .vendor-title {
+        padding: 0.75rem 1rem;
+    }
+    
+    .vendor-title h4 {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .totals-section .col-md-3 {
+        margin-bottom: 1rem;
+    }
+    
+    .search-section .input-group {
+        max-width: 100%;
+    }
+}
+
+/* ========================================
+   Utilidades adicionales
+   ======================================== */
+.text-currency {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+.no-data-message {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+}
+
+.no-data-message i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
