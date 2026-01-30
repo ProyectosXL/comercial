@@ -7,12 +7,27 @@
  * Inicialización cuando el DOM está listo
  */
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('index.js cargado correctamente');
+    
     // Inicializar funcionalidades
     initTotales();
     initBusquedaRapida();
     initEdicionTracking();
     initModalCliente();
+    initBotonLimpiarMarcas();
     checkEditedRow();
+});
+
+/**
+ * Detectar cuando se regresa a la página desde el historial
+ * para actualizar las marcas de edición
+ */
+window.addEventListener('pageshow', function(event) {
+    // Si la página se cargó desde el caché del navegador (botón atrás)
+    if (event.persisted) {
+        console.log('Página cargada desde caché, actualizando marcas de edición');
+        checkEditedRow();
+    }
 });
 
 /* ========================================
@@ -165,7 +180,7 @@ function mostrarMensajeSinResultados(filasVisibles) {
 }
 
 /* ========================================
-   Tracking de edición de clientes
+   Tracking de edición de clientes (CORREGIDO)
    ======================================== */
 
 /**
@@ -175,44 +190,40 @@ function initEdicionTracking() {
     const botonesEditar = document.querySelectorAll('.btn-edit');
     
     botonesEditar.forEach(boton => {
-        boton.addEventListener('click', function() {
+        boton.addEventListener('click', function(e) {
             const fila = this.closest('tr');
             const codigoCliente = fila.querySelector('#cod_client');
             
             if (codigoCliente) {
-                // Guardar el código del cliente y marcar que viene de edición
                 const clienteId = codigoCliente.textContent.trim();
-                const url = new URL(this.href);
-                url.searchParams.append('edited', clienteId);
-                this.href = url.toString();
+                
+                // Guardar en sessionStorage que este cliente fue editado
+                let clientesEditados = getClientesEditados();
+                if (!clientesEditados.includes(clienteId)) {
+                    clientesEditados.push(clienteId);
+                    sessionStorage.setItem('clientesEditados', JSON.stringify(clientesEditados));
+                }
             }
         });
     });
 }
 
 /**
- * Verifica si hay un cliente editado en la URL y lo marca visualmente
+ * Obtiene la lista de clientes editados de sessionStorage
  */
-function checkEditedRow() {
-    // Buscar parámetro 'edited' en la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const clienteEditado = urlParams.get('edited');
-    
-    // Solo marcar si viene el parámetro en la URL (recién editado)
-    if (clienteEditado) {
-        marcarFilaEditada(clienteEditado);
-        
-        // Limpiar la URL sin recargar la página
-        const newUrl = new URL(window.location);
-        newUrl.searchParams.delete('edited');
-        window.history.replaceState({}, '', newUrl);
-    }
+function getClientesEditados() {
+    const stored = sessionStorage.getItem('clientesEditados');
+    return stored ? JSON.parse(stored) : [];
 }
 
 /**
- * Marca visualmente la fila del cliente editado
+ * Verifica y marca las filas de clientes editados
  */
-function marcarFilaEditada(codigoCliente) {
+function checkEditedRow() {
+    const clientesEditados = getClientesEditados();
+    
+    if (clientesEditados.length === 0) return;
+    
     const tabla = document.querySelector('.table-pedidos tbody');
     if (!tabla) return;
     
@@ -221,32 +232,88 @@ function marcarFilaEditada(codigoCliente) {
     for (let i = 0; i < filas.length; i++) {
         const celda = filas[i].querySelector('#cod_client');
         
-        if (celda && celda.textContent.trim() === codigoCliente) {
-            // Agregar clase de highlight
-            filas[i].classList.add('edited-row');
+        if (celda) {
+            const codigoCliente = celda.textContent.trim();
             
-            // Scroll suave hacia la fila
-            setTimeout(() => {
-                filas[i].scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-            }, 300);
-            
-            break;
+            if (clientesEditados.includes(codigoCliente)) {
+                // Marcar la fila como editada con estilo visual
+                filas[i].classList.add('edited-row');
+                
+                // Agregar indicador visual al botón de editar sin eliminarlo
+                const btnEditar = filas[i].querySelector('.btn-edit');
+                if (btnEditar && !btnEditar.querySelector('.edited-indicator')) {
+                    // Cambiar el ícono para indicar que ya fue editado
+                    btnEditar.classList.add('btn-edited');
+                    btnEditar.title = 'Volver a editar (ya editado)';
+                    
+                    // Agregar un pequeño indicador visual
+                    const indicator = document.createElement('span');
+                    indicator.className = 'edited-indicator';
+                    indicator.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
+                    indicator.style.position = 'absolute';
+                    indicator.style.top = '-4px';
+                    indicator.style.right = '-4px';
+                    indicator.style.fontSize = '0.7rem';
+                    indicator.style.color = '#ffffff';
+                    indicator.style.backgroundColor = '#198754';
+                    indicator.style.borderRadius = '50%';
+                    indicator.style.padding = '2px';
+                    indicator.style.lineHeight = '1';
+                    indicator.style.display = 'flex';
+                    indicator.style.alignItems = 'center';
+                    indicator.style.justifyContent = 'center';
+                    
+                    btnEditar.style.position = 'relative';
+                    btnEditar.appendChild(indicator);
+                }
+            }
         }
     }
 }
 
 /**
- * Limpia la marca de edición
+ * Limpia todas las marcas de edición (para debugging)
  */
-function limpiarMarcaEdicion() {
-    const filaEditada = document.querySelector('.edited-row');
+function limpiarMarcasEdicion() {
+    sessionStorage.removeItem('clientesEditados');
+    location.reload();
+}
+
+/**
+ * Inicializa el botón de limpiar marcas
+ */
+function initBotonLimpiarMarcas() {
+    const btnLimpiar = document.getElementById('btnLimpiarMarcas');
     
-    if (filaEditada) {
-        filaEditada.classList.remove('edited-row');
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', function() {
+            Swal.fire({
+                title: '¿Limpiar marcas de edición?',
+                text: 'Se eliminarán todas las marcas visuales de los pedidos editados',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#198754',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="bi bi-check-circle me-2"></i>Sí, limpiar',
+                cancelButtonText: '<i class="bi bi-x-circle me-2"></i>Cancelar',
+                reverseButtons: true,
+                customClass: {
+                    confirmButton: 'btn btn-success',
+                    cancelButton: 'btn btn-secondary',
+                    actions: 'swal-actions-spacing'
+                },
+                buttonsStyling: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    limpiarMarcasEdicion();
+                }
+            });
+        });
     }
+}
+function limpiarMarcasEdicion() {
+    sessionStorage.removeItem('clientesEditados');
+    location.reload();
 }
 
 /* ========================================

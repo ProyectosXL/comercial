@@ -67,7 +67,7 @@ class Conexion{
             return array($this->host_apps, $this->database_power_uy);
         }else{
             // Solo usar sesión si no se especifica servidor o si se especifica uno no reconocido
-            if (session_status() == PHP_SESSION_NONE) {
+            if (session_status() === PHP_SESSION_NONE) {
                 session_start();
             }
             

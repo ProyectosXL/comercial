@@ -1,6 +1,5 @@
 <?php
 
-
 require 'Class/pedido.php';
 require 'Class/cliente.php';
 
@@ -9,131 +8,198 @@ $pedido = new Pedido();
 $cliente = new Cliente();
 $todosLosClientes = $cliente->traerClientes();
 
-$desde = isset($_GET['desde']) ? $_GET['desde'] : date("Y-m-d");
+$desde = isset($_GET['desde']) ? $_GET['desde'] : date("Y-m-d", strtotime("-30 days"));
 $hasta = isset($_GET['hasta']) ? $_GET['hasta'] : date("Y-m-d");
 
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
-    <!-- <meta http-equiv="X-UA-Compatible" content="IE=edge"> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pedidos asignados</title>
+    <title>Pedidos Asignados - XL Extra</title>
     <link rel="icon" type="image/jpg" href="images/LOGO XL 2018.jpg">
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <!-- Including Font Awesome CSS from CDN to show icons -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.1/css/dataTables.bootstrap4.min.css">
-
-    <link rel="stylesheet" href="css/style.css">
-
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    
+    <!-- CSS específico de esta página -->
+    <link rel="stylesheet" href="css/pedidosAsignados.css">
 </head>
 
 <body>
 
-    <nav class="navbar navbar-expand-md bg-dark navbar-dark">
-        <!-- Brand -->
-        <a class="navbar-brand" href="index.php" style="color: #28a745;"><i class="fa fa-arrow-left"></i> ATRAS</a>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-md navbar-dark">
+        <div class="container-fluid">
+            <!-- Brand con animación -->
+            <div class="d-flex align-items-center">
+                <img class="navbar-brand-img" src="images/LOGO XL 2018.jpg" width="40" height="40" alt="XL Extra">
+                <span class="brand-text ms-2">Gestión de Pedidos Mayoristas</span>
+            </div>
 
-        <!-- Toggler/collapsibe Button -->
+            <!-- Toggler Button -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-
-        <!-- Navbar links -->
-        <div class="collapse navbar-collapse" id="collapsibleNavbar">
-            <ul class="navbar-nav">
-                <!-- <li class="nav-item">
-            <a class="nav-link" disabled><i class="fa fa-list"></i> Seleccionar ordenes</a>
-        </li> -->
-            </ul>
+            <!-- Navbar links -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.php">
+                            <i class="bi bi-arrow-left-circle"></i>
+                            <span>Volver</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="resumenPorPedido.php">
+                            <i class="bi bi-receipt"></i>
+                            <span>Resumen por pedido</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
 
-    <form class="contenedor-info" method="get" action="<?php echo $_SERVER['PHP_SELF']; ?>">
-        <div class="contenedor-info2">
-            <div class="contenedor-info2" id="contvendedor">
-                <label">Cliente:</label>
-                    <select id="inputvendedor" class="form-control form-control-sm" name="cliente">
-                        <option selected></option>
-                        <?php
-                        foreach ($todosLosClientes as $cliente => $key) {
-                        ?>
-                            <option value="<?= $key['RAZON_SOCI'] ?>"><?= $key['RAZON_SOCI'] ?></option>
-                        <?php
-                            /*  unset($_GET['vendedor']); */
-                            /*  header("location:index.php"); */
-                        }
-                        ?>
-                    </select>
+    <!-- Contenedor principal -->
+    <div class="container-fluid px-4 py-4">
+        
+        <!-- Sección de filtros -->
+        <form method="get" action="<?php echo $_SERVER['PHP_SELF']; ?>">
+            <div class="filter-section">
+                <div class="row align-items-end g-3">
+                    <div class="col-md-4">
+                        <label for="inputCliente" class="form-label">
+                            <i class="bi bi-person me-2"></i>Cliente
+                        </label>
+                        <select id="inputCliente" class="form-select" name="cliente">
+                            <option value="">Todos los clientes...</option>
+                            <?php
+                            $clienteSeleccionado = isset($_GET['cliente']) ? $_GET['cliente'] : '';
+                            foreach ($todosLosClientes as $cliente => $key) {
+                                $selected = ($clienteSeleccionado == $key['RAZON_SOCI']) ? 'selected' : '';
+                            ?>
+                                <option value="<?= $key['RAZON_SOCI'] ?>" <?= $selected ?>><?= $key['RAZON_SOCI'] ?> (<?= $key['COD_CLIENT'] ?>)</option>
+                            <?php
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="desde" class="form-label">
+                            <i class="bi bi-calendar me-2"></i>Desde
+                        </label>
+                        <input type="date" id="desde" class="form-control" name="desde" value="<?= $desde ?>">
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="hasta" class="form-label">
+                            <i class="bi bi-calendar me-2"></i>Hasta
+                        </label>
+                        <input type="date" id="hasta" class="form-control" name="hasta" value="<?= $hasta ?>">
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary btn-filter w-100">
+                            <i class="bi bi-funnel"></i> Filtrar
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div class="col-">
-                <label class="">Desde:</label>
-                <input type="date" class="form-control form-control-sm" name="desde" value="<?= $desde ?>">
-            </div>
-            <div class="col-">
-                <label class="">Hasta:</label>
-                <input type="date" class="form-control form-control-sm" name="hasta" value="<?= $hasta ?>">
-            </div>
-            <div>
-                <button class="btn btn-primary" id="">Filtrar <i class="fa fa-filter"></i></button>
-            </div>
-
-            <div>
-                <button class="btn btn-success" id="btnExport">Exportar <i class="fa fa-file-excel-o"></i></button>
-            </div>
-        </div>
-
-      
-
-        <div class="contenedor-info3">
-            <div id="">
-                <label id="labelTotal">Total unidades</label>
-                <input name="total_todo" id="total" value="0" type="text" class="form-control text-center total" readonly>
-            </div>
-
-            <div id="">
-                <label id="labelTotal">Importe total</label>
-                <input name="total_todo" id="totalImp" value="0" type="text" class="form-control text-center total" readonly>
-            </div>
-        </div>
-    </form>
+        </form>
 
     <?php
 
-    if (isset($_GET['cliente'])) { ?>
+    if (isset($_GET['cliente'])) { 
+        
+        $clienteSeleccionado = $_GET['cliente'] != '' ? $_GET['cliente'] : '%';
+        $nombreCliente = $_GET['cliente'] != '' ? $_GET['cliente'] : 'Todos';
 
-        <h4 id="title_cliente"> Cliente: <?php echo $_GET['cliente'] ?></h4>
-
-        <?php
-        if ($_GET['cliente'] != '') {
-            $cliente = $_GET['cliente'];
-        } else {
-            $cliente = '%';
-        }
-
-        $todosLosPedidos = $pedido->traerPedidosAsignados($cliente, $desde, $hasta);
-
+        $todosLosPedidos = $pedido->traerPedidosAsignados($clienteSeleccionado, $desde, $hasta);
         ?>
 
-        <div class="table-responsive" id="tableIndex">
-            <table class="table table-hover table-condensed table-striped text-center">
-                <thead class="thead-dark" style="font-size: small;">
-                    <th scope="col" style="width: 3%">FECHA DESPACHO</th>
-                    <th scope="col" style="width: 3%">COD. CLIENTE</th>
-                    <th scope="col" style="width: 10%">CLIENTE</th>
-                    <th scope="col" style="width: 4%">PEDIDOS</th>
-                    <th scope="col" style="width: 4%">UNIDADES</th>
-                    <th scope="col" style="width: 4%">IMPORTE PEND.</th>
+        <!-- Cards de totales -->
+        <div class="totals-section">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="card total-card">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="icon-wrapper primary me-3">
+                                <i class="bi bi-box-seam"></i>
+                            </div>
+                            <div>
+                                <h6 class="card-title mb-0">Total Unidades</h6>
+                                <h3 class="card-value" id="total">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card total-card">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="icon-wrapper info me-3">
+                                <i class="bi bi-currency-dollar"></i>
+                            </div>
+                            <div>
+                                <h6 class="card-title mb-0">Importe Total</h6>
+                                <h3 class="card-value" id="totalImp">$0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card total-card">
+                        <div class="card-body">
+                            <h6 class="card-title mb-2">
+                                <i class="bi bi-person me-2"></i>Cliente Seleccionado
+                            </h6>
+                            <h5 class="mb-0 text-truncate" title="<?= $nombreCliente ?>"><?= $nombreCliente ?></h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botón Exportar -->
+        <div class="mb-3 text-end">
+            <button class="btn btn-success" id="btnExport">
+                <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
+            </button>
+        </div>
+
+        <!-- Tabla de pedidos -->
+        <div class="table-container" id="tableIndex">
+            <table class="table table-hover table-striped table-pedidos">
+                <thead>
+                    <tr>
+                        <th><i class="bi bi-calendar"></i> Fecha Despacho</th>
+                        <th><i class="bi bi-hash"></i> Cod. Cliente</th>
+                        <th><i class="bi bi-person"></i> Cliente</th>
+                        <th><i class="bi bi-receipt"></i> Cant. Pedidos</th>
+                        <th><i class="bi bi-box"></i> Unidades</th>
+                        <th><i class="bi bi-currency-dollar"></i> Importe Pend.</th>
+                    </tr>
                 </thead>
 
-                <tbody id="table" style="font-size: small;">
+                <tbody>
                     <?php
                     $todosLosPedidos = json_decode($todosLosPedidos);
-                    /*  print_r($todosLosPedidos);  */
+                    
                     foreach ($todosLosPedidos as $valor => $value) {
                         // Convertir fecha manejando diferentes tipos de datos
                         $fechaDespacho = '';
@@ -141,14 +207,12 @@ $hasta = isset($_GET['hasta']) ? $_GET['hasta'] : date("Y-m-d");
                             if (method_exists($value->FECHA_DESPACHO, 'format')) {
                                 $fechaDespacho = $value->FECHA_DESPACHO->format('Y-m-d');
                             } else {
-                                // Si es un stdClass, convertirlo a string
                                 $fechaDespacho = isset($value->FECHA_DESPACHO->date) ? substr($value->FECHA_DESPACHO->date, 0, 10) : '';
                             }
                         } else {
                             $fechaDespacho = is_string($value->FECHA_DESPACHO) ? substr($value->FECHA_DESPACHO, 0, 10) : $value->FECHA_DESPACHO;
                         }
                     ?>
-
 
                         <tr>
                             <td><?= $fechaDespacho; ?></td>
@@ -165,78 +229,56 @@ $hasta = isset($_GET['hasta']) ? $_GET['hasta'] : date("Y-m-d");
 
                 </tbody>
             </table>
+        </div>
 
+        <?php
+    } else {
+        ?>
+        <!-- Mensaje cuando no hay filtro aplicado -->
+        <div class="text-center py-5">
+            <i class="bi bi-funnel display-1 text-muted opacity-50"></i>
+            <h4 class="mt-3 text-muted">Seleccione un cliente y rango de fechas para ver los pedidos asignados</h4>
+        </div>
         <?php
     }
         ?>
 
-        </div>
+    </div><!-- Fin container-fluid -->
 
 </body>
 
-<script src="main.js" charset="utf-8"></script>
+<!-- jQuery (necesario para table2excel) -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
 
-<!-- Modal -->
-<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-<!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-<!-- Plugin to export Excel -->
-<script src="//ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
-<script src="//cdn.rawgit.com/rainabba/jquery-table2excel/1.1.0/dist/jquery.table2excel.min.js"></script>
+<!-- Plugin para exportar a Excel -->
+<script src="https://cdn.rawgit.com/rainabba/jquery-table2excel/1.1.0/dist/jquery.table2excel.min.js"></script>
+
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<!-- Inicializar Select2 -->
 <script>
-    $(document).ready(function() {
-        sumarTotal()
+$(document).ready(function() {
+    $('#inputCliente').select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Buscar cliente...',
+        allowClear: true,
+        language: {
+            noResults: function() {
+                return "No se encontraron resultados";
+            },
+            searching: function() {
+                return "Buscando...";
+            }
+        }
     });
-    const sumarTotal = () => {
-        var data = [];
-        $("td.sumTotal").each(function() {
-            data.push(parseFloat($(this).text()));
-        });
-        var suma = data.reduce(function(a, b) {
-            return a + b;
-        }, 0);
-        $("#total").val(new Intl.NumberFormat("de-DE").format(suma));
-    }
-
-    $(document).ready(function() {
-        sumarImporte()
-    });
-    const sumarImporte = () => {
-        var data = [];
-        $("td.sumImporte").each(function() {
-            data.push(parseFloat($(this).text()));
-        });
-        var suma = data.reduce(function(a, b) {
-            return a + b;
-        }, 0);
-        $("#totalImp").val(new Intl.NumberFormat("es-ar", {
-            style: "currency",
-            currency: "ARS",
-            minimumFractionDigits: 0
-        }).format(suma));
-        (() => {
-            let importe = document.querySelectorAll('.sumImporte');
-            importe.forEach(el => el.innerHTML = new Intl.NumberFormat("es-ar", {
-                style: "currency",
-                currency: "ARS",
-                minimumFractionDigits: 0
-            }).format(el.innerHTML));
-        })();
-    }
-
-    $(document).ready(() => {
-        $("#btnExport").click(function() {
-            $("#tableIndex").table2excel({
-                // exclude CSS class
-                exclude: ".noE  xl",
-                name: "Detalle pedidos",
-                filename: "Detalle pedidos asignados", //do not include extension
-                fileext: ".xls" // file extension
-            });
-        });
-
-    });
+});
 </script>
+
+<!-- JavaScript específico de esta página -->
+<script src="js/pedidosAsignados.js"></script>
+
+</html>

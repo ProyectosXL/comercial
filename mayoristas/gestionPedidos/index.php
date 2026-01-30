@@ -30,6 +30,9 @@ $pedido = new Pedido();
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    
     <!-- CSS específico de esta página -->
     <link rel="stylesheet" href="css/index.css">
 
@@ -38,10 +41,13 @@ $pedido = new Pedido();
 <body>
 
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-md navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-md navbar-dark">
         <div class="container-fluid">
-            <!-- Brand -->
-            <img class="navbar-brand" src="images/LOGO XL 2018.jpg" width="40" height="40" alt="XL Extra">
+            <!-- Brand con animación -->
+            <div class="d-flex align-items-center">
+                <img class="navbar-brand-img" src="images/LOGO XL 2018.jpg" width="40" height="40" alt="XL Extra">
+                <span class="brand-text ms-2">Gestión de Pedidos Mayoristas</span>
+            </div>
 
             <!-- Toggler Button -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
@@ -51,15 +57,17 @@ $pedido = new Pedido();
 
             <!-- Navbar links -->
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
+                <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="pedidosAsignados.php">
-                            <i class="bi bi-person-standing"></i> Resumen por cliente
+                            <i class="bi bi-person-standing"></i>
+                            <span>Resumen por cliente</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="resumenPorPedido.php">
-                            <i class="bi bi-receipt"></i> Resumen por pedido
+                            <i class="bi bi-receipt"></i>
+                            <span>Resumen por pedido</span>
                         </a>
                     </li>
                 </ul>
@@ -74,7 +82,7 @@ $pedido = new Pedido();
         <form method="get" action="<?php echo $_SERVER['PHP_SELF']; ?>">
             <div class="filter-section">
                 <div class="row align-items-end">
-                    <div class="col-md-8">
+                    <div class="col-md-5 col-lg-4">
                         <label for="inputvendedor" class="form-label">
                             <i class="bi bi-person-badge me-2"></i>Vendedor
                         </label>
@@ -89,9 +97,14 @@ $pedido = new Pedido();
                             ?>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3 col-lg-2">
                         <button type="submit" class="btn btn-primary btn-filter w-100">
-                            <i class="bi bi-funnel"></i> Filtrar
+                            <i class="bi bi-funnel me-1"></i> Filtrar
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-outline-secondary w-100" id="btnLimpiarMarcas" title="Limpiar marcas de edición">
+                            <i class="bi bi-eraser me-1"></i> Limpiar Marcas
                         </button>
                     </div>
                 </div>
@@ -246,6 +259,9 @@ $pedido = new Pedido();
 
 <!-- Bootstrap 5 JS Bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- JavaScript específico de esta página -->
 <script src="js/index.js"></script>

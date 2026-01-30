@@ -1,4 +1,8 @@
 <?php
+// Iniciar sesión antes de cualquier output si no está iniciada
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require 'Class/pedido.php';
 
@@ -9,572 +13,457 @@ $pedido = new Pedido();
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
-    <!-- <meta http-equiv="X-UA-Compatible" content="IE=edge"> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Selección de pedido</title>
+    <title>Selección de Pedido - XL Extra</title>
     <link rel="icon" type="image/jpg" href="images/LOGO XL 2018.jpg">
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l" crossorigin="anonymous">
-
-    <!-- Including Font Awesome CSS from CDN to show icons -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.1/css/dataTables.bootstrap4.min.css">
-
-    <link rel="stylesheet" href="css/style.css">
-
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- SweetAlert2 para confirmaciones -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    
+    <!-- CSS específico de esta página -->
+    <link rel="stylesheet" href="css/seleccionPedido.css">
 </head>
 
 <body>
 
-    <h3 id="title_nota">
-        <i class="fa fa-bars"></i> Pedidos de cliente: <a id="nomCliente"><?php echo $cliente . ' - ' . $razon_soci ?></a>
-    </h3>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-md navbar-dark">
+        <div class="container-fluid">
+            <!-- Brand con animación -->
+            <div class="d-flex align-items-center">
+                <img class="navbar-brand-img" src="images/LOGO XL 2018.jpg" width="40" height="40" alt="XL Extra">
+                <span class="brand-text ms-2">Gestión de Pedidos Mayoristas</span>
+            </div>
 
-    <form class="form-row mt-2">
+            <!-- Toggler Button -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-        <div class="col-1">
-            <a type="button" class="btn btn-warning" id="btn_back" href="javascript:history.back(-1)"><i class="fa fa-arrow-left"></i> Volver</a>
+            <!-- Navbar links -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="javascript:history.back()">
+                            <i class="bi bi-arrow-left-circle"></i>
+                            <span>Volver</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenedor principal -->
+    <div class="container-fluid px-4 py-4">
+        
+        <!-- Información del Cliente -->
+        <div class="client-info-card">
+            <div class="d-flex align-items-center">
+                <div class="client-icon me-3">
+                    <i class="bi bi-building"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 text-muted">Cliente</h6>
+                    <h5 class="mb-0 fw-bold"><?php echo $cliente . ' - ' . $razon_soci ?></h5>
+                </div>
+            </div>
         </div>
 
-        <div id="busqRapida2">
-            <label id="textBusqueda">Busqueda rapida:</label>
-            <input type="text" id="textbusq" placeholder="Sobre cualquier campo..." onkeyup="myFunction()" class="form-control form-control-sm"></input>
+        <!-- Cards de totales -->
+        <div class="totals-section">
+            <div class="row g-3">
+                <div class="col-lg-3 col-md-6">
+                    <div class="card total-card">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="icon-wrapper primary me-3">
+                                <i class="bi bi-receipt"></i>
+                            </div>
+                            <div>
+                                <h6 class="card-title mb-0">Total Factura</h6>
+                                <h3 class="card-value" id="total">$0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6">
+                    <div class="card total-card">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="icon-wrapper success me-3">
+                                <i class="bi bi-file-text"></i>
+                            </div>
+                            <div>
+                                <h6 class="card-title mb-0">Total Remito</h6>
+                                <h3 class="card-value" id="totalImp">$0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6">
+                    <div class="card total-card">
+                        <div class="card-body">
+                            <h6 class="card-title mb-2">
+                                <i class="bi bi-search me-2"></i>Búsqueda Rápida
+                            </h6>
+                            <input type="text" id="textbusq" placeholder="Buscar en tabla..." 
+                                   class="form-control" onkeyup="myFunction()">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6">
+                    <div class="card total-card">
+                        <div class="card-body">
+                            <button type="button" class="btn btn-primary w-100 mb-2" id="btn_save">
+                                <i class="bi bi-save me-1"></i> Guardar Cambios
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary w-100 btn-sm" onclick="copiarPrimerFila()" title="Copiar datos de la primera fila a todas las demás">
+                                <i class="bi bi-arrow-down-circle me-1"></i> Replicar Primera Fila
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div>
-            <button type="button" class="btn btn-primary" id="btn_save">Guardar <i class="fa fa-save"></i></button>
+        <!-- Leyenda de estados -->
+        <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
+            <i class="bi bi-info-circle me-3 fs-4"></i>
+            <div class="flex-grow-1">
+                <strong>Leyenda de Antigüedad del Pedido:</strong>
+                <div class="mt-2 d-flex flex-wrap gap-3">
+                    <div class="d-flex align-items-center">
+                        <span class="badge-estado badge-estado-success me-2">
+                            <i class="bi bi-check-circle-fill me-1"></i>0-29
+                        </span>
+                        <small>Reciente (hasta 29 días)</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="badge-estado badge-estado-warning me-2">
+                            <i class="bi bi-clock-fill me-1"></i>30-44
+                        </span>
+                        <small>Atención (30 a 44 días)</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="badge-estado badge-estado-danger me-2">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>45+
+                        </span>
+                        <small>Urgente (45 días o más)</small>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div id="totalArticulos3">
-            <label id="labelTotal">Total $ factura</label>
-            <input name="total_todo" id="total" value=0 type="text" class="form-control text-center total" readonly>
-        </div>
+        <?php
+        $todosLosPedidos = $pedido->traerPedidosCliente($cliente);
+        ?>
 
-        <div id="totalImporte3">
-            <label id="labelTotal">Total $ remito</label>
-            <input name="total_todo" id="totalImp" value=0 type="text" class="form-control text-center total" readonly>
-        </div>
-
-    </form>
-
-    <?php
-
-    $todosLosPedidos = $pedido->traerPedidosCliente($cliente);
-
-    ?>
-
-    <div class="table-responsive" id="tablePedidos">
-        <table class="table table-hover table-condensed table-striped text-center">
-            <thead class="thead-dark" style="font-size: small;">
-                <th scope="col" style="width: 8%">FECHA</th>
-                <th scope="col" style="width: 1%">HORA</th>
-                <th scope="col" style="width: 1%">ESTADO</th>
-                <th scope="col" style="width: 1%">TALONARIO</th>
-                <th scope="col" style="width: 3%">NRO. PEDIDO</th>
-                <th scope="col" style="width: 1%">UNID. PEDIDO</th>
-                <th scope="col" style="width: 1%">UNID. PENDIENTE</th>
-                <th scope="col" style="width: 2%">IMPORTE PEND.</th>
-                <th scope="col" style="width: 4%">TIPO COMPROBANTE</th>
-                <th scope="col" style="width: 7%">EMBALAJE</th>
-                <th scope="col" style="width: 10%">DESPACHO</th>
-                <th scope="col" style="width: 5%">ARREGLO</th>
-                <th scope="col" style="width: 5%">PRIORIDAD</th>
-                <th scope="col" style="width: 2%">ASIGNAR FECHA</th>
-                <th scope="col" style="width: 2%;"><button class="btn btn-primary" onclick="copiarPrimerFila()"><i class="fa fa fa-solid fa-arrow-down"></i></button></th>
-            </thead>
-
-            <tbody id="table" style="font-size: small;">
-                <?php
-                $todosLosPedidos = json_decode($todosLosPedidos);
-                ?>
-                <input type="text" name="" id="cod_client" value="<?php echo $todosLosPedidos[0]->COD_CLIENT ?>" hidden>
-                <input type="text" name="" id="razon_soci" value="<?php echo $todosLosPedidos[0]->RAZON_SOCI ?>" hidden>
-                <input type="text" name="" id="localidad" value="<?php echo $todosLosPedidos[0]->LOCALIDAD ?>" hidden>
-                <input type="text" name="" id="cod_vended" value="<?php echo $todosLosPedidos[0]->COD_VENDED ?>" hidden>
-                <input type="text" name="" id="vendedor" value="<?php echo $todosLosPedidos[0]->VENDEDOR ?>" hidden>
-                <?php
-                foreach ($todosLosPedidos as $valor => $value) {
-                    // Convertir fecha si es necesario
-                    if ($value->FECHA instanceof DateTime) {
-                        $fecha = $value->FECHA->format('Y-m-d');
-                    } elseif (is_object($value->FECHA) && isset($value->FECHA->date)) {
-                        $fecha = substr($value->FECHA->date, 0, 10);
-                    } elseif (is_string($value->FECHA)) {
-                        $fecha = substr($value->FECHA, 0, 10);
-                    } else {
-                        $fecha = $value->FECHA;
-                    }
-                ?>
-
-
-                    <tr id="trBody">
-                        <td><?= $fecha; ?></td>
-                        <td><?= $value->HORA_INGRESO; ?></td>
-                        <td>
-                            <?php if ($value->ESTADO >= 45) { ?><?= $value->ESTADO; ?><i class="fa fa fa-circle text-danger semaforo"></i>
-                            <?php }
-                            if ($value->ESTADO < 45 && $value->ESTADO >= 30) { ?><?= $value->ESTADO; ?><i class="fa fa fa-circle text-warning semaforo"></i>
-                            <?php }
-                            if ($value->ESTADO < 30) { ?><?= $value->ESTADO; ?><i class="fa fa fa-circle text-success semaforo"></i>
-                        <?php } else {
-                            } ?>
-                        </td>
-                        <td><?= $value->TALON_PED; ?></td>
-                        <td><?= $value->NRO_PEDIDO; ?></td>
-                        <td><?= $value->CANT_PEDIDO; ?></td>
-                        <td><?= $value->CANT_PENDIENTE; ?></td>
-                        <td id="importe"><?= $value->IMP_PENDIENTE; ?></td>
-                        <td>
-                            <?php if ($value->TIPO_COMP != '') { ?>
-                                <select name="Comprobante" id="Comprobante" class="form-control form-control-sm edit Comprobante" style="font-size: small;" disabled>
-                                    <!--si value es igual a remito entonces mostrar remito
-                                    si value es dintinto a remito entonces mostrar factura-->
-                                    <option value="<?= $value->TIPO_COMP == 'REMITO' ? 'REMITO' : 'FACTURA' ?>" selected id="primerSelect"><?= $value->TIPO_COMP == 'REMITO' ? 'REMITO' : 'FACTURA' ?></option>
-                                    <option value="<?= $value->TIPO_COMP == 'FACTURA' ? 'REMITO' : 'FACTURA' ?>"><?= $value->TIPO_COMP == 'FACTURA' ? 'REMITO' : 'FACTURA'  ?></option>
-                                    <!--  <option value="otro" >otro</option> -->
-                                    <!--  <option value="REMITO">REMITO</option> -->
-                                    <!-- <option value="FACTURA">FACTURA</option> -->
-                                </select>
-                            <?php } else { ?>
-                                <select name="Comprobante" id="Comprobante" class="form-control form-control-sm Comprobante" style="font-size: small;" disabled>
-                                    <option value="" selected></option>
-                                    <option value="REMITO">REMITO</option>
-                                    <option value="FACTURA">FACTURA</option>
-                                </select>
-                            <?php } ?>
-                        </td>
-
-                        <td>
-                            <?php if ($value->EMBALAJE != '') { ?>
-                                <select name="Embalaje" id="Embalaje" class="form-control form-control-sm edit" style="font-size: small;" disabled>
-
-                                    <option value="<?= $value->EMBALAJE == 'CAJA' ? 'CAJA' : 'BOLSA' ?>" selected id="primerSelect"><?= $value->EMBALAJE == 'CAJA' ? 'CAJA' : 'BOLSA' ?></option>
-                                    <option value="<?= $value->EMBALAJE == 'BOLSA' ? 'CAJA' : 'BOLSA' ?>"><?= $value->EMBALAJE == 'BOLSA' ? 'CAJA' : 'BOLSA'  ?></option>
-                                </select>
-                            <?php } else { ?>
-                                <select name="Embalaje" id="Embalaje" class="form-control form-control-sm" style="font-size: small;" disabled>
-                                    <option value="" selected></option>
-                                    <option value="BOLSA">BOLSA</option>
-                                    <option value="CAJA">CAJA</option>
-                                </select>
-                            <?php } ?>
-                        </td>
-
-                        <td>
-                            <?php if ($value->DESPACHO != '') { ?>
-                                <select name="Despacho" id="Despacho" class="form-control form-control-sm edit" style="font-size: small;" disabled>
-                                    <option value="<?= $value->DESPACHO == 'FLETE' ? 'FLETE' : ($value->DESPACHO == 'CLIENTE' ? 'CLIENTE' : 'TRANSPORTE') ?>" selected id="primerSelect"><?= $value->DESPACHO == 'FLETE' ? 'FLETE' : ($value->DESPACHO == 'CLIENTE' ? 'CLIENTE' : 'TRANSPORTE') ?></option>
-                                    <option value="<?= $value->DESPACHO == 'FLETE' ? 'CLIENTE' : ($value->DESPACHO == 'TRANSPORTE' ? 'CLIENTE' : 'TRANSPORTE') ?>"><?= $value->DESPACHO == 'FLETE' ? 'CLIENTE' : ($value->DESPACHO == 'TRANSPORTE' ? 'CLIENTE' : 'TRANSPORTE')  ?></option>
-                                    <option value="<?= $value->DESPACHO == 'TRANSPORTE' ? 'FLETE' : ($value->DESPACHO == 'FLETE' ? 'TRANSPORTE' : 'FLETE') ?>"><?= $value->DESPACHO == 'TRANSPORTE' ? 'FLETE' : ($value->DESPACHO == 'FLETE' ? 'TRANSPORTE' : 'FLETE') ?></option>
-
-                                </select>
-                            <?php } else { ?>
-                                <select name="Despacho" id="Despacho" class="form-control form-control-sm" style="font-size: small;" disabled>
-                                    <option value="" selected></option>
-                                    <option value="CLIENTE">CLIENTE</option>
-                                    <option value="FLETE">FLETE</option>
-                                    <option value="TRANSPORTE">TRANSPORTE</option>
-                                </select>
-                            <?php } ?>
-                        </td>
-
-                        <td>
-                            <?php if (isset($value->ARREGLO)) { ?>
-                                <select name="Arreglo" id="Arreglo" class="form-control form-control-sm edit" style="font-size: small;" disabled>
-                                    <option value="<?= $value->ARREGLO == 0 ? 0 : 1 ?>" selected id="primerSelect"><?= $value->ARREGLO == '0' ? 'NO' : 'SI' ?></option>
-                                    <option value="<?= $value->ARREGLO == 0 ? 1 : 0 ?>"><?= $value->ARREGLO == '1' ? 'NO' : 'SI'  ?></option>
-                                </select>
-                            <?php } else { ?>
-                                <select name="Arreglo" id="Arreglo" class="form-control form-control-sm" style="font-size: small;" disabled>
-                                    <option value="null" selected></option>
-                                    <option value="1">SI</option>
-                                </select>
-                            <?php } ?>
-                        </td>
-
-                        <td>
-                            <?php if (isset($value->PRIORIDAD) && $value->PRIORIDAD !== null && $value->PRIORIDAD !== '') { ?>
-                                <select name="Prioridad" id="Prioridad" class="form-control form-control-sm edit" style="font-size: small;" disabled>
-                                    <option value="0" <?= $value->PRIORIDAD == '0' ? 'selected' : '' ?>>0</option>
-                                    <option value="1" <?= $value->PRIORIDAD == '1' ? 'selected' : '' ?>>1</option>
-                                    <option value="2" <?= $value->PRIORIDAD == '2' ? 'selected' : '' ?>>2</option>
-                                    <option value="3" <?= $value->PRIORIDAD == '3' ? 'selected' : '' ?>>3</option>
-                                </select>
-                            <?php } else { ?>
-                                <select name="Prioridad" id="Prioridad" class="form-control form-control-sm" style="font-size: small;" disabled>
-                                    <option value="" selected></option>
-                                    <option value="0">0</option>
-                                    <option value="1">1</option>
-                                    <option value="2">2</option>
-                                    <option value="3">3</option>
-                                </select>
-                            <?php } ?>
-                        </td>
-
-                        <td>
-                            <?php 
-                                if ($value->FECHA_DESPACHO instanceof DateTime) {
-                                    $fechaDespacho = $value->FECHA_DESPACHO->format('Y-m-d');
-                                } elseif (is_object($value->FECHA_DESPACHO) && isset($value->FECHA_DESPACHO->date)) {
-                                    $fechaDespacho = substr($value->FECHA_DESPACHO->date, 0, 10);
-                                } elseif (is_string($value->FECHA_DESPACHO)) {
-                                    $fechaDespacho = substr($value->FECHA_DESPACHO, 0, 10);
-                                } else {
-                                    $fechaDespacho = $value->FECHA_DESPACHO;
-                                }
-                                if ($fechaDespacho != '1900-01-01' && $fechaDespacho != '' && $fechaDespacho != null) { 
-                            ?>
-                                <input name="" id="primerSelect" type="date" class="form-control form-control-sm edit" style="width: 90%;" value="<?= $fechaDespacho; ?>" disabled></input>
-                            <?php } else { ?>
-                                <input name="" id="campoFecha" type="date" class="form-control form-control-sm" style="width: 90%;" disabled></input>
-                            <?php } ?>
-                        </td>
-                        <td>
-                            <button class="btn btn-success btn-sm btnEdit" href="#"><i class="fa fa-edit" style="font-size:20px;"></i></button>
-                        </td>
+        <!-- Tabla de pedidos -->
+        <div class="table-container" id="tablePedidos">
+            <table class="table table-hover table-striped table-pedidos">
+                <thead>
+                    <tr>
+                        <th><i class="bi bi-calendar"></i> Fecha</th>
+                        <th><i class="bi bi-clock"></i> Hora</th>
+                        <th data-bs-toggle="tooltip" title="Días transcurridos desde la fecha del pedido">
+                            <i class="bi bi-hourglass-split"></i> Días
+                        </th>
+                        <th><i class="bi bi-hash"></i> Talonario</th>
+                        <th><i class="bi bi-receipt"></i> Nro. Pedido</th>
+                        <th><i class="bi bi-box"></i> Unid. Pedido</th>
+                        <th><i class="bi bi-box-seam"></i> Unid. Pend.</th>
+                        <th><i class="bi bi-currency-dollar"></i> Importe</th>
+                        <th><i class="bi bi-file-text"></i> Tipo Comp.</th>
+                        <th><i class="bi bi-archive"></i> Embalaje</th>
+                        <th><i class="bi bi-truck"></i> Despacho</th>
+                        <th><i class="bi bi-tools"></i> Arreglo</th>
+                        <th><i class="bi bi-star"></i> Prioridad</th>
+                        <th><i class="bi bi-calendar-check"></i> Fecha Desp.</th>
+                        <th><i class="bi bi-pencil-square"></i> Editar</th>
                     </tr>
+                </thead>
 
-                <?php
-                }
-                ?>
+                <tbody id="table">
+                    <?php
+                    $todosLosPedidos = json_decode($todosLosPedidos);
+                    ?>
+                    <input type="text" name="" id="cod_client" value="<?php echo $todosLosPedidos[0]->COD_CLIENT ?>" hidden>
+                    <input type="text" name="" id="razon_soci" value="<?php echo $todosLosPedidos[0]->RAZON_SOCI ?>" hidden>
+                    <input type="text" name="" id="localidad" value="<?php echo $todosLosPedidos[0]->LOCALIDAD ?>" hidden>
+                    <input type="text" name="" id="cod_vended" value="<?php echo $todosLosPedidos[0]->COD_VENDED ?>" hidden>
+                    <input type="text" name="" id="vendedor" value="<?php echo $todosLosPedidos[0]->VENDEDOR ?>" hidden>
+                    <?php
+                    foreach ($todosLosPedidos as $valor => $value) {
+                        // Convertir fecha si es necesario
+                        if ($value->FECHA instanceof DateTime) {
+                            $fecha = $value->FECHA->format('Y-m-d');
+                        } elseif (is_object($value->FECHA) && isset($value->FECHA->date)) {
+                            $fecha = substr($value->FECHA->date, 0, 10);
+                        } elseif (is_string($value->FECHA)) {
+                            $fecha = substr($value->FECHA, 0, 10);
+                        } else {
+                            $fecha = $value->FECHA;
+                        }
+                    ?>
 
-            </tbody>
-        </table>
+                        <tr id="trBody">
+                            <td><?= $fecha; ?></td>
+                            <td><?= $value->HORA_INGRESO; ?></td>
+                            <td class="dias-cell" data-fecha="<?= $fecha; ?>">
+                                <span class="badge-estado badge-estado-success">
+                                    <i class="bi bi-clock-fill me-1"></i><span class="dias-valor">0</span>
+                                </span>
+                            </td>
+                            <td><?= $value->TALON_PED; ?></td>
+                            <td><?= $value->NRO_PEDIDO; ?></td>
+                            <td><?= $value->CANT_PEDIDO; ?></td>
+                            <td><?= $value->CANT_PENDIENTE; ?></td>
+                            <td id="importe"><?= $value->IMP_PENDIENTE; ?></td>
+                            <td>
+                                <?php if ($value->TIPO_COMP != '') { ?>
+                                    <select name="Comprobante" id="Comprobante" class="form-select form-select-sm edit Comprobante" disabled>
+                                        <option value="<?= $value->TIPO_COMP == 'REMITO' ? 'REMITO' : 'FACTURA' ?>" selected><?= $value->TIPO_COMP == 'REMITO' ? 'REMITO' : 'FACTURA' ?></option>
+                                        <option value="<?= $value->TIPO_COMP == 'FACTURA' ? 'REMITO' : 'FACTURA' ?>"><?= $value->TIPO_COMP == 'FACTURA' ? 'REMITO' : 'FACTURA'  ?></option>
+                                    </select>
+                                <?php } else { ?>
+                                    <select name="Comprobante" id="Comprobante" class="form-select form-select-sm Comprobante" disabled>
+                                        <option value="" selected></option>
+                                        <option value="REMITO">REMITO</option>
+                                        <option value="FACTURA">FACTURA</option>
+                                    </select>
+                                <?php } ?>
+                            </td>
 
-    </div>
+                            <td>
+                                <?php if ($value->EMBALAJE != '') { ?>
+                                    <select name="Embalaje" id="Embalaje" class="form-select form-select-sm edit" disabled>
+                                        <option value="<?= $value->EMBALAJE == 'CAJA' ? 'CAJA' : 'BOLSA' ?>" selected><?= $value->EMBALAJE == 'CAJA' ? 'CAJA' : 'BOLSA' ?></option>
+                                        <option value="<?= $value->EMBALAJE == 'BOLSA' ? 'CAJA' : 'BOLSA' ?>"><?= $value->EMBALAJE == 'BOLSA' ? 'CAJA' : 'BOLSA'  ?></option>
+                                    </select>
+                                <?php } else { ?>
+                                    <select name="Embalaje" id="Embalaje" class="form-select form-select-sm" disabled>
+                                        <option value="" selected></option>
+                                        <option value="BOLSA">BOLSA</option>
+                                        <option value="CAJA">CAJA</option>
+                                    </select>
+                                <?php } ?>
+                            </td>
+
+                            <td>
+                                <?php if ($value->DESPACHO != '') { ?>
+                                    <select name="Despacho" id="Despacho" class="form-select form-select-sm edit" disabled>
+                                        <option value="<?= $value->DESPACHO == 'FLETE' ? 'FLETE' : ($value->DESPACHO == 'CLIENTE' ? 'CLIENTE' : 'TRANSPORTE') ?>" selected><?= $value->DESPACHO == 'FLETE' ? 'FLETE' : ($value->DESPACHO == 'CLIENTE' ? 'CLIENTE' : 'TRANSPORTE') ?></option>
+                                        <option value="<?= $value->DESPACHO == 'FLETE' ? 'CLIENTE' : ($value->DESPACHO == 'TRANSPORTE' ? 'CLIENTE' : 'TRANSPORTE') ?>"><?= $value->DESPACHO == 'FLETE' ? 'CLIENTE' : ($value->DESPACHO == 'TRANSPORTE' ? 'CLIENTE' : 'TRANSPORTE')  ?></option>
+                                        <option value="<?= $value->DESPACHO == 'TRANSPORTE' ? 'FLETE' : ($value->DESPACHO == 'FLETE' ? 'TRANSPORTE' : 'FLETE') ?>"><?= $value->DESPACHO == 'TRANSPORTE' ? 'FLETE' : ($value->DESPACHO == 'FLETE' ? 'TRANSPORTE' : 'FLETE') ?></option>
+                                    </select>
+                                <?php } else { ?>
+                                    <select name="Despacho" id="Despacho" class="form-select form-select-sm" disabled>
+                                        <option value="" selected></option>
+                                        <option value="CLIENTE">CLIENTE</option>
+                                        <option value="FLETE">FLETE</option>
+                                        <option value="TRANSPORTE">TRANSPORTE</option>
+                                    </select>
+                                <?php } ?>
+                            </td>
+
+                            <td>
+                                <?php if (isset($value->ARREGLO)) { ?>
+                                    <select name="Arreglo" id="Arreglo" class="form-select form-select-sm edit" disabled>
+                                        <option value="<?= $value->ARREGLO == 0 ? 0 : 1 ?>" selected><?= $value->ARREGLO == '0' ? 'NO' : 'SI' ?></option>
+                                        <option value="<?= $value->ARREGLO == 0 ? 1 : 0 ?>"><?= $value->ARREGLO == '1' ? 'NO' : 'SI'  ?></option>
+                                    </select>
+                                <?php } else { ?>
+                                    <select name="Arreglo" id="Arreglo" class="form-select form-select-sm" disabled>
+                                        <option value="null" selected></option>
+                                        <option value="1">SI</option>
+                                    </select>
+                                <?php } ?>
+                            </td>
+
+                            <td>
+                                <?php if (isset($value->PRIORIDAD) && $value->PRIORIDAD !== null && $value->PRIORIDAD !== '') { ?>
+                                    <select name="Prioridad" id="Prioridad" class="form-select form-select-sm edit" disabled>
+                                        <option value="0" <?= $value->PRIORIDAD == '0' ? 'selected' : '' ?>>0</option>
+                                        <option value="1" <?= $value->PRIORIDAD == '1' ? 'selected' : '' ?>>1</option>
+                                        <option value="2" <?= $value->PRIORIDAD == '2' ? 'selected' : '' ?>>2</option>
+                                        <option value="3" <?= $value->PRIORIDAD == '3' ? 'selected' : '' ?>>3</option>
+                                    </select>
+                                <?php } else { ?>
+                                    <select name="Prioridad" id="Prioridad" class="form-select form-select-sm" disabled>
+                                        <option value="" selected></option>
+                                        <option value="0">0</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                    </select>
+                                <?php } ?>
+                            </td>
+
+                            <td>
+                                <?php 
+                                    if ($value->FECHA_DESPACHO instanceof DateTime) {
+                                        $fechaDespacho = $value->FECHA_DESPACHO->format('Y-m-d');
+                                    } elseif (is_object($value->FECHA_DESPACHO) && isset($value->FECHA_DESPACHO->date)) {
+                                        $fechaDespacho = substr($value->FECHA_DESPACHO->date, 0, 10);
+                                    } elseif (is_string($value->FECHA_DESPACHO)) {
+                                        $fechaDespacho = substr($value->FECHA_DESPACHO, 0, 10);
+                                    } else {
+                                        $fechaDespacho = $value->FECHA_DESPACHO;
+                                    }
+                                    if ($fechaDespacho != '1900-01-01' && $fechaDespacho != '' && $fechaDespacho != null) { 
+                                ?>
+                                    <input name="" id="primerSelect" type="date" class="form-control form-control-sm edit" value="<?= $fechaDespacho; ?>" disabled>
+                                <?php } else { ?>
+                                    <input name="" id="campoFecha" type="date" class="form-control form-control-sm" disabled>
+                                <?php } ?>
+                            </td>
+                            <td>
+                                <button class="btn btn-success btn-sm btnEdit">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                    <?php
+                    }
+                    ?>
+
+                </tbody>
+            </table>
+        </div>
+
+    </div><!-- Fin container-fluid -->
 
 </body>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Inicializar tooltips de Bootstrap -->
 <script>
-    window.addEventListener('DOMContentLoaded', iniciarEscucha);
-    document.getElementById('btn_save').addEventListener('click', actualizarDB);
-    establecerMinFecha(); //setear min en los campos fecha
+// Inicializar todos los tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+});
 
-    let row;
-    let datos = [];
-    let campo;
-    /*   let tipComprobante=document.querySelectorAll('.Comprobante'); */
-    let inputTotalFactura = document.getElementById('total');
-    let inputTotalRemito = document.getElementById('totalImp');
-    let select = document.querySelectorAll('.form-control'); //almacenar select 
-    select.forEach(el => {
-        //guardar los cambios de un select junto con los datos del resto de la fila
-        el.addEventListener('change', (el) => {
-            guardarDatos(el.target.parentNode.parentNode, el)
-            sumarComprobantesFacturas();
-        });
-    });
-
-
-
-    function iniciarEscucha() {
-        let edit = document.querySelectorAll(".fa-edit");
-        edit.forEach(ele => {
-            ele.addEventListener('click', editarPedido, false);
-        });
-    }
-
-    function editarPedido(pedido) {
-        habilitarInputs(pedido);
-        pedido = pedido.target.parentNode.parentNode.parentNode;
-        guardarDatos(pedido);
-        sumarComprobantesFacturas();
-    }
-
-    function habilitarInputs(input) {
-        let row = [];
-        row = input.target.parentNode.parentNode.parentNode;
-        for (let i = 8; i < 14; i++) {
-            row.children[i].children[0].disabled = false;
-
-            if (row.children[i].children[0].constructor != HTMLInputElement) {
-                row.children[i].children[0].children[0].disabled = true;
-            }
-        }
-    }
-
-
-    let Pedidos = [];
-
-    function guardarDatos(row, campo) {
-        if ((Pedidos.find((valor, indice) => {
-                return valor.codigo == row.children[4].innerHTML
-            })) == undefined) {
-            //si el pedido no se encuentra en el array pedidos entonce almaceno los valores en el objeto 
-            const infoPedido = {
-                codigo: row.children[4].innerHTML,
-                fecha: row.children[0].innerHTML,
-                hora: row.children[1].innerHTML,
-                cod_client:(document.getElementById('cod_client').value).replace('&','%26'),
-                razon_soci: (document.getElementById('razon_soci').value).replace('&','%26'),
-                localidad: document.getElementById('localidad').value,
-                cod_vended: document.getElementById('cod_vended').value,
-                vendedor: document.getElementById('vendedor').value,
-                estado: row.children[2].innerText,
-                talonario: row.children[3].innerHTML,
-                unidPedido: row.children[5].innerHTML,
-                unidPendiente: row.children[6].innerHTML,
-                importePendiente: parseFloat(row.children[7].innerText.slice(2)).toFixed(3),
-                tipoComp: row.children[8].querySelector('select').value,
-                embalaje: row.children[9].querySelector('select').value,
-                despacho: row.children[10].querySelector('select').value,
-                arreglo: row.children[11].querySelector('select').value,
-                prioridad: row.children[12].querySelector('select').value,
-                fechaDespacho: row.children[13].children[0].value
-            };
-            Pedidos.push(infoPedido);
-           
-
-
-        } else {
-
-            //si el pedido ya se editó, y se vuelve a editar, se realiza un update de los valores dentro del objeto en el array Pedidos
-            elementIndex = Pedidos.findIndex((pedido => pedido.codigo == row.children[4].innerHTML));
-            Pedidos[elementIndex].tipoComp = row.children[8].querySelector('select').value;
-            Pedidos[elementIndex].embalaje = row.children[9].querySelector('select').value;
-            Pedidos[elementIndex].despacho = row.children[10].querySelector('select').value;
-            Pedidos[elementIndex].arreglo = row.children[11].querySelector('select').value;
-            Pedidos[elementIndex].prioridad = row.children[12].querySelector('select').value;
-            Pedidos[elementIndex].fechaDespacho = row.children[13].children[0].value;
-
-        }
-      
-    }
-
-    let conexion;
-
-    function actualizarDB() {
-        // si el arreglo Pedidos se encuentra vacio entonces no hubo ningun pedido editado. 
-        if (Pedidos.length > 0) {
-            //verificar si los campos en el pedido editado no están vacios 
-            checkInpustNoVacios();
-            if (b == 0) {
-                conexion = new XMLHttpRequest();
-                conexion.onreadystatechange = procesar;
-                let datos = JSON.stringify(Pedidos);
-                conexion.open('GET', './Controller/updateDatos.php?datos=' + datos, true);
-                conexion.send();
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Campos vacios',
-                    text: 'Deben completar los datos'
-                })
-            }
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'No se modificaron datos',
-                text: 'Cargue datos y haga click en guardar'
-            })
-
-        }
-    }
-
-
-    function procesar() {
-        if (conexion.readyState !== 4) return;
-        if (conexion.status >= 200 && conexion.status < 300) {
-            Swal.fire({
-                    icon: 'success',
-                    title: 'Pedido modificado exitosamente!',
-                    text: "Numero de pedido/s: " + conexion.responseText,
-                    showConfirmButton: true,
-                })
-                .then(function() {
-                    location.reload()
-                });
-        } else {
-            Swal.fire({
-                    icon: 'error',
-                    title: 'Error de carga',
-                    text: 'No se modificó ningún pedido! ' + conexion.responseText
-                })
-                .then(function() {
-                    location.reload()
-                });
-        }
-        location.reload();
-
-    }
-    //bandera que indica si el pedido se encuentra con campos vacios o no. 1 indica que existen campos sin completar. 
-    let b;
-
-    function checkInpustNoVacios() {
-        b = 0;
-        let select = document.querySelectorAll('select');
-        let date = dia = document.querySelectorAll('[type=date]');
-        select.forEach(el => {
-            if (el.parentElement.innerHTML.includes('Prioridad') == false && el.parentElement.innerHTML.includes('Arreglo') == false) {
-                if (el.disabled == false) {
-                    if (el.value == '') {
-                        el.style.borderColor = 'red';
-                        b = 1;
-                    } else {
-                        el.style.borderColor = '';
-                    }
-                }
-            }
-        });
-        date.forEach(el => {
-            if ((el.disabled == false) && (el.value == '')) {
-                el.style.borderColor = 'red';
-                b = 1;
-            } else {
-                el.style.borderColor = '';
-            }
-        })
-    }
-
-
-    function establecerMinFecha() {
-        let today = new Date();
-        let dd = today.getDate() + 2;
-        let mm = today.getMonth() + 1;
-        let yyyy = today.getFullYear();
-        if (dd < 10) {
-            dd = '0' + dd
-        }
-        if (mm < 10) {
-            mm = '0' + mm
-        }
-        today = yyyy + '-' + mm + '-' + dd;
-        let date = document.querySelectorAll('[type=date]');
-        date.forEach(el => {
-            el.setAttribute("min", today);
-        });
-    }
-
-    function sumarPorTipoComprobante(tipoComprobante, tipoComprobanteAnterior, importe) {
-        console.log('comp anterior: ' + tipoComprobanteAnterior);
-        if (tipoComprobanteAnterior == 'REMITO') {
-            inputTotalRemito.value = (parseFloat(inputTotalRemito.value) - parseFloat(importe)).toFixed(3);
-            inputTotalFactura.value = (parseFloat(inputTotalFactura.value) + parseFloat(importe)).toFixed(3);
-        } else {
-            if (tipoComprobanteAnterior == 'FACTURA') {
-                console.log('entraste a fac');
-                inputTotalRemito.value = (parseFloat(inputTotalRemito.value) + parseFloat(importe)).toFixed(3);
-                inputTotalFactura.value = (parseFloat(inputTotalFactura.value) - parseFloat(importe)).toFixed(3);
-            } else {
-                if (tipoComprobante == 'REMITO') {
-                    inputTotalRemito.value = (parseFloat(inputTotalRemito.value) + parseFloat(importe)).toFixed(3);
-                } else {
-                    if (tipoComprobante == 'FACTURA') {
-                        console.log('entraste a fac');
-                        inputTotalFactura.value = (parseFloat(inputTotalFactura.value) + parseFloat(importe)).toFixed(3);
-                    }
-                }
-            }
-        }
-    }
-
-    const copiarPrimerFila = () =>{
-        
-        let allTr = document.querySelectorAll('#trBody');
-
-        let primerFila = allTr[0];
-
-        let tipoComporbante = primerFila.querySelectorAll('td')[8].querySelector("select").value
-        let embalaje = primerFila.querySelectorAll('td')[9].querySelector("select").value
-        let despacho = primerFila.querySelectorAll('td')[10].querySelector("select").value
-        let asignarFecha = primerFila.querySelectorAll('td')[13].querySelector("input").value
-
-
-
-        allTr.forEach(element => {
-
-           if(element.querySelectorAll('td')[8].querySelector("select").disabled == false){
-
-               element.querySelectorAll('td')[8].querySelector("select").value = tipoComporbante
-               element.querySelectorAll('td')[9].querySelector("select").value = embalaje
-               element.querySelectorAll('td')[10].querySelector("select").value = despacho
-               element.querySelectorAll('td')[13].querySelector("input").value = asignarFecha
-
-                if ((Pedidos.find((valor, indice) => {
-                    return valor.codigo == element.querySelectorAll('td')[4].textContent
-                    })) == undefined) {
-                    //si el pedido no se encuentra en el array pedidos entonce almaceno los valores en el objeto 
-                    const infoPedido = {
-                        codigo: element.querySelectorAll('td')[8].querySelector("select").value,
-                        fecha: element.querySelectorAll('td')[0].innerHTML,
-                        hora: element.querySelectorAll('td')[1].innerHTML,
-                        cod_client:(document.getElementById('cod_client').value).replace('&','%26'),
-                        razon_soci: (document.getElementById('razon_soci').value).replace('&','%26'),
-                        localidad: document.getElementById('localidad').value,
-                        cod_vended: document.getElementById('cod_vended').value,
-                        vendedor: document.getElementById('vendedor').value,
-                        estado: element.querySelectorAll('td')[2].innerText,
-                        talonario: element.querySelectorAll('td')[3].innerHTML,
-                        unidPedido: element.querySelectorAll('td')[5].innerHTML,
-                        unidPendiente: element.querySelectorAll('td')[6].innerHTML,
-                        importePendiente: parseFloat(element.querySelectorAll('td')[7].innerText.slice(2)).toFixed(3),
-                        tipoComp: element.querySelectorAll('td')[8].querySelector("select").value,
-                        embalaje: element.querySelectorAll('td')[9].querySelector("select").value,
-                        despacho: element.querySelectorAll('td')[10].querySelector("select").value,
-                        arreglo: element.querySelectorAll('td')[11].querySelector("select").value,
-                        prioridad: element.querySelectorAll('td')[12].querySelector("select").value,
-                        fechaDespacho: element.querySelectorAll('td')[13].querySelector("input").value
-                    };
-                    Pedidos.push(infoPedido);
-
-                } else {
-
-                    elementIndex = Pedidos.findIndex((pedido => pedido.codigo == element.querySelectorAll('td')[4].textContent));
-                    Pedidos[elementIndex].tipoComp = element.querySelectorAll('td')[8].querySelector("select").value;
-                    Pedidos[elementIndex].embalaje = element.querySelectorAll('td')[9].querySelector("select").value;
-                    Pedidos[elementIndex].despacho = element.querySelectorAll('td')[10].querySelector("select").value;
-                    Pedidos[elementIndex].arreglo = element.querySelectorAll('td')[11].querySelector("select").value;
-                    Pedidos[elementIndex].prioridad = element.querySelectorAll('td')[12].querySelector("select").value;
-                    Pedidos[elementIndex].fechaDespacho = element.querySelectorAll('td')[13].querySelector("input").value;
-
-                }
-              
-           }
-  
-        });
-
-        sumarComprobantesFacturas();
-    }
-
-const sumarComprobantesFacturas = () =>{
-
-    let totalFactura = 0;
-    let totalRemito = 0;
-
-    document.querySelectorAll('.Comprobante').forEach(element => {
-        if(element.value == 'FACTURA'){ 
-        
-            let valor = parseFloat(element.parentElement.parentElement.querySelectorAll('td')[7].innerText.replace("$", "").replaceAll(".", "").replace(",", "."));
-            totalFactura = parseFloat(totalFactura) + valor
+// Calcular días transcurridos para cada pedido
+function calcularDiasTranscurridos() {
+    const celdas = document.querySelectorAll('.dias-cell');
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0); // Resetear horas para comparar solo fechas
+    
+    celdas.forEach(celda => {
+        const fechaPedido = celda.getAttribute('data-fecha');
+        if (fechaPedido) {
+            const fecha = new Date(fechaPedido + 'T00:00:00');
+            const diferencia = hoy - fecha;
+            const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
             
-
-
-        }else if (element.value == 'REMITO'){
-            let valor = parseFloat(element.parentElement.parentElement.querySelectorAll('td')[7].innerText.replace("$", "").replaceAll(".", "").replace(",", "."));
-            totalRemito = parseFloat(totalRemito) + valor
+            const badge = celda.querySelector('.badge-estado');
+            const valorSpan = celda.querySelector('.dias-valor');
+            const icono = badge.querySelector('i');
+            
+            // Actualizar valor
+            valorSpan.textContent = dias;
+            
+            // Actualizar clase y tooltip según los días (rangos originales)
+            badge.classList.remove('badge-estado-success', 'badge-estado-warning', 'badge-estado-danger');
+            
+            if (dias < 30) {
+                badge.classList.add('badge-estado-success');
+                icono.className = 'bi bi-check-circle-fill me-1';
+                badge.setAttribute('data-bs-toggle', 'tooltip');
+                badge.setAttribute('data-bs-placement', 'top');
+                badge.setAttribute('title', 'Pedido reciente: ' + dias + ' día' + (dias !== 1 ? 's' : ''));
+            } else if (dias < 45) {
+                badge.classList.add('badge-estado-warning');
+                icono.className = 'bi bi-clock-fill me-1';
+                badge.setAttribute('data-bs-toggle', 'tooltip');
+                badge.setAttribute('data-bs-placement', 'top');
+                badge.setAttribute('title', 'Requiere atención: ' + dias + ' días');
+            } else {
+                badge.classList.add('badge-estado-danger');
+                icono.className = 'bi bi-exclamation-triangle-fill me-1';
+                badge.setAttribute('data-bs-toggle', 'tooltip');
+                badge.setAttribute('data-bs-placement', 'top');
+                badge.setAttribute('title', 'Urgente: ' + dias + ' días de antigüedad');
+            }
+            
+            // Reinicializar tooltip para este elemento
+            new bootstrap.Tooltip(badge);
         }
     });
-
-    inputTotalFactura.value = totalFactura.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    inputTotalRemito.value = totalRemito.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-
 }
 
+// Calcular totales por tipo de comprobante
+function calcularTotales() {
+    const filas = document.querySelectorAll('#table tr');
+    let totalFactura = 0;
+    let totalRemito = 0;
+    
+    const formatter = new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 0
+    });
+    
+    filas.forEach(fila => {
+        const selectComprobante = fila.querySelector('select[name="Comprobante"]');
+        const celdaImporte = fila.querySelector('#importe');
+        
+        if (selectComprobante && celdaImporte) {
+            const tipoComp = selectComprobante.value;
+            const importe = parseFloat(celdaImporte.textContent) || 0;
+            
+            if (tipoComp === 'FACTURA') {
+                totalFactura += importe;
+            } else if (tipoComp === 'REMITO') {
+                totalRemito += importe;
+            }
+        }
+    });
+    
+    // Actualizar las cards
+    const elementoTotalFactura = document.getElementById('total');
+    const elementoTotalRemito = document.getElementById('totalImp');
+    
+    if (elementoTotalFactura) {
+        elementoTotalFactura.textContent = formatter.format(totalFactura);
+    }
+    
+    if (elementoTotalRemito) {
+        elementoTotalRemito.textContent = formatter.format(totalRemito);
+    }
+}
+
+// Ejecutar cálculos cuando cargue la página
+document.addEventListener('DOMContentLoaded', function() {
+    calcularDiasTranscurridos();
+    calcularTotales();
+});
 </script>
-<script src="main.js" charset="utf-8"></script>
-<script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<!-- Modal -->
-<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-<!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-
+<!-- JavaScript específico de esta página -->
+<script src="js/seleccionPedido.js"></script>
 
 </html>

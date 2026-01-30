@@ -29,21 +29,54 @@ body {
 /* ========================================
    Navbar personalizado
    ======================================== */
-.navbar-brand {
-    border-radius: 8px;
+.navbar {
+    background-color: #212529;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 0.75rem 0;
+}
+
+.navbar-brand-img {
+    border-radius: 10px;
     padding: 5px;
+    background: white;
+    transition: transform 0.3s ease;
+}
+
+.navbar-brand-img:hover {
+    transform: rotate(360deg) scale(1.1);
+}
+
+.brand-text {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: white;
+    letter-spacing: 0.5px;
 }
 
 .navbar-nav .nav-link {
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 0.6rem 1.2rem;
+    margin: 0 0.25rem;
+    border-radius: 8px;
     transition: all 0.3s ease;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9) !important;
 }
 
 .navbar-nav .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    color: white !important;
+}
+
+.navbar-nav .nav-link i {
+    font-size: 1.1rem;
+}
+
+.navbar-nav .nav-link span {
+    font-size: 0.95rem;
 }
 
 /* ========================================
@@ -292,6 +325,16 @@ body {
     }
 }
 
+/* Botón de editar cuando ya fue editado */
+.btn-edited {
+    border: 2px solid var(--edited-border) !important;
+    box-shadow: 0 0 8px rgba(25, 135, 84, 0.3);
+}
+
+.btn-edited:hover {
+    box-shadow: 0 0 12px rgba(25, 135, 84, 0.5);
+}
+
 /* ========================================
    Botones de acción
    ======================================== */
@@ -419,6 +462,16 @@ body {
 .text-currency {
     font-family: 'Courier New', monospace;
     font-weight: 600;
+}
+
+/* Espaciado para botones de SweetAlert2 */
+.swal-actions-spacing {
+    gap: 1rem !important;
+}
+
+.swal2-actions .btn {
+    padding: 0.6rem 1.5rem !important;
+    font-weight: 500 !important;
 }
 
 .no-data-message {

@@ -1,0 +1,173 @@
+
+/* ========================================
+   CSS específico para resumenPorPedido.php
+   Gestión de Pedidos - XL Extra
+   ======================================== */
+
+/* ========================================
+   Variables CSS
+   ======================================== */
+:root {
+    --primary-color: #198754;
+    --warning-color: #ffc107;
+    --dark-bg: #343a40;
+    --light-bg: #f8f9fa;
+    --border-color: #dee2e6;
+    --hover-bg: #f1f3f5;
+    --text-muted: #6c757d;
+}
+
+/* ========================================
+   Estilos generales de la página
+   ======================================== */
+body {
+    background-color: var(--light-bg);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ========================================
+   Navbar personalizado
+   ======================================== */
+.navbar-brand {
+    border-radius: 8px;
+    padding: 5px;
+}
+
+.navbar-nav .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+/* ========================================
+   Sección de filtros
+   ======================================== */
+.filter-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    max-width: 1800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.filter-section label {
+    font-weight: 600;
+    color: var(--dark-bg);
+    margin-bottom: 0.5rem;
+}
+
+.filter-section input[type="date"] {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    transition: border-color 0.3s ease;
+}
+
+.filter-section input[type="date"]:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+.btn-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+}
+
+/* ========================================
+   Tabla de pedidos
+   ======================================== */
+.table-container {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow-x: auto;
+    max-width: 1800px;
+    margin: 0 auto;
+    max-height: calc(100vh - 250px);
+    overflow-y: auto;
+}
+
+.table-pedidos {
+    margin-bottom: 0;
+    width: 100%;
+}
+
+.table-pedidos thead th {
+    background-color: var(--dark-bg);
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    padding: 1rem 0.75rem;
+    border: none;
+    vertical-align: middle;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table-pedidos thead th i {
+    margin-right: 6px;
+    opacity: 0.9;
+}
+
+.table-pedidos tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table-pedidos tbody tr:hover {
+    background-color: var(--hover-bg);
+}
+
+.table-pedidos tbody td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+    font-size: 0.875rem;
+}
+
+/* ========================================
+   Responsive Design
+   ======================================== */
+@media (max-width: 768px) {
+    .filter-section {
+        padding: 1rem;
+    }
+    
+    .table-container {
+        padding: 1rem;
+    }
+    
+    .table-pedidos {
+        font-size: 0.75rem;
+    }
+    
+    .table-pedidos thead th {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.7rem;
+    }
+    
+    .table-pedidos tbody td {
+        padding: 0.75rem 0.5rem;
+    }
+}
+
+/* ========================================
+   Utilidades adicionales
+   ======================================== */
+.text-currency {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
