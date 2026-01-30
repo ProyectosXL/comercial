@@ -9,7 +9,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 // Carga la clase para leer el archivo .env
 require_once __DIR__ . '/../classEnv.php';
 // Lee las variables del archivo .env2 y las pone a disposición de la aplicación.
-Env::load(__DIR__ . '/../../.env2');
+Env::load(__DIR__ . '/../../../.env');
 // Carga la clase para gestionar las conexiones a la base de datos.
 require_once __DIR__ . '/../src/Config/Database.php';
 
