@@ -417,42 +417,9 @@ function calcularDiasTranscurridos() {
 
 // Calcular totales por tipo de comprobante
 function calcularTotales() {
-    const filas = document.querySelectorAll('#table tr');
-    let totalFactura = 0;
-    let totalRemito = 0;
-    
-    const formatter = new Intl.NumberFormat('es-AR', {
-        style: 'currency',
-        currency: 'ARS',
-        minimumFractionDigits: 0
-    });
-    
-    filas.forEach(fila => {
-        const selectComprobante = fila.querySelector('select[name="Comprobante"]');
-        const celdaImporte = fila.querySelector('#importe');
-        
-        if (selectComprobante && celdaImporte) {
-            const tipoComp = selectComprobante.value;
-            const importe = parseFloat(celdaImporte.textContent) || 0;
-            
-            if (tipoComp === 'FACTURA') {
-                totalFactura += importe;
-            } else if (tipoComp === 'REMITO') {
-                totalRemito += importe;
-            }
-        }
-    });
-    
-    // Actualizar las cards
-    const elementoTotalFactura = document.getElementById('total');
-    const elementoTotalRemito = document.getElementById('totalImp');
-    
-    if (elementoTotalFactura) {
-        elementoTotalFactura.textContent = formatter.format(totalFactura);
-    }
-    
-    if (elementoTotalRemito) {
-        elementoTotalRemito.textContent = formatter.format(totalRemito);
+    // Simplemente llamamos a la función que ya arreglamos en el archivo JS
+    if (typeof sumarComprobantesFacturas === "function") {
+        sumarComprobantesFacturas();
     }
 }
 

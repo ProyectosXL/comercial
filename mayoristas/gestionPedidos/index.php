@@ -97,7 +97,7 @@ $pedido = new Pedido();
                             ?>
                         </select>
                     </div>
-                    <div class="col-md-3 col-lg-2">
+                    <div class="col-xl-3 col-md-6 col-sm-6">
                         <button type="submit" class="btn btn-primary btn-filter w-100">
                             <i class="bi bi-funnel me-1"></i> Filtrar
                         </button>
@@ -132,8 +132,8 @@ $pedido = new Pedido();
 
         <!-- Cards de totales -->
         <div class="totals-section">
-            <div class="row g-3">
-                <div class="col-md-3 col-sm-6">
+            <div class="row g-2">
+                <div class="col-xl-3 col-md-6 col-sm-6">
                     <div class="card total-card">
                         <div class="card-body d-flex align-items-center">
                             <div class="icon-wrapper primary me-3">
@@ -147,7 +147,7 @@ $pedido = new Pedido();
                     </div>
                 </div>
                 
-                <div class="col-md-3 col-sm-6">
+                <div class="col-xl-3 col-md-6 col-sm-6">
                     <div class="card total-card">
                         <div class="card-body d-flex align-items-center">
                             <div class="icon-wrapper success me-3">
@@ -161,7 +161,7 @@ $pedido = new Pedido();
                     </div>
                 </div>
                 
-                <div class="col-md-3 col-sm-6">
+                <div class="col-xl-3 col-md-6 col-sm-6">
                     <div class="card total-card">
                         <div class="card-body d-flex align-items-center">
                             <div class="icon-wrapper info me-3">
@@ -175,7 +175,7 @@ $pedido = new Pedido();
                     </div>
                 </div>
                 
-                <div class="col-md-3 col-sm-6">
+                <div class="col-xl-3 col-md-6 col-sm-6">
                     <div class="card total-card">
                         <div class="card-body">
                             <h6 class="card-title mb-2">

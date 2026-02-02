@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../class/conexion.php';
+
 class Destino
 {
     

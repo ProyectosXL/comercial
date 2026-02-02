@@ -84,10 +84,10 @@ body {
    ======================================== */
 .filter-section {
     background: white;
-    padding: 1.5rem;
+    padding: 0.75rem 1rem; /* Reducido de 1.5rem */
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.75rem; /* Reducido */
     max-width: 1800px;
     margin-left: auto;
     margin-right: auto;
@@ -121,69 +121,37 @@ body {
 /* ========================================
    Cards de totales
    ======================================== */
+/* ========================================
+   Cards de totales (VERSIÓN COMPACTA)
+   ======================================== */
 .totals-section {
-    margin-bottom: 2rem;
+    margin-bottom: 1rem; /* Reducido */
     max-width: 1800px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.total-card {
-    border: none;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    height: 100%;
-}
-
-.total-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .total-card .card-body {
-    padding: 1.5rem;
+    padding: 0.6rem 1rem !important; /* Padding mínimo */
 }
 
 .total-card .icon-wrapper {
-    width: 56px;
-    height: 56px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-}
-
-.icon-wrapper.primary {
-    background-color: rgba(13, 110, 253, 0.1);
-    color: #0d6efd;
-}
-
-.icon-wrapper.success {
-    background-color: rgba(25, 135, 84, 0.1);
-    color: var(--primary-color);
-}
-
-.icon-wrapper.info {
-    background-color: rgba(13, 202, 240, 0.1);
-    color: #0dcaf0;
+    width: 38px; /* Reducido de 56px */
+    height: 38px;
+    font-size: 18px; /* Icono más chico */
 }
 
 .total-card .card-title {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    margin-bottom: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
+    font-size: 0.7rem; /* Texto muy pequeño */
+    margin-bottom: 0;
 }
 
 .total-card .card-value {
-    font-size: 1.75rem;
+    font-size: 1.2rem; /* Valor más discreto */
     font-weight: 700;
-    color: var(--dark-bg);
-    margin: 0;
+}
+
+.total-card .form-control {
+    padding: 0.25rem 0.75rem; /* Input de búsqueda más fino */
+    font-size: 0.85rem;
 }
 
 /* ========================================
@@ -226,23 +194,16 @@ body {
    ======================================== */
 .vendor-title {
     background: white;
-    padding: 1rem 1.5rem;
+    padding: 0.5rem 1rem;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.75rem;
     display: flex;
     align-items: center;
-    gap: 12px;
-    max-width: 1800px;
-    margin-left: auto;
-    margin-right: auto;
+    gap: 10px;
 }
 
-.vendor-title h4 {
-    margin: 0;
-    color: var(--dark-bg);
-    font-weight: 600;
-}
+.vendor-title h4 { font-size: 1rem; margin: 0; }
 
 .vendor-title i {
     color: var(--primary-color);
@@ -252,40 +213,33 @@ body {
 /* ========================================
    Tabla de pedidos
    ======================================== */
+
 .table-container {
     background: white;
-    padding: 1.5rem;
+    padding: 0;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    overflow-x: auto;
     max-width: 1800px;
     margin: 0 auto;
-    max-height: calc(100vh - 400px);
+    /* Esto calcula el espacio restante de la pantalla automáticamente */
+    max-height: calc(100vh - 350px); 
     overflow-y: auto;
+    border: 1px solid var(--border-color);
 }
 
-.table-pedidos {
-    margin-bottom: 0;
-    width: 100%;
-}
-
-.table-pedidos {
-    margin-bottom: 0;
-}
-
-.table-pedidos thead th {
-    background-color: var(--dark-bg);
-    color: white;
-    font-weight: 600;
-    text-transform: uppercase;
+.table-pedidos tbody td {
+    padding: 0.5rem 0.75rem;
     font-size: 0.8rem;
-    letter-spacing: 0.5px;
+}
+.table-pedidos thead th {
+    position: sticky;
+    top: 0; /* Se pega arriba del .table-container */
+    z-index: 10;
+    background-color: var(--dark-bg) !important; /* Color oscuro sólido */
+    color: white !important;
     padding: 1rem 0.75rem;
     border: none;
-    vertical-align: middle;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    box-shadow: inset 0 -1px 0 rgba(255,255,255,0.1); /* Una línea sutil abajo */
 }
 
 .table-pedidos thead th i {

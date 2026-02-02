@@ -1,222 +1,196 @@
 /* ========================================
-   JavaScript específico para seleccionPedido.php
-   Gestión de Pedidos - XL Extra
+   js/seleccionPedido.js - SOLUCIÓN DEFINITIVA
    ======================================== */
 
-// Variables globales
 let Pedidos = [];
 
-/**
- * Inicialización cuando el DOM está listo
- */
 window.addEventListener('DOMContentLoaded', function() {
-    console.log('seleccionPedido.js cargado correctamente');
-    
-    // Inicializar funcionalidades
+    // 1. Escuchadores de eventos
     iniciarEscucha();
     establecerMinFecha();
-    formatearImportes();
-    initTotalesComprobantes();
     
-    // Event listener para guardar
+    // 2. Ejecutar correcciones y sumas iniciales
+    // Usamos un pequeño delay para asegurar que el DOM y otros scripts terminaron
+    setTimeout(() => {
+        formatearYCorregirTabla();
+        sumarTotalesDash();
+    }, 100);
+
     document.getElementById('btn_save').addEventListener('click', actualizarDB);
 });
 
-/* ========================================
-   Búsqueda rápida en tabla
-   ======================================== */
+/**
+ * Función que limpia el texto "$ 240.812,50" y lo hace un número real 240812.5
+ */
+function toNum(texto) {
+    if (!texto) return 0;
+    // Borramos $, espacios y el PUNTO de miles
+    let limpio = texto.toString().replace(/[$. ]/g, '').replace(',', '.');
+    let n = parseFloat(limpio) || 0;
+    
+    // Si el número es mayor a 1 millón, lo corregimos (error de los ceros)
+    if (n > 1000000) n = n / 1000;
+    
+    return n;
+}
 
 /**
- * Filtra las filas de la tabla según el texto de búsqueda
+ * Suma Facturas y Remitos leyendo directamente las celdas de la tabla
  */
-function myFunction() {
-    var input, filter, table, tr, td, i, txtValue, visible;
-    input = document.getElementById("textbusq");
-    filter = input.value.toUpperCase();
-    table = document.getElementById("table");
-    tr = table.getElementsByTagName("tr");
-
-    for (i = 0; i < tr.length; i++) {
-        visible = false;
-        td = tr[i].getElementsByTagName("td");
-
-        for (j = 0; j < td.length; j++) {
-            if (td[j] && td[j].innerHTML.toUpperCase().indexOf(filter) > -1) {
-                visible = true;
-            }
-        }
+function sumarTotalesDash() {
+    let totalF = 0;
+    let totalR = 0;
+    
+    // Seleccionamos todas las filas del cuerpo de la tabla
+    const filas = document.querySelectorAll('tbody#table tr');
+    
+    filas.forEach(fila => {
+        // Celda 7 es el Importe, Celda 8 es el Tipo Comp
+        let celdaImporte = fila.cells[7];
+        let selectComp = fila.cells[8].querySelector('select');
         
-        if (visible === true) {
-            tr[i].style.display = "";
-        } else {
-            tr[i].style.display = "none";
+        if (celdaImporte && selectComp) {
+            let valor = 0;
+            let input = celdaImporte.querySelector('input');
+            
+            // Si está editando usamos el valor del input, sino el texto de la celda
+            valor = input ? parseFloat(input.value) : toNum(celdaImporte.innerText);
+            
+            if (selectComp.value === 'FACTURA') totalF += valor;
+            else if (selectComp.value === 'REMITO') totalR += valor;
         }
-    }
-}
-
-/* ========================================
-   Formateo de importes
-   ======================================== */
-
-/**
- * Formatea los importes de la tabla
- */
-function formatearImportes() {
-    let importe = document.querySelectorAll('#importe');
-    importe.forEach(el => {
-        el.innerHTML = new Intl.NumberFormat("es-AR", {
-            style: "currency",
-            currency: "ARS",
-            minimumFractionDigits: 0
-        }).format(el.innerHTML);
-    });
-}
-
-/* ========================================
-   Edición de pedidos
-   ======================================== */
-
-/**
- * Inicializa los event listeners para edición
- */
-function iniciarEscucha() {
-    let edit = document.querySelectorAll(".btnEdit");
-    edit.forEach(ele => {
-        ele.addEventListener('click', editarPedido, false);
     });
     
-    // Event listeners para cambios en selects
-    let select = document.querySelectorAll('.form-select');
-    select.forEach(el => {
-        el.addEventListener('change', (e) => {
-            guardarDatos(e.target.closest('tr'), e);
-            sumarComprobantesFacturas();
-        });
-    });
+    const fmt = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 });
     
-    // Event listeners para cambios en fechas
-    let fechas = document.querySelectorAll('input[type="date"]');
-    fechas.forEach(el => {
-        el.addEventListener('change', (e) => {
-            guardarDatos(e.target.closest('tr'), e);
-        });
-    });
+    // Inyectamos los totales en los h3 de arriba
+    document.getElementById('total').textContent = fmt.format(totalF);
+    document.getElementById('totalImp').textContent = fmt.format(totalR);
 }
 
 /**
- * Habilita la edición de un pedido
+ * Corrige los errores de "millones" al cargar y pone el formato $
  */
-function editarPedido(pedido) {
-    habilitarInputs(pedido);
-    pedido = pedido.target.closest('tr');
-    guardarDatos(pedido);
-    sumarComprobantesFacturas();
+function formatearYCorregirTabla() {
+    const fmt = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 });
+    document.querySelectorAll('tbody#table tr').forEach(fila => {
+        let celda = fila.cells[7];
+        if (celda && !celda.querySelector('input')) {
+            let n = toNum(celda.innerText);
+            celda.innerText = fmt.format(n);
+        }
+    });
 }
 
-/**
- * Habilita los inputs de una fila para edición
- */
-function habilitarInputs(input) {
-    let row = input.target.closest('tr');
+function habilitarInputs(e) {
+    let row = e.target.closest('tr');
+    let celdaI = row.cells[7];
     
-    // Habilitar selects y fechas (columnas 8-13)
-    for (let i = 8; i < 14; i++) {
-        let campo = row.children[i].children[0];
-        campo.disabled = false;
+    if (!celdaI.querySelector('input')) {
+        let v = toNum(celdaI.innerText);
+        celdaI.innerHTML = `<input type="number" step="0.01" class="form-control form-control-sm" value="${v.toFixed(2)}" style="width:130px">`;
         
-        // Mantener deshabilitado el primer option de selects
-        if (campo.tagName === 'SELECT' && campo.children[0]) {
-            campo.children[0].disabled = true;
-        }
+        celdaI.querySelector('input').addEventListener('input', () => {
+            sumarTotalesDash();
+            guardarDatos(row);
+        });
     }
+
+    row.querySelectorAll('select, input').forEach(el => {
+        el.disabled = false;
+        if (el.tagName === 'SELECT' && el.options[0]) el.options[0].disabled = true;
+    });
 }
 
-/**
- * Guarda los datos de un pedido editado
- */
-function guardarDatos(row, campo) {
-    const codigo = row.children[4].innerHTML;
+function guardarDatos(row) {
+    const codigo = row.cells[4].innerText.trim();
+    const existeIndex = Pedidos.findIndex(p => p.codigo == codigo);
     
-    // Buscar si el pedido ya existe en el array
-    const existeIndex = Pedidos.findIndex(pedido => pedido.codigo == codigo);
-    
-    const infoPedido = {
+    let celdaI = row.cells[7];
+    let input = celdaI.querySelector('input');
+    let finalV = input ? parseFloat(input.value) : toNum(celdaI.innerText);
+
+    const info = {
         codigo: codigo,
-        fecha: row.children[0].innerHTML,
-        hora: row.children[1].innerHTML,
-        cod_client: (document.getElementById('cod_client').value).replace('&','%26'),
-        razon_soci: (document.getElementById('razon_soci').value).replace('&','%26'),
+        fecha: row.cells[0].innerText,
+        hora: row.cells[1].innerText,
+        cod_client: document.getElementById('cod_client').value.replace('&','%26'),
+        razon_soci: document.getElementById('razon_soci').value.replace('&','%26'),
         localidad: document.getElementById('localidad').value,
         cod_vended: document.getElementById('cod_vended').value,
         vendedor: document.getElementById('vendedor').value,
-        estado: row.children[2].innerText,
-        talonario: row.children[3].innerHTML,
-        unidPedido: row.children[5].innerHTML,
-        unidPendiente: row.children[6].innerHTML,
-        importePendiente: parseFloat(row.children[7].innerText.replace('$', '').replace(/\./g, '').replace(',', '.')).toFixed(3),
-        tipoComp: row.children[8].querySelector('select').value,
-        embalaje: row.children[9].querySelector('select').value,
-        despacho: row.children[10].querySelector('select').value,
-        arreglo: row.children[11].querySelector('select').value,
-        prioridad: row.children[12].querySelector('select').value,
-        fechaDespacho: row.children[13].children[0].value
+        estado: row.cells[2].innerText,
+        talonario: row.cells[3].innerText,
+        unidPedido: row.cells[5].innerText,
+        unidPendiente: row.cells[6].innerText,
+        importePendiente: finalV.toFixed(2).replace('.', ','), // COMA para el PHP
+        tipoComp: row.cells[8].querySelector('select').value,
+        embalaje: row.cells[9].querySelector('select').value,
+        despacho: row.cells[10].querySelector('select').value,
+        arreglo: row.cells[11].querySelector('select').value,
+        prioridad: row.cells[12].querySelector('select').value,
+        fechaDespacho: row.cells[13].querySelector('input').value
     };
     
-    if (existeIndex === -1) {
-        // Agregar nuevo pedido
-        Pedidos.push(infoPedido);
-    } else {
-        // Actualizar pedido existente
-        Pedidos[existeIndex] = infoPedido;
-    }
-    
-    console.log('Pedidos actualizados:', Pedidos);
+    if (existeIndex === -1) Pedidos.push(info);
+    else Pedidos[existeIndex] = info;
 }
 
-/* ========================================
-   Copiar primera fila
-   ======================================== */
+function actualizarDB() {
+    if (Pedidos.length === 0) {
+        Swal.fire({ icon: 'info', title: 'Sin cambios' });
+        return;
+    }
+    Swal.fire({ title: 'Guardando...', didOpen: () => { Swal.showLoading(); } });
+    let xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            Swal.fire({ icon: 'success', title: '¡Guardado!' }).then(() => { location.reload(); });
+        }
+    };
+    xhr.open('GET', './Controller/updateDatos.php?datos=' + encodeURIComponent(JSON.stringify(Pedidos)), true);
+    xhr.send();
+}
 
-/**
- * Copia los valores de la primera fila a todas las filas editables
- */
+function iniciarEscucha() {
+    document.querySelectorAll(".btnEdit").forEach(btn => btn.addEventListener('click', e => {
+        habilitarInputs(e);
+        guardarDatos(e.target.closest('tr'));
+    }));
+    document.querySelectorAll('.form-select, input[type="date"]').forEach(el => el.addEventListener('change', e => {
+        guardarDatos(e.target.closest('tr'));
+        sumarTotalesDash();
+    }));
+}
+
+function establecerMinFecha() {
+    let d = new Date(); d.setDate(d.getDate() + 2);
+    document.querySelectorAll('[type=date]').forEach(el => el.setAttribute("min", d.toISOString().split('T')[0]));
+}
+
 function copiarPrimerFila() {
-    let allTr = document.querySelectorAll('#trBody');
-    
-    if (allTr.length === 0) return;
-    
-    let primerFila = allTr[0];
-    
-    // Obtener valores de la primera fila
-    let tipoComprobante = primerFila.querySelectorAll('td')[8].querySelector("select").value;
-    let embalaje = primerFila.querySelectorAll('td')[9].querySelector("select").value;
-    let despacho = primerFila.querySelectorAll('td')[10].querySelector("select").value;
-    let asignarFecha = primerFila.querySelectorAll('td')[13].querySelector("input").value;
-    
-    // Aplicar a todas las filas editables
-    allTr.forEach(element => {
-        if (element.querySelectorAll('td')[8].querySelector("select").disabled == false) {
-            element.querySelectorAll('td')[8].querySelector("select").value = tipoComprobante;
-            element.querySelectorAll('td')[9].querySelector("select").value = embalaje;
-            element.querySelectorAll('td')[10].querySelector("select").value = despacho;
-            element.querySelectorAll('td')[13].querySelector("input").value = asignarFecha;
-            
-            // Guardar datos de esta fila
-            guardarDatos(element);
+    let rows = document.querySelectorAll('tbody#table tr');
+    if (rows.length < 2) return;
+    let ref = rows[0];
+    let vals = {
+        comp: ref.cells[8].querySelector("select").value,
+        emb: ref.cells[9].querySelector("select").value,
+        desp: ref.cells[10].querySelector("select").value,
+        fec: ref.cells[13].querySelector("input").value
+    };
+    rows.forEach(row => {
+        let sel = row.cells[8].querySelector("select");
+        if (!sel.disabled) {
+            sel.value = vals.comp;
+            row.cells[9].querySelector("select").value = vals.emb;
+            row.cells[10].querySelector("select").value = vals.desp;
+            row.cells[13].querySelector("input").value = vals.fec;
+            guardarDatos(row);
         }
     });
-    
-    sumarComprobantesFacturas();
-    
-    Swal.fire({
-        icon: 'success',
-        title: 'Valores copiados',
-        text: 'Se aplicaron los valores de la primera fila a todos los pedidos editables',
-        timer: 2000,
-        showConfirmButton: false
-    });
+    sumarTotalesDash();
+    Swal.fire({ icon: 'success', title: 'Replicado', timer: 1000, showConfirmButton: false });
 }
-
 /* ========================================
    Cálculo de totales por tipo de comprobante
    ======================================== */
@@ -228,6 +202,15 @@ function initTotalesComprobantes() {
     sumarComprobantesFacturas();
 }
 
+function limpiarImporte(texto) {
+    if (!texto) return 0;
+    // Eliminamos el signo $, los espacios y los puntos (que son separadores de miles en es-AR)
+    let limpio = texto.replace(/[$. ]/g, '');
+    // Cambiamos la coma decimal por un punto decimal para que JS lo entienda
+    limpio = limpio.replace(',', '.');
+    return parseFloat(limpio) || 0;
+}
+
 /**
  * Suma los totales de Facturas y Remitos
  */
@@ -235,26 +218,22 @@ function sumarComprobantesFacturas() {
     let totalFactura = 0;
     let totalRemito = 0;
     
-    document.querySelectorAll('.Comprobante').forEach(element => {
-        let valorTexto = element.closest('tr').querySelectorAll('td')[7].innerText;
-        let valor = parseFloat(valorTexto.replace("$", "").replace(/\./g, "").replace(",", "."));
+    document.querySelectorAll('#trBody').forEach(fila => {
+        let select = fila.querySelector('.Comprobante');
+        let celdaImporte = fila.querySelector('td:nth-child(8)'); // Columna importe
         
-        if (element.value == 'FACTURA') {
-            totalFactura += valor;
-        } else if (element.value == 'REMITO') {
-            totalRemito += valor;
+        let inputManual = celdaImporte.querySelector('.edit-importe');
+        let valor = inputManual ? parseFloat(inputManual.value) : parseImporte(celdaImporte.innerText);
+        
+        if (!isNaN(valor)) {
+            if (select.value == 'FACTURA') totalFactura += valor;
+            else if (select.value == 'REMITO') totalRemito += valor;
         }
     });
     
-    document.getElementById('total').value = totalFactura.toLocaleString('es-AR', { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
-    });
-    
-    document.getElementById('totalImp').value = totalRemito.toLocaleString('es-AR', { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
-    });
+    const formatter = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 });
+    document.getElementById('total').textContent = formatter.format(totalFactura);
+    document.getElementById('totalImp').textContent = formatter.format(totalRemito);
 }
 
 /* ========================================
@@ -303,54 +282,41 @@ function checkInpustNoVacios() {
  */
 function actualizarDB() {
     if (Pedidos.length === 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'No se modificaron datos',
-            text: 'Edite pedidos y haga click en guardar'
-        });
+        Swal.fire({ icon: 'error', title: 'No se modificaron datos', text: 'Edite pedidos y haga click en guardar' });
         return;
     }
     
     if (checkInpustNoVacios()) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Campos vacíos',
-            text: 'Debe completar todos los campos obligatorios'
-        });
+        Swal.fire({ icon: 'error', title: 'Campos vacíos', text: 'Debe completar todos los campos obligatorios' });
         return;
     }
     
-    // Mostrar loading
     Swal.fire({
         title: 'Guardando cambios...',
         html: 'Por favor espere',
         allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
+        didOpen: () => { Swal.showLoading(); }
     });
     
-    // Realizar petición AJAX
     let conexion = new XMLHttpRequest();
     conexion.onreadystatechange = function() {
         if (conexion.readyState === 4) {
             if (conexion.status >= 200 && conexion.status < 300) {
                 Swal.fire({
                     icon: 'success',
-                    title: 'Pedidos modificados exitosamente',
-                    text: "Nro. de pedido/s: " + conexion.responseText,
+                    title: 'Pedidos modificados',
+                    text: "Se guardaron los cambios correctamente",
                     showConfirmButton: true,
                 }).then(function() {
-                    // Volver a index.php
-                    window.location.href = 'index.php';
+                    // CAMBIO: En lugar de ir a index.php, recargamos la página actual
+                    // para ver los cambios aplicados y seguir con el mismo cliente.
+                    location.reload(); 
                 });
             } else {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error de carga',
-                    text: 'No se modificó ningún pedido. ' + conexion.responseText
-                }).then(function() {
-                    location.reload();
+                    text: 'No se pudo guardar: ' + conexion.responseText
                 });
             }
         }
@@ -360,6 +326,7 @@ function actualizarDB() {
     conexion.open('GET', './Controller/updateDatos.php?datos=' + datos, true);
     conexion.send();
 }
+
 
 /* ========================================
    Utilidades

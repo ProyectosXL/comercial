@@ -18,14 +18,14 @@ class NotificationService {
             $this->mailer->isSMTP();
             $this->mailer->Host       = Env::get('HOST_EMAIL', 'smtp.gmail.com');
             $this->mailer->SMTPAuth   = true;
-            $this->mailer->Username   = Env::get('USER_EMAIL');
+            $this->mailer->Username   = Env::get('USER_EMAIL2');
             $this->mailer->Password   = Env::get('PASS_EMAIL2');
             $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $this->mailer->Port       = 587;
             $this->mailer->CharSet    = 'UTF-8';
 
             // Remitente
-            $this->mailer->setFrom(Env::get('USER_EMAIL'), 'Sistema de Auditorías XL');
+            $this->mailer->setFrom(Env::get('USER_EMAIL2'), 'Sistema de Auditorías XL');
 
         } catch (Exception $e) {
             // Manejar error de configuración si es necesario
