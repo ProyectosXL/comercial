@@ -1,76 +1,58 @@
-
 <?php
 
 class PPP
 {
-
-    private function retornarArray($sqlEnviado)
-    {
-
-        require_once $_SERVER['DOCUMENT_ROOT'].'/sistemas/class/conexion.php';
-        /* echo $sqlEnviado; */
-        $cid = new Conexion();
-        $cid_central = $cid->conectar('central');
-        
-        if($cid_central === false){
-            die("Error al conectar con la base de datos: ".print_r(sqlsrv_errors(), true));
-        }
-        
-        $sql = $sqlEnviado;
-
-        $stmt = sqlsrv_query($cid_central, $sql);
-        
-        if($stmt === false){
-            die("Error en sqlsrv_query: ".print_r(sqlsrv_errors(), true));
-        }
-
-        $rows = array();
-
-        while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-            $rows[] = $v;
-        }
-
-
-        return $rows;
-    }
-
-
     public function traerCuenta($cliente)
     {
-        $sql = "SELECT * FROM RO_PPP_DETALLADO_MAYORISTAS WHERE COD_CLIENTE = '$cliente'";
-        $sql=str_replace('"','',$sql);
-        
         require_once $_SERVER['DOCUMENT_ROOT'].'/sistemas/class/conexion.php';
         
         $cid = new Conexion();
         $cid_central = $cid->conectar('central');
         
+        // Limpiamos headers para asegurar JSON
+        header('Content-Type: application/json; charset=utf-8');
+
         if($cid_central === false){
-            die("Error al conectar con la base de datos: ".print_r(sqlsrv_errors(), true));
+             echo json_encode(["error" => "Error de conexión DB"]);
+             exit;
         }
+        
+        // Evitar inyección SQL básica y limpiar comillas
+        $clienteLimpio = str_replace("'", "", $cliente);
+        $clienteLimpio = str_replace('"', '', $clienteLimpio);
+
+        $sql = "SELECT * FROM RO_PPP_DETALLADO_MAYORISTAS WHERE COD_CLIENTE = '$clienteLimpio'";
 
         $stmt = sqlsrv_query($cid_central, $sql);
         
         if($stmt === false){
-            die("Error en sqlsrv_query: ".print_r(sqlsrv_errors(), true));
+             echo json_encode(["error" => "Error SQL", "details" => sqlsrv_errors()]);
+             exit;
         }
 
         $rows = array();
 
         while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            // UTF-8 Encode si es necesario
+            foreach ($v as $key => $value) {
+                if (is_string($value)) {
+                    $v[$key] = mb_convert_encoding($value, 'UTF-8', 'ISO-8859-1');
+                }
+            }
             $rows[] = $v;
         }
 
-        // Asegurar que retorna JSON válido con header correcto
-        header('Content-Type: application/json');
+        // JSON_NUMERIC_CHECK convierte strings numéricos "123" a números 123
+        // Esto ayuda mucho al Javascript
         echo json_encode($rows, JSON_NUMERIC_CHECK);
-
     }
-
 }
 
-$p = new PPP();
+// Manejador de la petición GET
 if(isset($_GET['cliente']))
 {
+    // Instanciamos y llamamos
+    $p = new PPP();
     $p->traerCuenta($_GET['cliente']);
 }
+?>

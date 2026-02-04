@@ -1,441 +1,113 @@
 /* ========================================
-   CSS específico para index.php
-   Gestión de Pedidos - XL Extra
+   CSS Moderno para Gestión de Pedidos - CORREGIDO
    ======================================== */
 
-/* ========================================
-   Variables CSS
-   ======================================== */
-:root {
-    --primary-color: #198754;
-    --warning-color: #ffc107;
-    --dark-bg: #343a40;
-    --light-bg: #f8f9fa;
-    --border-color: #dee2e6;
-    --hover-bg: #f1f3f5;
-    --text-muted: #6c757d;
-    --edited-highlight: #d1e7dd;
-    --edited-border: #198754;
-}
-
-/* ========================================
-   Estilos generales de la página
-   ======================================== */
 body {
-    background-color: var(--light-bg);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #f3f4f6;
+    color: #374151;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Evita doble scroll en body */
 }
 
-/* ========================================
-   Navbar personalizado
-   ======================================== */
+/* Navbar */
 .navbar {
-    background-color: #212529;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(90deg, #1e293b 0%, #334155 100%);
     padding: 0.75rem 0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+.brand-text { font-size: 1.1rem; font-weight: 600; color:white; }
+.navbar-nav .nav-link { color: rgba(255,255,255,0.9) !important; font-weight: 500; }
+
+/* Contenedor Principal con Scroll inteligente */
+.main-container {
+    flex-grow: 1;
+    overflow-y: auto; /* Permite scroll si la pantalla es muy chica */
+    padding-bottom: 2rem;
+    display: flex;
+    flex-direction: column;
 }
 
-.navbar-brand-img {
-    border-radius: 10px;
-    padding: 5px;
-    background: white;
-    transition: transform 0.3s ease;
+/* Sección Filtros */
+.filter-card {
+    border-radius: 12px;
+    background-color: #ffffff;
+    flex-shrink: 0;
 }
 
-.navbar-brand-img:hover {
-    transform: rotate(360deg) scale(1.1);
-}
-
-.brand-text {
-    font-size: 1.4rem;
-    font-weight: 700;
+/* KPIs Cards */
+.kpi-card {
+    border-radius: 12px;
     color: white;
-    letter-spacing: 0.5px;
+    overflow: hidden;
+    border: none;
+    flex-shrink: 0;
 }
+.kpi-primary { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); }
+.kpi-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+.kpi-info    { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+.icon-circle { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background-color: rgba(255,255,255,0.2); }
 
-.navbar-nav .nav-link {
+/* --- CORRECCIÓN 2: TABLA CON SCROLL INTERNO --- */
+
+/* El contenedor de la tarjeta de la tabla debe ocupar el espacio restante */
+.table-card {
+    border: none;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0.6rem 1.2rem;
-    margin: 0 0.25rem;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.9) !important;
+    flex-direction: column;
+    /* Altura máxima calculada: 100vh menos navbar(60) menos filtros(100) menos kpis(150) menos margenes */
+    height: calc(100vh - 380px); 
+    min-height: 400px;
 }
 
-.navbar-nav .nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-    color: white !important;
-}
-
-.navbar-nav .nav-link i {
-    font-size: 1.1rem;
-}
-
-.navbar-nav .nav-link span {
-    font-size: 0.95rem;
-}
-
-/* ========================================
-   Sección de filtros
-   ======================================== */
-.filter-section {
+.table-responsive {
+    overflow-y: auto; /* Scroll vertical */
+    overflow-x: auto; /* Scroll horizontal si es necesario */
+    height: 100%;     /* Ocupa todo el alto de la card */
     background: white;
-    padding: 0.75rem 1rem; /* Reducido de 1.5rem */
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 0.75rem; /* Reducido */
-    max-width: 1800px;
-    margin-left: auto;
-    margin-right: auto;
 }
 
-.filter-section label {
-    font-weight: 600;
-    color: var(--dark-bg);
-    margin-bottom: 0.5rem;
-}
-
-.filter-section select {
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    transition: border-color 0.3s ease;
-}
-
-.filter-section select:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
-}
-
-.btn-filter {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0.5rem 1.5rem;
-    font-weight: 500;
-}
-
-/* ========================================
-   Cards de totales
-   ======================================== */
-/* ========================================
-   Cards de totales (VERSIÓN COMPACTA)
-   ======================================== */
-.totals-section {
-    margin-bottom: 1rem; /* Reducido */
-    max-width: 1800px;
-}
-
-.total-card .card-body {
-    padding: 0.6rem 1rem !important; /* Padding mínimo */
-}
-
-.total-card .icon-wrapper {
-    width: 38px; /* Reducido de 56px */
-    height: 38px;
-    font-size: 18px; /* Icono más chico */
-}
-
-.total-card .card-title {
-    font-size: 0.7rem; /* Texto muy pequeño */
-    margin-bottom: 0;
-}
-
-.total-card .card-value {
-    font-size: 1.2rem; /* Valor más discreto */
-    font-weight: 700;
-}
-
-.total-card .form-control {
-    padding: 0.25rem 0.75rem; /* Input de búsqueda más fino */
-    font-size: 0.85rem;
-}
-
-/* ========================================
-   Búsqueda rápida
-   ======================================== */
-.search-section {
-    background: white;
-    padding: 1rem 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 1.5rem;
-    max-width: 1800px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.search-section .input-group {
-    max-width: 400px;
-}
-
-.search-section input {
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
-}
-
-.search-section input:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
-}
-
-.search-section .input-group-text {
-    background-color: white;
-    border: 1px solid var(--border-color);
-    border-right: none;
-    border-radius: 6px 0 0 6px;
-}
-
-/* ========================================
-   Título del vendedor
-   ======================================== */
-.vendor-title {
-    background: white;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.vendor-title h4 { font-size: 1rem; margin: 0; }
-
-.vendor-title i {
-    color: var(--primary-color);
-    font-size: 1.5rem;
-}
-
-/* ========================================
-   Tabla de pedidos
-   ======================================== */
-
-.table-container {
-    background: white;
-    padding: 0;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    max-width: 1800px;
-    margin: 0 auto;
-    /* Esto calcula el espacio restante de la pantalla automáticamente */
-    max-height: calc(100vh - 350px); 
-    overflow-y: auto;
-    border: 1px solid var(--border-color);
-}
-
-.table-pedidos tbody td {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.8rem;
-}
-.table-pedidos thead th {
+/* Sticky Header dentro del contenedor */
+.table-modern thead th {
     position: sticky;
-    top: 0; /* Se pega arriba del .table-container */
-    z-index: 10;
-    background-color: var(--dark-bg) !important; /* Color oscuro sólido */
-    color: white !important;
-    padding: 1rem 0.75rem;
-    border: none;
-    box-shadow: inset 0 -1px 0 rgba(255,255,255,0.1); /* Una línea sutil abajo */
-}
-
-.table-pedidos thead th i {
-    margin-right: 6px;
-    opacity: 0.9;
-}
-
-.table-pedidos tbody tr {
-    transition: background-color 0.2s ease;
-}
-
-.table-pedidos tbody tr:hover {
-    background-color: var(--hover-bg);
-}
-
-.table-pedidos tbody td {
-    padding: 1rem 0.75rem;
-    vertical-align: middle;
-    font-size: 0.875rem;
-}
-
-/* ========================================
-   Fila editada (marcado temporal)
-   ======================================== */
-.edited-row {
-    border-left: 4px solid var(--edited-border) !important;
-    background-color: var(--edited-highlight) !important;
-    animation: fadeHighlight 0.6s ease;
-}
-
-@keyframes fadeHighlight {
-    0% {
-        background-color: #a3cfbb;
-    }
-    100% {
-        background-color: var(--edited-highlight);
-    }
-}
-
-/* Botón de editar cuando ya fue editado */
-.btn-edited {
-    border: 2px solid var(--edited-border) !important;
-    box-shadow: 0 0 8px rgba(25, 135, 84, 0.3);
-}
-
-.btn-edited:hover {
-    box-shadow: 0 0 12px rgba(25, 135, 84, 0.5);
-}
-
-/* ========================================
-   Botones de acción
-   ======================================== */
-.action-buttons {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-}
-
-.btn-action {
-    padding: 0.4rem 0.7rem;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-    border: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 38px;
-    min-height: 38px;
-}
-
-.btn-action i {
-    font-size: 1.1rem;
-}
-
-.btn-action.btn-success {
-    background-color: var(--primary-color);
-}
-
-.btn-action.btn-success:hover {
-    background-color: #157347;
-    transform: scale(1.05);
-}
-
-.btn-action.btn-warning {
-    background-color: var(--warning-color);
-    color: #000;
-}
-
-.btn-action.btn-warning:hover {
-    background-color: #ffca2c;
-    transform: scale(1.05);
-}
-
-/* ========================================
-   Badge "Impreso"
-   ======================================== */
-.badge-impreso {
+    top: 0;
+    z-index: 100;
+    background-color: #f1f5f9;
+    color: #475569;
+    font-weight: 700;
     font-size: 0.75rem;
-    padding: 0.35rem 0.65rem;
-    border-radius: 4px;
+    text-transform: uppercase;
+    padding: 1rem 0.75rem;
+    border-bottom: 2px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Sombra sutil para distinguir el header */
 }
 
-/* ========================================
-   Responsive Design
-   ======================================== */
-@media (max-width: 768px) {
-    .filter-section {
-        padding: 1rem;
-    }
-    
-    .total-card .card-body {
-        padding: 1rem;
-    }
-    
-    .total-card .icon-wrapper {
-        width: 48px;
-        height: 48px;
-        font-size: 20px;
-    }
-    
-    .total-card .card-value {
-        font-size: 1.5rem;
-    }
-    
-    .table-container {
-        padding: 1rem;
-    }
-    
-    .table-pedidos {
-        font-size: 0.75rem;
-    }
-    
-    .table-pedidos thead th {
-        padding: 0.75rem 0.5rem;
-        font-size: 0.7rem;
-    }
-    
-    .table-pedidos tbody td {
-        padding: 0.75rem 0.5rem;
-    }
-    
-    .btn-action {
-        min-width: 34px;
-        min-height: 34px;
-        padding: 0.3rem 0.5rem;
-    }
-    
-    .btn-action i {
-        font-size: 1rem;
-    }
-    
-    .vendor-title {
-        padding: 0.75rem 1rem;
-    }
-    
-    .vendor-title h4 {
-        font-size: 1.1rem;
-    }
+.table-modern tbody td {
+    padding: 0.8rem 0.75rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9rem;
 }
 
-@media (max-width: 576px) {
-    .totals-section .col-md-3 {
-        margin-bottom: 1rem;
-    }
-    
-    .search-section .input-group {
-        max-width: 100%;
-    }
+.table-modern tbody tr:hover {
+    background-color: #f8fafc;
 }
 
-/* ========================================
-   Utilidades adicionales
-   ======================================== */
-.text-currency {
-    font-family: 'Courier New', monospace;
-    font-weight: 600;
-}
+/* Badges y Botones */
+.badge { font-weight: 500; }
+.sumImporte { font-family: 'Courier New', monospace; font-weight: 600; }
+.btn-edit { padding: 0.3rem 0.6rem; border-radius: 6px; }
 
-/* Espaciado para botones de SweetAlert2 */
-.swal-actions-spacing {
-    gap: 1rem !important;
-}
-
-.swal2-actions .btn {
-    padding: 0.6rem 1.5rem !important;
-    font-weight: 500 !important;
-}
-
-.no-data-message {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: var(--text-muted);
-}
-
-.no-data-message i {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
+/* Responsive */
+@media (max-width: 992px) {
+    .main-container { overflow-y: auto; }
+    .table-card { height: auto; min-height: auto; }
+    .table-responsive { max-height: 500px; } /* En móviles scroll normal */
+    body { overflow: auto; height: auto; }
 }

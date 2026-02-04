@@ -198,152 +198,165 @@ $pedido = new Pedido();
                     </tr>
                 </thead>
 
-                <tbody id="table">
-                    <?php
-                    $todosLosPedidos = json_decode($todosLosPedidos);
-                    ?>
-                    <input type="text" name="" id="cod_client" value="<?php echo $todosLosPedidos[0]->COD_CLIENT ?>" hidden>
-                    <input type="text" name="" id="razon_soci" value="<?php echo $todosLosPedidos[0]->RAZON_SOCI ?>" hidden>
-                    <input type="text" name="" id="localidad" value="<?php echo $todosLosPedidos[0]->LOCALIDAD ?>" hidden>
-                    <input type="text" name="" id="cod_vended" value="<?php echo $todosLosPedidos[0]->COD_VENDED ?>" hidden>
-                    <input type="text" name="" id="vendedor" value="<?php echo $todosLosPedidos[0]->VENDEDOR ?>" hidden>
-                    <?php
-                    foreach ($todosLosPedidos as $valor => $value) {
-                        // Convertir fecha si es necesario
-                        if ($value->FECHA instanceof DateTime) {
-                            $fecha = $value->FECHA->format('Y-m-d');
-                        } elseif (is_object($value->FECHA) && isset($value->FECHA->date)) {
-                            $fecha = substr($value->FECHA->date, 0, 10);
-                        } elseif (is_string($value->FECHA)) {
-                            $fecha = substr($value->FECHA, 0, 10);
-                        } else {
-                            $fecha = $value->FECHA;
-                        }
-                    ?>
+<tbody id="table">
+    <?php
+    $todosLosPedidos = json_decode($todosLosPedidos);
+    ?>
+    <!-- Inputs ocultos para datos generales -->
+    <input type="text" id="cod_client" value="<?php echo $todosLosPedidos[0]->COD_CLIENT ?>" hidden>
+    <input type="text" id="razon_soci" value="<?php echo $todosLosPedidos[0]->RAZON_SOCI ?>" hidden>
+    <input type="text" id="localidad" value="<?php echo $todosLosPedidos[0]->LOCALIDAD ?>" hidden>
+    <input type="text" id="cod_vended" value="<?php echo $todosLosPedidos[0]->COD_VENDED ?>" hidden>
+    <input type="text" id="vendedor" value="<?php echo $todosLosPedidos[0]->VENDEDOR ?>" hidden>
+    
+    <?php
+    foreach ($todosLosPedidos as $valor => $value) {
+        // --- LÓGICA DE FECHAS ---
+        if ($value->FECHA instanceof DateTime) {
+            $fecha = $value->FECHA->format('Y-m-d');
+        } elseif (is_object($value->FECHA) && isset($value->FECHA->date)) {
+            $fecha = substr($value->FECHA->date, 0, 10);
+        } elseif (is_string($value->FECHA)) {
+            $fecha = substr($value->FECHA, 0, 10);
+        } else {
+            $fecha = $value->FECHA;
+        }
 
-                        <tr id="trBody">
-                            <td><?= $fecha; ?></td>
-                            <td><?= $value->HORA_INGRESO; ?></td>
-                            <td class="dias-cell" data-fecha="<?= $fecha; ?>">
-                                <span class="badge-estado badge-estado-success">
-                                    <i class="bi bi-clock-fill me-1"></i><span class="dias-valor">0</span>
-                                </span>
-                            </td>
-                            <td><?= $value->TALON_PED; ?></td>
-                            <td><?= $value->NRO_PEDIDO; ?></td>
-                            <td><?= $value->CANT_PEDIDO; ?></td>
-                            <td><?= $value->CANT_PENDIENTE; ?></td>
-                            <td id="importe"><?= $value->IMP_PENDIENTE; ?></td>
-                            <td>
-                                <?php if ($value->TIPO_COMP != '') { ?>
-                                    <select name="Comprobante" id="Comprobante" class="form-select form-select-sm edit Comprobante" disabled>
-                                        <option value="<?= $value->TIPO_COMP == 'REMITO' ? 'REMITO' : 'FACTURA' ?>" selected><?= $value->TIPO_COMP == 'REMITO' ? 'REMITO' : 'FACTURA' ?></option>
-                                        <option value="<?= $value->TIPO_COMP == 'FACTURA' ? 'REMITO' : 'FACTURA' ?>"><?= $value->TIPO_COMP == 'FACTURA' ? 'REMITO' : 'FACTURA'  ?></option>
-                                    </select>
-                                <?php } else { ?>
-                                    <select name="Comprobante" id="Comprobante" class="form-select form-select-sm Comprobante" disabled>
-                                        <option value="" selected></option>
-                                        <option value="REMITO">REMITO</option>
-                                        <option value="FACTURA">FACTURA</option>
-                                    </select>
-                                <?php } ?>
-                            </td>
+        // --- CORRECCIÓN DE IMPORTE (NUEVO) ---
+        // 1. Reemplazamos coma por punto para que PHP entienda el decimal
+        $importeRaw = str_replace(',', '.', $value->IMP_PENDIENTE);
+        // 2. Convertimos a Float y luego a Entero (eliminamos decimales)
+        $importeEntero = (int) $importeRaw; 
+        // 3. Formateamos estilo Argentina (Miles con punto, sin decimales)
+        $importeFormateado = number_format($importeEntero, 0, ',', '.');
+    ?>
 
-                            <td>
-                                <?php if ($value->EMBALAJE != '') { ?>
-                                    <select name="Embalaje" id="Embalaje" class="form-select form-select-sm edit" disabled>
-                                        <option value="<?= $value->EMBALAJE == 'CAJA' ? 'CAJA' : 'BOLSA' ?>" selected><?= $value->EMBALAJE == 'CAJA' ? 'CAJA' : 'BOLSA' ?></option>
-                                        <option value="<?= $value->EMBALAJE == 'BOLSA' ? 'CAJA' : 'BOLSA' ?>"><?= $value->EMBALAJE == 'BOLSA' ? 'CAJA' : 'BOLSA'  ?></option>
-                                    </select>
-                                <?php } else { ?>
-                                    <select name="Embalaje" id="Embalaje" class="form-select form-select-sm" disabled>
-                                        <option value="" selected></option>
-                                        <option value="BOLSA">BOLSA</option>
-                                        <option value="CAJA">CAJA</option>
-                                    </select>
-                                <?php } ?>
-                            </td>
+        <tr id="trBody">
+            <td><?= $fecha; ?></td>
+            <td><?= $value->HORA_INGRESO; ?></td>
+            <td class="dias-cell" data-fecha="<?= $fecha; ?>">
+                <span class="badge-estado badge-estado-success">
+                    <i class="bi bi-clock-fill me-1"></i><span class="dias-valor">0</span>
+                </span>
+            </td>
+            <td><?= $value->TALON_PED; ?></td>
+            <td><?= $value->NRO_PEDIDO; ?></td>
+            <td><?= $value->CANT_PEDIDO; ?></td>
+            <td><?= $value->CANT_PENDIENTE; ?></td>
+            
+            <!-- CAMBIO AQUÍ: Usamos class 'celda-importe' en vez de id repetido -->
+            <!-- Mostramos directamente formateado con $ -->
+            <td class="celda-importe">$ <?= $importeFormateado; ?></td>
+            
+            <td>
+                <?php if ($value->TIPO_COMP != '') { ?>
+                    <select name="Comprobante" class="form-select form-select-sm edit Comprobante" disabled>
+                        <option value="<?= $value->TIPO_COMP == 'REMITO' ? 'REMITO' : 'FACTURA' ?>" selected><?= $value->TIPO_COMP == 'REMITO' ? 'REMITO' : 'FACTURA' ?></option>
+                        <option value="<?= $value->TIPO_COMP == 'FACTURA' ? 'REMITO' : 'FACTURA' ?>"><?= $value->TIPO_COMP == 'FACTURA' ? 'REMITO' : 'FACTURA'  ?></option>
+                    </select>
+                <?php } else { ?>
+                    <select name="Comprobante" class="form-select form-select-sm Comprobante" disabled>
+                        <option value="" selected></option>
+                        <option value="REMITO">REMITO</option>
+                        <option value="FACTURA">FACTURA</option>
+                    </select>
+                <?php } ?>
+            </td>
 
-                            <td>
-                                <?php if ($value->DESPACHO != '') { ?>
-                                    <select name="Despacho" id="Despacho" class="form-select form-select-sm edit" disabled>
-                                        <option value="<?= $value->DESPACHO == 'FLETE' ? 'FLETE' : ($value->DESPACHO == 'CLIENTE' ? 'CLIENTE' : 'TRANSPORTE') ?>" selected><?= $value->DESPACHO == 'FLETE' ? 'FLETE' : ($value->DESPACHO == 'CLIENTE' ? 'CLIENTE' : 'TRANSPORTE') ?></option>
-                                        <option value="<?= $value->DESPACHO == 'FLETE' ? 'CLIENTE' : ($value->DESPACHO == 'TRANSPORTE' ? 'CLIENTE' : 'TRANSPORTE') ?>"><?= $value->DESPACHO == 'FLETE' ? 'CLIENTE' : ($value->DESPACHO == 'TRANSPORTE' ? 'CLIENTE' : 'TRANSPORTE')  ?></option>
-                                        <option value="<?= $value->DESPACHO == 'TRANSPORTE' ? 'FLETE' : ($value->DESPACHO == 'FLETE' ? 'TRANSPORTE' : 'FLETE') ?>"><?= $value->DESPACHO == 'TRANSPORTE' ? 'FLETE' : ($value->DESPACHO == 'FLETE' ? 'TRANSPORTE' : 'FLETE') ?></option>
-                                    </select>
-                                <?php } else { ?>
-                                    <select name="Despacho" id="Despacho" class="form-select form-select-sm" disabled>
-                                        <option value="" selected></option>
-                                        <option value="CLIENTE">CLIENTE</option>
-                                        <option value="FLETE">FLETE</option>
-                                        <option value="TRANSPORTE">TRANSPORTE</option>
-                                    </select>
-                                <?php } ?>
-                            </td>
+            <td>
+                <?php if ($value->EMBALAJE != '') { ?>
+                    <select name="Embalaje" class="form-select form-select-sm edit" disabled>
+                        <option value="<?= $value->EMBALAJE == 'CAJA' ? 'CAJA' : 'BOLSA' ?>" selected><?= $value->EMBALAJE == 'CAJA' ? 'CAJA' : 'BOLSA' ?></option>
+                        <option value="<?= $value->EMBALAJE == 'BOLSA' ? 'CAJA' : 'BOLSA' ?>"><?= $value->EMBALAJE == 'BOLSA' ? 'CAJA' : 'BOLSA'  ?></option>
+                    </select>
+                <?php } else { ?>
+                    <select name="Embalaje" class="form-select form-select-sm" disabled>
+                        <option value="" selected></option>
+                        <option value="BOLSA">BOLSA</option>
+                        <option value="CAJA">CAJA</option>
+                    </select>
+                <?php } ?>
+            </td>
 
-                            <td>
-                                <?php if (isset($value->ARREGLO)) { ?>
-                                    <select name="Arreglo" id="Arreglo" class="form-select form-select-sm edit" disabled>
-                                        <option value="<?= $value->ARREGLO == 0 ? 0 : 1 ?>" selected><?= $value->ARREGLO == '0' ? 'NO' : 'SI' ?></option>
-                                        <option value="<?= $value->ARREGLO == 0 ? 1 : 0 ?>"><?= $value->ARREGLO == '1' ? 'NO' : 'SI'  ?></option>
-                                    </select>
-                                <?php } else { ?>
-                                    <select name="Arreglo" id="Arreglo" class="form-select form-select-sm" disabled>
-                                        <option value="null" selected></option>
-                                        <option value="1">SI</option>
-                                    </select>
-                                <?php } ?>
-                            </td>
+            <td>
+                <?php if ($value->DESPACHO != '') { ?>
+                    <select name="Despacho" class="form-select form-select-sm edit" disabled>
+                        <option value="<?= $value->DESPACHO == 'FLETE' ? 'FLETE' : ($value->DESPACHO == 'CLIENTE' ? 'CLIENTE' : 'TRANSPORTE') ?>" selected><?= $value->DESPACHO == 'FLETE' ? 'FLETE' : ($value->DESPACHO == 'CLIENTE' ? 'CLIENTE' : 'TRANSPORTE') ?></option>
+                        <option value="<?= $value->DESPACHO == 'FLETE' ? 'CLIENTE' : ($value->DESPACHO == 'TRANSPORTE' ? 'CLIENTE' : 'TRANSPORTE') ?>"><?= $value->DESPACHO == 'FLETE' ? 'CLIENTE' : ($value->DESPACHO == 'TRANSPORTE' ? 'CLIENTE' : 'TRANSPORTE')  ?></option>
+                        <option value="<?= $value->DESPACHO == 'TRANSPORTE' ? 'FLETE' : ($value->DESPACHO == 'FLETE' ? 'TRANSPORTE' : 'FLETE') ?>"><?= $value->DESPACHO == 'TRANSPORTE' ? 'FLETE' : ($value->DESPACHO == 'FLETE' ? 'TRANSPORTE' : 'FLETE') ?></option>
+                    </select>
+                <?php } else { ?>
+                    <select name="Despacho" class="form-select form-select-sm" disabled>
+                        <option value="" selected></option>
+                        <option value="CLIENTE">CLIENTE</option>
+                        <option value="FLETE">FLETE</option>
+                        <option value="TRANSPORTE">TRANSPORTE</option>
+                    </select>
+                <?php } ?>
+            </td>
 
-                            <td>
-                                <?php if (isset($value->PRIORIDAD) && $value->PRIORIDAD !== null && $value->PRIORIDAD !== '') { ?>
-                                    <select name="Prioridad" id="Prioridad" class="form-select form-select-sm edit" disabled>
-                                        <option value="0" <?= $value->PRIORIDAD == '0' ? 'selected' : '' ?>>0</option>
-                                        <option value="1" <?= $value->PRIORIDAD == '1' ? 'selected' : '' ?>>1</option>
-                                        <option value="2" <?= $value->PRIORIDAD == '2' ? 'selected' : '' ?>>2</option>
-                                        <option value="3" <?= $value->PRIORIDAD == '3' ? 'selected' : '' ?>>3</option>
-                                    </select>
-                                <?php } else { ?>
-                                    <select name="Prioridad" id="Prioridad" class="form-select form-select-sm" disabled>
-                                        <option value="" selected></option>
-                                        <option value="0">0</option>
-                                        <option value="1">1</option>
-                                        <option value="2">2</option>
-                                        <option value="3">3</option>
-                                    </select>
-                                <?php } ?>
-                            </td>
+            <td>
+                <?php if (isset($value->ARREGLO)) { ?>
+                    <select name="Arreglo" class="form-select form-select-sm edit" disabled>
+                        <option value="<?= $value->ARREGLO == 0 ? 0 : 1 ?>" selected><?= $value->ARREGLO == '0' ? 'NO' : 'SI' ?></option>
+                        <option value="<?= $value->ARREGLO == 0 ? 1 : 0 ?>"><?= $value->ARREGLO == '1' ? 'NO' : 'SI'  ?></option>
+                    </select>
+                <?php } else { ?>
+                    <select name="Arreglo" class="form-select form-select-sm" disabled>
+                        <option value="null" selected></option>
+                        <option value="1">SI</option>
+                    </select>
+                <?php } ?>
+            </td>
 
-                            <td>
-                                <?php 
-                                    if ($value->FECHA_DESPACHO instanceof DateTime) {
-                                        $fechaDespacho = $value->FECHA_DESPACHO->format('Y-m-d');
-                                    } elseif (is_object($value->FECHA_DESPACHO) && isset($value->FECHA_DESPACHO->date)) {
-                                        $fechaDespacho = substr($value->FECHA_DESPACHO->date, 0, 10);
-                                    } elseif (is_string($value->FECHA_DESPACHO)) {
-                                        $fechaDespacho = substr($value->FECHA_DESPACHO, 0, 10);
-                                    } else {
-                                        $fechaDespacho = $value->FECHA_DESPACHO;
-                                    }
-                                    if ($fechaDespacho != '1900-01-01' && $fechaDespacho != '' && $fechaDespacho != null) { 
-                                ?>
-                                    <input name="" id="primerSelect" type="date" class="form-control form-control-sm edit" value="<?= $fechaDespacho; ?>" disabled>
-                                <?php } else { ?>
-                                    <input name="" id="campoFecha" type="date" class="form-control form-control-sm" disabled>
-                                <?php } ?>
-                            </td>
-                            <td>
-                                <button class="btn btn-success btn-sm btnEdit">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                            </td>
-                        </tr>
+            <td>
+                <?php if (isset($value->PRIORIDAD) && $value->PRIORIDAD !== null && $value->PRIORIDAD !== '') { ?>
+                    <select name="Prioridad" class="form-select form-select-sm edit" disabled>
+                        <option value="0" <?= $value->PRIORIDAD == '0' ? 'selected' : '' ?>>0</option>
+                        <option value="1" <?= $value->PRIORIDAD == '1' ? 'selected' : '' ?>>1</option>
+                        <option value="2" <?= $value->PRIORIDAD == '2' ? 'selected' : '' ?>>2</option>
+                        <option value="3" <?= $value->PRIORIDAD == '3' ? 'selected' : '' ?>>3</option>
+                    </select>
+                <?php } else { ?>
+                    <select name="Prioridad" class="form-select form-select-sm" disabled>
+                        <option value="" selected></option>
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                    </select>
+                <?php } ?>
+            </td>
 
-                    <?php
+            <td>
+                <?php 
+                    if ($value->FECHA_DESPACHO instanceof DateTime) {
+                        $fechaDespacho = $value->FECHA_DESPACHO->format('Y-m-d');
+                    } elseif (is_object($value->FECHA_DESPACHO) && isset($value->FECHA_DESPACHO->date)) {
+                        $fechaDespacho = substr($value->FECHA_DESPACHO->date, 0, 10);
+                    } elseif (is_string($value->FECHA_DESPACHO)) {
+                        $fechaDespacho = substr($value->FECHA_DESPACHO, 0, 10);
+                    } else {
+                        $fechaDespacho = $value->FECHA_DESPACHO;
                     }
-                    ?>
+                    if ($fechaDespacho != '1900-01-01' && $fechaDespacho != '' && $fechaDespacho != null) { 
+                ?>
+                    <input type="date" class="form-control form-control-sm edit" value="<?= $fechaDespacho; ?>" disabled>
+                <?php } else { ?>
+                    <input type="date" class="form-control form-control-sm" disabled>
+                <?php } ?>
+            </td>
+            <td>
+                <button class="btn btn-success btn-sm btnEdit">
+                    <i class="bi bi-pencil"></i>
+                </button>
+            </td>
+        </tr>
 
-                </tbody>
+    <?php
+    }
+    ?>
+</tbody>
             </table>
         </div>
 

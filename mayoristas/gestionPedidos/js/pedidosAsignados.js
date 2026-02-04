@@ -1,146 +1,76 @@
-/* ========================================
-   JavaScript específico para pedidosAsignados.php
-   Gestión de Pedidos - XL Extra
-   ======================================== */
-
-/**
- * Inicialización cuando el DOM está listo
- */
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('pedidosAsignados.js cargado correctamente');
-    
-    // Inicializar funcionalidades
     initTotales();
     initExportExcel();
 });
 
-/* ========================================
-   Cálculo de totales
-   ======================================== */
+/* --- UTILIDADES DE FORMATO --- */
+const formateadorPesos = new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+});
 
-/**
- * Inicializa el cálculo de totales
- */
+const formateadorEnteros = new Intl.NumberFormat('de-DE'); // Para miles sin signo
+
+// Parsea "$ 1.500.000" -> 1500000
+function parseMoneda(texto) {
+    if (!texto) return 0;
+    let limpio = texto.toString().replace(/[^0-9-]/g, ''); // Deja solo números y menos
+    let num = parseInt(limpio, 10);
+    return isNaN(num) ? 0 : num;
+}
+
+/* --- CÁLCULO DE TOTALES --- */
 function initTotales() {
     calcularTotalUnidades();
     calcularTotalImporte();
 }
 
-/**
- * Calcula el total de unidades
- */
 function calcularTotalUnidades() {
     const celdas = document.querySelectorAll('td.sumTotal');
     let total = 0;
     
     celdas.forEach(celda => {
-        const valor = parseFloat(celda.textContent) || 0;
-        total += valor;
+        // Limpiamos por si hay espacios o texto invisible
+        let val = parseInt(celda.textContent.replace(/\D/g, '')) || 0;
+        total += val;
     });
     
     const elementoTotal = document.getElementById('total');
     if (elementoTotal) {
-        elementoTotal.textContent = new Intl.NumberFormat('de-DE').format(total);
+        elementoTotal.textContent = formateadorEnteros.format(total);
     }
 }
 
-/**
- * Calcula el total de importe y formatea importes en la tabla
- */
 function calcularTotalImporte() {
     const celdas = document.querySelectorAll('td.sumImporte');
     let total = 0;
     
-    const formatter = new Intl.NumberFormat('es-AR', {
-        style: 'currency',
-        currency: 'ARS',
-        minimumFractionDigits: 0
-    });
-    
     celdas.forEach(celda => {
-        const valor = parseFloat(celda.textContent) || 0;
-        total += valor;
-        // Formatear cada celda
-        celda.textContent = formatter.format(valor);
-        celda.classList.add('text-currency');
+        // La celda ya viene formateada desde PHP ($ X.XXX.XXX)
+        // Solo necesitamos convertirla a número para sumar
+        total += parseMoneda(celda.textContent);
     });
     
     const elementoTotal = document.getElementById('totalImp');
     if (elementoTotal) {
-        elementoTotal.textContent = formatter.format(total);
+        elementoTotal.textContent = formateadorPesos.format(total);
     }
 }
 
-/* ========================================
-   Exportar a Excel
-   ======================================== */
-
-/**
- * Inicializa la funcionalidad de exportar a Excel
- */
+/* --- EXPORTAR EXCEL --- */
 function initExportExcel() {
     const btnExport = document.getElementById('btnExport');
     
     if (btnExport) {
         btnExport.addEventListener('click', function(e) {
             e.preventDefault();
-            exportarTablaAExcel();
+            $(".table-pedidos").table2excel({
+                name: "Pedidos Asignados",
+                filename: `Pedidos_Asignados_${new Date().toISOString().slice(0,10)}`,
+                fileext: ".xls"
+            });
         });
     }
-}
-
-/**
- * Exporta la tabla a Excel
- */
-function exportarTablaAExcel() {
-    const tabla = document.querySelector('.table-pedidos');
-    
-    if (!tabla) {
-        console.error('No se encontró la tabla para exportar');
-        return;
-    }
-    
-    // Usar table2excel (ya incluido en el HTML)
-    if (typeof $.fn.table2excel !== 'undefined') {
-        $(tabla).table2excel({
-            name: "Pedidos Asignados",
-            filename: `Pedidos_Asignados_${obtenerFechaActual()}`,
-            fileext: ".xls"
-        });
-    } else {
-        console.error('Plugin table2excel no disponible');
-    }
-}
-
-/**
- * Obtiene la fecha actual en formato YYYY-MM-DD
- */
-function obtenerFechaActual() {
-    const fecha = new Date();
-    const año = fecha.getFullYear();
-    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-    const dia = String(fecha.getDate()).padStart(2, '0');
-    return `${año}-${mes}-${dia}`;
-}
-
-/* ========================================
-   Utilidades
-   ======================================== */
-
-/**
- * Formatea un número como moneda argentina
- */
-function formatearMoneda(valor) {
-    return new Intl.NumberFormat('es-AR', {
-        style: 'currency',
-        currency: 'ARS',
-        minimumFractionDigits: 0
-    }).format(valor);
-}
-
-/**
- * Formatea un número con separadores de miles
- */
-function formatearNumero(valor) {
-    return new Intl.NumberFormat('de-DE').format(valor);
 }
