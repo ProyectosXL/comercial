@@ -1,7 +1,7 @@
 
 <?php
-
-class Conexion{
+if (!class_exists('Conexion')) {
+    class Conexion{
 
     private $envVars;
     private $host_central;
@@ -175,5 +175,5 @@ class Conexion{
 
         }
     }
-    
+    } 
 }

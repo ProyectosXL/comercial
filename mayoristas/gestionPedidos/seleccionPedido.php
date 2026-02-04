@@ -6,8 +6,10 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require 'Class/pedido.php';
 
-$cliente = $_GET['cliente'];
-$razon_soci = $_GET['razon_soci'];
+// CORRECCIÓN CRÍTICA: Limpiar espacios del código del cliente que viene por GET
+$cliente = trim($_GET['cliente']); 
+
+$razon_soci = $_GET['razon_soci']; // No necesita trim
 $pedido = new Pedido();
 
 ?>

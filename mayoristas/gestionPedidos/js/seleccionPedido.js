@@ -1,16 +1,13 @@
 /* ========================================
-   js/seleccionPedido.js - SOLUCIÓN DEFINITIVA
+   js/seleccionPedido.js - CORRECCIÓN ERROR NULL
    ======================================== */
 
 let Pedidos = [];
 
 window.addEventListener('DOMContentLoaded', function() {
-    // 1. Escuchadores de eventos
     iniciarEscucha();
     establecerMinFecha();
     
-    // 2. Ejecutar correcciones y sumas iniciales
-    // Usamos un pequeño delay para asegurar que el DOM y otros scripts terminaron
     setTimeout(() => {
         formatearYCorregirTabla();
         sumarTotalesDash();
@@ -19,41 +16,25 @@ window.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btn_save').addEventListener('click', actualizarDB);
 });
 
-/**
- * Función que limpia el texto "$ 240.812,50" y lo hace un número real 240812.5
- */
 function toNum(texto) {
     if (!texto) return 0;
-    // Borramos $, espacios y el PUNTO de miles
     let limpio = texto.toString().replace(/[$. ]/g, '').replace(',', '.');
     let n = parseFloat(limpio) || 0;
-    
-    // Si el número es mayor a 1 millón, lo corregimos (error de los ceros)
-    if (n > 1000000) n = n / 1000;
-    
     return n;
 }
 
-/**
- * Suma Facturas y Remitos leyendo directamente las celdas de la tabla
- */
 function sumarTotalesDash() {
     let totalF = 0;
     let totalR = 0;
-    
-    // Seleccionamos todas las filas del cuerpo de la tabla
     const filas = document.querySelectorAll('tbody#table tr');
     
     filas.forEach(fila => {
-        // Celda 7 es el Importe, Celda 8 es el Tipo Comp
         let celdaImporte = fila.cells[7];
         let selectComp = fila.cells[8].querySelector('select');
         
         if (celdaImporte && selectComp) {
             let valor = 0;
             let input = celdaImporte.querySelector('input');
-            
-            // Si está editando usamos el valor del input, sino el texto de la celda
             valor = input ? parseFloat(input.value) : toNum(celdaImporte.innerText);
             
             if (selectComp.value === 'FACTURA') totalF += valor;
@@ -62,34 +43,29 @@ function sumarTotalesDash() {
     });
     
     const fmt = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 });
-    
-    // Inyectamos los totales en los h3 de arriba
     document.getElementById('total').textContent = fmt.format(totalF);
     document.getElementById('totalImp').textContent = fmt.format(totalR);
 }
 
-/**
- * Corrige los errores de "millones" al cargar y pone el formato $
- */
 function formatearYCorregirTabla() {
     const fmt = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 });
     document.querySelectorAll('tbody#table tr').forEach(fila => {
         let celda = fila.cells[7];
         if (celda && !celda.querySelector('input')) {
             let n = toNum(celda.innerText);
+            if (n > 100000000) n = n / 1000; 
             celda.innerText = fmt.format(n);
         }
     });
 }
 
 function habilitarInputs(e) {
-    let row = e.target.closest('tr');
-    let celdaI = row.cells[7];
+    let row = e.target.closest('tr'); 
     
+    let celdaI = row.cells[7];
     if (!celdaI.querySelector('input')) {
         let v = toNum(celdaI.innerText);
         celdaI.innerHTML = `<input type="number" step="0.01" class="form-control form-control-sm" value="${v.toFixed(2)}" style="width:130px">`;
-        
         celdaI.querySelector('input').addEventListener('input', () => {
             sumarTotalesDash();
             guardarDatos(row);
@@ -98,7 +74,9 @@ function habilitarInputs(e) {
 
     row.querySelectorAll('select, input').forEach(el => {
         el.disabled = false;
-        if (el.tagName === 'SELECT' && el.options[0]) el.options[0].disabled = true;
+        if (el.tagName === 'SELECT' && el.options[0] && el.options[0].value === "") {
+             el.options[0].disabled = true;
+        }
     });
 }
 
@@ -110,12 +88,15 @@ function guardarDatos(row) {
     let input = celdaI.querySelector('input');
     let finalV = input ? parseFloat(input.value) : toNum(celdaI.innerText);
 
+    const codClient = document.getElementById('cod_client').value;
+    const razonSoci = document.getElementById('razon_soci').value;
+
     const info = {
         codigo: codigo,
         fecha: row.cells[0].innerText,
         hora: row.cells[1].innerText,
-        cod_client: document.getElementById('cod_client').value.replace('&','%26'),
-        razon_soci: document.getElementById('razon_soci').value.replace('&','%26'),
+        cod_client: codClient,
+        razon_soci: razonSoci,
         localidad: document.getElementById('localidad').value,
         cod_vended: document.getElementById('cod_vended').value,
         vendedor: document.getElementById('vendedor').value,
@@ -123,7 +104,7 @@ function guardarDatos(row) {
         talonario: row.cells[3].innerText,
         unidPedido: row.cells[5].innerText,
         unidPendiente: row.cells[6].innerText,
-        importePendiente: finalV.toFixed(2).replace('.', ','), // COMA para el PHP
+        importePendiente: finalV.toFixed(2).replace('.', ','),
         tipoComp: row.cells[8].querySelector('select').value,
         embalaje: row.cells[9].querySelector('select').value,
         despacho: row.cells[10].querySelector('select').value,
@@ -132,53 +113,131 @@ function guardarDatos(row) {
         fechaDespacho: row.cells[13].querySelector('input').value
     };
     
-    if (existeIndex === -1) Pedidos.push(info);
-    else Pedidos[existeIndex] = info;
+    if (existeIndex === -1) {
+        Pedidos.push(info);
+    } else {
+        Pedidos[existeIndex] = info;
+    }
+}
+
+/**
+ * Validar que no haya vacíos.
+ * CORREGIDO: Ahora solo busca inputs DENTRO de la tabla (tbody#table)
+ * para evitar error con el buscador o inputs ocultos.
+ */
+function checkInputsNoVacios() {
+    let hayErrores = false;
+    
+    // CORRECCIÓN AQUI: Agregamos "tbody#table" al selector
+    const inputsValidar = document.querySelectorAll('tbody#table input:not([disabled]), tbody#table select:not([disabled])');
+
+    inputsValidar.forEach(el => {
+        let td = el.closest('td');
+        
+        // Verificación de seguridad por si acaso
+        if (!td) return; 
+
+        if (!td.innerHTML.includes('Prioridad') && 
+            !td.innerHTML.includes('Arreglo')) {
+            
+            if (el.value === '') {
+                el.classList.add('is-invalid');
+                el.style.borderColor = 'red'; // Refuerzo visual
+                hayErrores = true;
+            } else {
+                el.classList.remove('is-invalid');
+                el.style.borderColor = '';
+            }
+        }
+    });
+    return hayErrores;
 }
 
 function actualizarDB() {
     if (Pedidos.length === 0) {
-        Swal.fire({ icon: 'info', title: 'Sin cambios' });
+        Swal.fire({ icon: 'info', title: 'Sin cambios', text: 'No has editado ninguna fila.' });
         return;
     }
-    Swal.fire({ title: 'Guardando...', didOpen: () => { Swal.showLoading(); } });
+
+    if (checkInputsNoVacios()) {
+         Swal.fire({ icon: 'warning', title: 'Faltan datos', text: 'Por favor completa los campos marcados en rojo.' });
+         return;
+    }
+
+    Swal.fire({ 
+        title: 'Guardando...', 
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); } 
+    });
+
     let xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            Swal.fire({ icon: 'success', title: '¡Guardado!' }).then(() => { location.reload(); });
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                // Si el PHP devuelve texto (ej: IDs guardados), asumimos éxito
+                console.log("Respuesta servidor:", xhr.responseText);
+                Swal.fire({ icon: 'success', title: '¡Guardado!' }).then(() => { 
+                    location.reload(); 
+                });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error en el servidor: ' + xhr.responseText });
+            }
         }
     };
-    xhr.open('GET', './Controller/updateDatos.php?datos=' + encodeURIComponent(JSON.stringify(Pedidos)), true);
-    xhr.send();
+
+    // CAMBIO CRÍTICO: Usamos POST en lugar de GET
+    xhr.open('POST', './Controller/updateDatos.php', true);
+    // Establecemos la cabecera para indicar que enviamos JSON
+    xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+    
+    // Enviamos el objeto JSON directamente
+    let datosJSON = JSON.stringify(Pedidos);
+    xhr.send(datosJSON);
 }
 
 function iniciarEscucha() {
     document.querySelectorAll(".btnEdit").forEach(btn => btn.addEventListener('click', e => {
+        e.preventDefault();
         habilitarInputs(e);
         guardarDatos(e.target.closest('tr'));
     }));
+
     document.querySelectorAll('.form-select, input[type="date"]').forEach(el => el.addEventListener('change', e => {
-        guardarDatos(e.target.closest('tr'));
-        sumarTotalesDash();
+        if (!e.target.disabled) {
+            guardarDatos(e.target.closest('tr'));
+            sumarTotalesDash();
+        }
     }));
 }
 
 function establecerMinFecha() {
-    let d = new Date(); d.setDate(d.getDate() + 2);
-    document.querySelectorAll('[type=date]').forEach(el => el.setAttribute("min", d.toISOString().split('T')[0]));
+    let d = new Date(); 
+    d.setDate(d.getDate() + 2);
+    let fechaMin = d.toISOString().split('T')[0];
+    document.querySelectorAll('[type=date]').forEach(el => el.setAttribute("min", fechaMin));
 }
 
 function copiarPrimerFila() {
     let rows = document.querySelectorAll('tbody#table tr');
     if (rows.length < 2) return;
+    
     let ref = rows[0];
+    if (ref.cells[8].querySelector("select").disabled) {
+        Swal.fire('Atención', 'Primero debes editar la primera fila (lápiz) para usarla de modelo.', 'warning');
+        return;
+    }
+
     let vals = {
         comp: ref.cells[8].querySelector("select").value,
         emb: ref.cells[9].querySelector("select").value,
         desp: ref.cells[10].querySelector("select").value,
         fec: ref.cells[13].querySelector("input").value
     };
-    rows.forEach(row => {
+
+    let contador = 0;
+    rows.forEach((row, index) => {
+        if (index === 0) return; 
+
         let sel = row.cells[8].querySelector("select");
         if (!sel.disabled) {
             sel.value = vals.comp;
@@ -186,168 +245,15 @@ function copiarPrimerFila() {
             row.cells[10].querySelector("select").value = vals.desp;
             row.cells[13].querySelector("input").value = vals.fec;
             guardarDatos(row);
+            contador++;
         }
     });
+
     sumarTotalesDash();
-    Swal.fire({ icon: 'success', title: 'Replicado', timer: 1000, showConfirmButton: false });
-}
-/* ========================================
-   Cálculo de totales por tipo de comprobante
-   ======================================== */
-
-/**
- * Inicializa los totales de comprobantes
- */
-function initTotalesComprobantes() {
-    sumarComprobantesFacturas();
-}
-
-function limpiarImporte(texto) {
-    if (!texto) return 0;
-    // Eliminamos el signo $, los espacios y los puntos (que son separadores de miles en es-AR)
-    let limpio = texto.replace(/[$. ]/g, '');
-    // Cambiamos la coma decimal por un punto decimal para que JS lo entienda
-    limpio = limpio.replace(',', '.');
-    return parseFloat(limpio) || 0;
-}
-
-/**
- * Suma los totales de Facturas y Remitos
- */
-function sumarComprobantesFacturas() {
-    let totalFactura = 0;
-    let totalRemito = 0;
     
-    document.querySelectorAll('#trBody').forEach(fila => {
-        let select = fila.querySelector('.Comprobante');
-        let celdaImporte = fila.querySelector('td:nth-child(8)'); // Columna importe
-        
-        let inputManual = celdaImporte.querySelector('.edit-importe');
-        let valor = inputManual ? parseFloat(inputManual.value) : parseImporte(celdaImporte.innerText);
-        
-        if (!isNaN(valor)) {
-            if (select.value == 'FACTURA') totalFactura += valor;
-            else if (select.value == 'REMITO') totalRemito += valor;
-        }
-    });
-    
-    const formatter = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 });
-    document.getElementById('total').textContent = formatter.format(totalFactura);
-    document.getElementById('totalImp').textContent = formatter.format(totalRemito);
-}
-
-/* ========================================
-   Validación y guardado
-   ======================================== */
-
-/**
- * Valida que no haya campos vacíos en pedidos editados
- */
-function checkInpustNoVacios() {
-    let hayErrores = false;
-    
-    let selects = document.querySelectorAll('select');
-    selects.forEach(el => {
-        // Validar solo campos obligatorios (no Prioridad ni Arreglo)
-        if (!el.closest('td').innerHTML.includes('Prioridad') && 
-            !el.closest('td').innerHTML.includes('Arreglo')) {
-            if (el.disabled == false && el.value == '') {
-                el.classList.add('error');
-                el.style.borderColor = 'red';
-                hayErrores = true;
-            } else {
-                el.classList.remove('error');
-                el.style.borderColor = '';
-            }
-        }
-    });
-    
-    let fechas = document.querySelectorAll('input[type="date"]');
-    fechas.forEach(el => {
-        if (el.disabled == false && el.value == '') {
-            el.classList.add('error');
-            el.style.borderColor = 'red';
-            hayErrores = true;
-        } else {
-            el.classList.remove('error');
-            el.style.borderColor = '';
-        }
-    });
-    
-    return hayErrores;
-}
-
-/**
- * Actualiza la base de datos con los cambios
- */
-function actualizarDB() {
-    if (Pedidos.length === 0) {
-        Swal.fire({ icon: 'error', title: 'No se modificaron datos', text: 'Edite pedidos y haga click en guardar' });
-        return;
+    if (contador > 0) {
+        Swal.fire({ icon: 'success', title: `Replicado a ${contador} filas`, timer: 1500, showConfirmButton: false });
+    } else {
+        Swal.fire({ icon: 'info', title: 'Nada que replicar', text: 'Habilita otras filas primero.' });
     }
-    
-    if (checkInpustNoVacios()) {
-        Swal.fire({ icon: 'error', title: 'Campos vacíos', text: 'Debe completar todos los campos obligatorios' });
-        return;
-    }
-    
-    Swal.fire({
-        title: 'Guardando cambios...',
-        html: 'Por favor espere',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-    
-    let conexion = new XMLHttpRequest();
-    conexion.onreadystatechange = function() {
-        if (conexion.readyState === 4) {
-            if (conexion.status >= 200 && conexion.status < 300) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Pedidos modificados',
-                    text: "Se guardaron los cambios correctamente",
-                    showConfirmButton: true,
-                }).then(function() {
-                    // CAMBIO: En lugar de ir a index.php, recargamos la página actual
-                    // para ver los cambios aplicados y seguir con el mismo cliente.
-                    location.reload(); 
-                });
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error de carga',
-                    text: 'No se pudo guardar: ' + conexion.responseText
-                });
-            }
-        }
-    };
-    
-    let datos = JSON.stringify(Pedidos);
-    conexion.open('GET', './Controller/updateDatos.php?datos=' + datos, true);
-    conexion.send();
-}
-
-
-/* ========================================
-   Utilidades
-   ======================================== */
-
-/**
- * Establece la fecha mínima en los campos de fecha
- */
-function establecerMinFecha() {
-    let today = new Date();
-    let dd = today.getDate() + 2;
-    let mm = today.getMonth() + 1;
-    let yyyy = today.getFullYear();
-    
-    if (dd < 10) dd = '0' + dd;
-    if (mm < 10) mm = '0' + mm;
-    
-    today = yyyy + '-' + mm + '-' + dd;
-    
-    let fechas = document.querySelectorAll('[type=date]');
-    fechas.forEach(el => {
-        el.setAttribute("min", today);
-    });
 }
