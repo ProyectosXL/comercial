@@ -126,23 +126,26 @@ function guardarDatos($usuario) {
             $totalDevoluciones = $historialD + $nuevoD;
             $saldoFinal = $totalPermisos - $totalDevoluciones;
 
-            if ($saldoFinal < 0) {
-                // Buscamos el nombre en el array que nos mandó el JS
-                $nombreError = "Vendedor $legajo"; // Fallback por si acaso
-                foreach ($horarios as $h) {
-                    if ($h['codVended'] == $legajo && isset($h['nombreVendedor'])) {
-                        $nombreError = $h['nombreVendedor'];
-                        break;
-                    }
-                }
-                
-                sqlsrv_close($conn);
-
-                die(json_encode([
-                    'status' => 'error',
-                    'message' => "ERROR DE SALDO: <b>$nombreError</b> no puede devolver más horas de las que tiene acumuladas.<br><br>Total Permisos (P): $totalPermisos<br>Total Devoluciones (D): $totalDevoluciones<br><b>Saldo final: $saldoFinal horas.</b>"
-                ]));
-            }
+        // ==========================================
+        // MODIFICACIÓN: COMENTAMOS EL ERROR PERO MANTENEMOS EL CÁLCULO
+        // ==========================================
+        // if ($saldoFinal < 0) {
+        //     // Buscamos el nombre en el array que nos mandó el JS
+        //     $nombreError = "Vendedor $legajo"; // Fallback por si acaso
+        //     foreach ($horarios as $h) {
+        //         if ($h['codVended'] == $legajo && isset($h['nombreVendedor'])) {
+        //             $nombreError = $h['nombreVendedor'];
+        //             break;
+        //         }
+        //     }
+        //     
+        //     sqlsrv_close($conn);
+        // 
+        //     die(json_encode([
+        //         'status' => 'error',
+        //         'message' => "ERROR DE SALDO: <b>$nombreError</b> no puede devolver más horas de las que tiene acumuladas.<br><br>Total Permisos (P): $totalPermisos<br>Total Devoluciones (D): $totalDevoluciones<br><b>Saldo final: $saldoFinal horas.</b>"
+        //     ]));
+        // }
         }
     }
 

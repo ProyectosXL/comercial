@@ -179,60 +179,63 @@ function mostrarModalConTitulo(titulo, mensaje, tipo = 'info') {
     }
 
 function agregarFilasRefuerzos(listaVendedores) {
-        if (!listaVendedores || listaVendedores.length === 0) return;
+    if (!listaVendedores || listaVendedores.length === 0) return;
 
-        let filasHTML = '';
-        listaVendedores.forEach(vendedor => {
-            const vendedorId = vendedor.COD_VENDED;
-            // Doble chequeo para no duplicar visualmente
-            if ($(`tr[data-vendedor-id="${vendedorId}"]`).length === 0) {
-                filasHTML += `<tr data-vendedor-id="${vendedorId}">`;
-                
-                // Columna Nombre
-                filasHTML += `<td class="fw-bold text-start ps-2">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="text-truncate" style="max-width: 180px;" title="${vendedor.NOMBRE_VEN}">
-                                        <div>${vendedor.NOMBRE_VEN}</div>
-                                        <small class="d-block text-muted fw-normal">${vendedor.TAREA_HABITUAL} <span class="badge bg-warning text-dark">Refuerzo</span></small>
-                                    </div>
-<span class="icono-feedback d-none ms-auto" data-vendedor-id="${vendedorId}" title="Sin Feedback" style="cursor:pointer;">
-    <i class="bi bi-chat-left-dots-fill text-secondary fs-5"></i>
-</span>
-                                </div>
-                             </td>`;
+    let filasHTML = '';
+    listaVendedores.forEach(function(vendedor) {
+        const vendedorId = vendedor.COD_VENDED;
+        if ($('tr[data-vendedor-id="' + vendedorId + '"]').length === 0) {
+            filasHTML += '<tr data-vendedor-id="' + vendedorId + '">';
+            
+            // Columna Nombre
+            filasHTML += '<td class="fw-bold text-start ps-2">';
+            filasHTML += '<div class="d-flex justify-content-between align-items-center">';
+            filasHTML += '<div class="text-truncate" style="max-width: 180px;" title="' + vendedor.NOMBRE_VEN + '">';
+            filasHTML += '<div>' + vendedor.NOMBRE_VEN + '</div>';
+            filasHTML += '<small class="d-block text-muted fw-normal">' + vendedor.TAREA_HABITUAL + ' <span class="badge bg-warning text-dark">Refuerzo</span></small>';
+            filasHTML += '</div>';
+            filasHTML += '<span class="icono-feedback d-none ms-auto" data-vendedor-id="' + vendedorId + '" title="Sin Feedback" style="cursor:pointer;">';
+            filasHTML += '<i class="bi bi-chat-left-dots-fill text-secondary fs-5"></i>';
+            filasHTML += '</span>';
+            filasHTML += '</div>';
+            filasHTML += '</td>';
 
-                // Columna Totales (CORREGIDO: N ahora es H)
-                filasHTML += `<td class="total-horas-empleado align-middle p-1">`;
-                filasHTML +=     `<div class="d-flex flex-column align-items-center" style="font-size: 0.85rem; line-height: 1.1;">`;
-                filasHTML +=         `<span class="text-success fw-bold">H: <span class="total-n">0</span></span>`;
-                filasHTML +=         `<span class="text-primary fw-bold">E: <span class="total-e">0</span></span>`;
-                filasHTML +=         `<span class="text-warning fw-bold">D: <span class="total-d">0</span></span>`;
-                filasHTML +=         `<span class="badge bg-light text-secondary border mt-1 total-saldo-container" title="Banco de Horas (Deuda)" style="font-size:0.9em;">
-                                Saldo: <span class="total-saldo">0</span>
-                             </span>`;
-                filasHTML +=     `</div>`;
-                filasHTML += `</td>`;
+            // Columna Totales
+            filasHTML += '<td class="total-horas-empleado align-middle p-1">';
+            filasHTML += '<div class="d-flex flex-column align-items-center" style="font-size: 0.85rem; line-height: 1.1;">';
+            filasHTML += '<span class="text-success fw-bold">H: <span class="total-n">0</span></span>';
+            filasHTML += '<span class="text-primary fw-bold">E: <span class="total-e">0</span></span>';
+            filasHTML += '<span class="text-warning fw-bold">D: <span class="total-d">0</span></span>';
+            filasHTML += '<span class="badge bg-light text-secondary border mt-1 total-saldo-container" title="Banco de Horas (Deuda)" style="font-size:0.9em;">';
+            filasHTML += 'Saldo: <span class="total-saldo">0</span>';
+            filasHTML += '</span>';
+            filasHTML += '</div>';
+            filasHTML += '</td>';
+            
+            // Columnas de Días (CON TURNO POR DÍA)
+            fechasSemana.forEach(function(fechaISO) {
+                // 1. Horas - YA ESTÁ CORRECTO: 7 a 23 (17 horas)
+                for (let h = 7; h <= 23; h++) {
+                    filasHTML += '<td class="hora-celda" data-fecha="' + fechaISO + '" data-hora="' + h + '"></td>';
+                }
                 
-                // Columnas de Días
-                fechasSemana.forEach(fechaISO => {
-                    // 1. Horas (Primero)
-                    for (let h = 7; h <= 23; h++) {
-                        filasHTML += `<td class="hora-celda" data-fecha="${fechaISO}" data-hora="${h}"></td>`;
-                    }
-                    
-                    // 2. Franco (Al final, estilo corregido)
-                    filasHTML += `<td class="dia-franco text-center p-0"><input type="checkbox" class="form-check-input franco-checkbox mt-1" value="${fechaISO}" style="transform:scale(0.8)"></td>`;
-                    
-                    // 3. Nota (Faltaba esta columna)
-                    filasHTML += `<td class="text-center p-0"><button class="btn-nota" data-vendedor="${vendedorId}" data-fecha="${fechaISO}"><i class="bi bi-chat-square"></i></button></td>`;
-                });
-                filasHTML += '</tr>';
-            }
-        });
-        
-        // Agregamos las nuevas filas al final del tbody
-        $('tbody').append(filasHTML);
-    }
+                // 2. Franco
+                filasHTML += '<td class="dia-franco text-center p-0"><input type="checkbox" class="form-check-input franco-checkbox mt-1" value="' + fechaISO + '" style="transform:scale(0.8)"></td>';
+                
+                // 3. NUEVO: TURNO POR DÍA
+                filasHTML += '<td class="turno-dia text-center align-middle p-0">';
+                filasHTML += '<span class="turno-dia-badge badge bg-light text-dark border" data-fecha="' + fechaISO + '" title="Sin horario asignado">-</span>';
+                filasHTML += '</td>';
+                
+                // 4. Nota
+                filasHTML += '<td class="text-center p-0"><button class="btn-nota" data-vendedor="' + vendedorId + '" data-fecha="' + fechaISO + '"><i class="bi bi-chat-square"></i></button></td>';
+            });
+            filasHTML += '</tr>';
+        }
+    });
+    
+    $('tbody').append(filasHTML);
+}
 
 function finalizarCarga() {
         // Mostramos el contenedor de acciones (donde están Guardar y Excel)
@@ -289,13 +292,20 @@ function finalizarCarga() {
 function generarTablaHorarios(vendedores, semana) {
     fechasSemana = [];
     const container = $('#tablaHorariosContainer');
-    let tablaHTML = '<table class="table table-bordered table-sm">';
     
-    // --- HEADER ---
-    let headerHTML = '<thead><tr class="align-middle"><th>Vendedor</th><th>Total Hs</th>';
+    // Creamos un contenedor con scroll
+    let tablaHTML = '<div class="table-container" style="max-height: 70vh; overflow-y: auto; position: relative;">';
+    tablaHTML += '<table class="table table-bordered table-sm table-horarios">';
+    
+    // --- HEADER CON STICKY ---
+    let headerHTML = '<thead>';
+    
+    // PRIMERA FILA STICKY (Días de la semana)
+    headerHTML += '<tr class="align-middle sticky-top-0">';
+    headerHTML += '<th class="sticky-left-0 bg-white" style="z-index: 20;">Vendedor</th>';
+    headerHTML += '<th class="sticky-left-1 bg-white" style="z-index: 20;">Total Hs</th>';
+    
     const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-    
-    // Usamos la función de fecha corregida (Regla 4 de Enero)
     const [year, weekNum] = semana.split('-W');
     const primerDia = getPrimerDiaDeSemana(year, weekNum);
     
@@ -307,136 +317,157 @@ function generarTablaHorarios(vendedores, semana) {
         const dia = String(fechaActual.getDate()).padStart(2, '0');
         const mes = String(fechaActual.getMonth() + 1).padStart(2, '0');
         
-        // Colspan aumenta a 18 (16 horas + 1 Franco + 1 Obs)
-        headerHTML += `<th colspan="19">${diasSemana[i]} ${dia}/${mes}</th>`;
+        // CAMBIO AQUÍ: colspan="20" (17 horas + franco + turno + nota)
+        headerHTML += '<th colspan="20" class="sticky-top-0 bg-light border-left-3">' + diasSemana[i] + ' ' + dia + '/' + mes + '</th>';
     }
+    headerHTML += '</tr>';
     
-    headerHTML += '</tr><tr class="align-middle"><th></th><th></th>';
+    // SEGUNDA FILA STICKY (Horas)
+    headerHTML += '<tr class="align-middle sticky-top-1">';
+    headerHTML += '<th class="sticky-left-0 bg-white" style="z-index: 19;"></th>';
+    headerHTML += '<th class="sticky-left-1 bg-white" style="z-index: 19;"></th>';
+    
     for (let d = 0; d < 7; d++) {
-        // 1. Horas (7 a 22)
-        for (let h = 7; h <= 23; h++) headerHTML += `<th>${h}</th>`;
+        // 17 horas (7 a 23)
+        for (let h = 7; h <= 23; h++) {
+            headerHTML += '<th class="sticky-top-1">' + h + '</th>';
+        }
         
-        // 2. Franco (Al final, Punto 6)
-        headerHTML += '<th style="width:30px; background-color:#e9ecef;" title="Franco">F</th>';
-        
-        // 3. Obs (Nueva columna, Punto 3)
-        headerHTML += '<th style="width:30px; background-color:#e9ecef;" title="Observación Diaria"><i class="bi bi-chat-square-text"></i></th>';
+        headerHTML += '<th class="sticky-top-1" style="width:30px; background-color:#e9ecef;" title="Franco">F</th>';
+        headerHTML += '<th class="sticky-top-1" style="width:40px; background-color:#f8f9fa;" title="Turno asignado">T</th>';
+        headerHTML += '<th class="sticky-top-1" style="width:30px; background-color:#e9ecef;" title="Observación Diaria"><i class="bi bi-chat-square-text"></i></th>';
     }
     headerHTML += '</tr></thead>';
 
     // --- BODY ---
     let bodyHTML = '<tbody>';
-    vendedores.forEach(vendedor => {
+    vendedores.forEach(function(vendedor) {
         const vendedorId = vendedor.COD_VENDED;
         
-        // Identificar si es refuerzo para mostrar badge
-        let badgeRefuerzo = '';
-        if (vendedor.TAREA_HABITUAL && vendedor.TAREA_HABITUAL.includes('Refuerzo')) {
-             badgeRefuerzo = ' <span class="badge bg-warning text-dark" style="font-size:0.7em">Refuerzo</span>';
-        }
-
-        bodyHTML += `<tr data-vendedor-id="${vendedorId}" data-nombre="${vendedor.NOMBRE_VEN}" data-saldo-inicial="0">`;
+        bodyHTML += '<tr data-vendedor-id="' + vendedorId + '" data-nombre="' + vendedor.NOMBRE_VEN + '" data-saldo-inicial="0">';
         
         // Columna Nombre
-        bodyHTML += `<td class="fw-bold text-start ps-2">
-<div style="white-space: normal; word-wrap: break-word;" title="${vendedor.NOMBRE_VEN}">
-    <div class="fw-bold">${vendedor.NOMBRE_VEN}</div>
-                                <small class="d-block text-muted fw-normal">${vendedor.TAREA_HABITUAL}</small>
-                            </div>
-                            <span class="icono-feedback ms-auto" data-vendedor-id="${vendedorId}" title="Sin Feedback" style="cursor:pointer; opacity: 0.2;">
-                                <i class="bi bi-chat-left-dots-fill text-secondary fs-5"></i>
-                            </span>
-                        </div>
-                     </td>`;
-// Columna Totales
-        bodyHTML += `<td class="total-horas-empleado align-middle p-1">`;
-        bodyHTML +=     `<div class="d-flex flex-column align-items-center" style="font-size: 0.85rem; line-height: 1.1;">`;
-        bodyHTML +=         `<span class="text-success fw-bold" title="Horas Normales (H)">H: <span class="total-n">0</span></span>`;
-        bodyHTML +=         `<span class="text-primary fw-bold" title="Horas Extras (E)">E: <span class="total-e">0</span></span>`;
-        bodyHTML +=         `<span class="text-warning fw-bold" title="Horas Devuelve (D)">D: <span class="total-d">0</span></span>`;
-        
-        // --- NUEVO: SALDO DEUDOR ---
-        // Lo iniciamos en 0, luego al cargar datos se actualiza
-        bodyHTML +=         `<span class="badge bg-light text-secondary border mt-3 total-saldo-container" title="Banco de Horas (Deuda)" style="font-size:0.9em;">
-                                Saldo: <span class="total-saldo">0</span>
-                             </span>`;
-        
-        bodyHTML +=     `</div>`;
-        bodyHTML += `</td>`;
+        bodyHTML += '<td class="fw-bold text-start ps-2">';
+        bodyHTML += '<div class="d-flex justify-content-between align-items-center">';
+        bodyHTML += '<div class="text-truncate" style="max-width: 180px;" title="' + vendedor.NOMBRE_VEN + '">';
+        bodyHTML += '<div>' + vendedor.NOMBRE_VEN + '</div>';
+        bodyHTML += '<small class="d-block text-muted fw-normal">' + vendedor.TAREA_HABITUAL + '</small>';
+        bodyHTML += '</div>';
+        bodyHTML += '<span class="icono-feedback ms-auto" data-vendedor-id="' + vendedorId + '" title="Sin Feedback" style="cursor:pointer; opacity: 0.2;">';
+        bodyHTML += '<i class="bi bi-chat-left-dots-fill text-secondary fs-5"></i>';
+        bodyHTML += '</span>';
+        bodyHTML += '</div>';
+        bodyHTML += '</td>';
+
+        // Columna Totales
+        bodyHTML += '<td class="total-horas-empleado align-middle p-1">';
+        bodyHTML += '<div class="d-flex flex-column align-items-center" style="font-size: 0.85rem; line-height: 1.1;">';
+        bodyHTML += '<span class="text-success fw-bold" title="Horas Normales (H)">H: <span class="total-n">0</span></span>';
+        bodyHTML += '<span class="text-primary fw-bold" title="Horas Extras (E)">E: <span class="total-e">0</span></span>';
+        bodyHTML += '<span class="text-warning fw-bold" title="Horas Devuelve (D)">D: <span class="total-d">0</span></span>';
+        bodyHTML += '<span class="badge bg-light text-secondary border mt-3 total-saldo-container" title="Banco de Horas (Deuda)" style="font-size:0.9em;">';
+        bodyHTML += 'Saldo: <span class="total-saldo">0</span>';
+        bodyHTML += '</span>';
+        bodyHTML += '</div>';
+        bodyHTML += '</td>';
 
         // Columnas Días
-        fechasSemana.forEach(fechaISO => {
-            // 1. Celdas de Hora
+        fechasSemana.forEach(function(fechaISO) {
+            // 1. Celdas de Hora (7 a 23) - 17 celdas
             for (let h = 7; h <= 23; h++) {
-                bodyHTML += `<td class="hora-celda" data-fecha="${fechaISO}" data-hora="${h}"></td>`;
+                bodyHTML += '<td class="hora-celda" data-fecha="' + fechaISO + '" data-hora="' + h + '"></td>';
             }
             
-            // 2. Celda Franco (Al final)
-            bodyHTML += `<td class="dia-franco text-center align-middle p-0">
-                            <input type="checkbox" class="form-check-input franco-checkbox mt-1" value="${fechaISO}" style="transform: scale(0.8);">
-                         </td>`;
+            // 2. Celda Franco
+            bodyHTML += '<td class="dia-franco text-center align-middle p-0">';
+            bodyHTML += '<input type="checkbox" class="form-check-input franco-checkbox mt-1" value="' + fechaISO + '" style="transform: scale(0.8);">';
+            bodyHTML += '</td>';
             
-            // 3. Celda Nota (Nueva)
-            bodyHTML += `<td class="text-center align-middle p-0">
-                            <button class="btn-nota border-0 bg-transparent text-secondary p-0" data-vendedor="${vendedorId}" data-fecha="${fechaISO}" title="Agregar nota">
-                                <i class="bi bi-chat-square"></i>
-                            </button>
-                         </td>`;
+            // 3. Celda Turno del día
+            bodyHTML += '<td class="turno-dia text-center align-middle p-0">';
+            bodyHTML += '<span class="turno-dia-badge badge bg-light text-dark border" data-fecha="' + fechaISO + '" title="Sin horario asignado">-</span>';
+            bodyHTML += '</td>';
+            
+            // 4. Celda Nota
+            bodyHTML += '<td class="text-center align-middle p-0">';
+            bodyHTML += '<button class="btn-nota border-0 bg-transparent text-secondary p-0" data-vendedor="' + vendedorId + '" data-fecha="' + fechaISO + '" title="Agregar nota">';
+            bodyHTML += '<i class="bi bi-chat-square"></i>';
+            bodyHTML += '</button>';
+            bodyHTML += '</td>';
         });
         bodyHTML += '</tr>';
     });
     bodyHTML += '</tbody>';
 
-    // --- FOOTER ---
-    // (Punto 1: Eliminamos la fila de Totales por Día)
+    // --- FOOTER CON STICKY ---
     let footerHTML = '<tfoot>';
     
- // Fila Promociones
+    // Fila de Total Hs STICKY BOTTOM
+    footerHTML += '<tr class="total-por-hora-row sticky-bottom">';
+    footerHTML += '<td class="sticky-left-0 bg-white" style="z-index: 18;"><strong>Total Hs</strong></td>';
+    footerHTML += '<td class="sticky-left-1 bg-white" style="z-index: 18;"></td>';
+    
+    for (let d = 0; d < 7; d++) {
+        // 17 horas (7 a 23)
+        for (let h = 7; h <= 23; h++) {
+            footerHTML += '<td class="total-hora-columna text-center fw-bold" data-hora="' + h + '" data-dia-index="' + d + '" style="font-size: 0.85rem; background-color: #e9ecef;">0</td>';
+        }
+        
+        footerHTML += '<td></td>';
+        footerHTML += '<td></td>';
+        footerHTML += '<td></td>';
+    }
+    footerHTML += '</tr>';
+    
+    // Fila Promociones
     footerHTML += '<tr><td><strong>Promociones</strong></td><td></td>';
-    fechasSemana.forEach(fechaISO => {
-        // CORRECCIÓN: Colspan ahora es 19
-        footerHTML += `<td colspan="19" class="promo-cell small text-start align-top p-1" data-fecha="${fechaISO}" style="white-space: normal; min-height: 50px;">-</td>`;
+    fechasSemana.forEach(function(fechaISO) {
+        // CAMBIO AQUÍ: colspan="20"
+        footerHTML += '<td colspan="20" class="promo-cell small text-start align-top p-1" data-fecha="' + fechaISO + '" style="white-space: normal; min-height: 50px;">-</td>';
     });
     footerHTML += '</tr>';
     
-    // (Punto 3: Eliminamos la fila de Obs. Diarias Generales antigua, ya que ahora es por vendedor)
-    // Si quieres dejarla como "Obs General de Sucursal", puedes descomentar esto:
-    /*
-    footerHTML += '<tr><td><strong>Obs. Gral.</strong></td><td></td>';
-    fechasSemana.forEach(fechaISO => {
-        footerHTML += `<td colspan="18"><textarea class="form-control form-control-sm obs-diaria" data-fecha="${fechaISO}" rows="1" style="font-size:0.8rem;"></textarea></td>`;
-    });
-    footerHTML += '</tr>';
-    */
-
-    footerHTML += '</tfoot>';
-
-    tablaHTML += headerHTML + bodyHTML + footerHTML + '</table>';
+    footerHTML += '</tfoot></table></div>';
+    
+    tablaHTML += headerHTML + bodyHTML + footerHTML;
     container.html(tablaHTML);
     
     let ultimoDia = new Date(primerDia);
     ultimoDia.setDate(primerDia.getDate() + 6);
+
+    // Agregar esta línea para actualizar totales inmediatamente
+    setTimeout(function() {
+        actualizarSumatorias();
+    }, 100);
+
     return { inicio: primerDia.toISOString().split('T')[0], fin: ultimoDia.toISOString().split('T')[0] };
 }
-    
-function cargarDatosEnGrilla(data) {
-            if (data.es_plantilla_base) {
-            mostrarModal("Se cargaron los horarios de la <b>Plantilla Base</b> (Semana " + (data.tipo_semana || 'Automática') + ").<br>Recuerde guardar para confirmar.", "info");
-        }
-        // Carga de Horarios (N, C, P, E, D)
-        if (data.horarios) {
-            data.horarios.forEach(h => {
-                const celda = $(`tr[data-vendedor-id="${h.COD_VENDED}"] td[data-fecha="${h.FECHA}"][data-hora="${h.HORA}"]`);
-                celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja');
-                const tipo = h.TIPO_HORA.toLowerCase();
 
-                if (tipo === 'extra') celda.addClass('hora-extra').text('E');
-                else if (tipo === 'devuelve') celda.addClass('hora-devuelve').text('D');
-                else if (tipo === 'permiso') celda.addClass('hora-permiso').text('P');
-                else if (tipo === 'caja') celda.addClass('hora-caja').text('C');
-                else celda.addClass('marcado').text('X');
-            });
-        }
+function cargarDatosEnGrilla(data) {
+    if (data.es_plantilla_base) {
+        mostrarModal("Se cargaron los horarios de la <b>Plantilla Base</b> (Semana " + (data.tipo_semana || 'Automática') + ").<br>Recuerde guardar para confirmar.", "info");
+    }
+    
+    // Carga de Horarios (N, C, P, E, D)
+    if (data.horarios) {
+        data.horarios.forEach(function(h) {
+            const celda = $('tr[data-vendedor-id="' + h.COD_VENDED + '"] td[data-fecha="' + h.FECHA + '"][data-hora="' + h.HORA + '"]');
+            celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja');
+            const tipo = h.TIPO_HORA.toLowerCase();
+
+            if (tipo === 'extra') {
+                celda.addClass('hora-extra').text('E');
+            } else if (tipo === 'devuelve') {
+                celda.addClass('hora-devuelve').text('D');
+            } else if (tipo === 'permiso') {
+                celda.addClass('hora-permiso').text('P');
+            } else if (tipo === 'caja') {
+                celda.addClass('hora-caja').text('C');
+            } else {
+                celda.addClass('marcado').text('X'); // Esto es importante para el horario base
+            }
+        });
+    }
 
         // Carga de Francos
     if (data.francos) {
@@ -647,90 +678,192 @@ function mostrarModal(mensaje, tipo = 'success') {
     new bootstrap.Modal(modalEl).show();
 }
 
+/**
+ * Calcula el turno (TM/TT/FULL) basado en las horas asignadas
+ * @param {Array} horasArray - Horas seleccionadas (ej: [7,8,9,10])
+ * @returns {String} - 'TM', 'TT', 'FULL', 'MIXTO' o '-'
+ */
+function calcularTurno(horasArray) {
+    if (!horasArray || horasArray.length === 0) return '-';
+    
+    // Convertir a números y ordenar
+    const horas = horasArray.map(function(h) { return parseInt(h); }).sort(function(a, b) { return a - b; });
+    
+    const primeraHora = horas[0];
+    const ultimaHora = horas[horas.length - 1];
+    
+    // TM: 7 a 16 hs (inclusive)
+    if (primeraHora >= 7 && ultimaHora <= 15) {
+        return 'TM';
+    }
+    // TT: 16 a 23 hs (inclusive) - CAMBIAR: de 22 a 23
+    else if (primeraHora >= 13 && ultimaHora <= 23) {
+        return 'TT';
+    }
+    // FULL: 10 a 23 hs (o rango amplio) - CAMBIAR: de 22 a 23
+    else if (primeraHora >= 10 && ultimaHora <= 23) {
+        return 'FULL';
+    }
+    // Rango mixto o no clasificable
+    else if (primeraHora >= 7 && ultimaHora <= 23) {
+        // Si tiene horas tanto en TM como TT, es FULL
+        const tieneTM = horas.some(function(h) { return h >= 7 && h <= 15; });
+        const tieneTT = horas.some(function(h) { return h >= 16 && h <= 23; }); // CAMBIAR: de 22 a 23
+        if (tieneTM && tieneTT) return 'FULL';
+        
+        // Si solo tiene parte del rango
+        return 'MIXTO';
+    }
+    
+    return '-';
+}
+
 function actualizarSumatorias() {
     let granTotalSemanal = 0;
-    let totalesDiarios = Array(7).fill(0); // Array para sumar Lunes a Domingo
+    let totalesDiarios = Array(7).fill(0);
+    
+    // Inicializar array para contar horas por columna
+    // [dia][hora] -> contador
+    // CAMBIAR: De 16 horas (7-22) a 17 horas (7-23)
+    let totalesPorHora = Array(7).fill().map(function() { 
+        return Array(17).fill(0); // 7 días, 17 horas (7-23)
+    });
 
     // Recorremos cada fila de vendedor
     $('tbody tr').each(function() {
         const fila = $(this);
+        const vendedorId = fila.data('vendedor-id');
         
-        // 1. Contar tipos de hora visuales en la grilla
-        const n = fila.find('.hora-celda.marcado').length;          // Normal (X)
-        const c = fila.find('.hora-celda.hora-caja').length;        // Caja (C)
-        const p = fila.find('.hora-celda.hora-permiso').length;     // Permiso (P)
-        const e = fila.find('.hora-celda.hora-extra').length;       // Extra (E)
-        const d = fila.find('.hora-celda.hora-devuelve').length;    // Devuelve (D)
-
-        // 2. Contar horas bloqueadas (trabajo en otra sucursal)
-        // Estas suman para el total contractual de la persona, pero no para el costo del local
+        // 1. Contar tipos de hora visuales - AHORA TAMBIÉN CUENTA "X" (plantilla base)
+        const n = fila.find('.hora-celda.marcado').length;
+        const c = fila.find('.hora-celda.hora-caja').length;
+        const p = fila.find('.hora-celda.hora-permiso').length;
+        const e = fila.find('.hora-celda.hora-extra').length;
+        const d = fila.find('.hora-celda.hora-devuelve').length;
         const nExterno = fila.find('.hora-celda.bloqueo-externo').length;
+        
+        // Contar TODAS las celdas con contenido (incluye "X" del horario base)
+        const celdasConHoras = fila.find('.hora-celda.marcado, .hora-celda.hora-caja, .hora-celda.hora-permiso, .hora-celda.hora-extra, .hora-celda.hora-devuelve, .hora-celda.bloqueo-externo');
+        const totalHorasTodas = celdasConHoras.length;
 
-        // 3. Calcular Total "H" (Horas Contractuales)
-        // Sumamos lo que trabaja acá + lo que trabaja allá + licencias pagas (P)
+        // 2. Calcular por CADA DÍA el turno y contar horas por columna
+        fechasSemana.forEach(function(fechaISO, diaIndex) {
+            let horasDia = [];
+            
+            // Contar TODAS las horas asignadas para este día (incluye horario base con "X")
+            const celdasDia = fila.find('.hora-celda.marcado[data-fecha="' + fechaISO + '"], .hora-celda.hora-caja[data-fecha="' + fechaISO + '"], .hora-celda.hora-permiso[data-fecha="' + fechaISO + '"]');
+            
+            celdasDia.each(function() {
+                const hora = $(this).data('hora');
+                horasDia.push(hora);
+                
+                // Contar para total por columna (hora)
+                // CAMBIAR: De 7-22 (rango 16) a 7-23 (rango 17)
+                const horaIndex = hora - 7; // Convertir 7-23 a índice 0-16
+                if (horaIndex >= 0 && horaIndex < 17) {
+                    totalesPorHora[diaIndex][horaIndex]++;
+                }
+            });
+            
+            // Calcular turno del día
+            const turnoDia = calcularTurno(horasDia);
+            const badgeTurno = fila.find('.turno-dia-badge[data-fecha="' + fechaISO + '"]');
+            
+            badgeTurno.text(turnoDia);
+            
+            // Colores para los turnos por día
+            badgeTurno.removeClass('bg-light bg-primary bg-success bg-warning bg-info');
+            
+            // Verificar si es franco
+            const esFranco = fila.find('.franco-checkbox[value="' + fechaISO + '"]').is(':checked');
+            
+            if (esFranco) {
+                badgeTurno.addClass('bg-secondary text-white').attr('title', 'Franco');
+                badgeTurno.text('F');
+            } else {
+                switch(turnoDia) {
+                    case 'TM':
+                        badgeTurno.addClass('bg-primary text-white').attr('title', 'Turno Mañana (7-16hs)');
+                        break;
+                    case 'TT':
+                        badgeTurno.addClass('bg-success text-white').attr('title', 'Turno Tarde (16-22hs)');
+                        break;
+                    case 'FULL':
+                        badgeTurno.addClass('bg-warning text-dark').attr('title', 'Full Day (10-22hs)');
+                        break;
+                    case 'MIXTO':
+                        badgeTurno.addClass('bg-info text-white').attr('title', 'Horario Mixto');
+                        break;
+                    default:
+                        badgeTurno.addClass('bg-light text-dark border').attr('title', 'Sin horario asignado');
+                }
+            }
+            
+            // Sumar al total diario
+            totalesDiarios[diaIndex] += horasDia.length;
+        });
+
+        // 3. Resto del cálculo (total H, banco de horas, etc.)
         const totalH_Visual = n + c + p + nExterno;
-
-        // 4. Actualizar los contadores de la fila
+        
         fila.find('.total-n').text(totalH_Visual); 
         fila.find('.total-e').text(e);
         fila.find('.total-d').text(d);
 
-        // 5. CÁLCULO BANCO DE HORAS (NUEVO)
-        // Fórmula: (Deuda Vieja) + (Nuevos Permisos) - (Nuevas Devoluciones)
-        // Leemos el saldo histórico que vino del backend
+        // Cálculo banco de horas
         const saldoInicial = parseInt(fila.attr('data-saldo-inicial')) || 0;
-        
-        // Calculamos el saldo final proyectado
         const saldoActual = saldoInicial + p - d;
 
         const spanSaldo = fila.find('.total-saldo');
         const badgeSaldo = fila.find('.total-saldo-container');
 
         spanSaldo.text(saldoActual);
-
-        // Colores dinámicos para el saldo
         badgeSaldo.removeClass('bg-light text-secondary bg-danger text-white bg-success');
         
         if (saldoActual > 0) {
-            // Debe horas -> Rojo
-            badgeSaldo.addClass('bg-danger text-white').attr('title', `Debe ${saldoActual} horas`);
+            badgeSaldo.addClass('bg-danger text-white').attr('title', 'Debe ' + saldoActual + ' horas');
         } else if (saldoActual < 0) {
-            // Saldo a favor (Devolvió de más) -> Verde
-            badgeSaldo.addClass('bg-success text-white').attr('title', `Saldo a favor: ${Math.abs(saldoActual)}`);
+            badgeSaldo.addClass('bg-success text-white').attr('title', 'Saldo a favor: ' + Math.abs(saldoActual));
         } else {
-            // Al día (0) -> Gris
             badgeSaldo.addClass('bg-light text-secondary').attr('title', 'Al día');
         }
 
-        // 6. Sumar al Gran Total Semanal del Local
-        // Solo sumamos lo que paga ESTE local (ignoramos nExterno)
+        // Sumar al total semanal (TODAS las horas)
         granTotalSemanal += (n + c + p + e + d);
     });
 
-    // 7. Calcular Totales Verticales (Por Día)
-    // Recorremos todas las celdas pintadas para sumar por columna
-    $('.hora-celda.marcado, .hora-celda.hora-extra, .hora-celda.hora-devuelve, .hora-celda.hora-permiso, .hora-celda.hora-caja').each(function() {
-        const fechaCelda = $(this).data('fecha');
-        // Buscamos en qué índice del array de fechas está esta celda
-        const diaIndex = fechasSemana.indexOf(fechaCelda);
-        
-        if (diaIndex !== -1) {
-            totalesDiarios[diaIndex]++;
+    // 4. ACTUALIZAR TOTALES POR COLUMNA DE HORA
+    // CAMBIAR: De 0-15 (16 horas) a 0-16 (17 horas)
+    for (let diaIndex = 0; diaIndex < 7; diaIndex++) {
+        for (let horaIndex = 0; horaIndex < 17; horaIndex++) {
+            const hora = horaIndex + 7; // Convertir índice 0-16 a hora 7-23
+            const total = totalesPorHora[diaIndex][horaIndex];
+            
+            // Buscar la celda correspondiente en el footer
+            const celdaTotal = $('.total-hora-columna[data-hora="' + hora + '"][data-dia-index="' + diaIndex + '"]');
+            celdaTotal.text(total);
+            
+            // Dar color según la cantidad
+            celdaTotal.removeClass('text-danger text-warning text-success');
+            if (total > 0) {
+                celdaTotal.addClass('text-success');
+            } else {
+                celdaTotal.addClass('text-muted');
+            }
         }
-    });
+    }
 
-    // 8. Actualizar Badges Globales en la Interfaz
+    // Actualizar badges globales
     $('#totalSemanalLocal').text(granTotalSemanal);
     $('.total-semanal-footer').text(granTotalSemanal);
 
-    // Color del badge global (Azul si 0, Verde si hay carga)
     if (granTotalSemanal > 0) {
         $('#totalSemanalLocal').removeClass('bg-primary').addClass('bg-success');
     } else {
         $('#totalSemanalLocal').removeClass('bg-success').addClass('bg-primary');
     }
 
-    // Actualizar fila del footer con los totales diarios
+    // Actualizar totales por día en el footer
     $('.total-horas-dia').each(function(index) {
         $(this).text(totalesDiarios[index]);
     });

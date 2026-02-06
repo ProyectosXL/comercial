@@ -7,8 +7,31 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Estilos Propios -->
     <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .accordion-button {
+            font-weight: 600;
+        }
+        .accordion-button:not(.collapsed) {
+            background-color: #e8f5e9;
+            color: #198754;
+            box-shadow: none;
+        }
+        .accordion-button:focus {
+            border-color: #198754;
+            box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+        }
+        .accordion-body {
+            padding: 1.5rem;
+        }
+        .badge-indicador {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+    </style>
 </head>
 <body class="bg-light">
 
@@ -46,6 +69,11 @@
             <li class="nav-item">
                 <button class="nav-link fw-bold text-primary" id="tab-plantillas" data-bs-toggle="tab" data-bs-target="#panel-plantillas" type="button" role="tab">
                     <i class="bi bi-layers-fill me-2"></i> ABM Plantillas Base
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link fw-bold" style="color: #28a745;" id="tab-indicadores" data-bs-toggle="tab" data-bs-target="#panel-indicadores" type="button" role="tab">
+                    <i class="bi bi-graph-up-arrow me-2"></i> Indicadores
                 </button>
             </li>
         </ul>
@@ -203,6 +231,296 @@
                 </div>
             </div> <!-- FIN PANEL PLANTILLAS -->
 
+            <!-- PANEL 3: INDICADORES -->
+            <div class="tab-pane fade" id="panel-indicadores" role="tabpanel">
+                <div class="accordion shadow-sm" id="accordionIndicadores">
+                    
+                    <!-- SECCIÓN 1: INDICADORES DE HORAS -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseHoras" aria-expanded="true">
+                                <i class="bi bi-clock-fill me-2"></i> Indicadores de Horas
+                                <span class="badge bg-success ms-2 badge-indicador">Actual</span>
+                            </button>
+                        </h2>
+                        <div id="collapseHoras" class="accordion-collapse collapse show" data-bs-parent="#accordionIndicadores">
+                            <div class="accordion-body">
+                                <!-- Filtros Indicadores -->
+                                <div class="row g-3 align-items-end mb-4">
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">Sucursal</label>
+                                        <select id="indicadoresSucursalSelector" class="form-select">
+                                            <option value="">-- Todas las Sucursales --</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">Semana</label>
+                                        <input type="week" id="indicadoresSemanaSelector" class="form-control" value="2026-W06">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">Filtrar Tipo</label>
+                                        <select id="indicadoresTipoHoraFiltro" class="form-select">
+                                            <option value="todos">Todos los Tipos</option>
+                                            <option value="normal">H (Normales)</option>
+                                            <option value="extra">E (Extras)</option>
+                                            <option value="devuelve">D (Devuelve)</option>
+                                            <option value="caja">C (Caja)</option>
+                                            <option value="permiso">P (Permiso)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <button id="indicadoresBtnFiltrar" class="btn btn-success w-100">
+                                            <i class="bi bi-graph-up-arrow"></i> Ver Indicadores
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- KPIs Totales -->
+                                <div class="row mb-4 text-center g-2" id="indicadoresKpiContainer" style="display:none;">
+                                    <div class="col-md-2">
+                                        <div class="card text-bg-success h-100 shadow-sm">
+                                            <div class="card-body p-2">
+                                                <h6 class="small text-uppercase opacity-75">H (Normal)</h6>
+                                                <h3 class="fw-bold mb-0" id="indicadoresKpiNormal">0</h3>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="card text-bg-info h-100 shadow-sm text-white">
+                                            <div class="card-body p-2">
+                                                <h6 class="small text-uppercase opacity-75">C (Caja)</h6>
+                                                <h3 class="fw-bold mb-0" id="indicadoresKpiCaja">0</h3>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="card h-100 shadow-sm text-white" style="background-color: #d63384;">
+                                            <div class="card-body p-2">
+                                                <h6 class="small text-uppercase opacity-75">P (Permiso)</h6>
+                                                <h3 class="fw-bold mb-0" id="indicadoresKpiPermiso">0</h3>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="card text-bg-primary h-100 shadow-sm">
+                                            <div class="card-body p-2">
+                                                <h6 class="small text-uppercase opacity-75">E (Extras)</h6>
+                                                <h3 class="fw-bold mb-0" id="indicadoresKpiExtra">0</h3>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="card text-bg-warning h-100 shadow-sm text-dark">
+                                            <div class="card-body p-2">
+                                                <h6 class="small text-uppercase opacity-75">D (Dev)</h6>
+                                                <h3 class="fw-bold mb-0" id="indicadoresKpiDevuelve">0</h3>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="card text-bg-dark h-100 shadow-sm">
+                                            <div class="card-body p-2">
+                                                <h6 class="small text-uppercase opacity-75">Total</h6>
+                                                <h3 class="fw-bold mb-0" id="indicadoresKpiTotal">0</h3>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Gráfico y Tabla -->
+                                <div class="row" id="indicadoresChartsContainer" style="display:none;">
+                                    <!-- Gráfico de Barras -->
+                                    <div class="col-12 mb-4">
+                                        <div class="card shadow-sm">
+                                            <div class="card-header bg-white">
+                                                <h5 class="mb-0" id="indicadoresGraficoTitulo">Distribución de Horas</h5>
+                                            </div>
+                                            <div class="card-body" style="height: 400px;">
+                                                <canvas id="indicadoresGraficoVendedores"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Tabla Resumen -->
+                                    <div class="col-12">
+                                        <div class="card shadow-sm">
+                                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                                <h5 class="mb-0">Detalle Numérico</h5>
+                                                <div>
+                                                    <button id="indicadoresBtnExportarDetalle" class="btn btn-sm btn-outline-success me-2">
+                                                        <i class="bi bi-file-earmark-excel"></i> Exportar Detalle
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-body p-0">
+                                                <div class="table-responsive" style="max-height: 450px;">
+                                                    <table class="table table-striped table-hover mb-0 text-center">
+                                                        <thead class="table-light sticky-top">
+                                                            <tr>
+                                                                <th>Sucursal</th>
+                                                                <th>Vendedor</th>
+                                                                <th>H</th>
+                                                                <th>C</th>
+                                                                <th>P</th>
+                                                                <th>E</th>
+                                                                <th>D</th>
+                                                                <th>Total</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="indicadoresTablaDetalleBody"></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+<!-- SECCIÓN 2: INDICADORES DE BANCO DE HORAS -->
+<div class="accordion-item">
+    <h2 class="accordion-header">
+        <button class="accordion-button fw-bold collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBancoHoras" aria-expanded="false">
+            <i class="bi bi-bank2 me-2"></i> Indicadores de Banco de Horas
+            <span class="badge bg-warning text-dark ms-2 badge-indicador">Histórico</span>
+        </button>
+    </h2>
+    <div id="collapseBancoHoras" class="accordion-collapse collapse" data-bs-parent="#accordionIndicadores">
+        <div class="accordion-body">
+            <!-- Filtros Banco de Horas -->
+<div class="row g-3 align-items-end mb-4">
+    <div class="col-md-3">
+        <label class="form-label fw-bold">Sucursal</label>
+        <select id="bancoSucursalSelector" class="form-select">
+            <option value="">-- Todas las Sucursales --</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-bold">Vendedor</label>
+        <select id="bancoVendedorSelector" class="form-select" disabled>
+            <option value="">-- Seleccione Sucursal primero --</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label fw-bold">Desde</label>
+        <input type="date" id="bancoFechaInicio" class="form-control">
+    </div>
+    <div class="col-md-2">
+        <label class="form-label fw-bold">Hasta</label>
+        <input type="date" id="bancoFechaFin" class="form-control">
+    </div>
+    <div class="col-md-2">
+        <button id="bancoBtnFiltrar" class="btn btn-warning w-100">
+            <i class="bi bi-search"></i> Buscar Histórico
+        </button>
+    </div>
+</div>
+            
+            <!-- Resumen Banco de Horas (inicialmente vacío) -->
+            <div class="row mb-4" id="bancoResumenContainer" style="display:none;">
+                <div class="col-12">
+                    <div class="card shadow-sm border-warning">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><i class="bi bi-calculator-fill"></i> Resumen de Banco de Horas</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-3 mb-3">
+                                    <div class="card bg-light h-100">
+                                        <div class="card-body p-3">
+                                            <h6 class="small text-uppercase text-muted mb-2">Horas Acumuladas</h6>
+                                            <h3 class="fw-bold text-success" id="bancoHorasAcumuladas">0</h3>
+                                            <small class="text-muted">Total histórico</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card bg-light h-100">
+                                        <div class="card-body p-3">
+                                            <h6 class="small text-uppercase text-muted mb-2">Horas Utilizadas</h6>
+                                            <h3 class="fw-bold text-danger" id="bancoHorasUtilizadas">0</h3>
+                                            <small class="text-muted">En últimos 6 meses</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card bg-light h-100">
+                                        <div class="card-body p-3">
+                                            <h6 class="small text-uppercase text-muted mb-2">Saldo Actual</h6>
+                                            <h3 class="fw-bold text-primary" id="bancoSaldoActual">0</h3>
+                                            <small class="text-muted">Disponible</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card bg-light h-100">
+                                        <div class="card-body p-3">
+                                            <h6 class="small text-uppercase text-muted mb-2">Promedio Mes</h6>
+                                            <h3 class="fw-bold text-info" id="bancoPromedioMes">0</h3>
+                                            <small class="text-muted">Horas/mes</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Gráfico Histórico (inicialmente vacío) -->
+            <div class="row mb-4" id="bancoGraficoContainer" style="display:none;">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">Evolución Histórica de Banco de Horas</h5>
+                        </div>
+                        <div class="card-body" style="height: 350px;">
+                            <canvas id="bancoGraficoHistorico"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabla Detalle Histórico (inicialmente vacía) -->
+            <div class="row" id="bancoTablaContainer" style="display:none;">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Movimientos Históricos</h5>
+                            <button id="bancoBtnExportar" class="btn btn-sm btn-outline-warning" disabled>
+                                <i class="bi bi-file-earmark-excel"></i> Exportar Histórico
+                            </button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 400px;">
+                                <table class="table table-striped table-hover mb-0 text-center">
+    <thead class="table-light sticky-top">
+        <tr>
+            <th>Sucursal</th>
+            <th>Vendedor</th>
+            <th>Acumuladas (P)</th>
+            <th>Utilizadas (D)</th>
+            <th>Saldo Actual</th>
+            <th>Última Fecha</th>
+        </tr>
+    </thead>
+    <tbody id="bancoTablaDetalleBody">
+        <!-- Los datos se cargarán aquí dinámicamente -->
+    </tbody>
+</table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+                    
+                </div>
+            </div> <!-- FIN PANEL INDICADORES -->
+
         </div>
     </div>
 
@@ -331,6 +649,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="assets/js/horarios.js?v=4.0"></script>
     <script src="assets/js/plantillas.js?v=1.1"></script>
+    <script src="assets/js/indicadores-integrado.js?v=1.1"></script>
+    <script src="assets/js/banco-horas.js?v=1.0"></script>
 
 </body>
 </html>
