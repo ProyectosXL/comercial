@@ -24,7 +24,7 @@ body {
     border-spacing: 0;
 }
 
-.table th, 
+.table th,
 .table td {
     border: 1px solid #dee2e6;
     text-align: center;
@@ -66,7 +66,8 @@ body {
 #tablaHorariosContainer thead tr:nth-child(2) th,
 #tablaVistaLocal thead tr:nth-child(2) th {
     position: sticky;
-    top: 41px; /* Ajuste según altura de fila 1 */
+    top: 41px;
+    /* Ajuste según altura de fila 1 */
     z-index: 90;
     background-color: #f8f9fa;
     box-shadow: inset 0 -1px 0 #dee2e6;
@@ -77,23 +78,25 @@ body {
    ========================================= */
 
 /* 1. Primera Columna (Vendedor) */
-#tablaHorariosContainer .table tr > :first-child,
-#tablaVistaLocal .table tr > :first-child {
+#tablaHorariosContainer .table tr> :first-child,
+#tablaVistaLocal .table tr> :first-child {
     position: sticky;
     left: 0;
     z-index: 50;
     background-color: #ffffff;
     border-right: 2px solid #dee2e6;
-    min-width: 280px; /* Ancho suficiente para nombres largos */
+    min-width: 280px;
+    /* Ancho suficiente para nombres largos */
     width: 280px;
     max-width: 280px;
 }
 
 /* 2. Segunda Columna (Total Hs) */
-#tablaHorariosContainer .table tr > :nth-child(2),
-#tablaVistaLocal .table tr > :nth-child(2) {
+#tablaHorariosContainer .table tr> :nth-child(2),
+#tablaVistaLocal .table tr> :nth-child(2) {
     position: sticky;
-    left: 280px; /* Debe coincidir con el ancho de la 1ra columna */
+    left: 280px;
+    /* Debe coincidir con el ancho de la 1ra columna */
     z-index: 50;
     background-color: #ffffff;
     border-right: 2px solid #dee2e6;
@@ -106,19 +109,19 @@ body {
 
 /* A. ESQUINA SUPERIOR IZQUIERDA (Cruce de Header y Columna Fija) */
 /* Deben estar por encima de todo */
-#tablaHorariosContainer thead tr > :first-child,
-#tablaHorariosContainer thead tr > :nth-child(2),
-#tablaVistaLocal thead tr > :first-child,
-#tablaVistaLocal thead tr > :nth-child(2) {
-    z-index: 200 !important; 
+#tablaHorariosContainer thead tr> :first-child,
+#tablaHorariosContainer thead tr> :nth-child(2),
+#tablaVistaLocal thead tr> :first-child,
+#tablaVistaLocal thead tr> :nth-child(2) {
+    z-index: 200 !important;
     background-color: #f8f9fa !important;
 }
 
 /* B. ESQUINA INFERIOR IZQUIERDA (Footer / Promociones) */
-#tablaHorariosContainer tfoot tr > :first-child,
-#tablaHorariosContainer tfoot tr > :nth-child(2),
-#tablaVistaLocal tfoot tr > :first-child,
-#tablaVistaLocal tfoot tr > :nth-child(2) {
+#tablaHorariosContainer tfoot tr> :first-child,
+#tablaHorariosContainer tfoot tr> :nth-child(2),
+#tablaVistaLocal tfoot tr> :first-child,
+#tablaVistaLocal tfoot tr> :nth-child(2) {
     position: sticky;
     bottom: 0;
     z-index: 60;
@@ -136,52 +139,95 @@ body {
 #tablaVistaLocal tfoot td {
     position: sticky;
     bottom: 0;
-    z-index: 60; /* Encima de las horas */
-    background-color: #e9ecef !important; /* Gris sólido para tapar el contenido */
-    border-top: 2px solid #adb5bd; /* Borde superior fuerte */
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.05); /* Sombrita para dar efecto flotante */
+    z-index: 60;
+    /* Encima de las horas */
+    background-color: #e9ecef !important;
+    /* Gris sólido para tapar el contenido */
+    border-top: 2px solid #adb5bd;
+    /* Borde superior fuerte */
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+    /* Sombrita para dar efecto flotante */
 }
 
 /* 2. Las primeras dos columnas del footer (Vendedor/Total) deben estar AÚN MÁS ARRIBA */
 /* Esto es para que cuando hagas scroll horizontal, la esquina inferior izquierda no se tape */
-#tablaHorariosContainer tfoot tr > :first-child,
-#tablaHorariosContainer tfoot tr > :nth-child(2),
-#tablaVistaLocal tfoot tr > :first-child,
-#tablaVistaLocal tfoot tr > :nth-child(2) {
-    z-index: 70 !important; /* Mayor que el resto del footer (60) y que las columnas laterales (50) */
-    background-color: #dee2e6 !important; /* Un gris un pelín más oscuro para diferenciar la esquina */
+#tablaHorariosContainer tfoot tr> :first-child,
+#tablaHorariosContainer tfoot tr> :nth-child(2),
+#tablaVistaLocal tfoot tr> :first-child,
+#tablaVistaLocal tfoot tr> :nth-child(2) {
+    z-index: 70 !important;
+    /* Mayor que el resto del footer (60) y que las columnas laterales (50) */
+    background-color: #dee2e6 !important;
+    /* Un gris un pelín más oscuro para diferenciar la esquina */
 }
 
 /* Ajuste específico para la segunda celda del footer */
-#tablaHorariosContainer tfoot tr > :nth-child(2),
-#tablaVistaLocal tfoot tr > :nth-child(2) {
+#tablaHorariosContainer tfoot tr> :nth-child(2),
+#tablaVistaLocal tfoot tr> :nth-child(2) {
     left: 280px;
 }
 
 /* =========================================
    ESTILOS DE CELDAS DE HORARIOS
    ========================================= */
-.hora-celda { cursor: pointer; user-select: none; }
+.hora-celda {
+    cursor: pointer;
+    user-select: none;
+}
 
 /* Normal (H) - Verde */
-.hora-celda.marcado { background-color: #198754; color: white; }
-.table tbody tr:hover .hora-celda:not(.marcado) { background-color: #e9f5e9; }
+.hora-celda.marcado {
+    background-color: #198754;
+    color: white;
+}
+
+.table tbody tr:hover .hora-celda:not(.marcado) {
+    background-color: #e9f5e9;
+}
 
 /* Extra (E) - Azul */
-.hora-celda.hora-extra { background-color: #0d6efd; color: white; font-weight: bold; }
-.table tbody tr:hover .hora-celda.hora-extra { background-color: #0b5ed7; }
+.hora-celda.hora-extra {
+    background-color: #0d6efd;
+    color: white;
+    font-weight: bold;
+}
+
+.table tbody tr:hover .hora-celda.hora-extra {
+    background-color: #0b5ed7;
+}
 
 /* Devuelve (D) - Naranja */
-.hora-celda.hora-devuelve { background-color: #fd7e14; color: white; font-weight: bold; }
-.table tbody tr:hover .hora-celda.hora-devuelve { background-color: #e36d0d; }
+.hora-celda.hora-devuelve {
+    background-color: #fd7e14;
+    color: white;
+    font-weight: bold;
+}
+
+.table tbody tr:hover .hora-celda.hora-devuelve {
+    background-color: #e36d0d;
+}
 
 /* Permiso (P) - Rosa */
-.hora-celda.hora-permiso { background-color: #d63384 !important; color: white; font-weight: bold; }
-.table tbody tr:hover .hora-celda.hora-permiso { background-color: #a61e61; }
+.hora-celda.hora-permiso {
+    background-color: #d63384 !important;
+    color: white;
+    font-weight: bold;
+}
+
+.table tbody tr:hover .hora-celda.hora-permiso {
+    background-color: #a61e61;
+}
 
 /* Caja (C) - Celeste */
-.hora-celda.hora-caja { background-color: #0dcaf0 !important; color: black; font-weight: bold; }
-.table tbody tr:hover .hora-celda.hora-caja { background-color: #0aa2c0; }
+.hora-celda.hora-caja {
+    background-color: #0dcaf0 !important;
+    color: black;
+    font-weight: bold;
+}
+
+.table tbody tr:hover .hora-celda.hora-caja {
+    background-color: #0aa2c0;
+}
 
 /* Bloqueo Externo (Gris Oscuro Rayado) */
 .hora-celda.bloqueo-externo {
@@ -194,16 +240,23 @@ body {
 /* =========================================
    ESTILOS DE FRANCOS
    ========================================= */
-.dia-franco { 
-    padding: 0.3rem; 
-    background-color: #c2a2fd !important; /* Violeta */
+.dia-franco {
+    padding: 0.3rem;
+    background-color: #c2a2fd !important;
+    /* Violeta */
     color: white;
 }
 
-td.franco-activo { background-color: #e0cffc !important; }
+td.franco-activo {
+    background-color: #e0cffc !important;
+}
 
 /* Celda bloqueada por franco */
-.hora-celda.dia-franco { background-color: #e2e3e5 !important; pointer-events: none; cursor: not-allowed; }
+.hora-celda.dia-franco {
+    background-color: #e2e3e5 !important;
+    pointer-events: none;
+    cursor: not-allowed;
+}
 
 /* Franco en Vista Local (Celda completa) */
 .bg-franco-activo {
@@ -228,7 +281,8 @@ td.franco-activo { background-color: #e0cffc !important; }
    ========================================= */
 
 /* Promo y Obs (Inputs) */
-.promo-cell, .obs-diaria {
+.promo-cell,
+.obs-diaria {
     padding: 2px 5px !important;
     font-size: 0.9rem;
     line-height: 1.2;
@@ -240,10 +294,19 @@ td.franco-activo { background-color: #e0cffc !important; }
     width: 100%;
     height: 100%;
 }
-.obs-diaria { background-color: #ffffff !important; border: 1px solid #ced4da !important; }
+
+.obs-diaria {
+    background-color: #ffffff !important;
+    border: 1px solid #ced4da !important;
+}
 
 /* Badges de Promociones */
-.promo-container { display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-start; }
+.promo-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    justify-content: flex-start;
+}
 
 .promo-badge {
     background-color: #ffffff;
@@ -254,11 +317,16 @@ td.franco-activo { background-color: #e0cffc !important; }
     font-size: 0.7rem;
     padding: 2px 6px;
     font-weight: 600;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
     white-space: nowrap;
     cursor: default;
 }
-.promo-badge:hover { background-color: #e7f1ff; border-color: #0d6efd; z-index: 1; }
+
+.promo-badge:hover {
+    background-color: #e7f1ff;
+    border-color: #0d6efd;
+    z-index: 1;
+}
 
 /* Botones de Nota */
 .btn-nota {
@@ -269,11 +337,22 @@ td.franco-activo { background-color: #e0cffc !important; }
     cursor: pointer;
     transition: all 0.2s;
 }
-.btn-nota:hover { color: #0d6efd; transform: scale(1.2); }
-.btn-nota.tiene-nota { color: #fd7e14 !important; transform: scale(1.1); }
+
+.btn-nota:hover {
+    color: #0d6efd;
+    transform: scale(1.2);
+}
+
+.btn-nota.tiene-nota {
+    color: #fd7e14 !important;
+    transform: scale(1.1);
+}
 
 /* Icono Feedback */
-.icono-feedback.visible { display: inline-block !important; opacity: 1 !important; }
+.icono-feedback.visible {
+    display: inline-block !important;
+    opacity: 1 !important;
+}
 
 /* Alineación Columna Vendedor */
 .vendedor-info-container {
@@ -312,6 +391,7 @@ td.franco-activo { background-color: #e0cffc !important; }
     border-color: #86b7fe !important;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
 }
+
 /* =========================================
    ESTILOS PARA ABM PLANTILLAS BASE
    ========================================= */
@@ -333,7 +413,8 @@ td.franco-activo { background-color: #e0cffc !important; }
 /* Normal (X) - Verde */
 .hora-base.marcado {
     background-color: #198754 !important;
-    color: white !important; /* Texto blanco visible */
+    color: white !important;
+    /* Texto blanco visible */
     font-weight: bold;
     text-align: center;
 }
@@ -341,7 +422,8 @@ td.franco-activo { background-color: #e0cffc !important; }
 /* Extra (E) - Azul */
 .hora-base.hora-extra {
     background-color: #0d6efd !important;
-    color: white !important; /* Texto blanco visible */
+    color: white !important;
+    /* Texto blanco visible */
     font-weight: bold;
     text-align: center;
 }
@@ -351,6 +433,7 @@ td.franco-activo { background-color: #e0cffc !important; }
     background-color: #e2e3e5 !important;
     color: transparent;
 }
+
 /* =========================================
    FIJAR COLUMNA VENDEDOR EN PLANTILLAS BASE (SOLUCIÓN DEFINITIVA)
    ========================================= */
@@ -359,10 +442,12 @@ td.franco-activo { background-color: #e0cffc !important; }
 #base_tablaContainer table tbody td:first-child {
     position: sticky !important;
     left: 0 !important;
-    z-index: 50 !important; /* Capa media */
-    background-color: #ffffff !important; /* Fondo blanco SÓLIDO */
+    z-index: 50 !important;
+    /* Capa media */
+    background-color: #ffffff !important;
+    /* Fondo blanco SÓLIDO */
     border-right: 2px solid #dee2e6 !important;
-    min-width: 250px; 
+    min-width: 250px;
     width: 250px;
     max-width: 250px;
 }
@@ -372,7 +457,8 @@ td.franco-activo { background-color: #e0cffc !important; }
     position: sticky !important;
     left: 0 !important;
     top: 0 !important;
-    z-index: 200 !important; /* Capa SUPERIOR (encima de todo) */
+    z-index: 200 !important;
+    /* Capa SUPERIOR (encima de todo) */
     background-color: #f8f9fa !important;
     border-right: 2px solid #dee2e6 !important;
     border-bottom: 2px solid #dee2e6 !important;
@@ -382,7 +468,8 @@ td.franco-activo { background-color: #e0cffc !important; }
 #base_tablaContainer table thead tr:nth-child(1) th {
     position: sticky;
     top: 0;
-    z-index: 100; /* Menor que la esquina, mayor que el cuerpo */
+    z-index: 100;
+    /* Menor que la esquina, mayor que el cuerpo */
     background-color: #f8f9fa;
 }
 
@@ -393,6 +480,7 @@ td.franco-activo { background-color: #e0cffc !important; }
     z-index: 90;
     background-color: #f8f9fa;
 }
+
 /* --- MODAL DE AYUDA (ESTILO PRO) --- */
 
 /* Cabecera del Modal */
@@ -413,7 +501,8 @@ td.franco-activo { background-color: #e0cffc !important; }
     background-color: white;
     color: #495057;
     font-weight: 600;
-    box-shadow: none !important; /* Quita el brillo azul nativo */
+    box-shadow: none !important;
+    /* Quita el brillo azul nativo */
     padding: 1.2rem 1rem;
 }
 
@@ -421,7 +510,8 @@ td.franco-activo { background-color: #e0cffc !important; }
 .accordion-help .accordion-button:not(.collapsed) {
     color: #0d6efd;
     background-color: #f8f9fa;
-    border-left: 4px solid #0d6efd; /* Borde de acento elegante */
+    border-left: 4px solid #0d6efd;
+    /* Borde de acento elegante */
 }
 
 /* Iconos dentro del acordeón */
@@ -441,13 +531,14 @@ td.franco-activo { background-color: #e0cffc !important; }
     background-color: #cfe2ff;
     color: #0d6efd;
 }
+
 /* Agrega esto a tu archivo CSS o en un estilo interno */
 .total-por-hora-row {
     position: sticky;
     bottom: 0;
     background-color: #f8f9fa !important;
     z-index: 10;
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
 }
 
 /* Asegurar que la tabla tenga altura fija para el scroll */
@@ -465,58 +556,62 @@ td.franco-activo { background-color: #e0cffc !important; }
    SEPARADORES DE DÍAS - VERSIÓN CORREGIDA
    ========================================= */
 
-/* Separador visual cada día (cada 20 columnas desde la 3ra) */
-#tablaVistaLocal .dia-header-0,
-#tablaVistaLocal .dia-header-1,
-#tablaVistaLocal .dia-header-2,
-#tablaVistaLocal .dia-header-3,
-#tablaVistaLocal .dia-header-4,
-#tablaVistaLocal .dia-header-5,
-#tablaVistaLocal .dia-header-6 {
-    border-left: 3px solid #000 !important;
+/* Aplicar borde negro al FINAL de cada día (Columna de Nota / Comentario)
+   Esto afecta a los TH de la segunda fila del header y a los TD del body. */
+
+/* Borde negro en la última celda del día para el HEADER de HORAS (7, 8, ..., F, T, N) */
+#tablaHorariosContainer thead tr:nth-child(2) th.header-dia-fin,
+#tablaVistaLocal thead tr:nth-child(2) th.header-dia-fin {
+    border-right: 3px solid #000 !important;
+    /* Borde grueso para el final del día */
 }
 
-/* Aplicar borde negro a la primera hora de cada día */
-#tablaVistaLocal .hora-header-dia-0:first-of-type,
-#tablaVistaLocal .hora-celda-dia-0:first-of-type,
-#tablaVistaLocal .footer-dia-0 {
-    border-left: 3px solid #000 !important;
+/* Borde negro en la última celda de cada día para el BODY */
+#tablaHorariosContainer tbody td.celda-dia-fin,
+#tablaVistaLocal tbody td.celda-dia-fin {
+    border-right: 3px solid #000 !important;
+    /* Borde grueso para el final del día */
 }
 
-#tablaVistaLocal .hora-header-dia-1:first-of-type,
-#tablaVistaLocal .hora-celda-dia-1:first-of-type,
-#tablaVistaLocal .footer-dia-1 {
-    border-left: 3px solid #000 !important;
+/* Borde negro en la última celda del día para el FOOTER de TOTALES (Total Hs) */
+#tablaHorariosContainer tfoot tr.total-por-hora-row td.footer-dia-fin,
+#tablaVistaLocal tfoot tr.total-por-hora-row td.footer-dia-fin {
+    border-right: 3px solid #000 !important;
+    /* Borde grueso para el final del día */
 }
 
-#tablaVistaLocal .hora-header-dia-2:first-of-type,
-#tablaVistaLocal .hora-celda-dia-2:first-of-type,
-#tablaVistaLocal .footer-dia-2 {
-    border-left: 3px solid #000 !important;
+/* Borde negro en la celda de "Promociones" al final de cada día en el FOOTER */
+#tablaHorariosContainer tfoot tr:last-child td.promo-cell.footer-dia-fin,
+#tablaVistaLocal tfoot td.footer-dia-fin {
+    border-right: 3px solid #000 !important;
+    /* Borde grueso para el final del día */
 }
 
-#tablaVistaLocal .hora-header-dia-3:first-of-type,
-#tablaVistaLocal .hora-celda-dia-3:first-of-type,
-#tablaVistaLocal .footer-dia-3 {
-    border-left: 3px solid #000 !important;
+/* Ajuste general para la primera fila del header (días Lunes, Martes...) */
+#tablaHorariosContainer thead tr:nth-child(1) th.dia-header,
+#tablaVistaLocal thead tr:nth-child(1) th.dia-header {
+    border-right: 3px solid #000 !important;
 }
 
-#tablaVistaLocal .hora-header-dia-4:first-of-type,
-#tablaVistaLocal .hora-celda-dia-4:first-of-type,
-#tablaVistaLocal .footer-dia-4 {
-    border-left: 3px solid #000 !important;
+/* Respaldo para las clases de inicio (por si se siguen usando, pero reducimos grosor o las quitamos) */
+.header-dia-inicio,
+.celda-dia-inicio,
+.footer-dia-inicio {
+    border-left: 1px solid #dee2e6 !important;
+    /* Volver al borde normal */
 }
 
-#tablaVistaLocal .hora-header-dia-5:first-of-type,
-#tablaVistaLocal .hora-celda-dia-5:first-of-type,
-#tablaVistaLocal .footer-dia-5 {
-    border-left: 3px solid #000 !important;
+/* --- Aseguramos que la columna del segundo sticky (Total Hs) no tenga un borde negro extra a la derecha --- */
+#tablaHorariosContainer .table tr> :nth-child(2) {
+    border-right: 2px solid #dee2e6;
+    /* Mantener el borde original */
 }
 
-#tablaVistaLocal .hora-header-dia-6:first-of-type,
-#tablaVistaLocal .hora-celda-dia-6:first-of-type,
-#tablaVistaLocal .footer-dia-6 {
-    border-left: 3px solid #000 !important;
+/* Ajustes para la tabla de ABM Plantillas */
+#base_tablaContainer thead tr:nth-child(1) th.dia-header,
+#base_tablaContainer thead tr:nth-child(2) th.header-dia-fin,
+#base_tablaContainer tbody td.celda-dia-fin {
+    border-right: 3px solid #000 !important;
 }
 
 /* Estilos para los tabs */
@@ -560,13 +655,15 @@ td.franco-activo { background-color: #e0cffc !important; }
 
 /* Tabla de vista local con estructura idéntica a gestión */
 #tablaVistaLocal table {
-    table-layout: fixed;
+    width: auto !important;
+    /* Permitir que la tabla se expanda según el contenido */
+    max-width: none !important;
     margin-bottom: 0;
 }
 
 /* HEADER - IDÉNTICO A GESTIÓN */
 #tablaVistaLocal thead tr:nth-child(1) th {
-    position: sticky!important;
+    position: sticky !important;
     top: 0;
     z-index: 100;
     background-color: #f8f9fa;
@@ -584,7 +681,7 @@ td.franco-activo { background-color: #e0cffc !important; }
 }
 
 /* COLUMNAS FIJAS - IDÉNTICO A GESTIÓN */
-#tablaVistaLocal .table tr > :first-child {
+#tablaVistaLocal .table tr> :first-child {
     position: sticky !important;
     left: 0;
     z-index: 50;
@@ -595,7 +692,7 @@ td.franco-activo { background-color: #e0cffc !important; }
     max-width: 280px;
 }
 
-#tablaVistaLocal .table tr > :nth-child(2) {
+#tablaVistaLocal .table tr> :nth-child(2) {
     position: sticky !important;
     left: 280px;
     z-index: 50;
@@ -605,8 +702,8 @@ td.franco-activo { background-color: #e0cffc !important; }
 }
 
 /* ESQUINAS SUPERIORES - FIJAS */
-#tablaVistaLocal thead tr:nth-child(1) > :first-child,
-#tablaVistaLocal thead tr:nth-child(1) > :nth-child(2) {
+#tablaVistaLocal thead tr:nth-child(1)> :first-child,
+#tablaVistaLocal thead tr:nth-child(1)> :nth-child(2) {
     position: sticky !important;
     left: 0;
     top: 0;
@@ -616,12 +713,12 @@ td.franco-activo { background-color: #e0cffc !important; }
     border-bottom: 1px solid #dee2e6;
 }
 
-#tablaVistaLocal thead tr:nth-child(1) > :nth-child(2) {
+#tablaVistaLocal thead tr:nth-child(1)> :nth-child(2) {
     left: 280px;
 }
 
-#tablaVistaLocal thead tr:nth-child(2) > :first-child,
-#tablaVistaLocal thead tr:nth-child(2) > :nth-child(2) {
+#tablaVistaLocal thead tr:nth-child(2)> :first-child,
+#tablaVistaLocal thead tr:nth-child(2)> :nth-child(2) {
     position: sticky;
     left: 0;
     top: 41px;
@@ -630,13 +727,13 @@ td.franco-activo { background-color: #e0cffc !important; }
     border-right: 2px solid #dee2e6;
 }
 
-#tablaVistaLocal thead tr:nth-child(2) > :nth-child(2) {
+#tablaVistaLocal thead tr:nth-child(2)> :nth-child(2) {
     left: 280px;
 }
 
 /* FOOTER - FIJADO ABAJO */
-#tablaVistaLocal tfoot tr > :first-child,
-#tablaVistaLocal tfoot tr > :nth-child(2) {
+#tablaVistaLocal tfoot tr> :first-child,
+#tablaVistaLocal tfoot tr> :nth-child(2) {
     position: sticky;
     bottom: 0;
     left: 0;
@@ -645,29 +742,33 @@ td.franco-activo { background-color: #e0cffc !important; }
     border-top: 2px solid #adb5bd;
 }
 
-#tablaVistaLocal tfoot tr > :nth-child(2) {
+#tablaVistaLocal tfoot tr> :nth-child(2) {
     left: 280px;
 }
 
-#tablaVistaLocal tfoot tr > td:first-child {
+#tablaVistaLocal tfoot tr>td:first-child {
     position: sticky !important;
     left: 0 !important;
     bottom: 0 !important;
-    z-index: 80 !important; /* Encima del resto del footer */
-    background-color: #dee2e6 !important; /* Gris un poco más oscuro */
+    z-index: 80 !important;
+    /* Encima del resto del footer */
+    background-color: #dee2e6 !important;
+    /* Gris un poco más oscuro */
     border-right: 2px solid #adb5bd;
     width: 280px;
     min-width: 280px;
     max-width: 280px;
 }
 
-#tablaVistaLocal tfoot tr > td:nth-child(2) {
+#tablaVistaLocal tfoot tr>td:nth-child(2) {
     position: sticky !important;
-    left: 280px !important; /* Pegada a la primera */
+    left: 280px !important;
+    /* Pegada a la primera */
     bottom: 0 !important;
     z-index: 80 !important;
     background-color: #dee2e6 !important;
-    border-right: 3px solid #000; /* Línea negra separadora */
+    border-right: 3px solid #000;
+    /* Línea negra separadora */
     width: 80px;
     min-width: 80px;
 }
@@ -675,11 +776,13 @@ td.franco-activo { background-color: #e0cffc !important; }
 #tablaVistaLocal tfoot td {
     position: sticky;
     bottom: 0;
-    z-index: 60; /* Capa media */
+    z-index: 60;
+    /* Capa media */
     background-color: #e9ecef !important;
     border-top: 2px solid #adb5bd;
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
-    height: auto !important; /* Permitir que crezca si hay muchas promos */
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+    height: auto !important;
+    /* Permitir que crezca si hay muchas promos */
 }
 
 
@@ -797,7 +900,7 @@ td.franco-activo { background-color: #e0cffc !important; }
     max-width: 250px;
     z-index: 10000;
     pointer-events: none;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* BADGES DE PROMOCIONES */
@@ -842,25 +945,16 @@ td.franco-activo { background-color: #e0cffc !important; }
 
 /* RESPONSIVE */
 @media (max-width: 1400px) {
-    #tablaVistaLocal .table th,
-    #tablaVistaLocal .table td {
-        min-width: 40px;
-        width: 40px;
-        max-width: 40px;
-        padding: 0.3rem;
-        font-size: 0.85rem;
-    }
-    
-    #tablaVistaLocal .table tr > :first-child {
+    #tablaVistaLocal .table tr> :first-child {
         min-width: 250px;
         width: 250px;
         max-width: 250px;
     }
-    
-    #tablaVistaLocal .table tr > :nth-child(2) {
-        min-width: 70px;
-        width: 70px;
-        max-width: 70px;
+
+    #tablaVistaLocal .table tr> :nth-child(2) {
+        min-width: 85px;
+        width: 85px;
+        max-width: 85px;
     }
 }
 
@@ -869,21 +963,13 @@ td.franco-activo { background-color: #e0cffc !important; }
         max-height: 60vh;
         font-size: 0.8rem;
     }
-    
-    #tablaVistaLocal .table th,
-    #tablaVistaLocal .table td {
-        min-width: 35px;
-        width: 35px;
-        max-width: 35px;
-        padding: 0.2rem;
-    }
-    
+
     #tablaVistaLocal .vendedor-info-container {
         flex-direction: column;
         align-items: flex-start;
         padding: 4px;
     }
-    
+
     #tablaVistaLocal .btn-feedback {
         margin-top: 4px;
     }

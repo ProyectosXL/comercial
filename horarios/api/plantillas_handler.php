@@ -11,47 +11,87 @@ if ($metodo === 'POST') {
     $tipo = $input['tipo']; // 'A' o 'B'
     $datos = $input['datos']; // Array de {cod, dia, hora, franco}
 
+    // Validaciones iniciales
     if (!$suc || !$tipo) {
-        die(json_encode(['status' => 'error', 'message' => 'Faltan datos']));
+        die(json_encode(['status' => 'error', 'message' => 'Faltan datos de sucursal o tipo de semana.']));
     }
 
     $conn = getConexionSistemas();
-    if ($conn === false) die(json_encode(['status'=>'error', 'message'=>'Error BD']));
+    if ($conn === false) {
+        die(json_encode(['status' => 'error', 'message' => 'Error al conectar con la base de datos de Sistemas: ' . print_r(sqlsrv_errors(), true)]));
+    }
     
-    // 1. Borrar anterior (Limpiar para sobreescribir)
-    $sqlDel = "DELETE FROM FP_HORARIOS_BASE WHERE NRO_SUCURSAL = ? AND TIPO_SEMANA = ?";
-    if (!sqlsrv_query($conn, $sqlDel, [$suc, $tipo])) {
-        die(json_encode(['status'=>'error', 'message'=>'Error Delete: ' . print_r(sqlsrv_errors(), true)]));
+    // =========================================================
+    // INICIAR TRANSACCIÓN para asegurar la atomicidad de la operación
+    // =========================================================
+    if (sqlsrv_begin_transaction($conn) === false) {
+        die(json_encode(['status' => 'error', 'message' => 'Error al iniciar la transacción: ' . print_r(sqlsrv_errors(), true)]));
     }
 
-    // 2. Insertar nuevo
-    if (!empty($datos)) {
-        $sqlIns = "INSERT INTO FP_HORARIOS_BASE (NRO_SUCURSAL, TIPO_SEMANA, COD_VENDED, DIA_SEMANA, HORA, TIPO_HORA, ES_FRANCO) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        
-        foreach ($datos as $d) {
-            // Validamos que los datos no sean nulos
-            $cod = $d['cod'];
-            $dia = $d['dia'];
-            $hora = isset($d['hora']) ? $d['hora'] : null;
-            $tipoHora = isset($d['tipo']) ? $d['tipo'] : 'normal'; // NUEVO
-            $franco = $d['franco'];
-            $params = [$suc, $tipo, $cod, $dia, $hora, $tipoHora, $franco];
+    try {
+        // 1. Borrar registros anteriores para esta sucursal y tipo de semana
+        $sqlDel = "DELETE FROM FP_HORARIOS_BASE WHERE NRO_SUCURSAL = ? AND TIPO_SEMANA = ?";
+        $stmtDel = sqlsrv_query($conn, $sqlDel, [$suc, $tipo]);
+
+        if ($stmtDel === false) {
+            sqlsrv_rollback($conn); // Revertir si el borrado falla
+            die(json_encode(['status' => 'error', 'message' => 'Error al borrar datos anteriores: ' . print_r(sqlsrv_errors(), true)]));
+        }
+        // No es estrictamente necesario liberar el statement si la conexión se va a cerrar o hacer commit/rollback
+        // pero es una buena práctica: sqlsrv_free_stmt($stmtDel); 
+
+        // 2. Insertar los nuevos datos
+        if (!empty($datos)) {
+            $sqlIns = "INSERT INTO FP_HORARIOS_BASE (NRO_SUCURSAL, TIPO_SEMANA, COD_VENDED, DIA_SEMANA, HORA, TIPO_HORA, ES_FRANCO) VALUES (?, ?, ?, ?, ?, ?, ?)";
             
-            if (!sqlsrv_query($conn, $sqlIns, $params)) {
-                // Si falla uno, morimos y mostramos error para debug
-                die(json_encode(['status'=>'error', 'message'=>'Error SQL Insert', 'debug'=>sqlsrv_errors()]));
+            foreach ($datos as $d) {
+                $cod = trim($d['cod']);
+                $dia = intval($d['dia']);
+                // === Importante: Si es franco, HORA será 0. Si no, usará el valor o NULL. ===
+                $hora = (intval($d['franco']) === 1) ? 0 : (isset($d['hora']) ? intval($d['hora']) : null);
+                $tipoHora = isset($d['tipo']) ? trim($d['tipo']) : 'normal';
+                $franco = intval($d['franco']);
+
+                $params = [$suc, $tipo, $cod, $dia, $hora, $tipoHora, $franco];
+                
+                $stmtIns = sqlsrv_query($conn, $sqlIns, $params);
+                
+                if ($stmtIns === false) {
+                    sqlsrv_rollback($conn); // Revertir si una inserción falla
+                    die(json_encode([
+                        'status' => 'error',
+                        'message' => 'Error al insertar datos de plantilla. Posible duplicado o tipo de dato incorrecto.',
+                        'details' => print_r(sqlsrv_errors(), true),
+                        'data_attempted' => $params // Mostrar los datos que intentaron insertarse
+                    ]));
+                }
+                // sqlsrv_free_stmt($stmtIns); // Liberar statement
             }
         }
+        
+        // =========================================================
+        // CONFIRMAR TRANSACCIÓN si todo fue exitoso
+        // =========================================================
+        sqlsrv_commit($conn);
+        sqlsrv_close($conn);
+        echo json_encode(['status' => 'ok', 'message' => 'Plantilla guardada correctamente.']);
+
+    } catch (Exception $e) {
+        // En caso de cualquier excepción inesperada
+        sqlsrv_rollback($conn);
+        die(json_encode(['status' => 'error', 'message' => 'Excepción inesperada: ' . $e->getMessage()]));
     }
-    
-    sqlsrv_close($conn);
-    echo json_encode(['status' => 'ok']);
+
 } elseif ($metodo === 'GET') {
     // CARGAR PLANTILLA
     $suc = $_GET['sucursal'];
     $tipo = $_GET['tipo'];
     
     $conn = getConexionSistemas();
+    if ($conn === false) {
+        die(json_encode(['status' => 'error', 'message' => 'Error al conectar con la base de datos de Sistemas para cargar: ' . print_r(sqlsrv_errors(), true)]));
+    }
+
     $sql = "SELECT COD_VENDED, DIA_SEMANA, HORA, TIPO_HORA, ES_FRANCO FROM FP_HORARIOS_BASE WHERE NRO_SUCURSAL = ? AND TIPO_SEMANA = ?";
     $stmt = sqlsrv_query($conn, $sql, [$suc, $tipo]);
     
@@ -63,13 +103,15 @@ if ($metodo === 'POST') {
             
             if (!isset($agenda[$id])) $agenda[$id] = ['horarios' => [], 'francos' => []];
             
-            if ($row['ES_FRANCO'] == 1) {
+            // Si ES_FRANCO es 1, se considera franco, independientemente del valor de HORA
+            if (intval($row['ES_FRANCO']) == 1) { // Asegurarse de que sea int
                 $agenda[$id]['francos'][$dia] = true;
             } else {
-                // Guardamos la hora y su tipo
+                // Guardamos la hora y su tipo para horarios normales
                 $agenda[$id]['horarios'][$dia][intval($row['HORA'])] = strtolower($row['TIPO_HORA']);
             }
         }
+        sqlsrv_free_stmt($stmt);
     }
     sqlsrv_close($conn);
     echo json_encode($agenda);

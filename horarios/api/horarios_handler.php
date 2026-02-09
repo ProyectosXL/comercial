@@ -1,4 +1,9 @@
 <?php
+// --- INICIO DE CONFIGURACIÓN DE ERRORES PARA DEPURACIÓN ---
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+// --- FIN DE CONFIGURACIÓN DE ERRORES ---
+
 header('Content-Type: application/json');
 require_once 'conexion.php';
 
@@ -7,10 +12,12 @@ $usuarioActual = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : 'SISTEMA';
 
 $metodo = $_SERVER['REQUEST_METHOD'];
 
+// =========================================================
+// BLOQUES DE LLAMADA A FUNCIONES
+// =========================================================
 if ($metodo === 'POST') {
     guardarDatos($usuarioActual);
 } elseif ($metodo === 'GET') {
-    // NUEVA LÓGICA: Distinguir entre cargar todo o solo verificar disponibilidad
     if (isset($_GET['accion']) && $_GET['accion'] === 'verificar_disponibilidad') {
         verificarDisponibilidad();
     } else {
@@ -18,34 +25,43 @@ if ($metodo === 'POST') {
     }
 }
 
+// =========================================================
+// DEFINICIONES DE FUNCIONES
+// =========================================================
+
 function guardarDatos($usuario) {
     $input = json_decode(file_get_contents('php://input'), true);
     $conn = getConexionSistemas();
 
-    // --- VALIDACIÓN DE CRUCE DE HORARIOS (Punto 4) ---
-    // Antes de borrar nada, verificamos si estos empleados ya trabajan en OTRO local esos días
-    $nroSucursal = $input['nroSucursal'];
-    $fechaInicio = $input['fechaInicio'];
-    $fechaFin = $input['fechaFin'];
-    $horarios = $input['horarios'];
+    $nroSucursal = $input['nroSucursal'] ?? null;
+    $fechaInicio = $input['fechaInicio'] ?? null;
+    $fechaFin = $input['fechaFin'] ?? null;
+    $horarios = $input['horarios'] ?? [];
+    $francos = $input['francos'] ?? [];
+    $vendedoresEnGrilla = $input['vendedoresEnGrilla'] ?? [];
+    $notas = $input['notas'] ?? [];
+    $observacionesSemana = $input['observaciones'] ?? '';
 
-    // Obtenemos todos los vendedores que estamos intentando guardar
+    if (!$nroSucursal || !$fechaInicio || !$fechaFin) {
+        die(json_encode(['status' => 'error', 'message' => 'Faltan parámetros críticos (sucursal, fechaInicio, fechaFin).']));
+    }
+
+    if (!$conn) {
+        die(json_encode(['status' => 'error', 'message' => 'Error al conectar con la base de datos de Sistemas al guardar.']));
+    }
+
+    // --- 1. VALIDACIÓN DE CRUCE DE HORARIOS (Punto 4) --- (Mantenido)
     $vendedoresInvolucrados = array_unique(array_column($horarios, 'codVended'));
-    
     if (!empty($vendedoresInvolucrados)) {
         $placeholders = implode(',', array_fill(0, count($vendedoresInvolucrados), '?'));
-        
-        // 1. Traemos TODAS las horas ocupadas en OTRAS sucursales para esta gente en esta semana
         $sqlCheck = "SELECT COD_VENDED, FECHA, HORA, NRO_SUCURSAL 
                      FROM FP_GESTION_HORARIOS 
                      WHERE FECHA BETWEEN ? AND ? 
                      AND NRO_SUCURSAL <> ? 
                      AND COD_VENDED IN ($placeholders)";
-        
         $paramsCheck = array_merge([$fechaInicio, $fechaFin, $nroSucursal], $vendedoresInvolucrados);
         $stmtCheck = sqlsrv_query($conn, $sqlCheck, $paramsCheck);
         
-        // 2. Construimos un mapa de ocupación: [Legajo][Fecha][Hora] = Sucursal
         $ocupacionExterna = [];
         if ($stmtCheck) {
             while ($row = sqlsrv_fetch_array($stmtCheck, SQLSRV_FETCH_ASSOC)) {
@@ -53,26 +69,20 @@ function guardarDatos($usuario) {
                 $fec = $row['FECHA']->format('Y-m-d');
                 $hr  = intval($row['HORA']);
                 $suc = $row['NRO_SUCURSAL'];
-                
                 if (!isset($ocupacionExterna[$lid])) $ocupacionExterna[$lid] = [];
                 if (!isset($ocupacionExterna[$lid][$fec])) $ocupacionExterna[$lid][$fec] = [];
-                
                 $ocupacionExterna[$lid][$fec][$hr] = $suc;
             }
             sqlsrv_free_stmt($stmtCheck);
         }
 
-        // 3. Comparamos lo que queremos guardar contra el mapa de ocupación
         foreach ($horarios as $h) {
             $nuevoLegajo = trim($h['codVended']);
             $nuevaFecha = $h['fecha'];
             $nuevaHora = intval($h['hora']);
-
-            // ¿Existe este slot ocupado en el mapa externo?
             if (isset($ocupacionExterna[$nuevoLegajo][$nuevaFecha][$nuevaHora])) {
                 $sucursalConflicto = $ocupacionExterna[$nuevoLegajo][$nuevaFecha][$nuevaHora];
                 $fechaFormateada = date('d/m/Y', strtotime($nuevaFecha));
-                
                 sqlsrv_close($conn);
                 die(json_encode([
                     'status' => 'error', 
@@ -82,128 +92,193 @@ function guardarDatos($usuario) {
         }
     }
 
-// --- VALIDACIÓN PUNTO 1: BANCO DE HORAS (P vs D) - CORREGIDO ---
-    
-    // 1. Identificar vendedores que tienen horas 'D' en lo que se quiere guardar
+    // --- VALIDACIÓN PUNTO 1: BANCO DE HORAS (P vs D) - COMENTADO --- (Mantenido)
     $vendedoresConDevolucion = [];
     foreach ($horarios as $h) {
-        if ($h['tipo'] === 'devuelve') $vendedoresConDevolucion[$h['codVended']] = true;
+        if (($h['tipo'] ?? '') === 'devuelve') $vendedoresConDevolucion[$h['codVended']] = true;
     }
-
     if (!empty($vendedoresConDevolucion)) {
         foreach (array_keys($vendedoresConDevolucion) as $legajo) {
-            
-            // A. Calcular Saldo Histórico en Base de Datos (TODO MENOS la semana actual)
             $sqlSaldo = "
                 SELECT 
                     SUM(CASE WHEN TIPO_HORA = 'permiso' THEN 1 ELSE 0 END) as TotalP,
                     SUM(CASE WHEN TIPO_HORA = 'devuelve' THEN 1 ELSE 0 END) as TotalD
                 FROM FP_GESTION_HORARIOS
                 WHERE COD_VENDED = ? 
-                AND (FECHA < ? OR FECHA > ?) -- Excluye la semana que estamos guardando
+                AND (FECHA < ? OR FECHA > ?)
             ";
-            
             $stmtSaldo = sqlsrv_query($conn, $sqlSaldo, [$legajo, $fechaInicio, $fechaFin]);
-            
             $historialP = 0; $historialD = 0;
             if ($stmtSaldo && $row = sqlsrv_fetch_array($stmtSaldo, SQLSRV_FETCH_ASSOC)) {
                 $historialP = intval($row['TotalP']);
                 $historialD = intval($row['TotalD']);
             }
             if($stmtSaldo) sqlsrv_free_stmt($stmtSaldo);
-
-            // B. Calcular lo Nuevo (Lo que el usuario acaba de dibujar en esta semana)
             $nuevoP = 0; $nuevoD = 0;
             foreach ($horarios as $h) {
-                if ($h['codVended'] == $legajo) {
-                    if ($h['tipo'] === 'permiso') $nuevoP++;
-                    if ($h['tipo'] === 'devuelve') $nuevoD++;
+                if (($h['codVended'] ?? '') == $legajo) {
+                    if (($h['tipo'] ?? '') === 'permiso') $nuevoP++;
+                    if (($h['tipo'] ?? '') === 'devuelve') $nuevoD++;
                 }
             }
-
-            // C. Validación Matemática
             $totalPermisos = $historialP + $nuevoP;
             $totalDevoluciones = $historialD + $nuevoD;
             $saldoFinal = $totalPermisos - $totalDevoluciones;
-
-        // ==========================================
-        // MODIFICACIÓN: COMENTAMOS EL ERROR PERO MANTENEMOS EL CÁLCULO
-        // ==========================================
-        // if ($saldoFinal < 0) {
-        //     // Buscamos el nombre en el array que nos mandó el JS
-        //     $nombreError = "Vendedor $legajo"; // Fallback por si acaso
-        //     foreach ($horarios as $h) {
-        //         if ($h['codVended'] == $legajo && isset($h['nombreVendedor'])) {
-        //             $nombreError = $h['nombreVendedor'];
-        //             break;
-        //         }
-        //     }
-        //     
-        //     sqlsrv_close($conn);
-        // 
-        //     die(json_encode([
-        //         'status' => 'error',
-        //         'message' => "ERROR DE SALDO: <b>$nombreError</b> no puede devolver más horas de las que tiene acumuladas.<br><br>Total Permisos (P): $totalPermisos<br>Total Devoluciones (D): $totalDevoluciones<br><b>Saldo final: $saldoFinal horas.</b>"
-        //     ]));
-        // }
         }
     }
 
-    // --- SI PASA LA VALIDACIÓN, GUARDAMOS ---
+    // =========================================================
+    // INICIAR TRANSACCIÓN para asegurar la atomicidad de la operación
+    // =========================================================
     if (sqlsrv_begin_transaction($conn) === false) {
-        die(json_encode(['status' => 'error', 'message' => 'Error transacción.']));
+        die(json_encode(['status' => 'error', 'message' => 'Error al iniciar la transacción: ' . print_r(sqlsrv_errors(), true)]));
     }
 
-    // 1. Guardar Horarios
-    $sqlDelete = "DELETE FROM FP_GESTION_HORARIOS WHERE NRO_SUCURSAL = ? AND FECHA BETWEEN ? AND ?";
-    sqlsrv_query($conn, $sqlDelete, [$nroSucursal, $fechaInicio, $fechaFin]);
-
-    if (!empty($horarios)) {
-        $sqlInsert = "INSERT INTO FP_GESTION_HORARIOS (NRO_SUCURSAL, COD_VENDED, FECHA, HORA, TIPO_HORA, MODIFICADO_POR) VALUES (?, ?, ?, ?, ?, ?)";
-        foreach ($horarios as $h) {
-            sqlsrv_query($conn, $sqlInsert, [$nroSucursal, $h['codVended'], $h['fecha'], $h['hora'], $h['tipo'], $usuario]);
-        }
-    }
-
-    // 2. Guardar Francos
-    $francos = $input['francos'];
-    $vendedoresEnGrilla = $input['vendedoresEnGrilla'];
-    if (!empty($vendedoresEnGrilla)) {
-        $phV = implode(',', array_fill(0, count($vendedoresEnGrilla), '?'));
-        $sqlDelF = "DELETE FROM FP_GESTION_FRANCOS WHERE FECHA_FRANCO BETWEEN ? AND ? AND COD_VENDED IN ($phV)";
-        $paramsDelF = array_merge([$fechaInicio, $fechaFin], $vendedoresEnGrilla);
-        sqlsrv_query($conn, $sqlDelF, $paramsDelF);
-    }
-    if (!empty($francos)) {
-        $sqlInsF = "INSERT INTO FP_GESTION_FRANCOS (COD_VENDED, FECHA_FRANCO, MODIFICADO_POR) VALUES (?, ?, ?)";
-        foreach ($francos as $f) sqlsrv_query($conn, $sqlInsF, [$f['codVended'], $f['fechaFranco'], $usuario]);
-    }
-
-    // 3. Guardar Notas por Vendedor (Punto 3)
-    $notas = $input['notas']; // Array de {codVended, fecha, nota}
+    $debugInfo = []; // Array para almacenar información de depuración
     
-    // Borramos notas viejas de estos vendedores en estas fechas para esta sucursal
-    $sqlDelNotas = "DELETE FROM FP_GESTION_NOTAS_VENDEDOR WHERE NRO_SUCURSAL = ? AND FECHA BETWEEN ? AND ?";
-    sqlsrv_query($conn, $sqlDelNotas, [$nroSucursal, $fechaInicio, $fechaFin]);
+    try {
+        // --- 1. Guardar Horarios (DELETE y luego INSERT) ---
+        $sqlDeleteHorarios = "DELETE FROM FP_GESTION_HORARIOS WHERE NRO_SUCURSAL = ? AND FECHA BETWEEN ? AND ?";
+        $stmtDeleteHorarios = sqlsrv_query($conn, $sqlDeleteHorarios, [$nroSucursal, $fechaInicio, $fechaFin]);
+        if ($stmtDeleteHorarios === false) {
+            sqlsrv_rollback($conn);
+            die(json_encode(['status' => 'error', 'message' => 'Error al borrar horarios anteriores: ' . print_r(sqlsrv_errors(), true)]));
+        }
 
-    if (!empty($notas)) {
-        $sqlInsNota = "INSERT INTO FP_GESTION_NOTAS_VENDEDOR (NRO_SUCURSAL, COD_VENDED, FECHA, NOTA, MODIFICADO_POR) VALUES (?, ?, ?, ?, ?)";
-        foreach ($notas as $n) {
-            if (!empty(trim($n['nota']))) {
-                sqlsrv_query($conn, $sqlInsNota, [$nroSucursal, $n['codVended'], $n['fecha'], $n['nota'], $usuario]);
+        if (!empty($horarios)) {
+            $sqlInsertHorarios = "INSERT INTO FP_GESTION_HORARIOS (NRO_SUCURSAL, COD_VENDED, FECHA, HORA, TIPO_HORA, MODIFICADO_POR) VALUES (?, ?, ?, ?, ?, ?)";
+            foreach ($horarios as $h) {
+                $stmtInsertHorarios = sqlsrv_query($conn, $sqlInsertHorarios, [
+                    $nroSucursal, 
+                    $h['codVended'] ?? '', 
+                    $h['fecha'] ?? '', 
+                    $h['hora'] ?? null, 
+                    $h['tipo'] ?? 'normal', 
+                    $usuario
+                ]);
+                if ($stmtInsertHorarios === false) {
+                    sqlsrv_rollback($conn);
+                    die(json_encode(['status' => 'error', 'message' => 'Error al insertar horarios: ' . print_r(sqlsrv_errors(), true), 'data_attempted' => $h]));
+                }
             }
         }
-    }
-    
-    // (Mantener guardado de Observaciones Semanales si quieres, pero borramos las diarias viejas)
 
-    sqlsrv_commit($conn);
-    echo json_encode(['status' => 'ok']);
-    sqlsrv_close($conn);
+        // --- 2. Guardar Francos (DELETE y luego INSERT) ---
+        $debugFrancos = []; // Para almacenar el resultado de cada franco
+
+        if (!empty($vendedoresEnGrilla)) {
+            $placeholdersVendedores = implode(',', array_fill(0, count($vendedoresEnGrilla), '?'));
+            $sqlDeleteFrancos = "DELETE FROM FP_GESTION_FRANCOS WHERE NRO_SUCURSAL = ? AND FECHA_FRANCO BETWEEN ? AND ? AND COD_VENDED IN ($placeholdersVendedores)";
+            $paramsDeleteFrancos = array_merge([$nroSucursal, $fechaInicio, $fechaFin], $vendedoresEnGrilla);
+            $stmtDeleteFrancos = sqlsrv_query($conn, $sqlDeleteFrancos, $paramsDeleteFrancos);
+            if ($stmtDeleteFrancos === false) {
+                sqlsrv_rollback($conn);
+                die(json_encode(['status' => 'error', 'message' => 'Error al borrar francos anteriores: ' . print_r(sqlsrv_errors(), true)]));
+            }
+            $debugFrancos['delete_affected_rows'] = sqlsrv_rows_affected($stmtDeleteFrancos);
+        }
+        
+        if (!empty($francos)) {
+            $sqlInsertFrancos = "INSERT INTO FP_GESTION_FRANCOS (NRO_SUCURSAL, COD_VENDED, FECHA_FRANCO, MODIFICADO_POR) VALUES (?, ?, ?, ?)";
+            $insertCount = 0;
+            foreach ($francos as $f) {
+                $insertCount++;
+                $currentFrancoDebug = [
+                    'attempt' => $insertCount,
+                    'data' => $f,
+                    'result' => 'OK'
+                ];
+
+                $stmtInsertFrancos = sqlsrv_query($conn, $sqlInsertFrancos, [
+                    $nroSucursal, 
+                    $f['codVended'] ?? '', 
+                    $f['fechaFranco'] ?? '', 
+                    $usuario
+                ]);
+                if ($stmtInsertFrancos === false) {
+                    $currentFrancoDebug['result'] = 'SQL_ERROR';
+                    $currentFrancoDebug['error_details'] = print_r(sqlsrv_errors(), true);
+                    sqlsrv_rollback($conn); // Rollback y die si hay un error SQL real
+                    die(json_encode(['status' => 'error', 'message' => 'Error al insertar franco: ' . $currentFrancoDebug['error_details'], 'data_attempted' => $f, 'debug_francos_history' => $debugFrancos]));
+                }
+                $rowsAffectedInsertFranco = sqlsrv_rows_affected($stmtInsertFrancos);
+                $currentFrancoDebug['affected_rows'] = $rowsAffectedInsertFranco;
+                
+                if ($rowsAffectedInsertFranco === 0) {
+                    $currentFrancoDebug['result'] = 'WARNING_0_ROWS_AFFECTED';
+                    // No hacemos die/rollback aquí, pero lo registramos para depuración
+                }
+                $debugFrancos['inserts'][] = $currentFrancoDebug;
+            }
+        }
+        $debugInfo['francos_operations'] = $debugFrancos; // Añadir toda la info de francos al debug general
+
+        // --- 3. Guardar Notas por Vendedor (DELETE y luego INSERT) --- (Mantenido)
+        $sqlDeleteNotas = "DELETE FROM FP_GESTION_NOTAS_VENDEDOR WHERE NRO_SUCURSAL = ? AND FECHA BETWEEN ? AND ?";
+        $stmtDeleteNotas = sqlsrv_query($conn, $sqlDeleteNotas, [$nroSucursal, $fechaInicio, $fechaFin]);
+        if ($stmtDeleteNotas === false) {
+            sqlsrv_rollback($conn);
+            die(json_encode(['status' => 'error', 'message' => 'Error al borrar notas anteriores: ' . print_r(sqlsrv_errors(), true)]));
+        }
+
+        if (!empty($notas)) {
+            $sqlInsertNota = "INSERT INTO FP_GESTION_NOTAS_VENDEDOR (NRO_SUCURSAL, COD_VENDED, FECHA, NOTA, MODIFICADO_POR) VALUES (?, ?, ?, ?, ?)";
+            foreach ($notas as $n) {
+                if (!empty(trim($n['nota'] ?? ''))) {
+                    $stmtInsertNota = sqlsrv_query($conn, $sqlInsertNota, [
+                        $nroSucursal, 
+                        $n['codVended'] ?? '', 
+                        $n['fecha'] ?? '', 
+                        $n['nota'] ?? '', 
+                        $usuario
+                    ]);
+                    if ($stmtInsertNota === false) {
+                        sqlsrv_rollback($conn);
+                        die(json_encode(['status' => 'error', 'message' => 'Error al insertar notas: ' . print_r(sqlsrv_errors(), true), 'data_attempted' => $n]));
+                    }
+                }
+            }
+        }
+        
+        // --- 4. Guardar Observaciones Semanales (DELETE y luego INSERT) --- (Mantenido)
+        $sqlDeleteObs = "DELETE FROM FP_GESTION_OBSERVACIONES WHERE NRO_SUCURSAL = ? AND FECHA_INICIO_SEMANA = ?";
+        $stmtDeleteObs = sqlsrv_query($conn, $sqlDeleteObs, [$nroSucursal, $fechaInicio]);
+        if ($stmtDeleteObs === false) {
+            sqlsrv_rollback($conn);
+            die(json_encode(['status' => 'error', 'message' => 'Error al borrar observaciones semanales: ' . print_r(sqlsrv_errors(), true)]));
+        }
+        if (!empty(trim($observacionesSemana))) {
+            $sqlInsertObs = "INSERT INTO FP_GESTION_OBSERVACIONES (NRO_SUCURSAL, FECHA_INICIO_SEMANA, OBSERVACIONES, MODIFICADO_POR) VALUES (?, ?, ?, ?)";
+            $stmtInsertObs = sqlsrv_query($conn, $sqlInsertObs, [$nroSucursal, $fechaInicio, $observacionesSemana, $usuario]);
+            if ($stmtInsertObs === false) {
+                sqlsrv_rollback($conn);
+                die(json_encode(['status' => 'error', 'message' => 'Error al insertar observaciones semanales: ' . print_r(sqlsrv_errors(), true)]));
+            }
+        }
+
+        // =========================================================
+        // CONFIRMAR TRANSACCIÓN
+        // =========================================================
+        sqlsrv_commit($conn);
+        echo json_encode([
+            'status' => 'ok', 
+            'message' => 'Los horarios se guardaron correctamente en el sistema!',
+            'debug' => $debugInfo // Incluir la info de depuración en la respuesta de éxito
+        ]);
+
+    } catch (Exception $e) {
+        sqlsrv_rollback($conn);
+        die(json_encode(['status' => 'error', 'message' => 'Excepción inesperada durante el guardado: ' . $e->getMessage()]));
+    } finally {
+        sqlsrv_close($conn);
+    }
 }
 
+// =========================================================
+// FUNCIONES verificarDisponibilidad y cargarDatos (copiadas de tu contexto original)
+// =========================================================
+
 function verificarDisponibilidad() {
-    // Recibimos IDs por GET (ej: 1869,2150)
     $ids = $_GET['ids'] ?? '';
     $nroSucursal = $_GET['sucursal'] ?? 0;
     $fechaInicio = $_GET['fechaInicio'] ?? '';
@@ -214,13 +289,11 @@ function verificarDisponibilidad() {
         return;
     }
 
-    // Convertimos la lista "1,2,3" en array para SQL
     $listaIdsArray = explode(',', $ids);
     $listaIdsLimpia = implode("','", array_map('trim', $listaIdsArray));
 
     $conn = getConexionSistemas();
     
-    // CAMBIO: Quitamos el GROUP BY para traer cada hora individualmente
     $sql = "
         SELECT COD_VENDED, FECHA, HORA, NRO_SUCURSAL
         FROM FP_GESTION_HORARIOS 
@@ -236,13 +309,12 @@ function verificarDisponibilidad() {
         while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             $id = $row['COD_VENDED'];
             $fecha = $row['FECHA']->format('Y-m-d');
-            $hora = intval($row['HORA']); // Traemos la hora exacta (ej: 7)
+            $hora = intval($row['HORA']);
             $sucursal = $row['NRO_SUCURSAL'];
             
             if (!isset($bloqueos[$id])) $bloqueos[$id] = [];
             if (!isset($bloqueos[$id][$fecha])) $bloqueos[$id][$fecha] = [];
             
-            // Guardamos: [ID][FECHA][HORA] = SUCURSAL
             $bloqueos[$id][$fecha][$hora] = $sucursal;
         }
         sqlsrv_free_stmt($stmt);
@@ -253,13 +325,12 @@ function verificarDisponibilidad() {
 }
 
 function cargarDatos() {
-    // 1. Validar parámetros
     $nroSucursal = intval($_GET['sucursal'] ?? 0);
     $fechaInicio = $_GET['fechaInicio'] ?? '';
     $fechaFin = $_GET['fechaFin'] ?? '';
 
     if (!$nroSucursal || !$fechaInicio || !$fechaFin) {
-        die(json_encode(['status' => 'error', 'message' => 'Faltan parámetros.']));
+        die(json_encode(['status' => 'error', 'message' => 'Faltan parámetros de carga (sucursal, fechaInicio, fechaFin).']));
     }
 
     $respuesta = [];
@@ -267,8 +338,6 @@ function cargarDatos() {
     // =================================================================================
     // PASO 1: CARGAR PROMOCIONES BANCARIAS
     // =================================================================================
-    
-    // 1. Obtener NOMBRE EXACTO de la sucursal en RRHH para traducir ID
     $connCorp = getConexionCorp(); 
     $sqlNomRRHH = "SELECT DESC_DEPARTAMENTO FROM DEPARTAMENTO WHERE ID_DEPARTAMENTO = ?";
     $stmtNom = sqlsrv_query($connCorp, $sqlNomRRHH, [$nroSucursal]);
@@ -280,12 +349,7 @@ function cargarDatos() {
     sqlsrv_free_stmt($stmtNom);
     sqlsrv_close($connCorp);
 
-    // 2. Buscar promos usando el nombre
     $connPromos = getConexionCentral(); 
-    $fIniSQL = date('Ymd', strtotime($fechaInicio));
-    $fFinSQL = date('Ymd', strtotime($fechaFin));
-    
-    // Si no encontró nombre, usamos un comodín imposible
     $paramBusqueda = !empty($nombreSucursal) ? $nombreSucursal : "NO_ENCONTRADO";
 
     $sqlPromociones = "
@@ -301,13 +365,12 @@ function cargarDatos() {
         INNER JOIN 
             SUCURSAL C ON B.ID_SUCURSAL = C.ID_SUCURSAL
         WHERE
-            C.DESC_SUCURSAL = ?  -- Buscamos por nombre exacto (traducción manual)
+            C.DESC_SUCURSAL = ?
             AND A.HABILITADO = 'S'
     ";
 
     $stmtPromociones = sqlsrv_query($connPromos, $sqlPromociones, [$paramBusqueda]);
     
-    // Si falla exacto, probamos LIKE
     if ($stmtPromociones === false || !sqlsrv_has_rows($stmtPromociones)) {
         $sqlPromociones = str_replace("C.DESC_SUCURSAL =", "C.DESC_SUCURSAL LIKE", $sqlPromociones);
         $stmtPromociones = sqlsrv_query($connPromos, $sqlPromociones, ["%" . $paramBusqueda . "%"]);
@@ -372,9 +435,9 @@ function cargarDatos() {
     }
     $respuesta['horarios'] = $horarios; 
 
-    // B. Francos Reales
-    $sqlFrancos = "SELECT COD_VENDED, FECHA_FRANCO FROM FP_GESTION_FRANCOS WHERE FECHA_FRANCO BETWEEN ? AND ?"; 
-    $stmtFrancos = sqlsrv_query($connSistemas, $sqlFrancos, [$fechaInicio, $fechaFin]); 
+    // B. Francos Reales (CORREGIDO con NRO_SUCURSAL)
+    $sqlFrancos = "SELECT COD_VENDED, FECHA_FRANCO FROM FP_GESTION_FRANCOS WHERE NRO_SUCURSAL = ? AND FECHA_FRANCO BETWEEN ? AND ?"; 
+    $stmtFrancos = sqlsrv_query($connSistemas, $sqlFrancos, [$nroSucursal, $fechaInicio, $fechaFin]); 
     $francos = []; 
     if ($stmtFrancos) {
         while ($row = sqlsrv_fetch_array($stmtFrancos, SQLSRV_FETCH_ASSOC)) { 
@@ -421,28 +484,24 @@ function cargarDatos() {
     if($stmtObs) sqlsrv_free_stmt($stmtObs);
 
     // =================================================================================
-    // PASO 3: LÓGICA AUTOMÁTICA DE PLANTILLAS BASE
+    // PASO 3: LÓGICA AUTOMÁTICA DE PLANTILLAS BASE (CORREGIDO para usar $respuesta['francos'])
     // =================================================================================
-    // Si no hay horarios ni francos guardados, cargamos la plantilla
+    // Si no hay horarios ni francos guardados *para esta sucursal*, cargamos la plantilla
     if (empty($respuesta['horarios']) && empty($respuesta['francos'])) {
-        
-        // Calcular Semana A (Impar) o B (Par)
         $date = new DateTime($fechaInicio);
         $numSemana = intval($date->format('W'));
         $tipoPlantilla = ($numSemana % 2 != 0) ? 'A' : 'B'; 
 
-        // Buscar Plantilla en BD
         $sqlBase = "SELECT COD_VENDED, DIA_SEMANA, HORA, TIPO_HORA, ES_FRANCO FROM FP_HORARIOS_BASE WHERE NRO_SUCURSAL = ? AND TIPO_SEMANA = ?";
         $stmtBase = sqlsrv_query($connSistemas, $sqlBase, [$nroSucursal, $tipoPlantilla]);
         
         if ($stmtBase) {
             while ($row = sqlsrv_fetch_array($stmtBase, SQLSRV_FETCH_ASSOC)) {
-                $diaSemana = intval($row['DIA_SEMANA']); // 1=Lunes
-                // Calcular fecha real: Lunes + (dia-1)
+                $diaSemana = intval($row['DIA_SEMANA']);
                 $fechaReal = date('Y-m-d', strtotime($fechaInicio . ' + ' . ($diaSemana - 1) . ' days'));
                 $id = trim($row['COD_VENDED']);
 
-                if ($row['ES_FRANCO'] == 1) {
+                if (intval($row['ES_FRANCO']) == 1) {
                     $respuesta['francos'][] = ['COD_VENDED' => $id, 'FECHA_FRANCO' => $fechaReal];
                 } else {
                     $respuesta['horarios'][] = [
@@ -452,8 +511,6 @@ function cargarDatos() {
                         'TIPO_HORA' => strtolower($row['TIPO_HORA'] ?: 'normal')
                     ];
                 }
-                
-                // Agregamos a la lista de actividad para que se dibuje la fila
                 $vendedoresConActividad[$id] = true;
             }
             sqlsrv_free_stmt($stmtBase);
@@ -461,21 +518,12 @@ function cargarDatos() {
         }
     }
 
-    // Convertir keys a lista simple para el frontend
     $respuesta['vendedoresConActividad'] = array_keys($vendedoresConActividad);
 
-        // --- BANCO DE HORAS (SALDO ANTERIOR) ---
-    // Calculamos: (Total P - Total D) acumulado ANTES de la fecha de inicio de esta semana.
-    // Esto es el "Saldo Inicial" con el que arranca la semana.
+    // --- BANCO DE HORAS (SALDO ANTERIOR) ---
     $saldosAnteriores = [];
-    
-    if (!empty($vendedoresConActividad)) {
-        $listaVendedores = implode("','", $vendedoresConActividad); // Ojo: asegurarse que $vendedoresConActividad tenga keys si es array asoc.
-        // Si $vendedoresConActividad es array de IDs (keys), usa array_keys($vendedoresConActividad) si aplica.
-        // En tu código actual $vendedoresConActividad es un array simple de IDs al final del paso 3.
-        
-        // CORRECCIÓN: Si $vendedoresConActividad está vacío, no ejecutamos.
-        // Si usas la versión anterior del código, asegúrate de que sea una lista de IDs.
+    if (!empty($respuesta['vendedoresConActividad'])) {
+        $listaVendedores = implode("','", $respuesta['vendedoresConActividad']);
         
         $sqlSaldo = "
             SELECT 
@@ -483,7 +531,7 @@ function cargarDatos() {
                 SUM(CASE WHEN TIPO_HORA = 'permiso' THEN 1 ELSE 0 END) as TotalP,
                 SUM(CASE WHEN TIPO_HORA = 'devuelve' THEN 1 ELSE 0 END) as TotalD
             FROM FP_GESTION_HORARIOS
-            WHERE FECHA < ? -- Estrictamente anterior a esta semana
+            WHERE FECHA < ? 
             AND (TIPO_HORA = 'permiso' OR TIPO_HORA = 'devuelve')
             GROUP BY COD_VENDED
         ";
@@ -494,13 +542,12 @@ function cargarDatos() {
             while ($row = sqlsrv_fetch_array($stmtSaldo, SQLSRV_FETCH_ASSOC)) {
                 $p = intval($row['TotalP']);
                 $d = intval($row['TotalD']);
-                $saldosAnteriores[trim($row['COD_VENDED'])] = $p - $d; // Saldo positivo = Debe horas
+                $saldosAnteriores[trim($row['COD_VENDED'])] = $p - $d;
             }
             sqlsrv_free_stmt($stmtSaldo);
         }
     }
     $respuesta['saldosAnteriores'] = $saldosAnteriores;
-
 
     // =================================================================================
     // PASO 4: BLOQUEOS EXTERNOS (Cruce de Sucursales)
@@ -537,6 +584,255 @@ function cargarDatos() {
 
     sqlsrv_close($connSistemas);
 
-    // Salida Final
     echo json_encode($respuesta);
 }
+
+// =========================================================
+// FUNCIÓN 1: RESUMEN DE BANCO DE HORAS
+// =========================================================
+function getResumenBancoHoras($conn, $sucursal, $vendedor) {
+    $sqlAcumuladas = "
+        SELECT 
+            COD_VENDED,
+            SUM(CASE WHEN TIPO_HORA IN ('P', 'permiso', 'perm') THEN 1 ELSE 0 END) AS horas_acumuladas
+        FROM FP_GESTION_HORARIOS
+        WHERE TIPO_HORA IN ('P', 'permiso', 'perm')
+    ";
+    
+    $sqlUtilizadas = "
+        SELECT 
+            COD_VENDED,
+            SUM(CASE WHEN TIPO_HORA IN ('D', 'devuelve', 'dev') THEN 1 ELSE 0 END) AS horas_utilizadas
+        FROM FP_GESTION_HORARIOS
+        WHERE TIPO_HORA IN ('D', 'devuelve', 'dev')
+    ";
+    
+    $params = [];
+    
+    if (!empty($sucursal)) {
+        $sqlAcumuladas .= " AND NRO_SUCURSAL = ?";
+        $sqlUtilizadas .= " AND NRO_SUCURSAL = ?";
+        $params[] = $sucursal;
+    }
+    
+    if (!empty($vendedor)) {
+        $sqlAcumuladas .= " AND COD_VENDED = ?";
+        $sqlUtilizadas .= " AND COD_VENDED = ?";
+        $params[] = $vendedor;
+    }
+    
+    $sqlAcumuladas .= " GROUP BY COD_VENDED";
+    $sqlUtilizadas .= " GROUP BY COD_VENDED";
+    
+    $stmtAcum = sqlsrv_query($conn, $sqlAcumuladas, $params);
+    $stmtUtil = sqlsrv_query($conn, $sqlUtilizadas, $params);
+    
+    $acumuladas = 0;
+    $utilizadas = 0;
+    
+    if ($stmtAcum) {
+        while ($row = sqlsrv_fetch_array($stmtAcum, SQLSRV_FETCH_ASSOC)) {
+            $acumuladas += (int)$row['horas_acumuladas'];
+        }
+        sqlsrv_free_stmt($stmtAcum);
+    }
+    
+    if ($stmtUtil) {
+        while ($row = sqlsrv_fetch_array($stmtUtil, SQLSRV_FETCH_ASSOC)) {
+            $utilizadas += (int)$row['horas_utilizadas'];
+        }
+        sqlsrv_free_stmt($stmtUtil);
+    }
+    
+    $saldo = $acumuladas - $utilizadas;
+    
+    $fecha6MesesAtras = date('Y-m-01', strtotime('-6 months'));
+    $sqlPromedio = "
+        SELECT 
+            COUNT(DISTINCT FORMAT(FECHA, 'yyyy-MM')) as meses,
+            SUM(CASE WHEN TIPO_HORA IN ('P', 'permiso', 'perm') THEN 1 ELSE 0 END) as horas_permisos,
+            SUM(CASE WHEN TIPO_HORA IN ('D', 'devuelve', 'dev') THEN 1 ELSE 0 END) as horas_devueltas
+        FROM FP_GESTION_HORARIOS
+        WHERE FECHA >= ?
+    ";
+    
+    $paramsProm = [$fecha6MesesAtras];
+    if (!empty($sucursal)) {
+        $sqlPromedio .= " AND NRO_SUCURSAL = ?";
+        $paramsProm[] = $sucursal;
+    }
+    if (!empty($vendedor)) {
+        $sqlPromedio .= " AND COD_VENDED = ?";
+        $paramsProm[] = $vendedor;
+    }
+    
+    $stmtProm = sqlsrv_query($conn, $sqlPromedio, $paramsProm);
+    $meses = 0;
+    $horasPermisos = 0;
+    $horasDevueltas = 0;
+    
+    if ($stmtProm && $row = sqlsrv_fetch_array($stmtProm, SQLSRV_FETCH_ASSOC)) {
+        $meses = max(1, (int)$row['meses']);
+        $horasPermisos = (int)$row['horas_permisos'];
+        $horasDevueltas = (int)$row['horas_devueltas'];
+        sqlsrv_free_stmt($stmtProm);
+    }
+    
+    $promedioMensual = $meses > 0 ? ($horasPermisos - $horasDevueltas) / $meses : 0;
+    
+    return json_encode([
+        'resumen' => [
+            'acumuladas' => $acumuladas,
+            'utilizadas' => $utilizadas,
+            'saldo' => $saldo,
+            'promedio_mes' => round($promedioMensual, 1)
+        ]
+    ]);
+}
+
+// =========================================================
+// FUNCIÓN 2: DATOS PARA GRÁFICO HISTÓRICO
+// =========================================================
+function getGraficoBancoHoras($conn, $sucursal, $vendedor, $fechaInicio, $fechaFin) {
+    $sql = "
+        SELECT 
+            FORMAT(FECHA, 'yyyy-MM') as mes,
+            SUM(CASE WHEN TIPO_HORA IN ('P', 'permiso', 'perm') THEN 1 ELSE 0 END) as horas_acumuladas,
+            SUM(CASE WHEN TIPO_HORA IN ('D', 'devuelve', 'dev') THEN 1 ELSE 0 END) as horas_utilizadas
+        FROM FP_GESTION_HORARIOS
+        WHERE FECHA BETWEEN ? AND ?
+    ";
+    
+    $params = [$fechaInicio, $fechaFin];
+    
+    if (!empty($sucursal)) {
+        $sql .= " AND NRO_SUCURSAL = ?";
+        $params[] = $sucursal;
+    }
+    
+    if (!empty($vendedor)) {
+        $sql .= " AND COD_VENDED = ?";
+        $params[] = $vendedor;
+    }
+    
+    $sql .= " GROUP BY FORMAT(FECHA, 'yyyy-MM')
+              ORDER BY mes ASC";
+    
+    $stmt = sqlsrv_query($conn, $sql, $params);
+    
+    $meses = [];
+    $acumuladas = [];
+    $utilizadas = [];
+    $saldos = [];
+    $saldoAcumulado = 0;
+    
+    if ($stmt) {
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $mes = $row['mes'];
+            $horasAcum = (int)$row['horas_acumuladas'];
+            $horasUtil = (int)$row['horas_utilizadas'];
+            
+            $saldoAcumulado += ($horasAcum - $horasUtil);
+            
+            $meses[] = date('M-Y', strtotime($mes . '-01'));
+            $acumuladas[] = $horasAcum;
+            $utilizadas[] = $horasUtil;
+            $saldos[] = $saldoAcumulado;
+        }
+        sqlsrv_free_stmt($stmt);
+    }
+    
+    return json_encode([
+        'grafico' => [
+            'meses' => $meses,
+            'acumuladas' => $acumuladas,
+            'utilizadas' => $utilizadas,
+            'saldos' => $saldos
+        ]
+    ]);
+}
+
+// =========================================================
+// FUNCIÓN 3: MOVIMIENTOS DETALLADOS
+// =========================================================
+function getMovimientosBancoHoras($conn, $sucursal, $vendedor, $fechaInicio, $fechaFin) {
+    $sql = "
+        SELECT 
+            COD_VENDED,
+            NRO_SUCURSAL,
+            COUNT(CASE WHEN TIPO_HORA IN ('P', 'permiso', 'perm') THEN 1 END) as acumulaciones,
+            COUNT(CASE WHEN TIPO_HORA IN ('D', 'devuelve', 'dev') THEN 1 END) as utilizaciones,
+            COUNT(CASE WHEN TIPO_HORA IN ('P', 'permiso', 'perm') THEN 1 END) - 
+            COUNT(CASE WHEN TIPO_HORA IN ('D', 'devuelve', 'dev') THEN 1 END) as saldo,
+            MAX(FECHA) as ultima_fecha
+        FROM FP_GESTION_HORARIOS
+        WHERE FECHA BETWEEN ? AND ?
+          AND TIPO_HORA IN ('P', 'permiso', 'perm', 'D', 'devuelve', 'dev')
+    ";
+    
+    $params = [$fechaInicio, $fechaFin];
+    
+    if (!empty($sucursal)) {
+        $sql .= " AND NRO_SUCURSAL = ?";
+        $params[] = $sucursal;
+    }
+    
+    if (!empty($vendedor)) {
+        $sql .= " AND COD_VENDED = ?";
+        $params[] = $vendedor;
+    }
+    
+    $sql .= " GROUP BY COD_VENDED, NRO_SUCURSAL
+              ORDER BY COD_VENDED ASC";
+    
+    $stmt = sqlsrv_query($conn, $sql, $params);
+    
+    $movimientos = [];
+    if ($stmt) {
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $connCentral = getConexionCentral();
+            $sqlNombre = "SELECT NOMBRE_VEN FROM GVA23 WHERE COD_VENDED = ?";
+            $stmtNombre = sqlsrv_query($connCentral, $sqlNombre, [$row['COD_VENDED']]);
+            $nombreVendedor = $row['COD_VENDED'];
+            
+            if ($stmtNombre && $nombreRow = sqlsrv_fetch_array($stmtNombre, SQLSRV_FETCH_ASSOC)) {
+                $nombreVendedor = trim($nombreRow['NOMBRE_VEN']);
+                $nombreVendedor = preg_replace('/[\s-]*[0-9]+$/', '', $nombreVendedor);
+                sqlsrv_free_stmt($stmtNombre);
+            }
+            sqlsrv_close($connCentral);
+            
+            $connCorp = getConexionCorp();
+            $sqlSuc = "SELECT DESC_DEPARTAMENTO FROM DEPARTAMENTO WHERE ID_DEPARTAMENTO = ?";
+            $stmtSuc = sqlsrv_query($connCorp, $sqlSuc, [$row['NRO_SUCURSAL']]);
+            $nombreSucursal = "Sucursal " . $row['NRO_SUCURSAL'];
+            
+            if ($stmtSuc && $sucRow = sqlsrv_fetch_array($stmtSuc, SQLSRV_FETCH_ASSOC)) {
+                $nombreSucursal = trim($sucRow['DESC_DEPARTAMENTO']);
+                sqlsrv_free_stmt($stmtSuc);
+            }
+            sqlsrv_close($connCorp);
+            
+            $ultimaFecha = $row['ultima_fecha'];
+            if ($ultimaFecha instanceof DateTime) {
+                $ultimaFecha = $ultimaFecha->format('Y-m-d');
+            }
+            
+            $movimientos[] = [
+                'cod_vendedor' => $row['COD_VENDED'],
+                'nombre_vendedor' => $nombreVendedor,
+                'sucursal' => $nombreSucursal,
+                'acumulaciones' => (int)$row['acumulaciones'],
+                'utilizaciones' => (int)$row['utilizaciones'],
+                'saldo' => (int)$row['saldo'],
+                'ultima_fecha' => $ultimaFecha
+            ];
+        }
+        sqlsrv_free_stmt($stmt);
+    }
+    
+    return json_encode([
+        'movimientos' => $movimientos
+    ]);
+}
+?>
