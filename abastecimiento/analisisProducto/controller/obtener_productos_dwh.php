@@ -1,19 +1,30 @@
 <?php
 header('Content-Type: application/json');
-require_once '../../Class/Conexion.php'; 
-require_once '../Class/Articulo.php'; 
+require_once '../../Class/Conexion.php';
+require_once '../Class/Articulo.php';
 
 // Helpers (sin cambios)
-function escape_val($s) { return str_replace("'", "''", (string)$s); }
-function buildCondition($values, $fieldName) {
-    if (!is_array($values) || empty($values) || in_array('%', $values)) return "1=1";
-    $reg = []; $null = false;
+function escape_val($s)
+{
+    return str_replace("'", "''", (string) $s);
+}
+function buildCondition($values, $fieldName)
+{
+    if (!is_array($values) || empty($values) || in_array('%', $values))
+        return "1=1";
+    $reg = [];
+    $null = false;
     foreach ($values as $v) {
-        if ($v === 'NULL') $null = true; else $reg[] = escape_val($v);
+        if ($v === 'NULL')
+            $null = true;
+        else
+            $reg[] = escape_val($v);
     }
     $sql = [];
-    if(!empty($reg)) $sql[] = "$fieldName IN ('" . implode("','", $reg) . "')";
-    if($null) $sql[] = "($fieldName IS NULL OR $fieldName = '')";
+    if (!empty($reg))
+        $sql[] = "$fieldName IN ('" . implode("','", $reg) . "')";
+    if ($null)
+        $sql[] = "($fieldName IS NULL OR $fieldName = '')";
     return empty($sql) ? "1=1" : "(" . implode(" OR ", $sql) . ")";
 }
 
@@ -29,6 +40,15 @@ try {
     $conds[] = buildCondition($temporadas, 'Temporada');
     $conds[] = buildCondition($destinos, 'Destino');
     $where = implode(" AND ", $conds);
+
+
+    // Iniciar sesión si no está iniciada para leer la variable de entorno
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    // Determinar la base de datos según el entorno
+    $base = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy') ? 'SUCURSALES_URUGUAY' : 'LOCALES_LAKERS';
 
     // ==============================================================================
     // ¡AQUÍ ESTÁ LA CORRECCIÓN!
@@ -56,9 +76,10 @@ try {
                 CantVenta AS CANT_VENTA, 
                 VentaTotal AS IMP_VENTA
             FROM 
-                [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL
+                [XL-LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL
             WHERE 
                 $where";
+
 
     $articulo = new Articulo();
     // Reutilizamos el método de Articulo.php, que ahora se conecta a XL-LAKERBIS

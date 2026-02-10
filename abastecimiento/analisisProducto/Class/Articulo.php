@@ -4,49 +4,51 @@ require_once __DIR__ . '/../../class/conexion.php';
 
 class Articulo
 {
-    
+
     private $cid;
     private $cid_central;
 
-    
+
     function __construct()
     {
 
-        
+
         $this->cid = new Conexion();
 
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        
+
         $db = isset($_SESSION['entorno']) ? $_SESSION['entorno'] : 'central';
         $this->cid_central = $this->cid->conectar($db);
 
 
-    } 
-
-
-public function retornarArray($sqlEnviado){
-
-    $sql = $sqlEnviado;
-
-    $stmt = sqlsrv_query( $this->cid_central, $sql );
-
-    // Para ver el error exacto de SQL Server
-    if ($stmt === false) {
-        die(print_r(sqlsrv_errors(), true));
     }
 
-    $rows = array();
 
-    while( $v = sqlsrv_fetch_array( $stmt, SQLSRV_FETCH_ASSOC) ) {
-        $rows[] = $v;
+    public function retornarArray($sqlEnviado)
+    {
+
+        $sql = $sqlEnviado;
+
+        $stmt = sqlsrv_query($this->cid_central, $sql);
+
+        // Para ver el error exacto de SQL Server
+        if ($stmt === false) {
+            die(print_r(sqlsrv_errors(), true));
+        }
+
+        $rows = array();
+
+        while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $rows[] = $v;
+        }
+
+        return $rows;
     }
 
-    return $rows;  
-}
-
-    public function traerArticulos($rubro, $temporada){
+    public function traerArticulos($rubro, $temporada)
+    {
 
         $sql = "SELECT A.COD_ARTICU, DESCRIPCION, DESTINO, TEMPORADA, B.RUBRO FROM MAESTRO_DESTINOS A
                 LEFT JOIN SOF_RUBROS_TANGO B ON A.COD_ARTICU = B.COD_ARTICU
@@ -58,9 +60,10 @@ public function retornarArray($sqlEnviado){
 
         return $rows;
 
-    }  
+    }
 
-        public function traerProductosMultiple($rubroCondition, $categoriaCondition, $temporadaCondition, $destinoCondition) {
+    public function traerProductosMultiple($rubroCondition, $categoriaCondition, $temporadaCondition, $destinoCondition)
+    {
         try {
             // Validar parámetros
             if (!is_string($rubroCondition) || !is_string($categoriaCondition) || !is_string($temporadaCondition) || !is_string($destinoCondition)) {
@@ -72,10 +75,11 @@ public function retornarArray($sqlEnviado){
             if (session_status() === PHP_SESSION_NONE) {
                 session_start();
             }
-            
+
             // Determinar base de datos según entorno
-// COMENTADO: Desactivado cambio de entorno
-$base = 'LOCALES_LAKERS';
+
+            $base = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy') ? 'SUCURSALES_URUGUAY' : 'LOCALES_LAKERS';
+
 
             error_log("traerProductosMultiple - Base: $base, Condiciones: Rubro=$rubroCondition, Temporada=$temporadaCondition, Destino=$destinoCondition");
 
@@ -107,14 +111,14 @@ $base = 'LOCALES_LAKERS';
 
             error_log("SQL generado: " . $sql);
             return $this->retornarArray($sql);
-            
+
         } catch (Exception $e) {
             error_log("Error en traerProductosMultiple: " . $e->getMessage());
             throw $e;
         }
     }
 
-/**
+    /**
      * Obtiene todos los artículos equivalentes usando el DWH.
      * ¡VERSIÓN FINAL Y SÚPER OPTIMIZADA!
      * @param int $codEquivalencia
@@ -165,23 +169,24 @@ $base = 'LOCALES_LAKERS';
             $rows[] = $v;
         }
         sqlsrv_free_stmt($stmt);
-        
+
         return $rows;
     }
     /**
      * REEMPLAZAR el método listarGruposEquivalencias en Articulo.php
      */
-    public function listarGruposEquivalencias() {
-    try {
-        error_log("=== listarGruposEquivalencias INICIADO ===");
-        
-        if (!$this->cid_central) {
-            error_log("ERROR: Conexión cid_central es NULL");
-            return [];
-        }
-        
-        // Query con campo RUBRO
-        $sql = "SELECT 
+    public function listarGruposEquivalencias()
+    {
+        try {
+            error_log("=== listarGruposEquivalencias INICIADO ===");
+
+            if (!$this->cid_central) {
+                error_log("ERROR: Conexión cid_central es NULL");
+                return [];
+            }
+
+            // Query con campo RUBRO
+            $sql = "SELECT 
                     ae.COD_EQUIVALENCIA,
                     MAX(ae.DESCRIPCION_GRUPO) AS DESCRIPCION_GRUPO,
                     MAX(ae.RUBRO) AS RUBRO,
@@ -193,39 +198,39 @@ $base = 'LOCALES_LAKERS';
                 WHERE ae.ACTIVO = 1
                 GROUP BY ae.COD_EQUIVALENCIA, ae.ACTIVO
                 ORDER BY ae.COD_EQUIVALENCIA DESC";
-        
-        $stmt = sqlsrv_query($this->cid_central, $sql);
-        
-        if ($stmt === false) {
-            $errors = sqlsrv_errors();
-            error_log("ERROR en sqlsrv_query: " . print_r($errors, true));
+
+            $stmt = sqlsrv_query($this->cid_central, $sql);
+
+            if ($stmt === false) {
+                $errors = sqlsrv_errors();
+                error_log("ERROR en sqlsrv_query: " . print_r($errors, true));
+                return [];
+            }
+
+            $rows = array();
+            while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                $rows[] = $v;
+            }
+
+            sqlsrv_free_stmt($stmt);
+
+            // Procesar fechas DateTime si es necesario
+            foreach ($rows as &$row) {
+                if (isset($row['FECHA_CREACION']) && $row['FECHA_CREACION'] instanceof DateTime) {
+                    $row['FECHA_CREACION'] = $row['FECHA_CREACION']->format('Y-m-d H:i:s');
+                }
+                if (isset($row['FECHA_MODIFICACION']) && $row['FECHA_MODIFICACION'] instanceof DateTime) {
+                    $row['FECHA_MODIFICACION'] = $row['FECHA_MODIFICACION']->format('Y-m-d H:i:s');
+                }
+            }
+
+            return $rows;
+
+        } catch (Exception $e) {
+            error_log("EXCEPCIÓN en listarGruposEquivalencias: " . $e->getMessage());
             return [];
         }
-        
-        $rows = array();
-        while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-            $rows[] = $v;
-        }
-        
-        sqlsrv_free_stmt($stmt);
-        
-        // Procesar fechas DateTime si es necesario
-        foreach ($rows as &$row) {
-            if (isset($row['FECHA_CREACION']) && $row['FECHA_CREACION'] instanceof DateTime) {
-                $row['FECHA_CREACION'] = $row['FECHA_CREACION']->format('Y-m-d H:i:s');
-            }
-            if (isset($row['FECHA_MODIFICACION']) && $row['FECHA_MODIFICACION'] instanceof DateTime) {
-                $row['FECHA_MODIFICACION'] = $row['FECHA_MODIFICACION']->format('Y-m-d H:i:s');
-            }
-        }
-        
-        return $rows;
-        
-    } catch (Exception $e) {
-        error_log("EXCEPCIÓN en listarGruposEquivalencias: " . $e->getMessage());
-        return [];
     }
-}
 
     /**
      * Buscar grupos de equivalencias con filtros
@@ -234,30 +239,31 @@ $base = 'LOCALES_LAKERS';
      * @param string $filtroEstado
      * @return array
      */
-        public function buscarGruposEquivalencias($filtroArticulo, $filtroGrupo, $filtroRubro, $filtroEstado) {
+    public function buscarGruposEquivalencias($filtroArticulo, $filtroGrupo, $filtroRubro, $filtroEstado)
+    {
         try {
             $condiciones = ["ae.ACTIVO = 1"];
-            
+
             if (!empty($filtroArticulo)) {
                 $filtroArticulo = $this->escapeSqlString($filtroArticulo);
                 $condiciones[] = "ae.COD_ARTICULO LIKE '%" . $filtroArticulo . "%'";
             }
-            
+
             if (!empty($filtroGrupo)) {
                 $condiciones[] = "ae.COD_EQUIVALENCIA = " . intval($filtroGrupo);
             }
-            
+
             if (!empty($filtroRubro)) {
                 $filtroRubro = $this->escapeSqlString($filtroRubro);
                 $condiciones[] = "ae.RUBRO = '" . $filtroRubro . "'";
             }
-            
+
             if ($filtroEstado !== '') {
                 $condiciones[] = "ae.ACTIVO = " . intval($filtroEstado);
             }
-            
+
             $whereClause = "WHERE " . implode(" AND ", $condiciones);
-            
+
             $sql = "SELECT 
                         ae.COD_EQUIVALENCIA,
                         MAX(ae.DESCRIPCION_GRUPO) AS DESCRIPCION_GRUPO,
@@ -272,14 +278,14 @@ $base = 'LOCALES_LAKERS';
                     ORDER BY ae.COD_EQUIVALENCIA DESC";
 
             return $this->retornarArray($sql);
-            
+
         } catch (Exception $e) {
             error_log("Error en buscarGruposEquivalencias: " . $e->getMessage());
             throw $e;
         }
     }
 
-     /**
+    /**
      * Buscar artículos para Select2 - CON SQL CORREGIDO
      * @param string $termino
      * @param int $page
@@ -376,7 +382,8 @@ $base = 'LOCALES_LAKERS';
      * @param int $codEquivalencia
      * @return array
      */
-        public function obtenerGrupoCompleto($codEquivalencia) {
+    public function obtenerGrupoCompleto($codEquivalencia)
+    {
         try {
             // Obtener datos del grupo con RUBRO
             $sqlGrupo = "SELECT TOP 1 
@@ -410,7 +417,7 @@ $base = 'LOCALES_LAKERS';
 
             $stmt = sqlsrv_prepare($this->cid_central, $sqlArticulos, array($codEquivalencia));
             sqlsrv_execute($stmt);
-            
+
             $articulos = array();
             while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                 $articulos[] = $row;
@@ -419,7 +426,7 @@ $base = 'LOCALES_LAKERS';
 
             $grupo['articulos'] = $articulos;
             return $grupo;
-            
+
         } catch (Exception $e) {
             error_log("Error en obtenerGrupoCompleto: " . $e->getMessage());
             throw $e;
@@ -429,7 +436,8 @@ $base = 'LOCALES_LAKERS';
     /**
      * Crear nuevo grupo de equivalencias
      */
-    public function crearGrupoEquivalencias($descripcionGrupo, $rubro, $estado, $articulos) {
+    public function crearGrupoEquivalencias($descripcionGrupo, $rubro, $estado, $articulos)
+    {
         try {
             // Obtener el siguiente código de equivalencia
             $sqlMaxCod = "SELECT COALESCE(MAX(COD_EQUIVALENCIA), 1000) + 1 as SIGUIENTE_COD FROM RO_T_ARTICULOS_EQUIVALENTES";
@@ -466,7 +474,7 @@ $base = 'LOCALES_LAKERS';
             }
 
             return $nuevoCodEquivalencia;
-            
+
         } catch (Exception $e) {
             error_log("Error en crearGrupoEquivalencias: " . $e->getMessage());
             throw $e;
@@ -481,17 +489,18 @@ $base = 'LOCALES_LAKERS';
      * @param array $articulos
      * @return bool
      */
-        public function editarGrupoEquivalencias($codEquivalencia, $descripcionGrupo, $rubro, $estado, $articulos) {
+    public function editarGrupoEquivalencias($codEquivalencia, $descripcionGrupo, $rubro, $estado, $articulos)
+    {
         try {
             // Obtener la fecha de creación original del grupo
             $sqlFechaCreacion = "SELECT TOP 1 FECHA_CREACION 
                                 FROM RO_T_ARTICULOS_EQUIVALENTES 
                                 WHERE COD_EQUIVALENCIA = ?";
-            
+
             $stmt = sqlsrv_prepare($this->cid_central, $sqlFechaCreacion, array($codEquivalencia));
             sqlsrv_execute($stmt);
             $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
-            
+
             $fechaCreacionOriginal = $row['FECHA_CREACION'];
             sqlsrv_free_stmt($stmt);
 
@@ -512,7 +521,7 @@ $base = 'LOCALES_LAKERS';
                                 FECHA_MODIFICACION, 
                                 ACTIVO
                             ) VALUES (?, ?, ?, ?, ?, GETDATE(), ?)";
-                
+
                 foreach ($articulos as $articulo) {
                     $params = array(
                         $codEquivalencia,
@@ -540,7 +549,7 @@ $base = 'LOCALES_LAKERS';
                                 FECHA_MODIFICACION, 
                                 ACTIVO
                             ) VALUES (?, ?, ?, ?, GETDATE(), GETDATE(), ?)";
-                
+
                 foreach ($articulos as $articulo) {
                     $params = array(
                         $codEquivalencia,
@@ -559,7 +568,7 @@ $base = 'LOCALES_LAKERS';
             }
 
             return true;
-            
+
         } catch (Exception $e) {
             error_log("Error en editarGrupoEquivalencias: " . $e->getMessage());
             throw $e;
@@ -571,21 +580,22 @@ $base = 'LOCALES_LAKERS';
      * @param int $codEquivalencia
      * @return bool
      */
-    public function eliminarGrupoEquivalencias($codEquivalencia) {
+    public function eliminarGrupoEquivalencias($codEquivalencia)
+    {
         try {
             $sql = "UPDATE RO_T_ARTICULOS_EQUIVALENTES 
                     SET ACTIVO = 0, FECHA_MODIFICACION = GETDATE() 
                     WHERE COD_EQUIVALENCIA = ?";
-            
+
             $stmt = sqlsrv_prepare($this->cid_central, $sql, array($codEquivalencia));
-            
+
             if (!sqlsrv_execute($stmt)) {
                 throw new Exception("Error al eliminar grupo: " . print_r(sqlsrv_errors(), true));
             }
-            
+
             sqlsrv_free_stmt($stmt);
             return true;
-            
+
         } catch (Exception $e) {
             error_log("Error en eliminarGrupoEquivalencias: " . $e->getMessage());
             throw $e;
@@ -597,9 +607,12 @@ $base = 'LOCALES_LAKERS';
      * @param string $str
      * @return string
      */
-    private function escapeSqlString($str) {
-        if (is_null($str)) return '';
-        if (!is_string($str)) $str = (string)$str;
+    private function escapeSqlString($str)
+    {
+        if (is_null($str))
+            return '';
+        if (!is_string($str))
+            $str = (string) $str;
         return str_replace("'", "''", $str);
     }
 
@@ -608,19 +621,20 @@ $base = 'LOCALES_LAKERS';
      * @param string $codigoArticulo
      * @return bool
      */
-    public function articuloTieneEquivalencia($codigoArticulo) {
+    public function articuloTieneEquivalencia($codigoArticulo)
+    {
         try {
             $sql = "SELECT COUNT(*) as TOTAL 
                     FROM RO_T_ARTICULOS_EQUIVALENTES 
                     WHERE COD_ARTICULO = ? AND ACTIVO = 1";
-            
+
             $stmt = sqlsrv_prepare($this->cid_central, $sql, array($codigoArticulo));
             sqlsrv_execute($stmt);
             $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
             sqlsrv_free_stmt($stmt);
-            
+
             return intval($row['TOTAL']) > 0;
-            
+
         } catch (Exception $e) {
             error_log("Error en articuloTieneEquivalencia: " . $e->getMessage());
             return false;
@@ -631,7 +645,8 @@ $base = 'LOCALES_LAKERS';
      * Obtener estadísticas de equivalencias
      * @return array
      */
-    public function obtenerEstadisticasEquivalencias() {
+    public function obtenerEstadisticasEquivalencias()
+    {
         try {
             $sql = "SELECT 
                         COUNT(DISTINCT COD_EQUIVALENCIA) as TOTAL_GRUPOS,
@@ -640,13 +655,13 @@ $base = 'LOCALES_LAKERS';
                         COUNT(CASE WHEN ACTIVO = 1 THEN 1 END) as GRUPOS_ACTIVOS,
                         COUNT(CASE WHEN ACTIVO = 0 THEN 1 END) as GRUPOS_INACTIVOS
                     FROM RO_T_ARTICULOS_EQUIVALENTES";
-            
+
             $stmt = sqlsrv_query($this->cid_central, $sql);
             $estadisticas = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
             sqlsrv_free_stmt($stmt);
-            
+
             return $estadisticas;
-            
+
         } catch (Exception $e) {
             error_log("Error en obtenerEstadisticasEquivalencias: " . $e->getMessage());
             throw $e;
@@ -656,51 +671,54 @@ $base = 'LOCALES_LAKERS';
     /**
      * Obtener rubros para filtro
      */
-    public function obtenerRubrosEquivalencias() {
+    public function obtenerRubrosEquivalencias()
+    {
         try {
             $sql = "SELECT DISTINCT(RUBRO) RUBRO 
                     FROM SOF_RUBROS_TANGO 
                     WHERE RUBRO NOT LIKE '%OUTLET%' 
                     AND RUBRO NOT IN ('_KITS','LENTES','PACKAGING')
                     ORDER BY RUBRO";
-            
+
             error_log("SQL rubros equivalencias: " . $sql);
-            
+
             $resultados = $this->retornarArray($sql);
-            
+
             error_log("Rubros encontrados: " . count($resultados));
-            
+
             return $resultados;
-            
+
         } catch (Exception $e) {
             error_log("Error en obtenerRubrosEquivalencias: " . $e->getMessage());
             return [];
         }
-}
+    }
 
     /**
      * Obtener categorías para filtro
      */
-    public function obtenerCategorias() {
+    public function obtenerCategorias()
+    {
         try {
             // Determinar base de datos según entorno
-// COMENTADO: Desactivado cambio de entorno
-$base = 'LOCALES_LAKERS';
-            
+
+            $base = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy') ? 'SUCURSALES_URUGUAY' : 'LOCALES_LAKERS';
+
+
             $sql = "SELECT DISTINCT(CATEGORIA) CATEGORIA 
                     FROM [XL-LAKERBIS].$base.DBO.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
                     WHERE CATEGORIA IS NOT NULL
                     AND CATEGORIA != ''
                     ORDER BY CATEGORIA";
-            
+
             error_log("SQL categorías: " . $sql);
-            
+
             $resultados = $this->retornarArray($sql);
-            
+
             error_log("Categorías encontradas: " . count($resultados));
-            
+
             return $resultados;
-            
+
         } catch (Exception $e) {
             error_log("Error en obtenerCategorias: " . $e->getMessage());
             return [];
@@ -710,25 +728,27 @@ $base = 'LOCALES_LAKERS';
     /**
      * Obtener categorías filtradas por rubro(s)
      */
-    public function obtenerCategoriasPorRubro($rubros = []) {
+    public function obtenerCategoriasPorRubro($rubros = [])
+    {
         try {
             error_log("=== obtenerCategoriasPorRubro INICIADO ===");
             error_log("Rubros recibidos: " . json_encode($rubros));
-            
+
             if (!$this->cid_central) {
                 error_log("ERROR: Conexión cid_central es NULL");
                 return [];
             }
-            
+
             // Determinar base de datos según entorno
-// COMENTADO: Desactivado cambio de entorno
-$base = 'LOCALES_LAKERS';
-            
+
+            $base = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy') ? 'SUCURSALES_URUGUAY' : 'LOCALES_LAKERS';
+
+
             // Si no hay rubros específicos, devolver todas las categorías
             if (empty($rubros) || in_array('%', $rubros) || in_array('', $rubros)) {
                 return $this->obtenerCategorias();
             }
-            
+
             // Construir condición WHERE para rubros
             $rubroConditions = [];
             foreach ($rubros as $rubro) {
@@ -737,28 +757,28 @@ $base = 'LOCALES_LAKERS';
                     $rubroConditions[] = "RUBRO = '$rubroEscapado'";
                 }
             }
-            
+
             if (empty($rubroConditions)) {
                 return $this->obtenerCategorias();
             }
-            
+
             $rubroWhere = "(" . implode(" OR ", $rubroConditions) . ")";
-            
+
             $sql = "SELECT DISTINCT(CATEGORIA) CATEGORIA 
                     FROM [XL-LAKERBIS].$base.DBO.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
                     WHERE CATEGORIA IS NOT NULL
                     AND CATEGORIA != ''
                     AND $rubroWhere
                     ORDER BY CATEGORIA";
-            
+
             error_log("SQL categorías por rubro: " . $sql);
-            
+
             $resultados = $this->retornarArray($sql);
-            
+
             error_log("Categorías por rubro encontradas: " . count($resultados));
-            
+
             return $resultados;
-            
+
         } catch (Exception $e) {
             error_log("EXCEPCIÓN en obtenerCategoriasPorRubro: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
@@ -769,11 +789,13 @@ $base = 'LOCALES_LAKERS';
     /**
      * Metodo optimizado para DataTables Server-Side
      */
-    public function traerProductosPaginados($whereFilters, $globalSearch, $orderCol, $orderDir, $start, $length) {
+    public function traerProductosPaginados($whereFilters, $globalSearch, $orderCol, $orderDir, $start, $length)
+    {
         try {
             // 1. Definir base de datos
-// COMENTADO: Desactivado cambio de entorno
-$base = 'LOCALES_LAKERS';
+
+            $base = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy') ? 'SUCURSALES_URUGUAY' : 'LOCALES_LAKERS';
+
 
             // 2. Búsqueda Global
             $searchCondition = "1=1";
@@ -784,29 +806,35 @@ $base = 'LOCALES_LAKERS';
 
             // 3. Columnas de ordenamiento
             $columns = [
-                0 => 'RUBRO', 1 => 'CATEGORIA', 2 => 'TEMPORADA', 3 => 'DESTINO',
-                4 => 'LIQUIDACION', 5 => 'FECHA_INGRESO_SUC', 6 => 'COD_EQUIVALENCIA',
-                7 => 'ARTICULO', 8 => 'DESCRIPCIO' // ... etc
+                0 => 'RUBRO',
+                1 => 'CATEGORIA',
+                2 => 'TEMPORADA',
+                3 => 'DESTINO',
+                4 => 'LIQUIDACION',
+                5 => 'FECHA_INGRESO_SUC',
+                6 => 'COD_EQUIVALENCIA',
+                7 => 'ARTICULO',
+                8 => 'DESCRIPCIO' // ... etc
             ];
-            
+
             // FIX DE RENDIMIENTO: Si no especifican orden, usar ARTICULO (Primary Key) que es más rápido que ordenar por RUBRO
-            $campoOrden = isset($columns[$orderCol]) ? $columns[$orderCol] : 'ARTICULO'; 
+            $campoOrden = isset($columns[$orderCol]) ? $columns[$orderCol] : 'ARTICULO';
             $direccion = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
 
 
             // --- PASO 1: Contar solo los registros (Consulta liviana con NOLOCK para evitar bloqueos) ---
             // Esta consulta NO trae datos, solo devuelve un número.
-            
+
             $sqlCount = "SELECT COUNT_BIG(ARTICULO) as Total
                          FROM [XL-LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL WITH (NOLOCK)
                          WHERE $whereFilters AND $searchCondition";
-                         
+
             $rowsCount = $this->retornarArray($sqlCount);
             $recordsFiltered = ($rowsCount && isset($rowsCount[0]['Total'])) ? intval($rowsCount[0]['Total']) : 0;
 
-            
+
             // --- PASO 2: Traer los datos si hay resultados ---
-            
+
             $data = [];
             if ($recordsFiltered > 0) {
                 // Usamos solo las columnas necesarias con NOLOCK para mejorar rendimiento
@@ -844,12 +872,13 @@ $base = 'LOCALES_LAKERS';
             ];
         }
     }
-public function traerProductosExportacion($whereFilters) {
-// COMENTADO: Desactivado cambio de entorno
-$base = 'LOCALES_LAKERS';
+    public function traerProductosExportacion($whereFilters)
+    {
+        // COMENTADO: Desactivado cambio de entorno
+        $base = 'LOCALES_LAKERS';
 
-    // AÑADIMOS "TOP 100" PARA LIMITAR LOS RESULTADOS DRÁSTICAMENTE
-    $sql = "SELECT RUBRO, CATEGORIA, TEMPORADA, DESTINO, LIQUIDACION,
+        // AÑADIMOS "TOP 100" PARA LIMITAR LOS RESULTADOS DRÁSTICAMENTE
+        $sql = "SELECT RUBRO, CATEGORIA, TEMPORADA, DESTINO, LIQUIDACION,
                 CAST(FECHA_INGRESO_SUC AS DATE) as FECHA,
                 COD_EQUIVALENCIA, ARTICULO, DESCRIPCIO, COLOR, 
                 PRECIO, 
@@ -864,12 +893,13 @@ $base = 'LOCALES_LAKERS';
             FROM [XL-LAKERBIS].$base.DBO.RO_ANALISIS_PRODUCTO_COMERCIAL
             WHERE $whereFilters";
 
-    return $this->retornarArray($sql);
-}
-// ==============================================================================
+        return $this->retornarArray($sql);
+    }
+    // ==============================================================================
     // NUEVO MÉTODO PARA LEER DESDE EL DWH - RÁPIDO Y EFICIENTE
     // ==============================================================================
-    public function traerProductosDWH($whereFilters) {
+    public function traerProductosDWH($whereFilters)
+    {
         try {
             // 1. Determinar base de datos
             $base = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy') ? 'SUCURSALES_URUGUAY' : 'LOCALES_LAKERS';
@@ -914,14 +944,15 @@ $base = 'LOCALES_LAKERS';
     // ==============================================================================
     // NUEVO MÉTODO PARA OBTENER LA FECHA DE LA ÚLTIMA ACTUALIZACIÓN DEL DWH
     // ==============================================================================
-    public function obtenerFechaUltimaActualizacion() {
+    public function obtenerFechaUltimaActualizacion()
+    {
         try {
             $base = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy') ? 'SUCURSALES_URUGUAY' : 'LOCALES_LAKERS';
 
             // Consulta muy rápida para obtener la fecha máxima.
             $sql = "SELECT MAX(FechaActualizacion) as UltimaActualizacion 
                     FROM [XL-LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL";
-            
+
             $resultado = $this->retornarArray($sql);
 
             // Devolver la fecha formateada o un mensaje si no hay datos.

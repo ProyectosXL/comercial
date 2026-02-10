@@ -8,17 +8,23 @@ class Temporada
     private $cid;
     private $cid_central;
 
-    
+
     function __construct()
     {
 
-            
+        // Verificar si no hay una sesión activa antes de iniciarla
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         $this->cid = new Conexion();
-        $this->cid_central = $this->cid->conectar('central');
+        $db = isset($_SESSION['entorno']) ? $_SESSION['entorno'] : 'central';
+        $this->cid_central = $this->cid->conectar($db);
 
-    } 
+    }
 
-    public function traerTemporadas(){
+    public function traerTemporadas()
+    {
 
         $sql = "
 
@@ -26,27 +32,28 @@ class Temporada
         ORDER BY 1 DESC 
         
         ";
-        $stmt = sqlsrv_query(  $this->cid_central, $sql );
+        $stmt = sqlsrv_query($this->cid_central, $sql);
 
         $rows = array();
 
-        while( $v = sqlsrv_fetch_array( $stmt) ) {
+        while ($v = sqlsrv_fetch_array($stmt)) {
             $rows[] = $v;
         }
 
         return $rows;
     }
-    
-    public function traerTemporadasDestinos (){
 
-        $sql ="SELECT DISTINCT(NOMBRE_TEMP) TEMPORADA, ID FROM MAESTRO_TEMPORADAS
+    public function traerTemporadasDestinos()
+    {
+
+        $sql = "SELECT DISTINCT(NOMBRE_TEMP) TEMPORADA, ID FROM MAESTRO_TEMPORADAS
         ORDER BY ID DESC";
 
-        $stmt = sqlsrv_query(  $this->cid_central, $sql );
+        $stmt = sqlsrv_query($this->cid_central, $sql);
 
         $rows = array();
 
-        while( $v = sqlsrv_fetch_array( $stmt) ) {
+        while ($v = sqlsrv_fetch_array($stmt)) {
             $rows[] = $v;
         }
 
@@ -54,4 +61,4 @@ class Temporada
 
     }
 
-}  
+}
