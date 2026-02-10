@@ -1,4 +1,3 @@
-
 <?php
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -23,23 +22,42 @@ try {
     $type = $data['type'];
 
     $directorio = __DIR__ . '/../../imagenes/compSupervision/';
-    
+
     // Normalizar la ruta del directorio
     $directorio = realpath($directorio);
     if ($directorio === false) {
         throw new Exception('No se pudo resolver la ruta del directorio');
     }
     $directorio .= DIRECTORY_SEPARATOR;
-    
+
     // Buscar solo imágenes
     $extensiones = ['jpg', 'jpeg', 'png'];
     $imagenes = [];
-    
+
+    // Obtener anio solicitado o usar actual
+    $anioSolicitado = isset($data['anio']) ? intval($data['anio']) : intval(date('Y'));
+
     foreach ($extensiones as $ext) {
         $patron = $directorio . $semana . '_' . $supervisora . '_' . $id_conc . '_' . $type . '_*.' . $ext;
         $archivos = glob($patron);
+
         if ($archivos) {
-            $imagenes = array_merge($imagenes, $archivos);
+            foreach ($archivos as $archivo) {
+                // Filtrar por año de modificación del archivo
+                // Esta es una solución para filtrar archivos de años anteriores que tienen el mismo nombre
+                // (ya que el nombre del archivo no incluía el año originalmente)
+                $anioArchivo = intval(date('Y', filemtime($archivo)));
+
+                // Lógica de filtrado:
+                // 1. Si el año del archivo coincide con el solicitado, incluir.
+                // 2. Si el año del archivo es MAYOR al solicitado, incluir (carga tardía).
+                // 3. Si el año del archivo es MENOR al solicitado, EXCLUIR (archivo antiguo).
+                //    Esto evita que al ver gastos del 2025 se vean las fotos del 2024
+
+                if ($anioArchivo >= $anioSolicitado) {
+                    $imagenes[] = $archivo;
+                }
+            }
         }
     }
 
@@ -52,7 +70,7 @@ try {
     $nombresImagenes = array_map('basename', $imagenes);
 
     echo json_encode([
-        'success' => true, 
+        'success' => true,
         'imagenes' => $nombresImagenes,
         'debug' => [
             'directorio' => $directorio,
