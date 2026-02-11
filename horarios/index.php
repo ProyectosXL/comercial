@@ -28,6 +28,31 @@
             box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
         }
 
+        .dia-franco {
+            background-color: #f3e5f5 !important;
+            /* Lila claro */
+            color: #6a1b9a;
+            font-weight: bold;
+            text-align: center;
+            vertical-align: middle;
+            cursor: not-allowed;
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(106, 27, 154, 0.05) 5px, rgba(106, 27, 154, 0.05) 10px);
+        }
+
+        /* MEDIA HORA */
+        .media-hora {
+            position: relative;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(240, 240, 240, 0.1) 100%);
+        }
+
+        .media-hora small {
+            display: block;
+            font-size: 0.75rem;
+            line-height: 1;
+            font-weight: 900;
+            color: inherit;
+        }
+
         .accordion-body {
             padding: 1.5rem;
         }
@@ -257,6 +282,10 @@
                                 <button id="base_btnGuardar" class="btn btn-success w-100" disabled><i
                                         class="bi bi-save"></i></button>
                             </div>
+                        </div>
+                        <div class="d-flex justify-content-end mb-2">
+                            <button id="base_agregarRefuerzoBtn" class="btn btn-outline-secondary btn-sm" disabled><i
+                                    class="bi bi-person-plus"></i> Agregar Refuerzo</button>
                         </div>
                         <div id="base_tablaContainer" class="table-responsive border rounded bg-white"
                             style="min-height: 300px;">
@@ -634,7 +663,8 @@
                     <div id="listaRefuerzosContainer"></div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-primary" id="btnConfirmarAgregarRefuerzo">Agregar</button>
+                    <button class="btn btn-primary" id="btnConfirmarAgregarRefuerzo">Agregar a Planificación</button>
+                    <button class="btn btn-primary d-none" id="btnConfirmarAgregarRefuerzoBase">Agregar a Base</button>
                 </div>
             </div>
         </div>

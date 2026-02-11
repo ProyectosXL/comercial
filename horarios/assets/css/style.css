@@ -9,11 +9,15 @@ body {
    CONTENEDOR DE TABLAS (SCROLL Y POSICIÓN)
    ========================================= */
 #tablaHorariosContainer,
-#tablaVistaLocal {
-    max-height: 75vh;
-    overflow: auto;
+#tablaVistaLocal,
+.table-container {
+    overflow-x: auto;
+    overflow-y: visible !important;
+    height: auto !important;
+    max-height: none !important;
     position: relative;
     border: 1px solid #dee2e6;
+    margin-bottom: 2rem;
 }
 
 /* =========================================
@@ -543,8 +547,6 @@ td.franco-activo {
 
 /* Asegurar que la tabla tenga altura fija para el scroll */
 #tablaHorariosContainer {
-    max-height: 70vh;
-    overflow-y: auto;
     position: relative;
 }
 

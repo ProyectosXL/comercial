@@ -3,7 +3,8 @@ $(document).ready(function () {
     const apiPlantillasURL = 'api/plantillas_handler.php';
     let isMouseDown = false;
     let modoPintado = 'pintar';
-    let tipoHoraSeleccionada = 'normal'; // Valor por defecto
+    let tipoHoraSeleccionada = 'normal';
+    let vendedoresCargados = []; // Variable global para persistir estado
 
     // 1. Cargar Sucursales al inicio
     $.getJSON(`${apiDatosURL}?accion=sucursales`, function (data) {
@@ -28,6 +29,7 @@ $(document).ready(function () {
         // UI Loading
         $('#base_tablaContainer').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Cargando plantilla...</p></div>');
         $('#base_btnGuardar').prop('disabled', true);
+        $('#base_agregarRefuerzoBtn').prop('disabled', true);
 
         // A. Traer Vendedores de esa sucursal
         $.getJSON(`${apiDatosURL}?accion=vendedores&sucursal=${sucursal}`)
@@ -36,8 +38,42 @@ $(document).ready(function () {
                 // B. Traer la Plantilla Guardada (si existe)
                 $.getJSON(`${apiPlantillasURL}?sucursal=${sucursal}&tipo=${tipoSemana}`)
                     .done(function (datosGuardados) {
-                        renderGrillaBase(vendedores, datosGuardados);
-                        $('#base_btnGuardar').prop('disabled', false); // Habilitar guardar
+                        // Detectar refuerzos: vendedores en datosGuardados que NO están en la lista de vendedores
+                        const idsVendedores = vendedores.map(v => String(v.COD_VENDED));
+                        const idsEnPlantilla = Object.keys(datosGuardados);
+                        const idsRefuerzos = idsEnPlantilla.filter(id => !idsVendedores.includes(String(id)));
+
+                        if (idsRefuerzos.length > 0) {
+                            // Cargar información de los refuerzos
+                            $.ajax({
+                                url: `${apiDatosURL}?accion=vendedoresPorLista`,
+                                type: 'POST',
+                                data: { listaVendedores: JSON.stringify(idsRefuerzos) },
+                                dataType: 'json',
+                                success: function (infoRefuerzos) {
+                                    // Marcar como refuerzos y agregar a la lista
+                                    infoRefuerzos.forEach(ref => {
+                                        ref.ES_REFUERZO = true;
+                                        vendedores.push(ref);
+                                    });
+                                    vendedoresCargados = vendedores; // Actualizar global
+                                    renderGrillaBase(vendedores, datosGuardados);
+                                    $('#base_btnGuardar').prop('disabled', false);
+                                    $('#base_agregarRefuerzoBtn').prop('disabled', false);
+                                },
+                                error: function () {
+                                    // Si falla, renderizar sin los refuerzos
+                                    renderGrillaBase(vendedores, datosGuardados);
+                                    $('#base_btnGuardar').prop('disabled', false);
+                                    $('#base_agregarRefuerzoBtn').prop('disabled', false);
+                                }
+                            });
+                        } else {
+                            // No hay refuerzos, renderizar normalmente
+                            renderGrillaBase(vendedores, datosGuardados);
+                            $('#base_btnGuardar').prop('disabled', false);
+                            $('#base_agregarRefuerzoBtn').prop('disabled', false);
+                        }
                     })
                     .fail(function () {
                         $('#base_tablaContainer').html('<div class="alert alert-danger">Error al cargar datos de plantilla.</div>');
@@ -49,18 +85,20 @@ $(document).ready(function () {
             });
     });
 
-    // 3. FUNCIÓN DE RENDERIZADO (CORREGIDA HASTA 23HS)
+    // 3. FUNCIÓN DE RENDERIZADO (Con Total Hs y hasta 23hs)
     function renderGrillaBase(vendedores, guardado) {
+        vendedoresCargados = vendedores; // Actualizamos la global
         const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-        let htmlHeader = '<table class="table table-bordered table-sm mb-0 user-select-none"><thead><tr><th class="text-start ps-3" style="width:250px;">Vendedor</th>';
+        // Header: Agregamos columna Total Hs
+        let htmlHeader = '<table class="table table-bordered table-sm mb-0 user-select-none"><thead><tr><th class="text-start ps-3" style="width:200px;">Vendedor</th><th class="text-center" style="width:60px;">Total Hs</th>';
 
         // Header Días
         diasSemana.forEach(dia => {
             // CAMBIO 1: Colspan pasa a 18 (17 horas [7 a 23] + 1 Franco)
             htmlHeader += `<th colspan="18" class="dia-header">${dia}</th>`;
         });
-        htmlHeader += '</tr><tr><th></th>';
+        htmlHeader += '</tr><tr><th></th><th></th>'; // Vendedor + Total Hs
 
         // Subheader Horas
         for (let d = 0; d < 7; d++) {
@@ -77,12 +115,15 @@ $(document).ready(function () {
         vendedores.forEach(v => {
             const vid = v.COD_VENDED;
             const data = guardado[vid] || { horarios: {}, francos: {} };
+            const esRefuerzo = v.ES_REFUERZO || false; // Marca si es refuerzo
 
-            htmlBody += `<tr data-vendedor-id="${vid}">
+            htmlBody += `<tr data-vendedor-id="${vid}" data-es-refuerzo="${esRefuerzo}">
                             <td class="fw-bold text-start ps-3 text-nowrap">
-                                <div class="text-truncate" style="max-width: 230px;" title="${v.NOMBRE_VEN}">${v.NOMBRE_VEN}</div>
+                                <div class="text-truncate" style="max-width: 180px;" title="${v.NOMBRE_VEN}">${v.NOMBRE_VEN}</div>
                                 <small class="text-muted fw-normal">${v.TAREA_HABITUAL}</small>
-                            </td>`;
+                                ${esRefuerzo ? '<span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">REFUERZO</span>' : ''}
+                            </td>
+                            <td class="align-middle text-center fw-bold text-primary total-hs-base">0</td>`;
 
             // 7 Días
             for (let dia = 1; dia <= 7; dia++) {
@@ -97,14 +138,22 @@ $(document).ready(function () {
                     if (esFranco) {
                         clase = 'dia-franco';
                     } else if (data.horarios[dia] && data.horarios[dia][h]) {
-                        const tipoGuardado = data.horarios[dia][h];
-                        if (tipoGuardado === 'extra') {
+                        const tipoGuardado = data.horarios[dia][h]; // <--- DEFINICION RESTAURADA
+
+                        if (tipoGuardado.includes('extra')) {
                             clase = 'hora-extra';
                             texto = 'E';
                         } else {
                             clase = 'marcado';
                             texto = 'X';
                         }
+
+                        // Chequear media hora
+                        if (tipoGuardado.includes('_media')) {
+                            clase += ' media-hora';
+                            texto += ' <small>½</small>';
+                        }
+
                     }
 
                     htmlBody += `<td class="hora-base ${clase}" data-dia="${dia}" data-hora="${h}">${texto}</td>`;
@@ -122,6 +171,7 @@ $(document).ready(function () {
 
         htmlBody += '</tbody></table>';
         $('#base_tablaContainer').html(htmlHeader + htmlBody);
+        calcularTotalesBase();
     }
 
     // =========================================================
@@ -141,16 +191,39 @@ $(document).ready(function () {
         }
     });
 
-    // B. Pintar Horas (Drag & Drop)
-    $('#base_tablaContainer').on('mousedown', '.hora-base', function (e) {
+    // CLICK DERECHO (Media Hora)
+    $('#base_tablaContainer').on('contextmenu', '.hora-base', function (e) {
         e.preventDefault();
 
         if ($(this).hasClass('dia-franco')) return;
 
-        isMouseDown = true;
-        // Detectar si vamos a pintar o borrar basándonos en si ya tiene color
-        modoPintado = ($(this).hasClass('marcado') || $(this).hasClass('hora-extra')) ? 'borrar' : 'pintar';
+        // Si está vacía, pintar primero
+        if (!$(this).hasClass('marcado') && !$(this).hasClass('hora-extra')) {
+            modoPintado = 'marcar'; // Forzamos pintar
+            pintarCelda($(this));
+        }
 
+        if ($(this).hasClass('media-hora')) {
+            $(this).removeClass('media-hora');
+            // Restaurar texto base
+            let txt = $(this).hasClass('hora-extra') ? 'E' : 'X';
+            $(this).html(txt);
+        } else {
+            $(this).addClass('media-hora');
+            let txt = $(this).hasClass('hora-extra') ? 'E' : 'X';
+            $(this).html(`${txt} <small>½</small>`);
+        }
+        calcularTotalesBase();
+    });
+
+    $('#base_tablaContainer').on('mousedown', '.hora-base', function (e) {
+        e.preventDefault();
+        if ($(this).hasClass('dia-franco')) return;
+        if (e.which === 3) return;
+
+        isMouseDown = true;
+        // Detectar si vamos a pintar o borrar
+        modoPintado = ($(this).hasClass('marcado') || $(this).hasClass('hora-extra')) ? 'borrar' : 'pintar';
         pintarCelda($(this));
     });
 
@@ -166,17 +239,133 @@ $(document).ready(function () {
     });
 
     function pintarCelda(celda) {
-        // Primero limpiamos cualquier clase de color previa
-        celda.removeClass('marcado hora-extra').text('');
+        if (modoPintado === 'borrar') {
+            celda.removeClass('marcado hora-extra media-hora').text('');
+        } else {
+            celda.removeClass('marcado hora-extra');
+            // Mantener media hora si ya la tenia
+            const esMedia = celda.hasClass('media-hora');
 
-        if (modoPintado === 'pintar') {
             if (tipoHoraSeleccionada === 'extra') {
                 celda.addClass('hora-extra').text('E');
             } else {
                 celda.addClass('marcado').text('X');
             }
+
+            if (esMedia) celda.append(' <small>½</small>');
         }
+        calcularTotalesBase();
     }
+
+    function calcularTotalesBase() {
+        $('#base_tablaContainer tbody tr').each(function () {
+            let total = 0;
+            $(this).find('.hora-base').each(function () {
+                if ($(this).hasClass('marcado') || $(this).hasClass('hora-extra')) {
+                    const val = $(this).hasClass('media-hora') ? 0.5 : 1;
+                    total += val;
+                }
+            });
+            $(this).find('.total-hs-base').text(total % 1 === 0 ? total : total.toFixed(1));
+        });
+    }
+
+    // =========================================================
+    // 5. REFUERZOS EN BASE
+    // =========================================================
+    $('#base_agregarRefuerzoBtn').on('click', function () {
+        // Configuramos el modal para trabajar en modo BASE
+        $('#btnConfirmarAgregarRefuerzo').addClass('d-none');
+        $('#btnConfirmarAgregarRefuerzoBase').removeClass('d-none');
+
+        const modal = new bootstrap.Modal(document.getElementById('modalRefuerzos'));
+        const listaContainer = $('#listaRefuerzosContainer');
+        listaContainer.html('<div class="text-center"><div class="spinner-border text-primary"></div></div>');
+        modal.show();
+
+        // Reusamos lógica de obtener refuerzos
+        $.getJSON(`${apiDatosURL}?accion=refuerzos`, function (refuerzos) {
+            listaContainer.empty();
+            if (refuerzos.length > 0) {
+                let listaHTML = '<ul class="list-group">';
+                refuerzos.forEach(refuerzo => {
+                    // Chequear si ya está en la grilla visual actual
+                    if ($(`tr[data-vendedor-id="${refuerzo.COD_VENDED}"]`).length === 0) {
+                        listaHTML += `<li class="list-group-item">
+                            <input class="form-check-input me-2" type="checkbox" value="${refuerzo.COD_VENDED}" 
+                                id="base-ref-${refuerzo.COD_VENDED}" 
+                                data-nombre="${refuerzo.NOMBRE_VEN}" 
+                                data-tarea="${refuerzo.TAREA_HABITUAL}">
+                            <label class="form-check-label" for="base-ref-${refuerzo.COD_VENDED}">${refuerzo.NOMBRE_VEN}</label>
+                         </li>`;
+                    }
+                });
+                listaHTML += '</ul>';
+
+                if (listaHTML === '<ul class="list-group"></ul>') {
+                    listaContainer.html('<p class="text-muted text-center">Todos los refuerzos disponibles ya están en la grilla.</p>');
+                } else {
+                    listaContainer.html(listaHTML);
+                }
+            } else {
+                listaContainer.html('<p>No hay refuerzos disponibles.</p>');
+            }
+        });
+    });
+
+    $('#btnConfirmarAgregarRefuerzoBase').on('click', function () {
+        const seleccionados = $('#listaRefuerzosContainer input:checked');
+        if (seleccionados.length > 0) {
+            seleccionados.each(function () {
+                vendedoresCargados.push({
+                    COD_VENDED: $(this).val(),
+                    NOMBRE_VEN: $(this).data('nombre'),
+                    TAREA_HABITUAL: $(this).data('tarea'),
+                    ES_REFUERZO: true // Marcar como refuerzo
+                });
+            });
+            // No tenemos "datos guardados" para estos nuevos, así que pasamos un objeto con sus IDs vacíos
+            // Pero renderGrillaBase espera "guardado" como mapa {id: data}.
+            // Debemos preservar lo que ya está pintado en la grilla actual antes de re-renderizar?
+            // AJAX call to save current state? No, it's better to just append rows or re-render everything preserving state.
+            // Dado que `renderGrillaBase` destruye el HTML, perderíamos lo pintado no guardado.
+
+            // SOLUCION MEJORADA: Solo anexar la fila HTML nueva.
+            // Pero `renderGrillaBase` es compleja. 
+            // Vamos a guardar el estado actual de la grilla en memoria antes de re-renderizar.
+
+            let estadoActual = {};
+            // Recorremos la grilla actual para salvar lo que el usuario pintó
+            $('#base_tablaContainer tbody tr').each(function () {
+                const vid = $(this).data('vendedor-id');
+                estadoActual[vid] = { horarios: {}, francos: {} };
+
+                $(this).find('.hora-base').each(function () {
+                    if ($(this).hasClass('marcado') || $(this).hasClass('hora-extra')) {
+                        const d = $(this).data('dia');
+                        const h = $(this).data('hora');
+                        let tipo = $(this).hasClass('hora-extra') ? 'extra' : 'normal';
+                        if ($(this).hasClass('media-hora')) tipo += '_media';
+
+                        if (!estadoActual[vid].horarios[d]) estadoActual[vid].horarios[d] = {};
+                        estadoActual[vid].horarios[d][h] = tipo;
+                    }
+                });
+
+                $(this).find('.checkbox-base:checked').each(function () {
+                    const d = $(this).data('dia');
+                    estadoActual[vid].francos[d] = true;
+                });
+            });
+
+            renderGrillaBase(vendedoresCargados, estadoActual);
+        }
+
+        bootstrap.Modal.getInstance(document.getElementById('modalRefuerzos')).hide();
+        // Resetear botones
+        $('#btnConfirmarAgregarRefuerzo').removeClass('d-none');
+        $('#btnConfirmarAgregarRefuerzoBase').addClass('d-none');
+    });
 
     // =========================================================
     // 5. GUARDAR PLANTILLA
@@ -207,6 +396,11 @@ $(document).ready(function () {
                         tipo: tipoHora,
                         franco: 0
                     });
+
+                    // Si es media hora, agregamos la info
+                    if ($(this).hasClass('media-hora')) {
+                        datosParaGuardar[datosParaGuardar.length - 1].tipo += '_media';
+                    }
                 }
             });
 

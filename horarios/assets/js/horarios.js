@@ -293,8 +293,8 @@ $(document).ready(function () {
         fechasSemana = [];
         const container = $('#tablaHorariosContainer');
 
-        // Creamos un contenedor con scroll
-        let tablaHTML = '<div class="table-container" style="max-height: 70vh; overflow-y: auto; position: relative;">';
+        // Creamos un contenedor (el scroll vertical se maneja por la página, el horizontal por el contenedor si es necesario)
+        let tablaHTML = '<div class="table-container" style="position: relative; overflow-x: auto;">';
         tablaHTML += '<table class="table table-bordered table-sm table-horarios">';
 
         // --- HEADER CON STICKY ---
@@ -720,58 +720,58 @@ $(document).ready(function () {
         let totalesDiarios = Array(7).fill(0);
 
         // Inicializar array para contar horas por columna
-        // [dia][hora] -> contador
-        // CAMBIAR: De 16 horas (7-22) a 17 horas (7-23)
+        // 7 días, 17 horas (7-23)
         let totalesPorHora = Array(7).fill().map(function () {
-            return Array(17).fill(0); // 7 días, 17 horas (7-23)
+            return Array(17).fill(0);
         });
 
         // Recorremos cada fila de vendedor
         $('tbody tr').each(function () {
             const fila = $(this);
-            const vendedorId = fila.data('vendedor-id');
 
-            // 1. Contar tipos de hora visuales - AHORA TAMBIÉN CUENTA "X" (plantilla base)
-            const n = fila.find('.hora-celda.marcado').length;
-            const c = fila.find('.hora-celda.hora-caja').length;
-            const p = fila.find('.hora-celda.hora-permiso').length;
-            const e = fila.find('.hora-celda.hora-extra').length;
-            const d = fila.find('.hora-celda.hora-devuelve').length;
-            const nExterno = fila.find('.hora-celda.bloqueo-externo').length;
+            // 1. Contar tipos de hora (Soportando 0.5)
+            let n = 0, c = 0, p = 0, e = 0, d = 0, nExterno = 0;
 
-            // Contar TODAS las celdas con contenido (incluye "X" del horario base)
-            const celdasConHoras = fila.find('.hora-celda.marcado, .hora-celda.hora-caja, .hora-celda.hora-permiso, .hora-celda.hora-extra, .hora-celda.hora-devuelve, .hora-celda.bloqueo-externo');
-            const totalHorasTodas = celdasConHoras.length;
+            fila.find('.hora-celda').each(function () {
+                const esMedia = $(this).hasClass('media-hora');
+                const valor = esMedia ? 0.5 : 1;
 
-            // 2. Calcular por CADA DÍA el turno y contar horas por columna
+                if ($(this).hasClass('bloqueo-externo')) nExterno += valor;
+                else if ($(this).hasClass('hora-extra')) e += valor;
+                else if ($(this).hasClass('hora-devuelve')) d += valor;
+                else if ($(this).hasClass('hora-permiso')) p += valor;
+                else if ($(this).hasClass('hora-caja')) c += valor;
+                else if ($(this).hasClass('marcado')) n += valor;
+            });
+
+            // 2. Calcular por CADA DÍA
             fechasSemana.forEach(function (fechaISO, diaIndex) {
                 let horasDia = [];
+                let horasDiaValor = 0;
 
-                // Contar TODAS las horas asignadas para este día (incluye horario base con "X")
-                const celdasDia = fila.find('.hora-celda.marcado[data-fecha="' + fechaISO + '"], .hora-celda.hora-caja[data-fecha="' + fechaISO + '"], .hora-celda.hora-permiso[data-fecha="' + fechaISO + '"]');
+                fila.find(`.hora-celda[data-fecha="${fechaISO}"]`).each(function () {
+                    if ($(this).hasClass('marcado') || $(this).hasClass('hora-caja') || $(this).hasClass('hora-permiso') || $(this).hasClass('hora-extra') || $(this).hasClass('hora-devuelve') || $(this).hasClass('bloqueo-externo')) {
+                        const hora = $(this).data('hora');
+                        const esMedia = $(this).hasClass('media-hora');
+                        const valor = esMedia ? 0.5 : 1;
 
-                celdasDia.each(function () {
-                    const hora = $(this).data('hora');
-                    horasDia.push(hora);
+                        horasDia.push(hora);
+                        horasDiaValor += valor;
 
-                    // Contar para total por columna (hora)
-                    // CAMBIAR: De 7-22 (rango 16) a 7-23 (rango 17)
-                    const horaIndex = hora - 7; // Convertir 7-23 a índice 0-16
-                    if (horaIndex >= 0 && horaIndex < 17) {
-                        totalesPorHora[diaIndex][horaIndex]++;
+                        // Contar para total por columna
+                        const horaIndex = hora - 7;
+                        if (horaIndex >= 0 && horaIndex < 17) {
+                            totalesPorHora[diaIndex][horaIndex] += valor;
+                        }
                     }
                 });
 
-                // Calcular turno del día
                 const turnoDia = calcularTurno(horasDia);
                 const badgeTurno = fila.find('.turno-dia-badge[data-fecha="' + fechaISO + '"]');
 
                 badgeTurno.text(turnoDia);
-
-                // Colores para los turnos por día
                 badgeTurno.removeClass('bg-light bg-primary bg-success bg-warning bg-info');
 
-                // Verificar si es franco
                 const esFranco = fila.find('.franco-checkbox[value="' + fechaISO + '"]').is(':checked');
 
                 if (esFranco) {
@@ -779,114 +779,117 @@ $(document).ready(function () {
                     badgeTurno.text('F');
                 } else {
                     switch (turnoDia) {
-                        case 'TM':
-                            badgeTurno.addClass('bg-primary text-white').attr('title', 'Turno Mañana (7-16hs)');
-                            break;
-                        case 'TT':
-                            badgeTurno.addClass('bg-success text-white').attr('title', 'Turno Tarde (16-22hs)');
-                            break;
-                        case 'FULL':
-                            badgeTurno.addClass('bg-warning text-dark').attr('title', 'Full Day (10-22hs)');
-                            break;
-                        case 'MIXTO':
-                            badgeTurno.addClass('bg-info text-white').attr('title', 'Horario Mixto');
-                            break;
-                        default:
-                            badgeTurno.addClass('bg-light text-dark border').attr('title', 'Sin horario asignado');
+                        case 'TM': badgeTurno.addClass('bg-primary text-white'); break;
+                        case 'TT': badgeTurno.addClass('bg-success text-white'); break;
+                        case 'FULL': badgeTurno.addClass('bg-warning text-dark'); break;
+                        case 'MIXTO': badgeTurno.addClass('bg-info text-white'); break;
+                        default: badgeTurno.addClass('bg-light text-dark border');
                     }
                 }
 
-                // Sumar al total diario
-                totalesDiarios[diaIndex] += horasDia.length;
+                totalesDiarios[diaIndex] += horasDiaValor;
             });
 
-            // 3. Resto del cálculo (total H, banco de horas, etc.)
+            // 3. Resto del cálculo
             const totalH_Visual = n + c + p + nExterno;
 
-            fila.find('.total-n').text(totalH_Visual);
-            fila.find('.total-e').text(e);
-            fila.find('.total-d').text(d);
+            // .toFixed(1).replace('.0', '') para mostrar entero si es entero
+            const fmt = (num) => (num % 1 === 0 ? num : num.toFixed(1));
 
-            // Cálculo banco de horas
-            const saldoInicial = parseInt(fila.attr('data-saldo-inicial')) || 0;
+            fila.find('.total-n').text(fmt(totalH_Visual));
+            fila.find('.total-e').text(fmt(e));
+            fila.find('.total-d').text(fmt(d));
+
+            const saldoInicial = parseFloat(fila.attr('data-saldo-inicial')) || 0;
             const saldoActual = saldoInicial + p - d;
 
             const spanSaldo = fila.find('.total-saldo');
             const badgeSaldo = fila.find('.total-saldo-container');
 
-            spanSaldo.text(saldoActual);
+            spanSaldo.text(fmt(saldoActual));
             badgeSaldo.removeClass('bg-light text-secondary bg-danger text-white bg-success');
 
             if (saldoActual > 0) {
-                badgeSaldo.addClass('bg-danger text-white').attr('title', 'Debe ' + saldoActual + ' horas');
+                badgeSaldo.addClass('bg-danger text-white').attr('title', 'Debe ' + fmt(saldoActual) + ' horas');
             } else if (saldoActual < 0) {
-                badgeSaldo.addClass('bg-success text-white').attr('title', 'Saldo a favor: ' + Math.abs(saldoActual));
+                badgeSaldo.addClass('bg-success text-white').attr('title', 'Saldo a favor: ' + fmt(Math.abs(saldoActual)));
             } else {
                 badgeSaldo.addClass('bg-light text-secondary').attr('title', 'Al día');
             }
 
-            // Sumar al total semanal (TODAS las horas)
             granTotalSemanal += (n + c + p + e + d);
         });
 
-        // 4. ACTUALIZAR TOTALES POR COLUMNA DE HORA
-        // CAMBIAR: De 0-15 (16 horas) a 0-16 (17 horas)
+        // 4. ACTUALIZAR TOTALES POR COLUMNA
+        const fmt = (num) => (num % 1 === 0 ? num : num.toFixed(1));
+
         for (let diaIndex = 0; diaIndex < 7; diaIndex++) {
             for (let horaIndex = 0; horaIndex < 17; horaIndex++) {
-                const hora = horaIndex + 7; // Convertir índice 0-16 a hora 7-23
+                const hora = horaIndex + 7;
                 const total = totalesPorHora[diaIndex][horaIndex];
-
-                // Buscar la celda correspondiente en el footer
                 const celdaTotal = $('.total-hora-columna[data-hora="' + hora + '"][data-dia-index="' + diaIndex + '"]');
-                celdaTotal.text(total);
+                celdaTotal.text(fmt(total));
 
-                // Dar color según la cantidad
                 celdaTotal.removeClass('text-danger text-warning text-success');
-                if (total > 0) {
-                    celdaTotal.addClass('text-success');
-                } else {
-                    celdaTotal.addClass('text-muted');
-                }
+                if (total > 0) celdaTotal.addClass('text-success');
+                else celdaTotal.addClass('text-muted');
             }
         }
 
-        // Actualizar badges globales
-        $('#totalSemanalLocal').text(granTotalSemanal);
-        $('.total-semanal-footer').text(granTotalSemanal);
+        $('#totalSemanalLocal').text(fmt(granTotalSemanal));
+        $('.total-semanal-footer').text(fmt(granTotalSemanal));
 
-        if (granTotalSemanal > 0) {
-            $('#totalSemanalLocal').removeClass('bg-primary').addClass('bg-success');
-        } else {
-            $('#totalSemanalLocal').removeClass('bg-success').addClass('bg-primary');
-        }
+        if (granTotalSemanal > 0) $('#totalSemanalLocal').removeClass('bg-primary').addClass('bg-success');
+        else $('#totalSemanalLocal').removeClass('bg-success').addClass('bg-primary');
 
-        // Actualizar totales por día en el footer
         $('.total-horas-dia').each(function (index) {
-            $(this).text(totalesDiarios[index]);
+            $(this).text(fmt(totalesDiarios[index]));
         });
     }
 
-    $('#tablaHorariosContainer').on('mousedown', '.hora-celda', function (e) {
+    // CLICK DERECHO: Alternar Media Hora
+    $('#tablaHorariosContainer').on('contextmenu', '.hora-celda', function (e) {
         e.preventDefault();
 
-        // Agregar bloqueo-externo a la lista de prohibidos
         if ($(this).hasClass('dia-franco') || $(this).hasClass('bloqueo-externo')) return;
 
-        // REGLA DE ORO: Si es día franco, NO HACER NADA.
-        // El usuario debe destildar el radio button manualmente si quiere editar.
-        if ($(this).hasClass('dia-franco')) return;
+        // Si la celda está vacía, primero la marcamos como X (o el tipo actual)
+        if (!$(this).hasClass('marcado') && !$(this).hasClass('hora-extra') && !$(this).hasClass('hora-devuelve') && !$(this).hasClass('hora-permiso') && !$(this).hasClass('hora-caja')) {
+            modoPintado = 'marcar'; // Forzamos pintar
+            toggleCelda($(this));
+        }
+
+        // Alternar clase de media hora
+        if ($(this).hasClass('media-hora')) {
+            $(this).removeClass('media-hora');
+            $(this).html(''); // Limpiar indicador VISUAL
+            // Restaurar texto base
+            let textobase = 'X';
+            if ($(this).hasClass('hora-extra')) textobase = 'E';
+            if ($(this).hasClass('hora-devuelve')) textobase = 'D';
+            if ($(this).hasClass('hora-permiso')) textobase = 'P';
+            if ($(this).hasClass('hora-caja')) textobase = 'C';
+            $(this).text(textobase);
+        } else {
+            $(this).addClass('media-hora');
+            $(this).html('<small style="font-size:0.7em;">½</small>'); // Indicador visual
+        }
+
+        actualizarSumatorias();
+    });
+
+    $('#tablaHorariosContainer').on('mousedown', '.hora-celda', function (e) {
+        e.preventDefault();
+        if ($(this).hasClass('dia-franco') || $(this).hasClass('bloqueo-externo')) return;
+        if (e.which === 3) return; // Ignorar si es click derecho (ya lo maneja contextmenu)
 
         isMouseDown = true;
-
-        // Lógica de pintar/despintar
         modoPintado = ($(this).hasClass('marcado') || $(this).hasClass('hora-extra') || $(this).hasClass('hora-devuelve')) ? 'desmarcar' : 'marcar';
         toggleCelda($(this));
     });
 
     $('#tablaHorariosContainer').on('mouseover', '.hora-celda', function () {
-        // Lo mismo al arrastrar: Si pasamos por encima de un franco, lo ignoramos.
         if ($(this).hasClass('dia-franco')) return;
-
         if (isMouseDown) {
             toggleCelda($(this));
         }
@@ -897,108 +900,96 @@ $(document).ready(function () {
     });
 
     function toggleCelda(celda) {
-        // 1. Limpiamos TODAS las clases de colores y el texto
         if (modoPintado === 'desmarcar') {
-            celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja').text('');
+            celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja media-hora').text('');
         } else {
-            // Primero limpiamos para evitar mezclas
             celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja');
 
-            // 2. Aplicamos la clase y letra según el selector
+            // Si ya tenía media hora, mantenemos la clase pero actualizamos el texto/color base
+            const esMedia = celda.hasClass('media-hora');
+
             if (modoPintadoHoras === 'extra') {
                 celda.addClass('hora-extra').text('E');
             } else if (modoPintadoHoras === 'devuelve') {
                 celda.addClass('hora-devuelve').text('D');
             } else if (modoPintadoHoras === 'permiso') {
-                celda.addClass('hora-permiso').text('P'); // Rosa
+                celda.addClass('hora-permiso').text('P');
             } else if (modoPintadoHoras === 'caja') {
-                celda.addClass('hora-caja').text('C'); // Celeste
+                celda.addClass('hora-caja').text('C');
             } else {
-                // Normal
                 celda.addClass('marcado').text('X');
             }
+
+            if (esMedia) celda.html('<small style="font-size:0.7em;">½</small>');
         }
         actualizarSumatorias();
     }
 
     function getPrimerDiaDeSemana(year, week) {
-        // 1. Creamos una fecha al 4 de enero del año elegido (siempre cae en la Semana 1)
         const d = new Date(year, 0, 4);
-
-        // 2. Obtenemos el día de la semana (0=Domingo, 1=Lunes, ... 6=Sábado)
-        // El "|| 7" convierte el 0 (Domingo) en 7 para facilitar la resta
         const day = d.getDay() || 7;
-
-        // 3. Retrocedemos al LUNES de esa semana 1
         d.setDate(d.getDate() - day + 1);
-
-        // 4. Sumamos las semanas correspondientes
-        // (week - 1) porque ya estamos en la semana 1
         d.setDate(d.getDate() + ((week - 1) * 7));
-
         return d;
     }
 
     $('#guardarHorariosBtn').off('click').on('click', function () {
         const boton = $(this);
-        let errores = [];
+        let advertencias = [];
+        let erroresCriticos = [];
 
-        // =========================================================
         // 1. VALIDACIONES
-        // =========================================================
         $('tbody tr').each(function () {
-            // Leemos del atributo data, si falla, intentamos leer del HTML visual
             let nombre = $(this).data('nombre');
             if (!nombre || nombre === "undefined") {
-                // Fallback al texto visual
                 nombre = $(this).find('td:first .text-truncate > div').first().text().trim();
             }
 
-            // Leemos el total H que ya calculamos visualmente (Suma Local + Externo)
-            const totalH_Semanal = parseInt($(this).find('.total-n').text()) || 0;
+            const totalH_Semanal = parseFloat($(this).find('.total-n').text()) || 0;
 
-            // Regla A: Semanal 30, 36, 42, 48
-            // Validamos solo si tiene alguna hora asignada (mayor a 0)
+            // Regla A: Semanal 30, 36, 42, 48 (AHORA ES ADVERTENCIA)
+            // Validamos solo si tiene alguna hora asignada
             if (totalH_Semanal > 0 && ![30, 36, 42, 48].includes(totalH_Semanal)) {
-                errores.push(`<b>${nombre}</b> suma ${totalH_Semanal} hs normales (H). Debe ser 30, 36, 42 o 48.`);
+                advertencias.push(`<b>${nombre}</b> suma ${totalH_Semanal} hs normales (H). Sugerido: 30, 36, 42 o 48.`);
             }
 
-            // Regla B: Diario Max 12 (Sumando todo: Local + Bloqueado Externo)
+            // Regla B: Diario Max 12 (ERROR CRÍTICO)
             let horasPorDia = {};
             $(this).find('.hora-celda').each(function () {
-                // Contamos si está marcado acá O si está bloqueado por otra sucursal
-                if ($(this).hasClass('marcado') ||
-                    $(this).hasClass('hora-extra') ||
-                    $(this).hasClass('hora-devuelve') ||
-                    $(this).hasClass('bloqueo-externo')) {
-
+                if ($(this).hasClass('marcado') || $(this).hasClass('hora-extra') || $(this).hasClass('hora-devuelve') || $(this).hasClass('bloqueo-externo')) {
                     const f = $(this).data('fecha');
-                    horasPorDia[f] = (horasPorDia[f] || 0) + 1;
+                    // Soporte media hora
+                    const val = $(this).hasClass('media-hora') ? 0.5 : 1;
+                    horasPorDia[f] = (horasPorDia[f] || 0) + val;
                 }
             });
 
             for (const [dia, cant] of Object.entries(horasPorDia)) {
-                if (cant > 12) errores.push(`<b>${nombre}</b> excede 12hs el día ${dia} (Total acumulado).`);
+                if (cant > 12) erroresCriticos.push(`<b>${nombre}</b> excede 12hs el día ${dia} (Total acumulado: ${cant}).`);
             }
         });
 
-        // Si hay errores, mostramos modal y CORTAMOS la ejecución
-        if (errores.length > 0) {
-            let listaHtml = errores.map(e => `<li>${e}</li>`).join('');
+        // ERROR CRÍTICO: Bloquear
+        if (erroresCriticos.length > 0) {
+            let listaHtml = erroresCriticos.map(e => `<li>${e}</li>`).join('');
             $('#listaErroresValidacion').html(listaHtml);
             new bootstrap.Modal(document.getElementById('modalValidacion')).show();
             return;
         }
 
-        // =========================================================
-        // 2. PREPARACIÓN DE DATOS (Lo que faltaba)
-        // =========================================================
+        // ADVERTENCIA: Confirmar
+        if (advertencias.length > 0) {
+            const confirmMsg = "ADVERTENCIAS DE VALIDACIÓN:\n\n" + advertencias.map(a => a.replace(/<b>|<\/b>/g, '')).join('\n') + "\n\n¿Desea guardar de todos modos?";
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+        }
+
+        // 2. PREPARACIÓN DE DATOS
         boton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Guardando...');
 
         const sucursalId = $('#sucursalSelector').val();
         const semana = $('#semanaSelector').val();
-
-        // Calcular Fechas
         const [year, weekNum] = semana.split('-W');
         const primerDia = getPrimerDiaDeSemana(year, weekNum);
         let ultimoDia = new Date(primerDia);
@@ -1006,50 +997,45 @@ $(document).ready(function () {
         const fechaInicio = primerDia.toISOString().split('T')[0];
         const fechaFin = ultimoDia.toISOString().split('T')[0];
 
-        // Arrays para guardar
         let horarios = [], francos = [], notas = [], vendedores = [];
 
         // A. Recolectar Horarios
-        // IMPORTANTE: Agregamos .hora-permiso y .hora-caja al selector para que las encuentre
         $('.hora-celda.marcado, .hora-celda.hora-extra, .hora-celda.hora-devuelve, .hora-celda.hora-permiso, .hora-celda.hora-caja').each(function () {
             const celda = $(this);
-
-            // Ignoramos las celdas bloqueadas (ya están en otra sucursal)
             if (celda.hasClass('bloqueo-externo')) return;
 
-            // DEFINICIÓN DE VARIABLE (Aquí estaba el error, faltaba el 'let')
             let tipo = 'normal';
-
             if (celda.hasClass('hora-extra')) tipo = 'extra';
             else if (celda.hasClass('hora-devuelve')) tipo = 'devuelve';
-            else if (celda.hasClass('hora-permiso')) tipo = 'permiso'; // Nuevo
-            else if (celda.hasClass('hora-caja')) tipo = 'caja';       // Nuevo
+            else if (celda.hasClass('hora-permiso')) tipo = 'permiso';
+            else if (celda.hasClass('hora-caja')) tipo = 'caja';
 
-            // Obtenemos el nombre de la fila
-            const nombreVendedor = celda.closest('tr').data('nombre'); // ESTO ES SEGURO
+            // == MEDIA HORA SUPPORT ==
+            if (celda.hasClass('media-hora')) {
+                tipo += '_media';
+            }
 
+            const nombreVendedor = celda.closest('tr').data('nombre');
 
             horarios.push({
                 codVended: celda.closest('tr').data('vendedor-id'),
-                nombreVendedor: nombreVendedor, // <--- CAMPO NUEVO
+                nombreVendedor: nombreVendedor,
                 fecha: celda.data('fecha'),
                 hora: celda.data('hora'),
                 tipo: tipo
             });
         });
 
-        // B. Recolectar Francos y Lista de Vendedores (para limpiar BD)
+        // B. Recolectar Francos
         $('tbody tr').each(function () {
-            const fila = $(this); // Obtener la fila actual
+            const fila = $(this);
             const vid = fila.data('vendedor-id');
             vendedores.push(vid);
 
-            // --- CAMBIO CLAVE AQUÍ: Iterar sobre CADA checkbox marcado ---
             fila.find('.franco-checkbox:checked').each(function () {
-                const checkbox = $(this); // Obtener el checkbox actual
-                // Solo guardamos si el checkbox NO está deshabilitado
+                const checkbox = $(this);
                 if (!checkbox.prop('disabled')) {
-                    francos.push({ codVended: vid, fechaFranco: checkbox.val() }); // Usar el valor del checkbox actual
+                    francos.push({ codVended: vid, fechaFranco: checkbox.val() });
                 }
             });
         });
@@ -1057,7 +1043,6 @@ $(document).ready(function () {
         // C. Recolectar Notas
         $('.btn-nota').each(function () {
             const t = $(this).data('texto');
-            // Solo guardamos notas que no estén deshabilitadas
             if (t && t.trim() !== '' && !$(this).prop('disabled')) {
                 notas.push({
                     codVended: $(this).data('vendedor'),
@@ -1067,9 +1052,6 @@ $(document).ready(function () {
             }
         });
 
-        // =========================================================
-        // 3. DEFINICIÓN DEL PAYLOAD (Aquí estaba el error)
-        // =========================================================
         const payload = {
             nroSucursal: sucursalId,
             fechaInicio: fechaInicio,
@@ -1081,9 +1063,6 @@ $(document).ready(function () {
             observaciones: $('#observacionesSemana').val()
         };
 
-        // =========================================================
-        // 4. ENVÍO AJAX
-        // =========================================================
         $.ajax({
             url: apiHorariosURL,
             type: 'POST',
@@ -1091,12 +1070,9 @@ $(document).ready(function () {
             data: JSON.stringify(payload),
             success: (res) => {
                 if (res.status === 'ok') {
-                    // USAMOS EL NUEVO MODAL
                     mostrarModal('¡Los horarios se guardaron correctamente en el sistema!', 'success');
-
-                    $('#cargarHorariosBtn').click(); // Recargamos
+                    $('#cargarHorariosBtn').click();
                 } else {
-                    // USAMOS EL NUEVO MODAL (Error)
                     mostrarModal(res.message, 'error');
                 }
             },

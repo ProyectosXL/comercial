@@ -197,15 +197,21 @@ $(document).ready(function () {
                 const esFranco = datos.francos && datos.francos[fecha];
                 if (!esFranco && datos.horarios && datos.horarios[fecha]) {
                     for (let h = 7; h <= 23; h++) {
-                        const tipo = datos.horarios[fecha][h];
+                        let tipo = datos.horarios[fecha][h];
+                        let valor = 1;
+                        if (tipo && tipo.endsWith('_media')) {
+                            valor = 0.5;
+                            tipo = tipo.replace('_media', '');
+                        }
+
                         if (tipo) {
-                            if (tipo === 'normal' || tipo === 'caja') tH++;
-                            else if (tipo === 'extra') tE++;
-                            else if (tipo === 'devuelve') tD++;
-                            else if (tipo === 'permiso') tP++;
+                            if (tipo === 'normal' || tipo === 'caja') tH += valor;
+                            else if (tipo === 'extra') tE += valor;
+                            else if (tipo === 'devuelve') tD += valor;
+                            else if (tipo === 'permiso') tP += valor;
 
                             // Sumar para el footer global
-                            sumasHoras[diaIndex][h]++;
+                            sumasHoras[diaIndex][h] += valor;
                         }
                     }
                 }
@@ -240,12 +246,12 @@ $(document).ready(function () {
 
             html += `<td class="sticky-left-1 bg-white align-middle p-0" style="width: 100px; min-width: 100px;">
                         <div class="d-flex flex-column align-items-center" style="font-size: 0.8rem; line-height: 1.1; padding: 4px;">
-                            <span class="text-success fw-bold" title="Horas Normales">H: ${tH}</span>
-                            <span class="text-primary fw-bold" title="Horas Extras">E: ${tE}</span>
-                            <span class="text-warning fw-bold" title="Horas a Devolver">D: ${tD}</span>
-                            <span class="text-pink fw-bold" style="color: #d63384;" title="Permisos">P: ${tP}</span>
+                            <span class="text-success fw-bold" title="Horas Normales">H: ${tH % 1 === 0 ? tH : tH.toFixed(1)}</span>
+                            <span class="text-primary fw-bold" title="Horas Extras">E: ${tE % 1 === 0 ? tE : tE.toFixed(1)}</span>
+                            <span class="text-warning fw-bold" title="Horas a Devolver">D: ${tD % 1 === 0 ? tD : tD.toFixed(1)}</span>
+                            <span class="text-pink fw-bold" style="color: #d63384;" title="Permisos">P: ${tP % 1 === 0 ? tP : tP.toFixed(1)}</span>
                             <span class="badge border ${colorSaldo} mt-1" style="font-size: 0.7rem; padding: 2px 4px;">
-                                Saldo: ${saldoFinal}
+                                Saldo: ${saldoFinal % 1 === 0 ? saldoFinal : saldoFinal.toFixed(1)}
                             </span>
                         </div>
                      </td>`;
@@ -261,7 +267,13 @@ $(document).ready(function () {
                     let texto = '';
                     let color = '';
 
-                    const tipo = (!esFranco && datos.horarios && datos.horarios[fecha]) ? datos.horarios[fecha][h] : null;
+                    let tipo = (!esFranco && datos.horarios && datos.horarios[fecha]) ? datos.horarios[fecha][h] : null;
+                    let esMedia = false;
+
+                    if (tipo && tipo.endsWith('_media')) {
+                        esMedia = true;
+                        tipo = tipo.replace('_media', '');
+                    }
 
                     if (esFranco) {
                         bgColor = '#e9ecef';
@@ -272,9 +284,14 @@ $(document).ready(function () {
                         else if (tipo === 'permiso') { bgColor = '#d63384'; texto = 'P'; }
                         else if (tipo === 'caja') { bgColor = '#0dcaf0'; texto = 'C'; color = '#000'; }
                         else { bgColor = '#198754'; texto = 'X'; }
+
+                        if (esMedia) texto += ' <small>½</small>';
                     }
 
-                    html += `<td style="background-color: ${bgColor}; color: ${color}; font-weight: bold; text-align: center; vertical-align: middle; min-width: 30px; font-size: 0.8rem;">${texto}</td>`;
+                    // Clase especial si es media hora para posicionamiento (aunque background es inline)
+                    const classMedia = esMedia ? 'media-hora-view' : '';
+
+                    html += `<td class="${classMedia}" style="background-color: ${bgColor}; color: ${color}; font-weight: bold; text-align: center; vertical-align: middle; min-width: 30px; font-size: 0.8rem;">${texto}</td>`;
                 }
 
                 // Franco (F)

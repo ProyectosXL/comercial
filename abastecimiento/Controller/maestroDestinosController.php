@@ -156,7 +156,7 @@ switch ($accion) {
 
         $maestroArticulos = new Destino();
 
-        $data = $_POST['data'];
+        $data = json_decode($_POST['data'], true);
         $arrayResponse = [];
         foreach ($data as $key => $articulo) {
             $existe = $maestroArticulos->comprobarArticulo($articulo[0], $articulo[1], $articulo[2], $articulo[3]);
@@ -174,7 +174,7 @@ switch ($accion) {
 
         $maestroDestinos = new Destino();
 
-        $data = $_POST['data'];
+        $data = json_decode($_POST['data'], true);
 
         foreach ($data as $key => $articulo) {
             $maestroDestinos->actualizarMaestro($articulo[0], $articulo[1], $articulo[2], $articulo[3]);
@@ -190,7 +190,7 @@ switch ($accion) {
 
         $maestroDestinos = new Destino();
 
-        $data = $_POST['data'];
+        $data = json_decode($_POST['data'], true);
         $response = [];
 
         foreach ($data as $key => $value) {
