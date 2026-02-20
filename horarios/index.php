@@ -28,7 +28,8 @@
             box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
         }
 
-        .dia-franco {
+        .dia-franco,
+        .hora-vacaciones {
             background-color: #f3e5f5 !important;
             /* Lila claro */
             color: #6a1b9a;
@@ -150,6 +151,9 @@
                                     <input type="radio" class="btn-check" name="tipoHora" id="tipoDevuelve"
                                         value="devuelve"><label class="btn btn-outline-warning" for="tipoDevuelve">D
                                         (DEV)</label>
+                                    <input type="radio" class="btn-check" name="tipoHora" id="tipoVacaciones"
+                                        value="vacaciones"><label class="btn btn-outline-secondary" for="tipoVacaciones"
+                                        style="border-color:#6a1b9a; color:#6a1b9a;">V (VAC)</label>
                                 </div>
                             </div>
                             <div class="col-md-2">

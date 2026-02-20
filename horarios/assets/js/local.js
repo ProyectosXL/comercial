@@ -106,12 +106,12 @@ $(document).ready(function () {
         const min = horas[0];
         const max = horas[horas.length - 1];
 
-        if (min >= 7 && max <= 16) return 'TM';
-        if (min >= 14 && max <= 23) return 'TT';
-        if (min >= 10 && max <= 23) return 'FULL';
+        if (min >= 7 && max <= 15) return 'TM';
+        if (min >= 14 && (max <= 23 || max === 24)) return 'TT';
+        if (min >= 10 && (max <= 23 || max === 24)) return 'FULL';
 
         const tieneTM = horas.some(h => h >= 7 && h <= 15);
-        const tieneTT = horas.some(h => h >= 16 && h <= 23);
+        const tieneTT = horas.some(h => (h >= 16 && h <= 23) || h === 24);
         if (tieneTM && tieneTT) return 'FULL';
 
         return 'MIXTO';
@@ -140,10 +140,10 @@ $(document).ready(function () {
             return nomA.localeCompare(nomB);
         });
 
-        // Inicializar sumatorias para el footer
-        let sumasHoras = Array.from({ length: 7 }, () => Array(24).fill(0));
+        // Inicializar sumatorias para el footer (7 días, 25 rangos para soportar index 24)
+        let sumasHoras = Array.from({ length: 7 }, () => Array(25).fill(0));
 
-        // --- 1. CONSTRUCCIÓN DEL TH ---
+        // --- 1. CONSTRUCCIÓN DEL HEADER ---
         let html = '<table class="table table-bordered table-sm mb-0 table-horarios">';
         html += '<thead>';
 
@@ -161,7 +161,8 @@ $(document).ready(function () {
             const diaNum = String(fechaActual.getDate()).padStart(2, '0');
             const mesNum = String(fechaActual.getMonth() + 1).padStart(2, '0');
 
-            html += `<th colspan="20" class="dia-header text-center fw-bold bg-light" style="min-width: 600px;">${diasSemanaNombres[i]} ${diaNum}/${mesNum}</th>`;
+            // Colspan a 21 (18 horas + F + T + N)
+            html += `<th colspan="21" class="dia-header text-center fw-bold bg-light" style="min-width: 600px;">${diasSemanaNombres[i]} ${diaNum}/${mesNum}</th>`;
         }
         html += '</tr>';
 
@@ -170,8 +171,9 @@ $(document).ready(function () {
         html += '<th class="sticky-left-0 bg-white" style="z-index: 19;"></th>';
         html += '<th class="sticky-left-1 bg-white" style="z-index: 19;"></th>';
         for (let d = 0; d < 7; d++) {
-            for (let h = 7; h <= 23; h++) {
-                html += `<th class="sticky-top-1 text-center" style="width: 30px; min-width: 30px;">${h}</th>`;
+            for (let h = 7; h <= 24; h++) {
+                const label = (h === 24) ? '00' : h;
+                html += `<th class="sticky-top-1 text-center" style="width: 30px; min-width: 30px;">${label}</th>`;
             }
             html += '<th class="sticky-top-1 text-center" style="width:30px; background-color:#e9ecef;" title="Franco">F</th>';
             html += '<th class="sticky-top-1 text-center" style="width:40px; background-color:#f8f9fa;" title="Turno">T</th>';
@@ -183,8 +185,6 @@ $(document).ready(function () {
         html += '<tbody>';
         vendedoresOrdenados.forEach(id => {
             const datos = agenda[id] || {};
-
-            // Intentar buscar el nombre de forma más robusta (por si viene como número en el objeto nombres)
             const infoVend = nombres[id] || nombres[parseInt(id)] || { nombre: `Vendedor ${id}`, tarea: '' };
             const nombre = infoVend.nombre;
             const tarea = infoVend.tarea;
@@ -196,8 +196,9 @@ $(document).ready(function () {
             fechasSemana.forEach((fecha, diaIndex) => {
                 const esFranco = datos.francos && datos.francos[fecha];
                 if (!esFranco && datos.horarios && datos.horarios[fecha]) {
-                    for (let h = 7; h <= 23; h++) {
-                        let tipo = datos.horarios[fecha][h];
+                    for (let h = 7; h <= 24; h++) {
+                        const hBusqueda = (h === 24) ? 0 : h;
+                        let tipo = datos.horarios[fecha][hBusqueda];
                         let valor = 1;
                         if (tipo && tipo.endsWith('_media')) {
                             valor = 0.5;
@@ -205,24 +206,23 @@ $(document).ready(function () {
                         }
 
                         if (tipo) {
+                            if (tipo === 'vacaciones') continue;
+
                             if (tipo === 'normal' || tipo === 'caja') tH += valor;
                             else if (tipo === 'extra') tE += valor;
                             else if (tipo === 'devuelve') tD += valor;
                             else if (tipo === 'permiso') tP += valor;
 
-                            // Sumar para el footer global
                             sumasHoras[diaIndex][h] += valor;
                         }
                     }
                 }
             });
 
-            // CORRECCIÓN SALDO: El saldo es P (Permisos) - D (Devuelve)
             const saldoFinal = saldoBase + (tP - tD);
-
             html += '<tr>';
 
-            // Celda Vendedor (Sticky 0)
+            // Celda Vendedor
             const feedbackTexto = datos.feedback || '';
             const tieneFeedback = feedbackTexto.trim() !== '';
             html += `<td class="sticky-left-0 bg-white text-start p-2">
@@ -239,17 +239,17 @@ $(document).ready(function () {
                         </div>
                      </td>`;
 
-            // Celda Totales (Sticky 1)
+            // Celda Totales
             let colorSaldo = 'bg-light text-secondary';
             if (saldoFinal > 0) colorSaldo = 'bg-danger text-white';
             else if (saldoFinal < 0) colorSaldo = 'bg-success text-white';
 
             html += `<td class="sticky-left-1 bg-white align-middle p-0" style="width: 100px; min-width: 100px;">
                         <div class="d-flex flex-column align-items-center" style="font-size: 0.8rem; line-height: 1.1; padding: 4px;">
-                            <span class="text-success fw-bold" title="Horas Normales">H: ${tH % 1 === 0 ? tH : tH.toFixed(1)}</span>
-                            <span class="text-primary fw-bold" title="Horas Extras">E: ${tE % 1 === 0 ? tE : tE.toFixed(1)}</span>
-                            <span class="text-warning fw-bold" title="Horas a Devolver">D: ${tD % 1 === 0 ? tD : tD.toFixed(1)}</span>
-                            <span class="text-pink fw-bold" style="color: #d63384;" title="Permisos">P: ${tP % 1 === 0 ? tP : tP.toFixed(1)}</span>
+                            <span class="text-success fw-bold">H: ${tH % 1 === 0 ? tH : tH.toFixed(1)}</span>
+                            <span class="text-primary fw-bold">E: ${tE % 1 === 0 ? tE : tE.toFixed(1)}</span>
+                            <span class="text-warning fw-bold">D: ${tD % 1 === 0 ? tD : tD.toFixed(1)}</span>
+                            <span class="fw-bold" style="color: #d63384;">P: ${tP % 1 === 0 ? tP : tP.toFixed(1)}</span>
                             <span class="badge border ${colorSaldo} mt-1" style="font-size: 0.7rem; padding: 2px 4px;">
                                 Saldo: ${saldoFinal % 1 === 0 ? saldoFinal : saldoFinal.toFixed(1)}
                             </span>
@@ -261,13 +261,13 @@ $(document).ready(function () {
                 const esFranco = datos.francos && datos.francos[fecha];
                 const nota = datos.notas && datos.notas[fecha];
 
-                // Horas
-                for (let h = 7; h <= 23; h++) {
+                for (let h = 7; h <= 24; h++) {
                     let bgColor = '';
                     let texto = '';
                     let color = '';
 
-                    let tipo = (!esFranco && datos.horarios && datos.horarios[fecha]) ? datos.horarios[fecha][h] : null;
+                    const hBusqueda = (h === 24) ? 0 : h;
+                    let tipo = (!esFranco && datos.horarios && datos.horarios[fecha]) ? (datos.horarios[fecha][hBusqueda] || '') : null;
                     let esMedia = false;
 
                     if (tipo && tipo.endsWith('_media')) {
@@ -283,21 +283,17 @@ $(document).ready(function () {
                         else if (tipo === 'devuelve') { bgColor = '#fd7e14'; texto = 'D'; }
                         else if (tipo === 'permiso') { bgColor = '#d63384'; texto = 'P'; }
                         else if (tipo === 'caja') { bgColor = '#0dcaf0'; texto = 'C'; color = '#000'; }
+                        else if (tipo === 'vacaciones') { bgColor = '#f3e5f5'; texto = 'V'; color = '#6a1b9a'; }
                         else { bgColor = '#198754'; texto = 'X'; }
-
                         if (esMedia) texto += ' <small>½</small>';
                     }
-
-                    // Clase especial si es media hora para posicionamiento (aunque background es inline)
-                    const classMedia = esMedia ? 'media-hora-view' : '';
-
-                    html += `<td class="${classMedia}" style="background-color: ${bgColor}; color: ${color}; font-weight: bold; text-align: center; vertical-align: middle; min-width: 30px; font-size: 0.8rem;">${texto}</td>`;
+                    html += `<td style="background-color: ${bgColor}; color: ${color}; font-weight: bold; text-align: center; vertical-align: middle; min-width: 30px; font-size: 0.8rem;">${texto}</td>`;
                 }
 
                 // Franco (F)
                 html += `<td class="text-center align-middle p-0" style="min-width: 30px; background-color: ${esFranco ? '#f3e5f5' : 'transparent'};">
-                            ${esFranco ? '<i class="bi bi-check-circle-fill" style="color: #6f42c1; font-size: 1.1rem;"></i>' : ''}
-                         </td>`;
+                                ${esFranco ? '<i class="bi bi-check-circle-fill" style="color: #6f42c1; font-size: 1.1rem;"></i>' : ''}
+                             </td>`;
 
                 // Turno (T)
                 let turno = '-';
@@ -307,13 +303,12 @@ $(document).ready(function () {
                     turno = 'F';
                     turnoColor = 'text-white';
                     html += `<td class="text-center align-middle p-0" style="min-width: 45px;">
-                                <span class="badge" style="background-color: #6f42c1; font-size: 0.75rem;">${turno}</span>
-                             </td>`;
+                                    <span class="badge" style="background-color: #6f42c1; font-size: 0.75rem;">${turno}</span>
+                                 </td>`;
                 } else {
                     if (datos.horarios && datos.horarios[fecha]) {
-                        const horasDia = Object.keys(datos.horarios[fecha]).map(Number);
+                        const horasDia = Object.keys(datos.horarios[fecha]).map(h => parseInt(h) === 0 ? 24 : parseInt(h));
                         turno = calcularTurnoTexto(horasDia);
-
                         switch (turno) {
                             case 'TM': turnoColor = 'bg-primary text-white'; break;
                             case 'TT': turnoColor = 'bg-success text-white'; break;
@@ -322,19 +317,19 @@ $(document).ready(function () {
                         }
                     }
                     html += `<td class="text-center align-middle p-0" style="min-width: 45px;">
-                                <span class="badge ${turnoColor}" style="font-size: 0.7rem;">${turno}</span>
-                             </td>`;
+                                    <span class="badge ${turnoColor}" style="font-size: 0.7rem;">${turno}</span>
+                                 </td>`;
                 }
 
                 // Nota
                 const tieneNota = nota && nota.trim() !== '';
                 html += `<td class="text-center align-middle p-0 celda-dia-fin" style="min-width: 30px;">
-                            <button class="btn-nota-local ${tieneNota ? 'tiene-nota' : ''}" 
-                                    data-nombre="${nombre}" data-fecha="${fecha}" data-nota="${nota || ''}"
-                                    style="border: none; background: transparent; cursor: pointer; font-size: 1.1rem; color: ${tieneNota ? '#fd7e14' : '#ced4da'};">
-                                <i class="bi bi-chat-square-text${tieneNota ? '-fill' : ''}"></i>
-                            </button>
-                         </td>`;
+                                <button class="btn-nota-local ${tieneNota ? 'tiene-nota' : ''}" 
+                                        data-nombre="${nombre}" data-fecha="${fecha}" data-nota="${nota || ''}"
+                                        style="border: none; background: transparent; cursor: pointer; font-size: 1.1rem; color: ${tieneNota ? '#fd7e14' : '#ced4da'};">
+                                    <i class="bi bi-chat-square-text${tieneNota ? '-fill' : ''}"></i>
+                                </button>
+                             </td>`;
             });
 
             html += '</tr>';
@@ -344,30 +339,34 @@ $(document).ready(function () {
         // --- 3. FOOTER ---
         html += '<tfoot class="sticky-bottom bg-white" style="z-index: 25;">';
 
-        // Fila de Totales por Hora
+        // Totales por Hora
         html += '<tr class="total-por-hora-row">';
         html += '<td class="sticky-left-0 bg-light fw-bold text-start p-2">Total Hs</td>';
         html += '<td class="sticky-left-1 bg-light"></td>';
         for (let d = 0; d < 7; d++) {
-            for (let h = 7; h <= 23; h++) {
-                html += `<td class="text-center fw-bold bg-light" style="font-size: 0.8rem;">${sumasHoras[d][h] || ''}</td>`;
+            for (let h = 7; h <= 24; h++) {
+                const suma = sumasHoras[d][h] || 0;
+                const fmtSuma = (suma % 1 === 0 ? suma : suma.toFixed(1));
+                const colorClass = suma > 0 ? 'text-success' : 'text-muted';
+                html += `<td class="text-center fw-bold bg-light ${colorClass}" style="font-size: 0.8rem; min-width: 30px;">${suma > 0 ? fmtSuma : '0'}</td>`;
             }
             html += '<td class="bg-light"></td><td class="bg-light"></td><td class="bg-light footer-dia-fin"></td>';
         }
         html += '</tr>';
 
-        // Fila de Promociones
+        // Promociones
         html += '<tr>';
         html += '<td class="sticky-left-0 bg-light fw-bold text-start p-2">Promociones</td>';
         html += '<td class="sticky-left-1 bg-light"></td>';
-        fechasSemana.forEach((fecha, index) => {
+        fechasSemana.forEach(fecha => {
+            const list = promociones[fecha] || [];
             let promoHTML = '<span class="text-muted">-</span>';
-            if (promociones[fecha] && promociones[fecha].length > 0) {
+            if (list.length > 0) {
                 promoHTML = `<div class="d-flex flex-wrap gap-1">
-                    ${promociones[fecha].map(p => `<span class="badge bg-primary px-1" style="font-size: 0.7rem; white-space: normal; text-align: left;">${p}</span>`).join('')}
+                    ${list.map(p => `<span class="badge bg-primary px-1" style="font-size: 0.7rem; white-space: normal; text-align: left;">${p}</span>`).join('')}
                 </div>`;
             }
-            html += `<td colspan="20" class="footer-dia-fin bg-light text-start p-1 align-top" style="max-width: 300px;">${promoHTML}</td>`;
+            html += `<td colspan="21" class="footer-dia-fin bg-light text-start p-1 align-top" style="max-width: 300px;">${promoHTML}</td>`;
         });
         html += '</tr>';
 
@@ -375,115 +374,65 @@ $(document).ready(function () {
         container.html(html);
     }
 
-    // --- MANEJO DEL MODAL DE FEEDBACK ---
+    // --- EVENTOS ---
     $(document).on('click', '.btn-feedback', function () {
-        const id = $(this).data('id');
-        const nom = $(this).data('nombre');
-        const txt = $(this).data('texto');
-
-        $('#feedVendedor').val(id);
-        $('#feedNombre').text(nom);
-        $('#feedTexto').val(txt || '');
-
-        const modal = new bootstrap.Modal(document.getElementById('modalFeedback'));
-        modal.show();
+        $('#feedVendedor').val($(this).data('id'));
+        $('#feedNombre').text($(this).data('nombre'));
+        $('#feedTexto').val($(this).data('texto') || '');
+        new bootstrap.Modal(document.getElementById('modalFeedback')).show();
     });
 
     $('#btnGuardarFeed').on('click', function () {
-        const sucursal = $('#sucursalSelector').val() || 0;
-        const vendedor = $('#feedVendedor').val();
-        const mensaje = $('#feedTexto').val();
-        const semana = $('#semanaSelector').val();
-
-        if (!semana) {
-            mostrarModalConTitulo("Error", "Debe seleccionar una semana primero.", "error");
-            return;
-        }
-
-        const [year, weekNum] = semana.split('-W');
-        const primerDia = getPrimerDiaDeSemana(year, weekNum);
-        const fechaSemana = primerDia.toISOString().split('T')[0];
+        const payload = {
+            accion: 'guardar_feedback',
+            sucursal: $('#sucursalSelector').val() || 0,
+            vendedor: $('#feedVendedor').val(),
+            fechaSemana: getPrimerDiaDeSemana(...$('#semanaSelector').val().split('-W')).toISOString().split('T')[0],
+            mensaje: $('#feedTexto').val()
+        };
 
         $.ajax({
             url: apiVistaURL,
             type: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({
-                accion: 'guardar_feedback',
-                sucursal: sucursal,
-                vendedor: vendedor,
-                fechaSemana: fechaSemana,
-                mensaje: mensaje
-            }),
+            data: JSON.stringify(payload),
             success: function (res) {
                 if (res.status === 'ok') {
                     mostrarModalConTitulo("Éxito", "Feedback guardado correctamente.", "success");
                     $('#btnVerAgenda').trigger('click');
                     bootstrap.Modal.getInstance(document.getElementById('modalFeedback')).hide();
                 } else {
-                    mostrarModalConTitulo("Error", "Error al guardar el feedback.", "error");
+                    mostrarModalConTitulo("Error", "Error al guardar.", "error");
                 }
-            },
-            error: function () {
-                mostrarModalConTitulo("Error", "Error de conexión con el servidor.", "error");
             }
         });
     });
 
-    // --- MOSTRAR MODAL DE NOTA DIARIA ---
     $(document).on('click', '.btn-nota-local.tiene-nota', function () {
-        const nombre = $(this).data('nombre');
-        const fecha = $(this).data('fecha');
-        const nota = $(this).data('nota');
-
-        if (nota && nota.trim() !== '') {
-            mostrarModalConTitulo(`Nota para ${nombre} (${fecha})`, nota, 'warning');
-        }
+        mostrarModalConTitulo(`Nota para ${$(this).data('nombre')} (${$(this).data('fecha')})`, $(this).data('nota'), 'warning');
     });
 
-    // --- FUNCIÓN HELPER PARA MODALES ---
     function mostrarModalConTitulo(titulo, mensaje, tipo = 'info') {
         const header = $('#modalMensajeHeader');
-        const modalTitulo = $('#modalMensajeTitulo');
-        const icono = $('#modalMensajeIcono');
-        const texto = $('#modalMensajeTexto');
-
         header.removeClass('bg-success bg-danger bg-warning bg-info bg-primary');
-        icono.html('');
+        let icon = 'bi-info-circle-fill text-info';
 
-        let colorClase = 'bg-info';
-        let iconoClase = 'bi bi-info-circle-fill text-info';
+        if (tipo === 'success') { header.addClass('bg-success'); icon = 'bi-check-circle-fill text-success'; }
+        else if (tipo === 'error') { header.addClass('bg-danger'); icon = 'bi-x-circle-fill text-danger'; }
+        else if (tipo === 'warning') { header.addClass('bg-warning text-dark'); icon = 'bi-exclamation-triangle-fill text-warning'; }
+        else { header.addClass('bg-info'); }
 
-        if (tipo === 'success') {
-            colorClase = 'bg-success';
-            iconoClase = 'bi bi-check-circle-fill text-success';
-        }
-        else if (tipo === 'error') {
-            colorClase = 'bg-danger';
-            iconoClase = 'bi bi-x-circle-fill text-danger';
-        }
-        else if (tipo === 'warning') {
-            colorClase = 'bg-warning text-dark';
-            iconoClase = 'bi bi-exclamation-triangle-fill text-warning';
-        }
-
-        header.addClass(colorClase);
-        modalTitulo.text(titulo);
-        icono.html(`<i class="${iconoClase}"></i>`);
-        texto.html(mensaje.replace(/\n/g, '<br>'));
-
-        const modal = new bootstrap.Modal(document.getElementById('modalMensaje'));
-        modal.show();
+        $('#modalMensajeTitulo').text(titulo);
+        $('#modalMensajeIcono').html(`<i class="${icon}"></i>`);
+        $('#modalMensajeTexto').html(mensaje.replace(/\n/g, '<br>'));
+        new bootstrap.Modal(document.getElementById('modalMensaje')).show();
     }
 
-    // --- CONFIGURAR SELECTOR DE SEMANA ---
     function obtenerSemanaActual() {
-        const hoy = new Date();
-        const año = hoy.getFullYear();
-        const primerEnero = new Date(año, 0, 1);
-        const diasPasados = Math.floor((hoy - primerEnero) / (24 * 60 * 60 * 1000));
-        const semana = Math.ceil((diasPasados + primerEnero.getDay() + 1) / 7);
-        return `${año}-W${String(semana).padStart(2, '0')}`;
+        const d = new Date();
+        const start = new Date(d.getFullYear(), 0, 1);
+        const week = Math.ceil((((d - start) / 86400000) + start.getDay() + 1) / 7);
+        return `${d.getFullYear()}-W${String(week).padStart(2, '0')}`;
     }
 
     $('#semanaSelector').val(obtenerSemanaActual());

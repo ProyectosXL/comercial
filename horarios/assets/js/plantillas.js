@@ -95,16 +95,17 @@ $(document).ready(function () {
 
         // Header Días
         diasSemana.forEach(dia => {
-            // CAMBIO 1: Colspan pasa a 18 (17 horas [7 a 23] + 1 Franco)
-            htmlHeader += `<th colspan="18" class="dia-header">${dia}</th>`;
+            // CAMBIO 1: Colspan pasa a 19 (18 horas [7 a 00] + 1 Franco)
+            htmlHeader += `<th colspan="19" class="dia-header">${dia}</th>`;
         });
         htmlHeader += '</tr><tr><th></th><th></th>'; // Vendedor + Total Hs
 
         // Subheader Horas
         for (let d = 0; d < 7; d++) {
-            // CAMBIO 2: El bucle va hasta 23
-            for (let h = 7; h <= 23; h++) {
-                htmlHeader += `<th style="font-size:0.7em; min-width:22px;">${h}</th>`;
+            // CAMBIO 2: El bucle va hasta 24 (00)
+            for (let h = 7; h <= 24; h++) {
+                const label = (h === 24) ? '00' : h;
+                htmlHeader += `<th style="font-size:0.7em; min-width:22px;">${label}</th>`;
             }
             htmlHeader += '<th class="header-dia-fin" style="width:30px; background-color:#e9ecef;">F</th>';
         }
@@ -129,16 +130,17 @@ $(document).ready(function () {
             for (let dia = 1; dia <= 7; dia++) {
                 const esFranco = data.francos[dia] ? true : false;
 
-                // Horas 7-23
-                // CAMBIO 3: El bucle va hasta 23
-                for (let h = 7; h <= 23; h++) {
+                // Horas 7-00
+                // CAMBIO 3: El bucle va hasta 24 (00)
+                for (let h = 7; h <= 24; h++) {
                     let clase = '';
                     let texto = '';
+                    const horaBusqueda = (h === 24) ? 0 : h;
 
                     if (esFranco) {
                         clase = 'dia-franco';
-                    } else if (data.horarios[dia] && data.horarios[dia][h]) {
-                        const tipoGuardado = data.horarios[dia][h]; // <--- DEFINICION RESTAURADA
+                    } else if (data.horarios[dia] && data.horarios[dia][horaBusqueda]) {
+                        const tipoGuardado = data.horarios[dia][horaBusqueda]; // <--- DEFINICION RESTAURADA
 
                         if (tipoGuardado.includes('extra')) {
                             clase = 'hora-extra';
@@ -389,10 +391,13 @@ $(document).ready(function () {
                     let tipoHora = 'normal';
                     if ($(this).hasClass('hora-extra')) tipoHora = 'extra';
 
+                    const h = parseInt($(this).data('hora'));
+                    const horaFinal = (h === 24) ? 0 : h; // Mapear 24 a 0
+
                     datosParaGuardar.push({
                         cod: vid,
                         dia: $(this).data('dia'),
-                        hora: $(this).data('hora'),
+                        hora: horaFinal,
                         tipo: tipoHora,
                         franco: 0
                     });

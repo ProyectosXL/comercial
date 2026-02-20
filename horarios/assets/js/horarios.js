@@ -214,8 +214,8 @@ $(document).ready(function () {
 
                 // Columnas de Días (CON TURNO POR DÍA)
                 fechasSemana.forEach(function (fechaISO) {
-                    // 1. Horas - YA ESTÁ CORRECTO: 7 a 23 (17 horas)
-                    for (let h = 7; h <= 23; h++) {
+                    // 1. Horas - 7 a 23 + 00 (18 horas)
+                    for (let h = 7; h <= 24; h++) {
                         filasHTML += '<td class="hora-celda" data-fecha="' + fechaISO + '" data-hora="' + h + '"></td>';
                     }
 
@@ -318,7 +318,8 @@ $(document).ready(function () {
             const mes = String(fechaActual.getMonth() + 1).padStart(2, '0');
 
             // --- CAMBIO: Añadir clase 'dia-header' para el borde derecho ---
-            headerHTML += `<th colspan="20" class="sticky-top-0 bg-light dia-header">` + diasSemana[i] + ' ' + dia + '/' + mes + '</th>';
+            // Colspan pasa a 21 (18 horas + F + T + N)
+            headerHTML += `<th colspan="21" class="sticky-top-0 bg-light dia-header">` + diasSemana[i] + ' ' + dia + '/' + mes + '</th>';
         }
         headerHTML += '</tr>';
 
@@ -328,8 +329,9 @@ $(document).ready(function () {
         headerHTML += '<th class="sticky-left-1 bg-white" style="z-index: 19;"></th>';
 
         for (let d = 0; d < 7; d++) {
-            for (let h = 7; h <= 23; h++) {
-                headerHTML += `<th class="sticky-top-1">` + h + '</th>';
+            for (let h = 7; h <= 24; h++) {
+                const label = (h === 24) ? '00' : h;
+                headerHTML += `<th class="sticky-top-1">` + label + '</th>';
             }
 
             headerHTML += `<th class="sticky-top-1" style="width:30px; background-color:#e9ecef;" title="Franco">F</th>`;
@@ -372,8 +374,8 @@ $(document).ready(function () {
 
             // Columnas Días
             fechasSemana.forEach(function (fechaISO, diaIndex) { // Agregamos diaIndex aquí
-                // 1. Celdas de Hora (7 a 23) - 17 celdas
-                for (let h = 7; h <= 23; h++) {
+                // 1. Celdas de Hora (7 a 24 [00]) - 18 celdas
+                for (let h = 7; h <= 24; h++) {
                     bodyHTML += `<td class="hora-celda" data-fecha="${fechaISO}" data-hora="${h}"></td>`;
                 }
 
@@ -407,7 +409,7 @@ $(document).ready(function () {
         footerHTML += '<td class="sticky-left-1 bg-white" style="z-index: 18;"></td>';
 
         for (let d = 0; d < 7; d++) {
-            for (let h = 7; h <= 23; h++) {
+            for (let h = 7; h <= 24; h++) {
                 footerHTML += `<td class="total-hora-columna text-center fw-bold" data-hora="${h}" data-dia-index="${d}" style="font-size: 0.85rem; background-color: #e9ecef;">0</td>`;
             }
             // También agregar un relleno para las columnas F, T, N con la clase de borde para consistencia
@@ -420,7 +422,7 @@ $(document).ready(function () {
         // Fila Promociones
         footerHTML += '<tr><td><strong>Promociones</strong></td><td></td>';
         fechasSemana.forEach(function (fechaISO, diaIndex) { // Agregamos diaIndex aquí
-            footerHTML += `<td colspan="20" class="promo-cell small text-start align-top p-1 footer-dia-fin" data-fecha="${fechaISO}" style="white-space: normal; min-height: 50px;">-</td>`;
+            footerHTML += `<td colspan="21" class="promo-cell small text-start align-top p-1 footer-dia-fin" data-fecha="${fechaISO}" style="white-space: normal; min-height: 50px;">-</td>`;
         });
         footerHTML += '</tr>';
 
@@ -460,8 +462,29 @@ $(document).ready(function () {
                     celda.addClass('hora-permiso').text('P');
                 } else if (tipo === 'caja') {
                     celda.addClass('hora-caja').text('C');
+                } else if (tipo === 'vacaciones') {
+                    celda.addClass('hora-vacaciones').text('V');
                 } else {
                     celda.addClass('marcado').text('X'); // Esto es importante para el horario base
+                }
+            });
+        }
+
+        // Carga de Horas 00 (Midnight) - Si vienen del servidor como 0, las mapeamos a 24
+        if (data.horarios) {
+            data.horarios.forEach(function (h) {
+                if (parseInt(h.HORA) === 0) {
+                    const celda = $('tr[data-vendedor-id="' + h.COD_VENDED + '"] td[data-fecha="' + h.FECHA + '"][data-hora="24"]');
+                    if (celda.length) {
+                        celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja');
+                        const tipo = h.TIPO_HORA.toLowerCase();
+                        if (tipo === 'extra') celda.addClass('hora-extra').text('E');
+                        else if (tipo === 'devuelve') celda.addClass('hora-devuelve').text('D');
+                        else if (tipo === 'permiso') celda.addClass('hora-permiso').text('P');
+                        else if (tipo === 'caja') celda.addClass('hora-caja').text('C');
+                        else if (tipo === 'vacaciones') celda.addClass('hora-vacaciones').text('V');
+                        else celda.addClass('marcado').text('X');
+                    }
                 }
             });
         }
@@ -693,19 +716,20 @@ $(document).ready(function () {
         if (primeraHora >= 7 && ultimaHora <= 15) {
             return 'TM';
         }
-        // TT: 16 a 23 hs (inclusive) - CAMBIAR: de 22 a 23
-        else if (primeraHora >= 13 && ultimaHora <= 23) {
-            return 'TT';
+        // TT: 16 to 00 hs (inclusive)
+        else if (primeraHora >= 13 && (ultimaHora <= 23 || (horas.includes(24) && ultimaHora >= 13))) {
+            const maxH = (horas.includes(24)) ? 24 : ultimaHora;
+            if (maxH <= 24) return 'TT';
         }
-        // FULL: 10 a 23 hs (o rango amplio) - CAMBIAR: de 22 a 23
-        else if (primeraHora >= 10 && ultimaHora <= 23) {
+        // FULL: 10 to 00 hs (o rango amplio)
+        else if (primeraHora >= 10 && (ultimaHora <= 23 || (horas.includes(24) && ultimaHora >= 10))) {
             return 'FULL';
         }
         // Rango mixto o no clasificable
-        else if (primeraHora >= 7 && ultimaHora <= 23) {
+        else if (primeraHora >= 7 && (ultimaHora <= 23 || (horas.includes(24) && ultimaHora >= 7))) {
             // Si tiene horas tanto en TM como TT, es FULL
             const tieneTM = horas.some(function (h) { return h >= 7 && h <= 15; });
-            const tieneTT = horas.some(function (h) { return h >= 16 && h <= 23; }); // CAMBIAR: de 22 a 23
+            const tieneTT = horas.some(function (h) { return h >= 16 && h <= 24; });
             if (tieneTM && tieneTT) return 'FULL';
 
             // Si solo tiene parte del rango
@@ -720,9 +744,9 @@ $(document).ready(function () {
         let totalesDiarios = Array(7).fill(0);
 
         // Inicializar array para contar horas por columna
-        // 7 días, 17 horas (7-23)
+        // 7 días, 18 horas (7-00)
         let totalesPorHora = Array(7).fill().map(function () {
-            return Array(17).fill(0);
+            return Array(18).fill(0);
         });
 
         // Recorremos cada fila de vendedor
@@ -760,7 +784,7 @@ $(document).ready(function () {
 
                         // Contar para total por columna
                         const horaIndex = hora - 7;
-                        if (horaIndex >= 0 && horaIndex < 17) {
+                        if (horaIndex >= 0 && horaIndex < 18) {
                             totalesPorHora[diaIndex][horaIndex] += valor;
                         }
                     }
@@ -824,7 +848,7 @@ $(document).ready(function () {
         const fmt = (num) => (num % 1 === 0 ? num : num.toFixed(1));
 
         for (let diaIndex = 0; diaIndex < 7; diaIndex++) {
-            for (let horaIndex = 0; horaIndex < 17; horaIndex++) {
+            for (let horaIndex = 0; horaIndex < 18; horaIndex++) {
                 const hora = horaIndex + 7;
                 const total = totalesPorHora[diaIndex][horaIndex];
                 const celdaTotal = $('.total-hora-columna[data-hora="' + hora + '"][data-dia-index="' + diaIndex + '"]');
@@ -901,9 +925,9 @@ $(document).ready(function () {
 
     function toggleCelda(celda) {
         if (modoPintado === 'desmarcar') {
-            celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja media-hora').text('');
+            celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja hora-vacaciones media-hora').text('');
         } else {
-            celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja');
+            celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja hora-vacaciones');
 
             // Si ya tenía media hora, mantenemos la clase pero actualizamos el texto/color base
             const esMedia = celda.hasClass('media-hora');
@@ -916,6 +940,8 @@ $(document).ready(function () {
                 celda.addClass('hora-permiso').text('P');
             } else if (modoPintadoHoras === 'caja') {
                 celda.addClass('hora-caja').text('C');
+            } else if (modoPintadoHoras === 'vacaciones') {
+                celda.addClass('hora-vacaciones').text('V');
             } else {
                 celda.addClass('marcado').text('X');
             }
@@ -1000,7 +1026,7 @@ $(document).ready(function () {
         let horarios = [], francos = [], notas = [], vendedores = [];
 
         // A. Recolectar Horarios
-        $('.hora-celda.marcado, .hora-celda.hora-extra, .hora-celda.hora-devuelve, .hora-celda.hora-permiso, .hora-celda.hora-caja').each(function () {
+        $('.hora-celda.marcado, .hora-celda.hora-extra, .hora-celda.hora-devuelve, .hora-celda.hora-permiso, .hora-celda.hora-caja, .hora-celda.hora-vacaciones').each(function () {
             const celda = $(this);
             if (celda.hasClass('bloqueo-externo')) return;
 
@@ -1009,6 +1035,7 @@ $(document).ready(function () {
             else if (celda.hasClass('hora-devuelve')) tipo = 'devuelve';
             else if (celda.hasClass('hora-permiso')) tipo = 'permiso';
             else if (celda.hasClass('hora-caja')) tipo = 'caja';
+            else if (celda.hasClass('hora-vacaciones')) tipo = 'vacaciones';
 
             // == MEDIA HORA SUPPORT ==
             if (celda.hasClass('media-hora')) {
@@ -1021,7 +1048,7 @@ $(document).ready(function () {
                 codVended: celda.closest('tr').data('vendedor-id'),
                 nombreVendedor: nombreVendedor,
                 fecha: celda.data('fecha'),
-                hora: celda.data('hora'),
+                hora: (parseInt(celda.data('hora')) === 24) ? 0 : celda.data('hora'),
                 tipo: tipo
             });
         });
