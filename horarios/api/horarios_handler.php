@@ -150,8 +150,15 @@ function guardarDatos($usuario)
         $sqlDeleteHorarios = "DELETE FROM FP_GESTION_HORARIOS WHERE NRO_SUCURSAL = ? AND FECHA BETWEEN ? AND ?";
         $stmtDeleteHorarios = sqlsrv_query($conn, $sqlDeleteHorarios, [$nroSucursal, $fechaInicio, $fechaFin]);
         if ($stmtDeleteHorarios === false) {
+            $errors = sqlsrv_errors();
+            $msg = "";
+            if ($errors != null) {
+                foreach ($errors as $error) {
+                    $msg .= "SQLSTATE: " . $error['SQLSTATE'] . " Code: " . $error['code'] . " Message: " . $error['message'] . " | ";
+                }
+            }
             sqlsrv_rollback($conn);
-            die(json_encode(['status' => 'error', 'message' => 'Error al borrar horarios anteriores: ' . print_r(sqlsrv_errors(), true)]));
+            die(json_encode(['status' => 'error', 'message' => 'Error al borrar horarios anteriores: ' . $msg]));
         }
 
         if (!empty($horarios)) {
@@ -166,8 +173,15 @@ function guardarDatos($usuario)
                     $usuario
                 ]);
                 if ($stmtInsertHorarios === false) {
+                    $errors = sqlsrv_errors();
+                    $msg = "";
+                    if ($errors != null) {
+                        foreach ($errors as $error) {
+                            $msg .= "SQLSTATE: " . $error['SQLSTATE'] . " Code: " . $error['code'] . " Message: " . $error['message'] . " | ";
+                        }
+                    }
                     sqlsrv_rollback($conn);
-                    die(json_encode(['status' => 'error', 'message' => 'Error al insertar horarios: ' . print_r(sqlsrv_errors(), true), 'data_attempted' => $h]));
+                    die(json_encode(['status' => 'error', 'message' => 'Error al insertar horarios: ' . $msg, 'data_attempted' => $h]));
                 }
             }
         }
@@ -181,8 +195,15 @@ function guardarDatos($usuario)
             $paramsDeleteFrancos = array_merge([$nroSucursal, $fechaInicio, $fechaFin], $vendedoresEnGrilla);
             $stmtDeleteFrancos = sqlsrv_query($conn, $sqlDeleteFrancos, $paramsDeleteFrancos);
             if ($stmtDeleteFrancos === false) {
+                $errors = sqlsrv_errors();
+                $msg = "";
+                if ($errors != null) {
+                    foreach ($errors as $error) {
+                        $msg .= "SQLSTATE: " . $error['SQLSTATE'] . " Code: " . $error['code'] . " Message: " . $error['message'] . " | ";
+                    }
+                }
                 sqlsrv_rollback($conn);
-                die(json_encode(['status' => 'error', 'message' => 'Error al borrar francos anteriores: ' . print_r(sqlsrv_errors(), true)]));
+                die(json_encode(['status' => 'error', 'message' => 'Error al borrar francos anteriores: ' . $msg]));
             }
             $debugFrancos['delete_affected_rows'] = sqlsrv_rows_affected($stmtDeleteFrancos);
         }
@@ -205,10 +226,15 @@ function guardarDatos($usuario)
                     $usuario
                 ]);
                 if ($stmtInsertFrancos === false) {
-                    $currentFrancoDebug['result'] = 'SQL_ERROR';
-                    $currentFrancoDebug['error_details'] = print_r(sqlsrv_errors(), true);
-                    sqlsrv_rollback($conn); // Rollback y die si hay un error SQL real
-                    die(json_encode(['status' => 'error', 'message' => 'Error al insertar franco: ' . $currentFrancoDebug['error_details'], 'data_attempted' => $f, 'debug_francos_history' => $debugFrancos]));
+                    $errors = sqlsrv_errors();
+                    $msg = "";
+                    if ($errors != null) {
+                        foreach ($errors as $error) {
+                            $msg .= "SQLSTATE: " . $error['SQLSTATE'] . " Code: " . $error['code'] . " Message: " . $error['message'] . " | ";
+                        }
+                    }
+                    sqlsrv_rollback($conn);
+                    die(json_encode(['status' => 'error', 'message' => 'Error al insertar franco: ' . $msg, 'data_attempted' => $f]));
                 }
                 $rowsAffectedInsertFranco = sqlsrv_rows_affected($stmtInsertFrancos);
                 $currentFrancoDebug['affected_rows'] = $rowsAffectedInsertFranco;
@@ -226,8 +252,15 @@ function guardarDatos($usuario)
         $sqlDeleteNotas = "DELETE FROM FP_GESTION_NOTAS_VENDEDOR WHERE NRO_SUCURSAL = ? AND FECHA BETWEEN ? AND ?";
         $stmtDeleteNotas = sqlsrv_query($conn, $sqlDeleteNotas, [$nroSucursal, $fechaInicio, $fechaFin]);
         if ($stmtDeleteNotas === false) {
+            $errors = sqlsrv_errors();
+            $msg = "";
+            if ($errors != null) {
+                foreach ($errors as $error) {
+                    $msg .= "SQLSTATE: " . $error['SQLSTATE'] . " Code: " . $error['code'] . " Message: " . $error['message'] . " | ";
+                }
+            }
             sqlsrv_rollback($conn);
-            die(json_encode(['status' => 'error', 'message' => 'Error al borrar notas anteriores: ' . print_r(sqlsrv_errors(), true)]));
+            die(json_encode(['status' => 'error', 'message' => 'Error al borrar notas anteriores: ' . $msg]));
         }
 
         if (!empty($notas)) {
@@ -242,8 +275,15 @@ function guardarDatos($usuario)
                         $usuario
                     ]);
                     if ($stmtInsertNota === false) {
+                        $errors = sqlsrv_errors();
+                        $msg = "";
+                        if ($errors != null) {
+                            foreach ($errors as $error) {
+                                $msg .= "SQLSTATE: " . $error['SQLSTATE'] . " Code: " . $error['code'] . " Message: " . $error['message'] . " | ";
+                            }
+                        }
                         sqlsrv_rollback($conn);
-                        die(json_encode(['status' => 'error', 'message' => 'Error al insertar notas: ' . print_r(sqlsrv_errors(), true), 'data_attempted' => $n]));
+                        die(json_encode(['status' => 'error', 'message' => 'Error al insertar notas: ' . $msg, 'data_attempted' => $n]));
                     }
                 }
             }

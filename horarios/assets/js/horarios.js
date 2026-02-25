@@ -128,9 +128,9 @@ $(document).ready(function () {
                 // Convertimos todo a String para evitar errores de tipo (741 vs "741")
                 const idsConActividad = (datosGuardados.vendedoresConActividad || []).map(id => String(id));
 
-                // 2. Obtener IDs que YA están dibujados en la tabla
+                // 2. Obtener IDs que YA están dibujados en la tabla (Filtrado por el contenedor correcto)
                 const idsEnTabla = [];
-                $('tbody tr').each(function () {
+                $('#tablaHorariosContainer tbody tr').each(function () {
                     idsEnTabla.push(String($(this).data('vendedor-id')));
                 });
 
@@ -234,7 +234,7 @@ $(document).ready(function () {
             }
         });
 
-        $('tbody').append(filasHTML);
+        $('#tablaHorariosContainer tbody').append(filasHTML);
     }
 
     function finalizarCarga() {
@@ -450,7 +450,7 @@ $(document).ready(function () {
         // Carga de Horarios (N, C, P, E, D)
         if (data.horarios) {
             data.horarios.forEach(function (h) {
-                const celda = $('tr[data-vendedor-id="' + h.COD_VENDED + '"] td[data-fecha="' + h.FECHA + '"][data-hora="' + h.HORA + '"]');
+                const celda = $('#tablaHorariosContainer tr[data-vendedor-id="' + h.COD_VENDED + '"] td[data-fecha="' + h.FECHA + '"][data-hora="' + h.HORA + '"]');
                 celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja');
                 const tipo = h.TIPO_HORA.toLowerCase();
 
@@ -474,7 +474,7 @@ $(document).ready(function () {
         if (data.horarios) {
             data.horarios.forEach(function (h) {
                 if (parseInt(h.HORA) === 0) {
-                    const celda = $('tr[data-vendedor-id="' + h.COD_VENDED + '"] td[data-fecha="' + h.FECHA + '"][data-hora="24"]');
+                    const celda = $('#tablaHorariosContainer tr[data-vendedor-id="' + h.COD_VENDED + '"] td[data-fecha="' + h.FECHA + '"][data-hora="24"]');
                     if (celda.length) {
                         celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja');
                         const tipo = h.TIPO_HORA.toLowerCase();
@@ -492,7 +492,7 @@ $(document).ready(function () {
         // Carga de Francos
         if (data.francos) {
             data.francos.forEach(franco => {
-                const fila = $(`tr[data-vendedor-id="${franco.COD_VENDED}"]`);
+                const fila = $(`#tablaHorariosContainer tr[data-vendedor-id="${franco.COD_VENDED}"]`);
                 // Cambiamos el selector a 'franco-checkbox'
                 const checkbox = fila.find(`input.franco-checkbox[value="${franco.FECHA_FRANCO}"]`);
 
@@ -525,7 +525,7 @@ $(document).ready(function () {
         if (data.bloqueosExternos) {
             for (const [vendedorId, fechas] of Object.entries(data.bloqueosExternos)) {
                 for (const [fecha, horasOcupadas] of Object.entries(fechas)) {
-                    const fila = $(`tr[data-vendedor-id="${vendedorId}"]`);
+                    const fila = $(`#tablaHorariosContainer tr[data-vendedor-id="${vendedorId}"]`);
                     for (const [hora, sucursalOrigen] of Object.entries(horasOcupadas)) {
                         const celdaHora = fila.find(`.hora-celda[data-fecha="${fecha}"][data-hora="${hora}"]`);
                         celdaHora
@@ -544,7 +544,7 @@ $(document).ready(function () {
             for (const [vendedorId, mensaje] of Object.entries(data.feedback)) {
                 if (mensaje && mensaje.trim() !== '') {
                     // 1. Buscamos el SPAN
-                    const spanIcono = $(`span.icono-feedback[data-vendedor-id="${vendedorId}"]`);
+                    const spanIcono = $(`#tablaHorariosContainer span.icono-feedback[data-vendedor-id="${vendedorId}"]`);
 
                     // 2. Buscamos el ícono <i> DENTRO del span
                     const icono = spanIcono.find('i');
@@ -562,7 +562,7 @@ $(document).ready(function () {
             for (const [vid, fechas] of Object.entries(data.notasVendedor)) {
                 for (const [fecha, texto] of Object.entries(fechas)) {
                     if (texto && texto.trim() !== '') {
-                        const btn = $(`button.btn-nota[data-vendedor="${vid}"][data-fecha="${fecha}"]`);
+                        const btn = $(`#tablaHorariosContainer button.btn-nota[data-vendedor="${vid}"][data-fecha="${fecha}"]`);
                         btn.data('texto', texto);
                         btn.addClass('tiene-nota');
                         btn.html('<i class="bi bi-chat-square-text-fill"></i>');
@@ -573,7 +573,7 @@ $(document).ready(function () {
 
         if (data.saldosAnteriores) {
             for (const [vendedorId, saldo] of Object.entries(data.saldosAnteriores)) {
-                const fila = $(`tr[data-vendedor-id="${vendedorId}"]`);
+                const fila = $(`#tablaHorariosContainer tr[data-vendedor-id="${vendedorId}"]`);
                 // Guardamos el dato en la fila para usarlo en la suma en vivo
                 fila.attr('data-saldo-inicial', saldo);
             }
@@ -606,7 +606,7 @@ $(document).ready(function () {
         const fecha = $('#notaFecha').val();
         const texto = $('#textoNota').val().trim();
 
-        const btnGrilla = $(`button.btn-nota[data-vendedor="${vid}"][data-fecha="${fecha}"]`);
+        const btnGrilla = $(`#tablaHorariosContainer button.btn-nota[data-vendedor="${vid}"][data-fecha="${fecha}"]`);
 
         // Cerramos el modal de edición primero
         bootstrap.Modal.getInstance(document.getElementById('modalNotas')).hide();
@@ -630,7 +630,7 @@ $(document).ready(function () {
         const vid = $('#notaCodVended').val();
         const fecha = $('#notaFecha').val();
 
-        const btnGrilla = $(`button.btn-nota[data-vendedor="${vid}"][data-fecha="${fecha}"]`);
+        const btnGrilla = $(`#tablaHorariosContainer button.btn-nota[data-vendedor="${vid}"][data-fecha="${fecha}"]`);
 
         // Limpiamos datos y estilos
         btnGrilla.removeData('texto'); // Borra la memoria
@@ -749,8 +749,8 @@ $(document).ready(function () {
             return Array(18).fill(0);
         });
 
-        // Recorremos cada fila de vendedor
-        $('tbody tr').each(function () {
+        // Recorremos cada fila de vendedor (Solo de nuestro contenedor)
+        $('#tablaHorariosContainer tbody tr').each(function () {
             const fila = $(this);
 
             // 1. Contar tipos de hora (Soportando 0.5)
@@ -1026,7 +1026,7 @@ $(document).ready(function () {
         let horarios = [], francos = [], notas = [], vendedores = [];
 
         // A. Recolectar Horarios
-        $('.hora-celda.marcado, .hora-celda.hora-extra, .hora-celda.hora-devuelve, .hora-celda.hora-permiso, .hora-celda.hora-caja, .hora-celda.hora-vacaciones').each(function () {
+        $('#tablaHorariosContainer .hora-celda.marcado, #tablaHorariosContainer .hora-celda.hora-extra, #tablaHorariosContainer .hora-celda.hora-devuelve, #tablaHorariosContainer .hora-celda.hora-permiso, #tablaHorariosContainer .hora-celda.hora-caja, #tablaHorariosContainer .hora-celda.hora-vacaciones').each(function () {
             const celda = $(this);
             if (celda.hasClass('bloqueo-externo')) return;
 
@@ -1054,7 +1054,7 @@ $(document).ready(function () {
         });
 
         // B. Recolectar Francos
-        $('tbody tr').each(function () {
+        $('#tablaHorariosContainer tbody tr').each(function () {
             const fila = $(this);
             const vid = fila.data('vendedor-id');
             vendedores.push(vid);
@@ -1068,7 +1068,7 @@ $(document).ready(function () {
         });
 
         // C. Recolectar Notas
-        $('.btn-nota').each(function () {
+        $('#tablaHorariosContainer .btn-nota').each(function () {
             const t = $(this).data('texto');
             if (t && t.trim() !== '' && !$(this).prop('disabled')) {
                 notas.push({

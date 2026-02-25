@@ -380,7 +380,7 @@ $(document).ready(function () {
         // Recolectar Datos
         let datosParaGuardar = [];
 
-        $('tbody tr').each(function () {
+        $('#base_tablaContainer tbody tr').each(function () {
             const vid = $(this).data('vendedor-id');
 
             // 1. Recorrer celdas marcadas (Horas)

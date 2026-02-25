@@ -24,13 +24,14 @@ switch ($accion) {
 }
 
 // 1. SUCURSALES (Filtra habilitados + Excluye administrativos)
-function getSucursales() {
-    
+function getSucursales()
+{
+
     // PASO A: Obtener lista de NRO_SUCURSAL habilitados desde LOCALES
     $connLocales = getConexionLocales();
     $sqlHab = "SELECT NRO_SUCURSAL FROM SUCURSALES_LAKERS WHERE HABILITADO = 1";
     $stmtHab = sqlsrv_query($connLocales, $sqlHab);
-    
+
     $habilitados = [];
     if ($stmtHab) {
         while ($row = sqlsrv_fetch_array($stmtHab, SQLSRV_FETCH_ASSOC)) {
@@ -41,20 +42,21 @@ function getSucursales() {
     sqlsrv_close($connLocales);
 
     // PASO B: Obtener lista completa de Departamentos (RRHH)
-    $connCorp = getConexionCorp(); 
+    $connCorp = getConexionCorp();
     $sql = "SELECT ID_DEPARTAMENTO, DESC_DEPARTAMENTO, COD_DEPARTAMENTO FROM DEPARTAMENTO ORDER BY DESC_DEPARTAMENTO ASC";
     $stmt = sqlsrv_query($connCorp, $sql);
-    
+
     // --- LISTA NEGRA: Nombres exactos que queremos ocultar ---
     $excluidos = ['LOGISTICA', 'COMERCIALIZACION', 'ADMINISTRACION', 'FABRICA'];
 
     $sucursales = [];
     if ($stmt) {
-while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             $nombre = trim($row['DESC_DEPARTAMENTO']);
 
             // 1. FILTRO DE EXCLUSIÓN
-            if (in_array($nombre, $excluidos)) continue; 
+            if (in_array($nombre, $excluidos))
+                continue;
 
             // 2. OBTENER NÚMERO REAL
             $codigo = $row['COD_DEPARTAMENTO']; // Ej: LOC005
@@ -64,7 +66,7 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             // En RRHH figura como LOC005 (5), pero en Tango es la sucursal 2.
             // Forzamos el 2 para que cruce bien con la lista de habilitados.
             if (stripos($nombre, 'UNICENTER') !== false) {
-                $nroReal = 2; 
+                $nroReal = 2;
             }
 
             // 3. FILTRO DE HABILITADOS
@@ -78,18 +80,19 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
         }
         sqlsrv_free_stmt($stmt);
     }
-    
+
     echo json_encode($sucursales);
     sqlsrv_close($connCorp);
 }
 // ---------------------------------------------------------
 // 2. VENDEDORES (Ahora desde LEGAJO_CLOUD + RO_LEGAJOS_PERSONAL)
 // ---------------------------------------------------------
-function getVendedores($idDepto) {
-    $conn = getConexionCorp(); 
-    
+function getVendedores($idDepto)
+{
+    $conn = getConexionCorp();
+
     // Usamos 'BLOQUE' como el ID de vendedor, según tu corrección.
-    
+
     $sql = "
         SELECT 
             R.BLOQUE AS COD_VENDED, 
@@ -123,7 +126,7 @@ function getVendedores($idDepto) {
     $vendedores = [];
     while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
         $nombreCompleto = trim($row['APELLIDO']) . ' ' . trim($row['NOMBRE']);
-        
+
         $vendedores[] = [
             'COD_VENDED' => trim($row['COD_VENDED']),
             'NOMBRE_VEN' => $nombreCompleto,
@@ -138,7 +141,8 @@ function getVendedores($idDepto) {
 // ---------------------------------------------------------
 // LAS OTRAS FUNCIONES SIGUEN IGUAL (Refuerzos, etc.)
 // ---------------------------------------------------------
-function getRefuerzos() {
+function getRefuerzos()
+{
     $conn = getConexionCentral();
     $sql = "
         SELECT 
@@ -150,29 +154,37 @@ function getRefuerzos() {
             ON GVA23.COD_VENDED COLLATE Modern_Spanish_CI_AI = LEGAJOS.COD_VENDEDOR
         WHERE GVA23.INHABILITA = 0 
             AND GVA23.NOMBRE_VEN NOT LIKE '[0-9][0-9]%' 
-            AND GVA23.NOMBRE_VEN LIKE '%[0-9]%'
         GROUP BY GVA23.COD_VENDED, GVA23.NOMBRE_VEN
         ORDER BY GVA23.NOMBRE_VEN ASC";
-    
+
     $stmt = sqlsrv_query($conn, $sql);
     $refuerzos = [];
-    if($stmt) {
-        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) { $refuerzos[] = $row; }
+    if ($stmt) {
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $refuerzos[] = $row;
+        }
     }
     echo json_encode($refuerzos);
     sqlsrv_free_stmt($stmt);
     sqlsrv_close($conn);
 }
 
-function getVendedoresPorLista() {
-    if (!isset($_POST['listaVendedores'])) { echo json_encode([]); return; }
+function getVendedoresPorLista()
+{
+    if (!isset($_POST['listaVendedores'])) {
+        echo json_encode([]);
+        return;
+    }
     $lista = json_decode($_POST['listaVendedores'], true);
-    if (empty($lista)) { echo json_encode([]); return; }
+    if (empty($lista)) {
+        echo json_encode([]);
+        return;
+    }
     $lista = array_map('strval', $lista);
 
     $conn = getConexionCentral();
     $placeholders = implode(',', array_fill(0, count($lista), '?'));
-    
+
     $sql = "
         SELECT GVA23.COD_VENDED, GVA23.NOMBRE_VEN,
             MAX(ISNULL(LEGAJOS.TAREA_HABITUAL, 'Sin Tarea')) AS TAREA_HABITUAL
@@ -182,23 +194,26 @@ function getVendedoresPorLista() {
         WHERE GVA23.COD_VENDED IN ($placeholders) AND GVA23.INHABILITA = 0
         GROUP BY GVA23.COD_VENDED, GVA23.NOMBRE_VEN
         ORDER BY GVA23.NOMBRE_VEN ASC";
-    
+
     $stmt = sqlsrv_query($conn, $sql, $lista);
     $vendedores = [];
-    if($stmt) {
-        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) { $vendedores[] = $row; }
+    if ($stmt) {
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $vendedores[] = $row;
+        }
     }
     echo json_encode($vendedores);
     sqlsrv_free_stmt($stmt);
     sqlsrv_close($conn);
 }
 
-function getTodosLosVendedores() {
+function getTodosLosVendedores()
+{
     $conn = getConexionCentral();
     $sql = "SELECT COD_VENDED, NOMBRE_VEN FROM GVA23 WHERE INHABILITA = 0 AND NOMBRE_VEN NOT LIKE '[0-9][0-9]%' ORDER BY NOMBRE_VEN ASC";
     $stmt = sqlsrv_query($conn, $sql);
     $data = [];
-    if($stmt) {
+    if ($stmt) {
         while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             $nom = trim($row['NOMBRE_VEN']);
             $nomLimpio = preg_replace('/[\s-]*[0-9]+$/', '', $nom);
