@@ -6,17 +6,18 @@ class Objetivo
     private $cid_central;
     private $usuarioModificacion = '6402EC3F-A0D9-4113-B393-2759004BCAC8';
 
-    function __construct(){
-        require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/Class/Conexion.php';
+    function __construct()
+    {
+        require_once $_SERVER['DOCUMENT_ROOT'] . '/comercial/Class/Conexion.php';
         $this->cid = new Conexion();
 
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        
+
         $db = isset($_SESSION['entorno']) ? $_SESSION['entorno'] : 'central';
         $this->cid_central = $this->cid->conectar($db);
-        
+
         if (!$this->cid_central) {
             $errors = sqlsrv_errors();
             error_log("Error de conexión en Objetivo::__construct: " . print_r($errors, true));
@@ -24,10 +25,11 @@ class Objetivo
         }
     }
 
-    private function retornarArray($sqlEnviado){
+    private function retornarArray($sqlEnviado)
+    {
         $sql = $sqlEnviado;
         error_log("Ejecutando SQL: " . $sql);
-        
+
         $stmt = sqlsrv_query($this->cid_central, $sql);
 
         if ($stmt === false) {
@@ -38,7 +40,7 @@ class Objetivo
         }
 
         $rows = array();
-        while($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+        while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             $rows[] = $v;
         }
 
@@ -49,31 +51,33 @@ class Objetivo
     /**
      * Obtener lista de sucursales franquicias
      */
-    public function getSucursales() {
+    public function getSucursales()
+    {
         try {
             $sql = "SELECT NRO_SUCURSAL, DESC_SUCURSAL 
                     FROM [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS 
-                    WHERE CANAL = 'FRANQUICIAS' 
+                    WHERE CANAL IN ('FRANQUICIAS','PROPIOS') 
                     AND HABILITADO = 1 
                     AND NRO_SUC_MADRE IS NULL
                     AND NRO_SUCURSAL NOT IN ('812','912','933')
                     ORDER BY DESC_SUCURSAL";
-            
+
             return $this->retornarArray($sql);
         } catch (Exception $e) {
             error_log("Error en getSucursales: " . $e->getMessage());
             return [];
         }
     }
-    
+
     /**
      * Obtener objetivos con filtros
      */
-    public function getObjetivos($mes = null, $anio = null, $sucursal = null) {
+    public function getObjetivos($mes = null, $anio = null, $sucursal = null)
+    {
         try {
             $mesActual = $mes ?: date('n');
             $anioActual = $anio ?: date('Y');
-            
+
             $sql = "SELECT 
                         s.NRO_SUCURSAL,
                         s.DESC_SUCURSAL,
@@ -86,7 +90,7 @@ class Objetivo
                     LEFT JOIN [Servidortesting].dbXLSales.DBO.PuntosDeVenta pv ON s.NRO_SUCURSAL = pv.idTango
                     LEFT JOIN [Servidortesting].dbXLSales.DBO.Objetivos o ON pv.id = o.idPOS 
                         AND o.mes = $mesActual AND o.anio = $anioActual
-                    WHERE s.CANAL = 'FRANQUICIAS' 
+                    WHERE s.CANAL IN ('FRANQUICIAS','PROPIOS') 
                     AND s.HABILITADO = 1 
                     AND s.NRO_SUC_MADRE IS NULL
                     AND pv.activo = 1
@@ -108,7 +112,8 @@ class Objetivo
     /**
      * Actualizar objetivo de franquicia
      */
-    public function editarObjetivo($idTango, $mes, $anio, $nuevoImporteObjetivo) {
+    public function editarObjetivo($idTango, $mes, $anio, $nuevoImporteObjetivo)
+    {
         try {
             $sql = "EXEC [Servidortesting].dbXLSales.DBO.RO_EDITAR_OBJETIVO_FRANQUICIA 
                     @idTango = '$idTango',
@@ -121,8 +126,18 @@ class Objetivo
 
             if ($stmt === false) {
                 $errors = sqlsrv_errors();
+                $errorMessage = 'Error al ejecutar el procedimiento almacenado';
+                if ($errors != null) {
+                    $errorMessage = $errors[0]['message'];
+                }
                 error_log("Error en editarObjetivo: " . print_r($errors, true));
-                return ['success' => false, 'message' => 'Error al ejecutar el procedimiento almacenado'];
+                return ['success' => false, 'message' => $errorMessage];
+            }
+
+            // Si hay un SELECT en el SP, lo capturamos
+            $v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+            if ($v && isset($v['Mensaje'])) {
+                return ['success' => true, 'message' => $v['Mensaje']];
             }
 
             return ['success' => true, 'message' => 'Objetivo actualizado correctamente'];
@@ -135,24 +150,26 @@ class Objetivo
     /**
      * Obtener años disponibles
      */
-    public function getAniosDisponibles() {
+    public function getAniosDisponibles()
+    {
         $anioActual = date('Y');
         $anios = [];
-        
+
         for ($i = $anioActual - 2; $i <= $anioActual + 1; $i++) {
             $anios[] = $i;
         }
-        
+
         return $anios;
     }
 
     /**
      * Obtener meses
      */
-    public function getMeses() {
+    public function getMeses()
+    {
         return [
             1 => 'Enero',
-            2 => 'Febrero', 
+            2 => 'Febrero',
             3 => 'Marzo',
             4 => 'Abril',
             5 => 'Mayo',

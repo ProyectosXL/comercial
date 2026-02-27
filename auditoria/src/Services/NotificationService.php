@@ -7,25 +7,27 @@ use PHPMailer\PHPMailer\Exception;
 // Cargar el autoloader de Composer
 require_once __DIR__ . '/../../vendor/autoload.php';
 
-class NotificationService {
+class NotificationService
+{
     private $mailer;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->mailer = new PHPMailer(true); // true habilita excepciones
 
         try {
             // Configuración del servidor SMTP (tomada del .env)
             $this->mailer->isSMTP();
-            $this->mailer->Host       = Env::get('HOST_EMAIL', 'smtp.gmail.com');
-            $this->mailer->SMTPAuth   = true;
-            $this->mailer->Username   = Env::get('USER_EMAIL');
-            $this->mailer->Password   = Env::get('PASS_EMAIL2');
+            $this->mailer->Host = Env::get('HOST_EMAIL_EGRESOS', 'smtp.gmail.com');
+            $this->mailer->SMTPAuth = true;
+            $this->mailer->Username = Env::get('USER_EMAIL_EGRESOS');
+            $this->mailer->Password = Env::get('PASS_EMAIL_EGRESOS');
             $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $this->mailer->Port       = 587;
-            $this->mailer->CharSet    = 'UTF-8';
+            $this->mailer->Port = Env::get('PORT_EMAIL_EGRESOS', 587);
+            $this->mailer->CharSet = 'UTF-8';
 
             // Remitente
-            $this->mailer->setFrom(Env::get('USER_EMAIL'), 'Sistema de Auditorías XL');
+            $this->mailer->setFrom(Env::get('USER_EMAIL_EGRESOS'), 'Sistema de Auditorías XL');
 
         } catch (Exception $e) {
             // Manejar error de configuración si es necesario
@@ -33,9 +35,10 @@ class NotificationService {
         }
     }
 
-    public function sendEmail($to, $subject, $body) {
+    public function sendEmail($to, $subject, $body)
+    {
         try {
-                        // --- CORRECCIÓN: LIMPIAR DESTINATARIOS PREVIOS ---
+            // --- CORRECCIÓN: LIMPIAR DESTINATARIOS PREVIOS ---
             $this->mailer->clearAddresses();
             $this->mailer->clearCCs();
             $this->mailer->clearBCCs();
@@ -45,7 +48,7 @@ class NotificationService {
             // Contenido
             $this->mailer->isHTML(true);
             $this->mailer->Subject = $subject;
-            $this->mailer->Body    = $body;
+            $this->mailer->Body = $body;
             $this->mailer->AltBody = strip_tags($body); // Versión de texto plano
 
             $this->mailer->send();

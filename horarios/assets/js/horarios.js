@@ -451,8 +451,11 @@ $(document).ready(function () {
         if (data.horarios) {
             data.horarios.forEach(function (h) {
                 const celda = $('#tablaHorariosContainer tr[data-vendedor-id="' + h.COD_VENDED + '"] td[data-fecha="' + h.FECHA + '"][data-hora="' + h.HORA + '"]');
-                celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja');
-                const tipo = h.TIPO_HORA.toLowerCase();
+                celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja hora-vacaciones media-hora');
+
+                let tipoRaw = h.TIPO_HORA.toLowerCase();
+                let esMedia = tipoRaw.endsWith('_media');
+                let tipo = esMedia ? tipoRaw.replace('_media', '') : tipoRaw;
 
                 if (tipo === 'extra') {
                     celda.addClass('hora-extra').text('E');
@@ -465,7 +468,12 @@ $(document).ready(function () {
                 } else if (tipo === 'vacaciones') {
                     celda.addClass('hora-vacaciones').text('V');
                 } else {
-                    celda.addClass('marcado').text('X'); // Esto es importante para el horario base
+                    celda.addClass('marcado').text('X');
+                }
+
+                if (esMedia) {
+                    celda.addClass('media-hora');
+                    celda.html('<small style="font-size:0.75rem; font-weight: 900;">½</small>');
                 }
             });
         }
@@ -476,14 +484,23 @@ $(document).ready(function () {
                 if (parseInt(h.HORA) === 0) {
                     const celda = $('#tablaHorariosContainer tr[data-vendedor-id="' + h.COD_VENDED + '"] td[data-fecha="' + h.FECHA + '"][data-hora="24"]');
                     if (celda.length) {
-                        celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja');
-                        const tipo = h.TIPO_HORA.toLowerCase();
+                        celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja hora-vacaciones media-hora');
+
+                        let tipoRaw = h.TIPO_HORA.toLowerCase();
+                        let esMedia = tipoRaw.endsWith('_media');
+                        let tipo = esMedia ? tipoRaw.replace('_media', '') : tipoRaw;
+
                         if (tipo === 'extra') celda.addClass('hora-extra').text('E');
                         else if (tipo === 'devuelve') celda.addClass('hora-devuelve').text('D');
                         else if (tipo === 'permiso') celda.addClass('hora-permiso').text('P');
                         else if (tipo === 'caja') celda.addClass('hora-caja').text('C');
                         else if (tipo === 'vacaciones') celda.addClass('hora-vacaciones').text('V');
                         else celda.addClass('marcado').text('X');
+
+                        if (esMedia) {
+                            celda.addClass('media-hora');
+                            celda.html('<small style="font-size:0.75rem; font-weight: 900;">½</small>');
+                        }
                     }
                 }
             });
@@ -896,7 +913,7 @@ $(document).ready(function () {
             $(this).text(textobase);
         } else {
             $(this).addClass('media-hora');
-            $(this).html('<small style="font-size:0.7em;">½</small>'); // Indicador visual
+            $(this).html('<small style="font-size:0.75rem; font-weight: 900;">½</small>'); // Indicador visual
         }
 
         actualizarSumatorias();
@@ -946,7 +963,7 @@ $(document).ready(function () {
                 celda.addClass('marcado').text('X');
             }
 
-            if (esMedia) celda.html('<small style="font-size:0.7em;">½</small>');
+            if (esMedia) celda.html('<small style="font-size:0.75rem; font-weight: 900;">½</small>');
         }
         actualizarSumatorias();
     }
