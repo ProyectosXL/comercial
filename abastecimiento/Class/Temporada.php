@@ -32,7 +32,16 @@ class Temporada
         ORDER BY 1 DESC 
         
         ";
+
+        if (!$this->cid_central) {
+            return [];
+        }
+
         $stmt = sqlsrv_query($this->cid_central, $sql);
+
+        if (!$stmt) {
+            return [];
+        }
 
         $rows = array();
 
@@ -46,10 +55,17 @@ class Temporada
     public function traerTemporadasDestinos()
     {
 
-        $sql = "SELECT DISTINCT(NOMBRE_TEMP) TEMPORADA, ID FROM MAESTRO_TEMPORADAS
-        ORDER BY ID DESC";
+        $sql = "SELECT DISTINCT(NOMBRE_TEMP) TEMPORADA FROM MAESTRO_TEMPORADAS ORDER BY 1 DESC";
+
+        if (!$this->cid_central) {
+            return [];
+        }
 
         $stmt = sqlsrv_query($this->cid_central, $sql);
+
+        if (!$stmt) {
+            return [];
+        }
 
         $rows = array();
 

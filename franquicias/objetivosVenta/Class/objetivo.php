@@ -11,17 +11,14 @@ class Objetivo
         require_once $_SERVER['DOCUMENT_ROOT'] . '/comercial/Class/Conexion.php';
         $this->cid = new Conexion();
 
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        $db = isset($_SESSION['entorno']) ? $_SESSION['entorno'] : 'central';
-        $this->cid_central = $this->cid->conectar($db);
+        // Forzamos conexión a central ya que este módulo depende de servidores vinculados 
+        // que sólo están configurados en la base de datos central.
+        $this->cid_central = $this->cid->conectar('central');
 
         if (!$this->cid_central) {
             $errors = sqlsrv_errors();
             error_log("Error de conexión en Objetivo::__construct: " . print_r($errors, true));
-            throw new Exception("No se pudo establecer conexión a la base de datos: " . print_r($errors, true));
+            throw new Exception("No se pudo establecer conexión a la base de datos central: " . print_r($errors, true));
         }
     }
 
@@ -56,7 +53,8 @@ class Objetivo
         try {
             $sql = "SELECT NRO_SUCURSAL, DESC_SUCURSAL 
                     FROM [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS 
-                    WHERE CANAL IN ('FRANQUICIAS','PROPIOS') 
+                    WHERE (CANAL IN ('FRANQUICIAS','PROPIOS','EXTERIOR') 
+                           OR (CANAL = 'CENTRAL' AND DESC_SUCURSAL IN ('ECOMMERCE VTEX', 'ECOMMERCE ML'))) 
                     AND HABILITADO = 1 
                     AND NRO_SUC_MADRE IS NULL
                     AND NRO_SUCURSAL NOT IN ('812','912','933')
@@ -74,39 +72,41 @@ class Objetivo
      */
     public function getObjetivos($mes = null, $anio = null, $sucursal = null)
     {
-        try {
-            $mesActual = $mes ?: date('n');
-            $anioActual = $anio ?: date('Y');
+        $mesActual = $mes ?: date('n');
+        $anioActual = $anio ?: date('Y');
 
-            $sql = "SELECT 
-                        s.NRO_SUCURSAL,
-                        s.DESC_SUCURSAL,
-                        o.mes,
-                        o.anio,
-                        o.importeObjetivos,
-                        CONVERT(varchar(23), o.fechaUltMod, 121) AS fechaUltMod,
-                        pv.idTango
-                    FROM [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s
-                    LEFT JOIN [Servidortesting].dbXLSales.DBO.PuntosDeVenta pv ON s.NRO_SUCURSAL = pv.idTango
-                    LEFT JOIN [Servidortesting].dbXLSales.DBO.Objetivos o ON pv.id = o.idPOS 
-                        AND o.mes = $mesActual AND o.anio = $anioActual
-                    WHERE s.CANAL IN ('FRANQUICIAS','PROPIOS') 
-                    AND s.HABILITADO = 1 
-                    AND s.NRO_SUC_MADRE IS NULL
+        $sql = "SELECT 
+                    s.NRO_SUCURSAL,
+                    s.DESC_SUCURSAL,
+                    o.mes,
+                    o.anio,
+                    o.importeObjetivos,
+                    CONVERT(varchar(23), o.fechaUltMod, 121) AS fechaUltMod,
+                    pv.idTango,
+                    pv.id as idPOS
+                FROM [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS s
+                LEFT JOIN [Servidortesting].dbXLSales.DBO.PuntosDeVenta pv ON 
+                    (CASE 
+                        WHEN s.DESC_SUCURSAL = 'ECOMMERCE VTEX' THEN '9'
+                        WHEN s.DESC_SUCURSAL = 'ECOMMERCE ML' THEN '1'
+                        ELSE CAST(s.NRO_SUCURSAL AS VARCHAR(25)) 
+                    END) = CAST(pv.idTango AS VARCHAR(25))
                     AND pv.activo = 1
-                    AND s.NRO_SUCURSAL NOT IN ('812','912','933')";
+                LEFT JOIN [Servidortesting].dbXLSales.DBO.Objetivos o ON pv.id = o.idPOS 
+                    AND o.mes = " . (int) $mesActual . " AND o.anio = " . (int) $anioActual . "
+                WHERE (s.CANAL IN ('FRANQUICIAS','PROPIOS','EXTERIOR') 
+                       OR (s.CANAL = 'CENTRAL' AND s.DESC_SUCURSAL IN ('ECOMMERCE VTEX', 'ECOMMERCE ML'))) 
+                AND s.HABILITADO = 1 
+                AND s.NRO_SUC_MADRE IS NULL
+                AND s.NRO_SUCURSAL NOT IN ('812','912','933')";
 
-            if ($sucursal) {
-                $sql .= " AND s.NRO_SUCURSAL = '$sucursal'";
-            }
-
-            $sql .= " ORDER BY s.DESC_SUCURSAL";
-
-            return $this->retornarArray($sql);
-        } catch (Exception $e) {
-            error_log("Error en getObjetivos: " . $e->getMessage());
-            return [];
+        if ($sucursal) {
+            $sql .= " AND s.NRO_SUCURSAL = '$sucursal'";
         }
+
+        $sql .= " ORDER BY s.DESC_SUCURSAL";
+
+        return $this->retornarArray($sql);
     }
 
     /**

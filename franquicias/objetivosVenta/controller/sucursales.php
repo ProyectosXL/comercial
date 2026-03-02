@@ -1,5 +1,3 @@
-
-
 <?php
 // controller/sucursales.php
 header('Content-Type: application/json');
@@ -14,31 +12,30 @@ try {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
-    
+
     // Establecer entorno por defecto si no existe
     if (!isset($_SESSION['entorno'])) {
         $_SESSION['entorno'] = 'central';
     }
-    
+
     require_once '../Class/objetivo.php';
-    
+
     $objetivo = new Objetivo();
     $sucursales = $objetivo->getSucursales();
-    
-    if (empty($sucursales)) {
-        echo json_encode(['error' => 'No se encontraron sucursales', 'debug' => 'Query returned empty result']);
-    } else {
-        echo json_encode($sucursales);
+
+    // Devolvemos siempre un array (aunque esté vacío) para que el frontend no rompa con .forEach
+    if (!is_array($sucursales)) {
+        $sucursales = [];
     }
-    
+
+    echo json_encode($sucursales);
+
 } catch (Exception $e) {
     http_response_code(500);
-    error_log("Error en sucursales.php: " . $e->getMessage() . " - " . $e->getTraceAsString());
+    error_log("Error en sucursales.php : " . $e->getMessage());
     echo json_encode([
         'error' => 'Error al cargar sucursales: ' . $e->getMessage(),
-        'file' => $e->getFile(),
-        'line' => $e->getLine(),
-        'trace' => $e->getTraceAsString()
+        'success' => false
     ]);
 }
 ?>

@@ -1,7 +1,7 @@
 // js/main.js
-$(document).ready(function() {
+$(document).ready(function () {
     let dataTable;
-    
+
     // Inicializar Select2
     $('#filtroSucursal').select2({
         theme: 'bootstrap-5',
@@ -14,23 +14,23 @@ $(document).ready(function() {
     cargarMeses();
     cargarAnios();
     cargarSucursales();
-    
+
     // Inicializar DataTable
     inicializarDataTable();
-    
+
     // Cargar objetivos por defecto
     cargarObjetivos();
 
     // Event listeners
     $('#btnFiltrar').click(cargarObjetivos);
-    $(document).on('click', '.btn-guardar', function() {
+    $(document).on('click', '.btn-guardar', function () {
         const fila = $(this).closest('tr');
         mostrarModalConfirmacion(fila);
     });
     $('#btnConfirmarCambio').click(guardarObjetivo);
 
     // Formatear números en inputs
-    $(document).on('input', '.objetivo-input', function() {
+    $(document).on('input', '.objetivo-input', function () {
         formatearNumeroInput(this);
     });
 
@@ -40,27 +40,27 @@ $(document).ready(function() {
             5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
             9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
         };
-        
+
         const mesActual = new Date().getMonth() + 1;
         let options = '';
-        
+
         Object.keys(meses).forEach(key => {
             const selected = key == mesActual ? 'selected' : '';
             options += `<option value="${key}" ${selected}>${meses[key]}</option>`;
         });
-        
+
         $('#filtroMes').html(options);
     }
 
     function cargarAnios() {
         const anioActual = new Date().getFullYear();
         let options = '';
-        
+
         for (let i = anioActual - 2; i <= anioActual + 1; i++) {
             const selected = i === anioActual ? 'selected' : '';
             options += `<option value="${i}" ${selected}>${i}</option>`;
         }
-        
+
         $('#filtroAnio').html(options);
     }
 
@@ -69,14 +69,22 @@ $(document).ready(function() {
             url: 'controller/sucursales.php',
             method: 'GET',
             dataType: 'json',
-            success: function(data) {
+            success: function (data) {
+                if (data && data.error) {
+                    console.error('Error al cargar sucursales:', data.error);
+                    return;
+                }
+                if (!Array.isArray(data)) {
+                    console.error('La API de sucursales no devolvió un array:', data);
+                    return;
+                }
                 let options = '<option value="">Todas las sucursales</option>';
-                data.forEach(function(sucursal) {
+                data.forEach(function (sucursal) {
                     options += '<option value="' + sucursal.NRO_SUCURSAL + '">' + sucursal.NRO_SUCURSAL + ' - ' + sucursal.DESC_SUCURSAL + '</option>';
                 });
                 $('#filtroSucursal').html(options);
             },
-            error: function() {
+            error: function () {
                 console.error('Error al cargar sucursales');
             }
         });
@@ -123,13 +131,27 @@ $(document).ready(function() {
         const sucursal = $('#filtroSucursal').val();
 
         $('.loading').show();
-        
+
         $.ajax({
             url: 'controller/objetivos.php',
             method: 'GET',
             data: { mes: mes, anio: anio, sucursal: sucursal },
             dataType: 'json',
-            success: function(data) {
+            success: function (data) {
+                // Verificar si hay errores en la respuesta
+                if (data && data.error) {
+                    $('.loading').hide();
+                    Swal.fire('Error', data.error, 'error');
+                    return;
+                }
+
+                // Verificar que data sea un array
+                if (!Array.isArray(data)) {
+                    $('.loading').hide();
+                    console.error('La API no devolvió un array:', data);
+                    return;
+                }
+
                 // Verificar si DataTable existe antes de usar clear()
                 if ($.fn.DataTable.isDataTable('#tablaObjetivos')) {
                     dataTable.clear();
@@ -137,11 +159,11 @@ $(document).ready(function() {
                     // Si no existe, inicializar primero
                     inicializarDataTable();
                 }
-                
-                data.forEach(function(objetivo) {
+
+                data.forEach(function (objetivo) {
                     const importeActual = parseFloat(objetivo.importeObjetivos || 0);
                     const fechaMod = formatearFecha(objetivo.fechaUltMod);
-                    
+
                     dataTable.row.add([
                         objetivo.NRO_SUCURSAL,
                         objetivo.DESC_SUCURSAL,
@@ -149,22 +171,26 @@ $(document).ready(function() {
                         '<input type="text" class="form-control objetivo-input" ' +
                         'value="' + formatearNumero(importeActual, 0) + '" ' +
                         'data-valor="' + importeActual + '" ' +
-                        'data-idtango="' + objetivo.idTango + '" ' +
+                        'data-idtango="' + (objetivo.idTango || objetivo.NRO_SUCURSAL) + '" ' +
                         'data-sucursal="' + objetivo.DESC_SUCURSAL + '">',
                         fechaMod,
                         '<button type="button" class="btn btn-sm btn-success btn-guardar" ' +
-                        'data-idtango="' + objetivo.idTango + '" ' +
+                        'data-idtango="' + (objetivo.idTango || objetivo.NRO_SUCURSAL) + '" ' +
                         'data-sucursal="' + objetivo.DESC_SUCURSAL + '">' +
                         '<i class="fas fa-save"></i> Guardar</button>'
                     ]);
                 });
-                
+
                 dataTable.draw();
                 $('.loading').hide();
             },
-            error: function() {
+            error: function (xhr) {
                 $('.loading').hide();
-                Swal.fire('Error', 'No se pudieron cargar los objetivos', 'error');
+                let errMsg = 'No se pudieron cargar los objetivos';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errMsg = xhr.responseJSON.error;
+                }
+                Swal.fire('Error', errMsg, 'error');
             }
         });
     }
@@ -188,7 +214,7 @@ $(document).ready(function() {
         const modal = $('#modalConfirmacion');
         const fila = modal.data('fila');
         const input = fila.find('.objetivo-input');
-        
+
         const datos = {
             idTango: input.data('idtango'),
             mes: $('#filtroMes').val(),
@@ -201,9 +227,9 @@ $(document).ready(function() {
             method: 'POST',
             data: datos,
             dataType: 'json',
-            success: function(response) {
+            success: function (response) {
                 modal.modal('hide');
-                
+
                 if (response.success) {
                     Swal.fire('Éxito', response.message, 'success').then(() => {
                         cargarObjetivos(); // Recargar tabla
@@ -212,14 +238,14 @@ $(document).ready(function() {
                     Swal.fire('Error', response.message, 'error');
                 }
             },
-            error: function() {
+            error: function () {
                 modal.modal('hide');
                 Swal.fire('Error', 'Ocurrió un error al guardar el objetivo', 'error');
             }
         });
     }
 
-        function formatearFecha(fecha) {
+    function formatearFecha(fecha) {
         if (!fecha) return '-';
 
         // Caso objeto de PHP: { date: '2025-08-21 16:55:05.557', ... }
@@ -252,7 +278,7 @@ $(document).ready(function() {
                         Number(mi),
                         Number(s),
                         // milisegundos (si vienen microsegundos, recorto a 3 dígitos)
-                        Number(frac.padEnd(3, '0').slice(0,3))
+                        Number(frac.padEnd(3, '0').slice(0, 3))
                     );
                 }
             }
@@ -290,7 +316,7 @@ $(document).ready(function() {
         if (!numeroString) {
             return 0;
         }
-        return parseFloat(numeroString.toString().replace(/[.,]/g, function(match) {
+        return parseFloat(numeroString.toString().replace(/[.,]/g, function (match) {
             return match === ',' ? '.' : '';
         }).replace(/[^\d.]/g, '')) || 0;
     }
