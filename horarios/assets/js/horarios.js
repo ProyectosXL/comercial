@@ -1062,7 +1062,7 @@ $(document).ready(function () {
             const nombreVendedor = celda.closest('tr').data('nombre');
 
             horarios.push({
-                codVended: celda.closest('tr').data('vendedor-id'),
+                codVended: String(celda.closest('tr').data('vendedor-id')),
                 nombreVendedor: nombreVendedor,
                 fecha: celda.data('fecha'),
                 hora: (parseInt(celda.data('hora')) === 24) ? 0 : celda.data('hora'),
@@ -1073,7 +1073,7 @@ $(document).ready(function () {
         // B. Recolectar Francos
         $('#tablaHorariosContainer tbody tr').each(function () {
             const fila = $(this);
-            const vid = fila.data('vendedor-id');
+            const vid = String(fila.data('vendedor-id'));
             vendedores.push(vid);
 
             fila.find('.franco-checkbox:checked').each(function () {
@@ -1089,7 +1089,7 @@ $(document).ready(function () {
             const t = $(this).data('texto');
             if (t && t.trim() !== '' && !$(this).prop('disabled')) {
                 notas.push({
-                    codVended: $(this).data('vendedor'),
+                    codVended: String($(this).data('vendedor')),
                     fecha: $(this).data('fecha'),
                     nota: t
                 });

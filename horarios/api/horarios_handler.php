@@ -192,7 +192,7 @@ function guardarDatos($usuario)
         if (!empty($vendedoresEnGrilla)) {
             $placeholdersVendedores = implode(',', array_fill(0, count($vendedoresEnGrilla), '?'));
             $sqlDeleteFrancos = "DELETE FROM FP_GESTION_FRANCOS WHERE NRO_SUCURSAL = ? AND FECHA_FRANCO BETWEEN ? AND ? AND COD_VENDED IN ($placeholdersVendedores)";
-            $paramsDeleteFrancos = array_merge([$nroSucursal, $fechaInicio, $fechaFin], $vendedoresEnGrilla);
+            $paramsDeleteFrancos = array_merge([$nroSucursal, $fechaInicio, $fechaFin], array_map('strval', $vendedoresEnGrilla));
             $stmtDeleteFrancos = sqlsrv_query($conn, $sqlDeleteFrancos, $paramsDeleteFrancos);
             if ($stmtDeleteFrancos === false) {
                 $errors = sqlsrv_errors();
