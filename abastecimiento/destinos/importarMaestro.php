@@ -117,18 +117,14 @@
                 success: function (res) {
 
                     res = JSON.parse(res);
+                    // Map code to description for O(1) lookup
+                    const descMap = new Map();
+                    res.forEach(item => descMap.set(item[0].toString().trim(), item[1]));
 
                     jsonData.forEach((element, x) => {
 
-                        element[0] = element[0] || '';
-
-                        let descripcion = '';
-
-                        res.forEach((element2, y) => {
-                            if (element[0] == element2[0]) {
-                                descripcion = element2[1];
-                            }
-                        });
+                        let cod = (element[0] || '').toString().trim();
+                        let descripcion = descMap.get(cod) || '';
 
                         element[1] = element[1] || '';
                         element[2] = element[2] || '';
@@ -136,7 +132,7 @@
                         if (x > 0) {
                             tableHtml += `
                                     <tr>
-                                        <td>${element[0]}</td>
+                                        <td>${cod}</td>
                                         <td>${descripcion}</td>
                                         <td>${element[1]}</td>
                                         <td>${element[2]}</td>
@@ -152,7 +148,7 @@
                             <button type="button" class="btn btn-success" onclick="actualizar()">Actualizar <i class='bi bi-arrow-repeat'></i></button>
                         `;
 
-
+                    Swal.close();
                 }
             })
 
@@ -176,15 +172,21 @@
     }
 
     const actualizar = () => {
+        Swal.fire({
+            title: 'Validando...',
+            text: 'Espere un momento mientras verificamos los artículos.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
 
         let allRows = document.querySelectorAll('#tableImportExcel tbody tr');
         let newArray = [];
 
         allRows.forEach(element => {
-            let articulo = element.querySelectorAll('td')[0].textContent;
-            let descripcion = element.querySelectorAll('td')[1].textContent;
-            let destino = element.querySelectorAll('td')[2].textContent;
-            let liquidacion = element.querySelectorAll('td')[3].textContent;
+            let articulo = element.querySelectorAll('td')[0].textContent.trim();
+            let descripcion = element.querySelectorAll('td')[1].textContent.trim();
+            let destino = element.querySelectorAll('td')[2].textContent.trim();
+            let liquidacion = element.querySelectorAll('td')[3].textContent.trim();
 
             newArray.push([articulo, descripcion, destino, liquidacion]);
         });
@@ -197,41 +199,51 @@
             },
             success: function (data) {
                 data = JSON.parse(data);
+
+                // Map code to existence for O(1) lookup
+                const existenceMap = new Map();
+                data.forEach(item => existenceMap.set(item[0].toString().trim(), item[1]));
+
                 let puedeContinuar = true;
+                let totalErrores = 0;
+
                 allRows.forEach(element => {
                     let errores = '';
-                    if (element.querySelectorAll('td')[0].textContent == '') {
+                    let codArt = element.querySelectorAll('td')[0].textContent.trim();
+                    let destino = element.querySelectorAll('td')[2].textContent.trim();
+
+                    if (codArt == '') {
                         errores += 'Articulo (Requerido) <br>';
                         puedeContinuar = false;
                     }
 
-                    if (element.querySelectorAll('td')[2].textContent == '') {
+                    if (destino == '') {
                         errores += 'Destino (Requerido) <br>';
                         puedeContinuar = false;
                     }
 
-                    data.forEach(articulo => {
-                        if (element.querySelectorAll('td')[0].textContent == articulo[0]) {
-                            console.log(element.querySelectorAll('td')[4]);
-                            if (articulo[1] == 1) {
-                                // element.querySelectorAll('td')[4].style.backgroundColor = "red";
-                            } else {
-                                errores += 'Articulo no existe En el Maestro <br>';
-                                puedeContinuar = false;
-                                // element.querySelectorAll('td')[4].style.backgroundColor = "green";
-                            }
-
+                    if (codArt != '') {
+                        if (existenceMap.get(codArt) !== 1) {
+                            errores += 'Articulo no existe En el Maestro <br>';
+                            puedeContinuar = false;
                         }
-                    });
-                    if (errores != '') {
-
-                        element.querySelectorAll('td')[4].innerHTML = `<i class="bi bi-exclamation-circle-fill" style="color:red;width" title="${errores.replace(/<br>/g, '\n')}" data-toggle="tooltip" ></i>`;
                     }
 
+                    if (errores != '') {
+                        totalErrores++;
+                        element.querySelectorAll('td')[4].innerHTML = `<i class="bi bi-exclamation-circle-fill" style="color:red" title="${errores.replace(/<br>/g, '\n')}" data-toggle="tooltip"></i>`;
+                    } else {
+                        element.querySelectorAll('td')[4].innerHTML = '';
+                    }
                 });
-                if (puedeContinuar) {
 
-                    console.log('puede continuar')
+                if (puedeContinuar) {
+                    Swal.fire({
+                        title: 'Actualizando...',
+                        text: 'Procesando cambios masivos.',
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
 
                     $.ajax({
                         type: "POST",
@@ -240,8 +252,6 @@
                             data: JSON.stringify(newArray)
                         },
                         success: function (data) {
-
-
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Actualizado correctamente',
@@ -250,37 +260,19 @@
                             }).then((result) => {
                                 location.reload();
                             })
-
                         }
                     });
 
                 } else {
-                    console.log('no puede continuar')
-
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'No se puede continuar',
+                        text: `Se encontraron ${totalErrores} errores en el archivo. Por favor, revise los íconos rojos en la tabla.`
+                    });
+                    $('[data-toggle="tooltip"]').tooltip();
                 }
-                // if(data == "success"){
-                //     Swal.fire({
-                //         icon: 'success',
-                //         title: 'Actualizado correctamente',
-                //         showConfirmButton: false,
-                //         timer: 1500
-                //     }).then((result) => {
-                //         location.reload();
-                //     })
-                // }else{
-                //     Swal.fire({
-                //         icon: 'error',
-                //         title: 'Error al actualizar',
-                //         showConfirmButton: false,
-                //         timer: 1500
-                //     })
-                // }
             }
-
         })
-
-
-        $('[data-toggle="tooltip"]').tooltip();
     }
 
 

@@ -19,17 +19,17 @@ class EmailNew {
             $this->mail->isSMTP();
             $this->mail->Host = 'smtp.gmail.com';
             $this->mail->SMTPAuth = true;
-            $this->mail->Username = 'xl.notificaciones@xl.com.ar';
-            $this->mail->Password = 'oysuyuhsnyoaifin';
+            $this->mail->Username = 'notificaciones@xl.com.ar';
+            $this->mail->Password = 'yvsuiewmcztagevs';
             $this->mail->SMTPSecure = 'tls';
             $this->mail->Port = 587;
-            $this->mail->setFrom('xl.notificaciones@xl.com.ar', 'XL Extralarge');
+            $this->mail->setFrom('notificaciones@xl.com.ar', 'XL Extralarge');
             
         } catch (Exception $e) {
             error_log("Error al instanciar EmailNew: " . $e->getMessage());
         }
     }
-
+    
     /**
      * Envía notificación de autorización de gastos en efectivo
      * Solo se envía cuando hay gastos en efectivo
