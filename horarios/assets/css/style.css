@@ -658,9 +658,9 @@ td.franco-activo {
 /* Tabla de vista local con estructura idéntica a gestión */
 #tablaVistaLocal table {
     width: auto !important;
-    /* Permitir que la tabla se expanda según el contenido */
     max-width: none !important;
     margin-bottom: 0;
+    user-select: none;
 }
 
 /* HEADER - IDÉNTICO A GESTIÓN */
@@ -682,25 +682,34 @@ td.franco-activo {
     font-size: 0.9rem;
 }
 
-/* COLUMNAS FIJAS - IDÉNTICO A GESTIÓN */
+/* COLUMNAS FIJAS - CLASES NUEVAS */
+.col-vendedor {
+    min-width: 250px;
+    width: 250px;
+    max-width: 250px;
+}
+
+.col-totales {
+    min-width: 100px;
+    width: 100px;
+    max-width: 100px;
+    left: 250px !important;
+}
+
 #tablaVistaLocal .table tr> :first-child {
     position: sticky !important;
     left: 0;
     z-index: 50;
     background-color: #ffffff;
     border-right: 2px solid #dee2e6;
-    min-width: 280px;
-    width: 280px;
-    max-width: 280px;
 }
 
 #tablaVistaLocal .table tr> :nth-child(2) {
     position: sticky !important;
-    left: 280px;
+    left: 250px;
     z-index: 50;
     background-color: #ffffff;
     border-right: 2px solid #dee2e6;
-    min-width: 80px;
 }
 
 /* ESQUINAS SUPERIORES - FIJAS */
@@ -716,7 +725,7 @@ td.franco-activo {
 }
 
 #tablaVistaLocal thead tr:nth-child(1)> :nth-child(2) {
-    left: 280px;
+    left: 250px !important;
 }
 
 #tablaVistaLocal thead tr:nth-child(2)> :first-child,
@@ -730,7 +739,7 @@ td.franco-activo {
 }
 
 #tablaVistaLocal thead tr:nth-child(2)> :nth-child(2) {
-    left: 280px;
+    left: 250px !important;
 }
 
 /* FOOTER - FIJADO ABAJO */
@@ -745,7 +754,7 @@ td.franco-activo {
 }
 
 #tablaVistaLocal tfoot tr> :nth-child(2) {
-    left: 280px;
+    left: 250px !important;
 }
 
 #tablaVistaLocal tfoot tr>td:first-child {
@@ -753,26 +762,17 @@ td.franco-activo {
     left: 0 !important;
     bottom: 0 !important;
     z-index: 80 !important;
-    /* Encima del resto del footer */
     background-color: #dee2e6 !important;
-    /* Gris un poco más oscuro */
     border-right: 2px solid #adb5bd;
-    width: 280px;
-    min-width: 280px;
-    max-width: 280px;
 }
 
 #tablaVistaLocal tfoot tr>td:nth-child(2) {
     position: sticky !important;
-    left: 280px !important;
-    /* Pegada a la primera */
+    left: 250px !important;
     bottom: 0 !important;
     z-index: 80 !important;
     background-color: #dee2e6 !important;
     border-right: 3px solid #000;
-    /* Línea negra separadora */
-    width: 80px;
-    min-width: 80px;
 }
 
 #tablaVistaLocal tfoot td {
@@ -828,6 +828,10 @@ td.franco-activo {
 #tablaVistaLocal .hora-celda.dia-franco {
     background-color: #e2e3e5 !important;
     color: transparent !important;
+}
+
+.text-pink {
+    color: #d63384 !important;
 }
 
 /* FRANCO ACTIVO */
@@ -946,34 +950,100 @@ td.franco-activo {
 }
 
 /* RESPONSIVE */
-@media (max-width: 1400px) {
-    #tablaVistaLocal .table tr> :first-child {
-        min-width: 250px;
-        width: 250px;
-        max-width: 250px;
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
     }
 
-    #tablaVistaLocal .table tr> :nth-child(2) {
-        min-width: 85px;
-        width: 85px;
-        max-width: 85px;
+    /* Reducir padding de los filtros */
+    .card-body.p-4 {
+        padding: 1rem !important;
+    }
+
+    #tablaVistaLocal {
+        max-height: 70vh;
+        font-size: 0.75rem;
+    }
+
+    /* Columnas Sticky mucho más finas en móvil */
+    .col-vendedor {
+        min-width: 140px !important;
+        width: 140px !important;
+        max-width: 140px !important;
+    }
+
+    .col-totales {
+        left: 140px !important;
+        min-width: 70px !important;
+        width: 70px !important;
+        max-width: 70px !important;
+    }
+
+    /* Ajuste de posiciones left para toda la tabla */
+    #tablaVistaLocal .table tr> :nth-child(2),
+    #tablaVistaLocal thead tr:nth-child(1)> :nth-child(2),
+    #tablaVistaLocal thead tr:nth-child(2)> :nth-child(2),
+    #tablaVistaLocal tfoot tr> :nth-child(2) {
+        left: 140px !important;
+    }
+
+    /* Vendedor Nombre y Tarea */
+    .vendedor-nombre {
+        font-size: 0.8rem !important;
+    }
+
+    .vendedor-tarea {
+        font-size: 0.65rem !important;
+    }
+
+    /* Contenedor de Totales más compacto */
+    .summary-container {
+        font-size: 0.65rem !important;
+        line-height: 1 !important;
+        padding: 2px !important;
+    }
+
+    .badge-saldo {
+        font-size: 0.6rem !important;
+        padding: 1px 3px !important;
+    }
+
+    /* Iconos */
+    .btn-feedback i,
+    .btn-nota-local i {
+        font-size: 1rem !important;
+    }
+
+    /* Celdas de hora más angostas */
+    .table th,
+    .table td {
+        min-width: 30px;
+        padding: 0.25rem 0.1rem !important;
+    }
+
+    .dia-header {
+        min-width: 400px !important;
     }
 }
 
-@media (max-width: 768px) {
-    #tablaVistaLocal {
-        max-height: 60vh;
-        font-size: 0.8rem;
+@media (max-width: 576px) {
+    .col-vendedor {
+        min-width: 110px !important;
+        width: 110px !important;
     }
 
-    #tablaVistaLocal .vendedor-info-container {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 4px;
+    .col-totales {
+        left: 110px !important;
+        min-width: 60px !important;
+        width: 60px !important;
     }
 
-    #tablaVistaLocal .btn-feedback {
-        margin-top: 4px;
+    #tablaVistaLocal .table tr> :nth-child(2),
+    #tablaVistaLocal thead tr:nth-child(1)> :nth-child(2),
+    #tablaVistaLocal thead tr:nth-child(2)> :nth-child(2),
+    #tablaVistaLocal tfoot tr> :nth-child(2) {
+        left: 110px !important;
     }
 }
 

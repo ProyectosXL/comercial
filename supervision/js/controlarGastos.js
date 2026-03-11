@@ -165,20 +165,14 @@ $(document).ready(function() {
         })
         .done(function(response) {
             if (response.success) {
-               
-                if(!response.gastos[0]){
-                    Swal.fire('Error', 'Hubo un problema al buscar los gastos', 'error');
-                    return 1
-                }
-            
                 actualizarTabla(response.gastos);
                 
                 let totalGastosTarjeta = 0;
                 let totalGastosEfectivo = 0;
                 
                 response.gastos.forEach(element => {
-                    let efectivo = element.importe.replace('.','').replace(',','.');
-                    let tarjeta = element.importe_tarjeta.replace('.','').replace(',','.');
+                    let efectivo = element.importe.replace(/\./g,'').replace(',','.');
+                    let tarjeta = element.importe_tarjeta.replace(/\./g,'').replace(',','.');
                
                     totalGastosEfectivo += parseFloat(efectivo);
                     totalGastosTarjeta += parseFloat(tarjeta);

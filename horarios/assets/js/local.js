@@ -149,8 +149,8 @@ $(document).ready(function () {
 
         // FILA 1: Días
         html += '<tr class="align-middle sticky-top-0">';
-        html += '<th class="sticky-left-0 bg-white" style="z-index: 20; min-width: 250px;">Vendedor</th>';
-        html += '<th class="sticky-left-1 bg-white" style="z-index: 20; min-width: 100px;">Total Hs</th>';
+        html += '<th class="sticky-left-0 bg-white col-vendedor">Vendedor</th>';
+        html += '<th class="sticky-left-1 bg-white col-totales">Total Hs</th>';
 
         for (let i = 0; i < 7; i++) {
             let fechaActual = new Date(primerDia);
@@ -168,8 +168,8 @@ $(document).ready(function () {
 
         // FILA 2: Horas
         html += '<tr class="align-middle sticky-top-1">';
-        html += '<th class="sticky-left-0 bg-white" style="z-index: 19;"></th>';
-        html += '<th class="sticky-left-1 bg-white" style="z-index: 19;"></th>';
+        html += '<th class="sticky-left-0 bg-white col-vendedor"></th>';
+        html += '<th class="sticky-left-1 bg-white col-totales"></th>';
         for (let d = 0; d < 7; d++) {
             for (let h = 7; h <= 24; h++) {
                 const label = (h === 24) ? '00' : h;
@@ -225,15 +225,14 @@ $(document).ready(function () {
             // Celda Vendedor
             const feedbackTexto = datos.feedback || '';
             const tieneFeedback = feedbackTexto.trim() !== '';
-            html += `<td class="sticky-left-0 bg-white text-start p-2">
+            html += `<td class="sticky-left-0 bg-white text-start p-2 col-vendedor">
                         <div class="d-flex justify-content-between align-items-center">
-                            <div class="text-truncate" style="max-width: 180px;">
-                                <div class="fw-bold mb-0" style="font-size: 0.9rem;">${nombre}</div>
-                                <small class="text-muted" style="font-size: 0.75rem;">${tarea}</small>
+                            <div class="text-truncate" style="max-width: 160px;">
+                                <div class="fw-bold mb-0 vendedor-nombre">${nombre}</div>
+                                <small class="text-muted vendedor-tarea">${tarea}</small>
                             </div>
                             <button class="btn-feedback ${tieneFeedback ? 'tiene-feedback' : ''}" 
-                                    data-id="${id}" data-nombre="${nombre}" data-texto="${feedbackTexto}"
-                                    style="border: none; background: transparent; cursor: pointer; font-size: 1.2rem; color: ${tieneFeedback ? '#0d6efd' : '#ced4da'};">
+                                    data-id="${id}" data-nombre="${nombre}" data-texto="${feedbackTexto}">
                                 <i class="bi bi-chat-dots-fill"></i>
                             </button>
                         </div>
@@ -244,14 +243,14 @@ $(document).ready(function () {
             if (saldoFinal > 0) colorSaldo = 'bg-danger text-white';
             else if (saldoFinal < 0) colorSaldo = 'bg-success text-white';
 
-            html += `<td class="sticky-left-1 bg-white align-middle p-0" style="width: 100px; min-width: 100px;">
-                        <div class="d-flex flex-column align-items-center" style="font-size: 0.8rem; line-height: 1.1; padding: 4px;">
+            html += `<td class="sticky-left-1 bg-white align-middle p-0 col-totales">
+                        <div class="d-flex flex-column align-items-center summary-container">
                             <span class="text-success fw-bold">H: ${tH % 1 === 0 ? tH : tH.toFixed(1)}</span>
                             <span class="text-primary fw-bold">E: ${tE % 1 === 0 ? tE : tE.toFixed(1)}</span>
                             <span class="text-warning fw-bold">D: ${tD % 1 === 0 ? tD : tD.toFixed(1)}</span>
-                            <span class="fw-bold" style="color: #d63384;">P: ${tP % 1 === 0 ? tP : tP.toFixed(1)}</span>
-                            <span class="badge border ${colorSaldo} mt-1" style="font-size: 0.7rem; padding: 2px 4px;">
-                                Saldo: ${saldoFinal % 1 === 0 ? saldoFinal : saldoFinal.toFixed(1)}
+                            <span class="fw-bold text-pink">P: ${tP % 1 === 0 ? tP : tP.toFixed(1)}</span>
+                            <span class="badge border ${colorSaldo} mt-1 badge-saldo">
+                                S: ${saldoFinal % 1 === 0 ? saldoFinal : saldoFinal.toFixed(1)}
                             </span>
                         </div>
                      </td>`;
@@ -341,8 +340,8 @@ $(document).ready(function () {
 
         // Totales por Hora
         html += '<tr class="total-por-hora-row">';
-        html += '<td class="sticky-left-0 bg-light fw-bold text-start p-2">Total Hs</td>';
-        html += '<td class="sticky-left-1 bg-light"></td>';
+        html += '<td class="sticky-left-0 bg-light fw-bold text-start p-2 col-vendedor">Total Hs</td>';
+        html += '<td class="sticky-left-1 bg-light col-totales"></td>';
         for (let d = 0; d < 7; d++) {
             for (let h = 7; h <= 24; h++) {
                 const suma = sumasHoras[d][h] || 0;
@@ -356,8 +355,8 @@ $(document).ready(function () {
 
         // Promociones
         html += '<tr>';
-        html += '<td class="sticky-left-0 bg-light fw-bold text-start p-2">Promociones</td>';
-        html += '<td class="sticky-left-1 bg-light"></td>';
+        html += '<td class="sticky-left-0 bg-light fw-bold text-start p-2 col-vendedor">Promociones</td>';
+        html += '<td class="sticky-left-1 bg-light col-totales"></td>';
         fechasSemana.forEach(fecha => {
             const list = promociones[fecha] || [];
             let promoHTML = '<span class="text-muted">-</span>';
