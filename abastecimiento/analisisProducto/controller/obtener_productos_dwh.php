@@ -74,7 +74,12 @@ try {
                 StockReservaEcommerce AS STOCK_RESERVA, 
                 StockExcluido AS STOCK_EXCLUIDO, 
                 CantVenta AS CANT_VENTA, 
-                VentaTotal AS IMP_VENTA
+                VentaTotal AS IMP_VENTA,
+                CantIngresoCentral AS CANT_INGRESO_CENTRAL,
+                VentaFranq AS VENTA_FRANQ,
+                VentaMay AS VENTA_MAY,
+                VentaEcomm AS VENTA_ECOMM,
+                VentaPropios AS VENTA_PROPIOS
             FROM 
                 [XL-LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL
             WHERE 
