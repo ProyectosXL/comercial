@@ -2,6 +2,14 @@
 
 session_start();
 
+// Cambio de entorno via GET (sin AJAX, más confiable)
+if (isset($_GET['setEntorno'])) {
+    $_SESSION['entorno'] = ($_GET['setEntorno'] === 'central') ? 'central' : 'uy';
+    // Redirigir limpiando el parámetro de la URL
+    header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?'));
+    exit;
+}
+
 
 require_once '../Class/Conexion.php';
 // ----------------------------------------------
@@ -73,22 +81,6 @@ if ($_SESSION['entorno'] == 'central') {
 
 
     <style>
-        .toggle-on {
-            background-image: url('<?= $imageOn ?>');
-            background-size: contain;
-            background-repeat: no-repeat;
-            height: 60px;
-            width: 60px;
-        }
-
-        .toggle-off {
-            background-image: url('<?= $imageOff ?>');
-            background-size: contain;
-            background-repeat: no-repeat;
-            height: 60px;
-            width: 60px;
-        }
-
         /* Adaptar ancho de selectores Temporada y Destino según contenido */
         #temporada+.select2-container,
         #destino+.select2-container {
@@ -104,6 +96,41 @@ if ($_SESSION['entorno'] == 'central') {
         .btn-compact {
             white-space: nowrap;
             padding: 0.375rem 0.75rem;
+        }
+
+        /* Switch de entorno */
+        .entorno-switch {
+            display: inline-flex;
+            background: #f1f3f5;
+            border: 1px solid #dee2e6;
+            border-radius: 50px;
+            padding: 3px;
+            gap: 2px;
+        }
+        .entorno-option {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 5px 16px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #868e96;
+            transition: background 0.22s, color 0.22s, box-shadow 0.22s;
+            user-select: none;
+        }
+        .entorno-option.active {
+            background: #6f42c1;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(111,66,193,0.18);
+        }
+        .entorno-option .flag-icon {
+            width: 22px;
+            height: 22px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 1.5px solid rgba(255,255,255,0.4);
         }
     </style>
 
@@ -121,18 +148,25 @@ if ($_SESSION['entorno'] == 'central') {
     <div class="container-fluid py-4">
         <div class="card mb-4">
             <div class="card-body">
-                <h4 class="card-title mb-4">
-                    <i class="fas fa-chart-line me-2"></i>
-                    <span style="margin-right:50%">Consulta Analisis de Producto</span><span
-                        class="text-muted small">Última actualización DWH: <?php echo $ultimaActualizacionDWH; ?>
-                        hs</span>
-
-
-                    <input type="checkbox" <?= $checkedValue ?> data-toggle="toggle" data-on="<?= $dataOnValue ?>"
-                        data-off="<?= $dataOffValue ?>" class="custom-toggle" style="color:black; font-size: 0; "
-                        onchange="cambiarEntorno(this)" id="checkEntorno">
-
-                </h4>
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2 text-primary"></i>Consulta Análisis de Producto
+                    </h5>
+                    <span style="font-size:0.75rem; color:#adb5bd; font-weight:400;">
+                        <i class="fas fa-clock me-1"></i>Última actualización DWH: <?php echo $ultimaActualizacionDWH; ?> hs
+                    </span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="font-size:0.8rem;color:#868e96;">Entorno:</span>
+                        <div class="entorno-switch">
+                            <div class="entorno-option <?= $_SESSION['entorno'] == 'central' ? 'active' : '' ?>" onclick="cambiarEntorno('central')">
+                                <img src="../css/bandera_con_sol__55757_std.jpg" class="flag-icon" alt="ARG"> ARG
+                            </div>
+                            <div class="entorno-option <?= $_SESSION['entorno'] != 'central' ? 'active' : '' ?>" onclick="cambiarEntorno('uy')">
+                                <img src="../css/UY.png" class="flag-icon" alt="UY"> UY
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
 
                 <form id="filtroForm" class="row g-3">
@@ -188,6 +222,16 @@ if ($_SESSION['entorno'] == 'central') {
                         <button type="button" id="exportXlsx" class="btn btn-success btn-compact">
                             <i class="fas fa-file-excel me-2"></i>Excel
                         </button>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary btn-compact dropdown-toggle" type="button" id="colVisDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-columns me-1"></i>Elegir Columnas
+                            </button>
+                            <ul class="dropdown-menu p-2" aria-labelledby="colVisDropdown" id="colVisMenu" style="min-width:220px;max-height:400px;overflow-y:auto">
+                                <li class="px-1 py-1"><small class="text-muted fw-bold">Mostrar / Ocultar columnas</small></li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <!-- Generado dinámicamente por actualizarDropdownColumnas() -->
+                            </ul>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -195,7 +239,6 @@ if ($_SESSION['entorno'] == 'central') {
 
         <div class="card">
             <div class="card-body">
-                <div class="table-responsive">
                     <table class="table table-striped" id="productosTable">
                         <thead>
                             <tr>
@@ -218,12 +261,16 @@ if ($_SESSION['entorno'] == 'central') {
                                 <th>Stock Excluido</th>
                                 <th>Cant. Venta</th>
                                 <th>Venta Total</th>
+                                <th>Cant. Ingr. Central</th>
+                                <th>Venta Franq.</th>
+                                <th>Venta May.</th>
+                                <th>Venta Ecomm.</th>
+                                <th>Venta Propios</th>
                             </tr>
                         </thead>
                         <tbody>
                         </tbody>
                     </table>
-                </div>
             </div>
         </div>
     </div>
@@ -237,8 +284,7 @@ if ($_SESSION['entorno'] == 'central') {
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-    <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
-    <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="js/equivalencias.js"></script>
 
@@ -312,10 +358,11 @@ if ($_SESSION['entorno'] == 'central') {
             handleExport($(this), 'controller/exportar_productos_excel.php');
         });
 
-        // REEMPLAZA EL ANTIGUO EVENT LISTENER DEL BOTÓN DE EXCEL POR ESTE:
         $('#exportXlsx').on('click', function (e) {
             e.preventDefault();
-            exportarDirectoExcel();
+            if (dataTable) {
+                dataTable.button(0).trigger();
+            }
         });
 
         // Variable para la instancia de DataTable, debe estar fuera de la función
@@ -335,8 +382,16 @@ if ($_SESSION['entorno'] == 'central') {
                 pageLength: 50,
                 lengthMenu: [[25, 50, 100, 200, -1], [25, 50, 100, 200, "Todos"]],
                 language: { url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json', search: "Buscar en resultados:" },
-                dom: 'Bfrtip',
-                buttons: [],
+                dom: '<"d-none"B>frtip',
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        title: 'Analisis de Producto',
+                        filename: function () { return 'Analisis_Producto_' + new Date().toISOString().slice(0, 10); },
+                        exportOptions: { columns: ':visible', orthogonal: 'export' }
+                    }
+                ],
+                scrollX: true,
                 order: [[0, 'asc']],
                 columns: [
                     { data: 'RUBRO', defaultContent: '' },
@@ -354,15 +409,20 @@ if ($_SESSION['entorno'] == 'central') {
                     { data: 'ARTICULO', defaultContent: '' },
                     { data: 'DESCRIPCIO', defaultContent: '' },
                     { data: 'COLOR', defaultContent: '' },
-                    { data: 'PRECIO', render: function (data) { return data ? '$ ' + Number(data).toLocaleString('es-AR') : '$ 0'; } },
-                    { data: 'STOCK_LOCALES', render: function (data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                    { data: 'STOCK_CENTRAL', render: function (data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                    { data: 'STOCK_CENTRAL_FISCAL', render: function (data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                    { data: 'STOCK_TOTAL', render: function (data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                    { data: 'STOCK_RESERVA', render: function (data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                    { data: 'STOCK_EXCLUIDO', render: function (data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                    { data: 'CANT_VENTA', render: function (data) { return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                    { data: 'IMP_VENTA', render: function (data) { return data ? '$ ' + Number(data).toLocaleString('es-AR') : '$ 0'; } }
+                    { data: 'PRECIO', render: function (data, type) { if (type === 'sort' || type === 'filter') return data ? Number(data) : 0; return data ? '$ ' + Number(data).toLocaleString('es-AR') : '$ 0'; } },
+                    { data: 'STOCK_LOCALES', render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'STOCK_CENTRAL', render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'STOCK_CENTRAL_FISCAL', render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'STOCK_TOTAL', render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'STOCK_RESERVA', render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'STOCK_EXCLUIDO', render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'CANT_VENTA', render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'IMP_VENTA', render: function (data, type) { if (type === 'sort' || type === 'filter') return data ? Number(data) : 0; return data ? '$ ' + Number(data).toLocaleString('es-AR') : '$ 0'; } },
+                    { data: 'CANT_INGRESO_CENTRAL', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'VENTA_FRANQ', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'VENTA_MAY', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'VENTA_ECOMM', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'VENTA_PROPIOS', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } }
                 ]
             });
 
@@ -370,6 +430,25 @@ if ($_SESSION['entorno'] == 'central') {
                 if (e.which === 13) {
                     dataTable.search(this.value).draw();
                 }
+            });
+
+            actualizarDropdownColumnas();
+        }
+
+        function actualizarDropdownColumnas() {
+            if (!dataTable) return;
+            const menu = $('#colVisMenu');
+            menu.find('.col-toggle-item').remove();
+            dataTable.columns().every(function () {
+                const idx = this.index();
+                const title = $(this.header()).text().trim();
+                const visible = this.visible();
+                menu.append(`
+                    <li class="col-toggle-item">
+                        <label class="dropdown-item d-flex align-items-center gap-2" onclick="event.stopPropagation()">
+                            <input type="checkbox" class="col-toggle" data-col-idx="${idx}" ${visible ? 'checked' : ''}> ${title}
+                        </label>
+                    </li>`);
             });
         }
 
@@ -694,6 +773,14 @@ if ($_SESSION['entorno'] == 'central') {
             $('#filtroForm button[type="submit"]').prop('disabled', false).html('<i class="fas fa-search me-2"></i>Buscar');
         }
 
+        // Toggle de visibilidad de columnas adicionales
+        $(document).on('change', '.col-toggle', function () {
+            const colIdx = parseInt($(this).data('col-idx'));
+            if (dataTable) {
+                dataTable.column(colIdx).visible(this.checked);
+            }
+        });
+
         // Asegúrate de que tu formulario llame a buscarProductos()
         $('#filtroForm').on('submit', function (e) {
             e.preventDefault();
@@ -718,19 +805,8 @@ if ($_SESSION['entorno'] == 'central') {
         };
 
 
-        const cambiarEntorno = (t) => {
-
-            let entorno = t.checked ? 0 : 1;
-
-            $.ajax({
-                url: "../Controller/maestroDestinosController.php?accion=cambiarEntorno",
-                method: "POST",
-                data: { entorno: entorno },
-                success: function (data) {
-                    location.reload();
-                }
-            });
-
+        const cambiarEntorno = (entorno) => {
+            window.location.href = '?setEntorno=' + entorno;
         }
 
     </script>

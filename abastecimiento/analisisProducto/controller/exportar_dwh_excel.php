@@ -60,10 +60,11 @@ try {
     // Definir encabezados
     $headers = [
         'Rubro', 'Categoria', 'Temporada', 'Destino', 'Liquidacion', 'Fecha Ingreso', 'Cod. Equiv.', 'Articulo', 'Descripcion', 'Color', 'Precio', 
-        'Stock Locales', 'Stock Central', 'Stock Fiscal', 'Stock Total', 'Stock Ecommerce', 'Stock Excluido', 'Cant. Venta', 'Venta Total'
+        'Stock Locales', 'Stock Central', 'Stock Fiscal', 'Stock Total', 'Stock Ecommerce', 'Stock Excluido', 'Cant. Venta', 'Venta Total',
+        'Cant. Ingr. Central', 'Venta Franq.', 'Venta May.', 'Venta Ecomm.', 'Venta Propios'
     ];
     $sheet->fromArray($headers, NULL, 'A1');
-    $sheet->getStyle('A1:S1')->getFont()->setBold(true);
+    $sheet->getStyle('A1:X1')->getFont()->setBold(true);
 
     // Llenar las filas
     $rowNum = 2;
@@ -73,7 +74,8 @@ try {
             $row['RUBRO'], $row['CATEGORIA'], $row['TEMPORADA'], $row['DESTINO'], $row['LIQUIDACION'],
             $row['FECHA_INGRESO_SUC'], $row['COD_EQUIVALENCIA'], $row['ARTICULO'], $row['DESCRIPCIO'], $row['COLOR'],
             $row['PRECIO'], $row['STOCK_LOCALES'], $row['STOCK_CENTRAL'], $row['STOCK_CENTRAL_FISCAL'],
-            $row['STOCK_TOTAL'], $row['STOCK_RESERVA'], $row['STOCK_EXCLUIDO'], $row['CANT_VENTA'], $row['IMP_VENTA']
+            $row['STOCK_TOTAL'], $row['STOCK_RESERVA'], $row['STOCK_EXCLUIDO'], $row['CANT_VENTA'], $row['IMP_VENTA'],
+            $row['CANT_INGRESO_CENTRAL'], $row['VENTA_FRANQ'], $row['VENTA_MAY'], $row['VENTA_ECOMM'], $row['VENTA_PROPIOS']
         ], NULL, 'A'.$rowNum);
 
         // Formatear columnas de moneda
@@ -84,7 +86,7 @@ try {
     }
 
     // Auto-ajustar el ancho de las columnas
-    foreach (range('A', 'S') as $columnID) {
+    foreach (range('A', 'X') as $columnID) {
         $sheet->getColumnDimension($columnID)->setAutoSize(true);
     }
 
