@@ -234,9 +234,9 @@ body {
 }
 
 /* Bloqueo Externo (Gris Oscuro Rayado) */
-.hora-celda.bloqueo-externo {
+.bloqueo-externo {
     background-color: #343a40 !important;
-    color: #adb5bd;
+    color: #adb5bd !important;
     cursor: not-allowed;
     background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, #495057 5px, #495057 10px);
 }

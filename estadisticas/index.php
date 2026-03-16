@@ -4,6 +4,7 @@ session_start();
 if (!isset($_SESSION['username'])) {
 	header("Location:../../sistemas/login.php");
 } else {
+	$nombre = isset($_SESSION['descLocal']) ? $_SESSION['descLocal'] : $_SESSION['username'];
 
 ?>
 
@@ -12,7 +13,7 @@ if (!isset($_SESSION['username'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XL - Dashboard Empresarial</title>
+    <title>Portal Supervisión Comercial</title>
     <link rel="shortcut icon" href="../image/logo.jpg" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -24,8 +25,8 @@ if (!isset($_SESSION['username'])) {
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container-fluid">
             <a class="navbar-brand d-flex align-items-center">
-                <i class="bi bi-graph-up me-2"></i>
-                Reportes y Tableros PBI Comerciales
+                <i class="bi bi-grid-fill me-2"></i>
+                Portal Supervisión Comercial
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -46,10 +47,10 @@ if (!isset($_SESSION['username'])) {
         <!-- Welcome Header -->
         <div class="welcome-header">
             <h1>
-                <i class="bi bi-speedometer2 me-3"></i>
-                Panel de Reportes y Tableros PBI
+                <i class="bi bi-emoji-smile me-3"></i>
+                Bienvenido/a, <?php echo htmlspecialchars($nombre); ?>!
             </h1>
-            <p>Sistema integrado de análisis empresarial</p>
+            <p>Reportes, tableros PBI y aplicaciones empresariales</p>
         </div>
 
         <!-- Main Navigation Tabs -->
@@ -83,64 +84,24 @@ if (!isset($_SESSION['username'])) {
                             <i class="bi bi-cart-fill me-2"></i>
                             Módulo de Ventas
                         </h2>
-                        <div class="stats-grid">
-                            <div class="card">
-                                <div class="card-body">
-                                    <i class="bi bi-shop card-icon color-primary"></i>
-                                    <h5 class="card-title">Locales Propios</h5>
-                                    <p class="card-subtitle">Gestión y estadísticas de sucursales</p>
-                                    <a href="../../ventas/locales" class="btn btn-primary btn-card">Ver Reporte</a>
-                                </div>
-                            </div>
-                            <div class="card">
-                                <div class="card-body">
-                                    <i class="bi bi-shop-window card-icon color-success"></i>
-                                    <h5 class="card-title">Franquicias</h5>
-                                    <p class="card-subtitle">Control de franquicias y partners</p>
-                                    <a href="../../ventas/franquicias" class="btn btn-success btn-card">Ver Reporte</a>
-                                </div>
-                            </div>
-                            <div class="card">
-                                <div class="card-body">
-                                    <i class="bi bi-globe-americas card-icon color-info"></i>
-                                    <h5 class="card-title">Uruguay</h5>
-                                    <p class="card-subtitle">Operaciones internacionales</p>
-                                    <a href="../../ventas/traerUruguay" class="btn btn-info btn-card">Ver Reporte</a>
-                                </div>
-                            </div>
-                            <div class="card">
-                                <div class="card-body">
-                                    <i class="bi bi-list-ul card-icon color-warning"></i>
-                                    <h5 class="card-title">Resumen General</h5>
-                                    <p class="card-subtitle">Vista consolidada de todas las ventas</p>
-                                    <a href="../../ventas/todos" class="btn btn-warning btn-card">Ver Reporte</a>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                    <section class="mb-5">
-                        <h2 class="section-title">
-                            <i class="bi bi-bar-chart-fill me-2"></i>
-                            Análisis Comparativo
-                        </h2>
                         <div class="row row-cols-1 row-cols-md-2 g-4">
                             <div class="col">
                                 <div class="card">
                                     <div class="card-body">
-                                        <i class="bi bi-graph-up-arrow card-icon color-primary"></i>
-                                        <h5 class="card-title">Comparar Locales</h5>
-                                        <p class="card-subtitle">Análisis comparativo entre sucursales</p>
-                                        <a href="../../ventas/localesComp" class="btn btn-primary btn-card">Comparar</a>
+                                        <i class="bi bi-shop card-icon color-primary"></i>
+                                        <h5 class="card-title">Ventas Sucursales</h5>
+                                        <p class="card-subtitle">Gestión y estadísticas de sucursales</p>
+                                        <a href="../../ventas/locales" class="btn btn-primary btn-card">Ver Reporte</a>
                                     </div>
                                 </div>
                             </div>
                             <div class="col">
                                 <div class="card">
                                     <div class="card-body">
-                                        <i class="bi bi-graph-down-arrow card-icon color-success"></i>
-                                        <h5 class="card-title">Comparar Franquicias</h5>
-                                        <p class="card-subtitle">Análisis comparativo de franquicias</p>
-                                        <a href="../../ventas/franquiciasComp" class="btn btn-success btn-card">Comparar</a>
+                                        <i class="bi bi-bullseye card-icon color-danger"></i>
+                                        <h5 class="card-title">Seguimiento de Objetivos</h5>
+                                        <p class="card-subtitle">Cumplimiento de objetivos de venta</p>
+                                        <a href="../../ppp/objetivos/portal.php" class="btn btn-danger btn-card">Ver Reporte</a>
                                     </div>
                                 </div>
                             </div>

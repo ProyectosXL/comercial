@@ -124,8 +124,11 @@ $(document).ready(function () {
 
         const agenda = data.agenda;
         const nombres = data.nombres;
+        const nombresSucursales = data.nombres_sucursales || {};
         const promociones = data.promociones || {};
         const saldosAnteriores = data.saldosAnteriores || {};
+
+        const esFiltroUnSoloVendedor = $('#vendedorSelector').val() !== null && $('#vendedorSelector').val() !== '';
 
         if (!agenda || Object.keys(agenda).length === 0) {
             container.html('<div class="alert alert-info text-center m-4">No hay horarios cargados para esta selección.</div>');
@@ -161,8 +164,36 @@ $(document).ready(function () {
             const diaNum = String(fechaActual.getDate()).padStart(2, '0');
             const mesNum = String(fechaActual.getMonth() + 1).padStart(2, '0');
 
+            let sucursalTexto = '';
+            if (esFiltroUnSoloVendedor && vendedoresOrdenados.length > 0) {
+                const vId = vendedoresOrdenados[0];
+                const infoGral = agenda[vId] || {};
+                if (infoGral.sucursal_detalle && infoGral.sucursal_detalle[fechaISO]) {
+                    const horasDetalle = infoGral.sucursal_detalle[fechaISO];
+                    const idsValidos = Object.values(horasDetalle).filter(sid => sid > 0);
+                    if (idsValidos.length > 0) {
+                        const counts = {};
+                        let maxCount = 0;
+                        let winner = null;
+                        idsValidos.forEach(sid => {
+                            counts[sid] = (counts[sid] || 0) + 1;
+                            if (counts[sid] > maxCount) {
+                                maxCount = counts[sid];
+                                winner = sid;
+                            }
+                        });
+                        if (winner && nombresSucursales[winner]) {
+                            sucursalTexto = `<div class="text-primary fw-normal mt-1" style="font-size: 0.72rem; line-height: 1;"><i class="bi bi-geo-alt-fill"></i> ${nombresSucursales[winner]}</div>`;
+                        }
+                    }
+                }
+            }
+
             // Colspan a 21 (18 horas + F + T + N)
-            html += `<th colspan="21" class="dia-header text-center fw-bold bg-light" style="min-width: 600px;">${diasSemanaNombres[i]} ${diaNum}/${mesNum}</th>`;
+            html += `<th colspan="21" class="dia-header text-center fw-bold bg-light" style="min-width: 600px;">
+                        <div>${diasSemanaNombres[i]} ${diaNum}/${mesNum}</div>
+                        ${sucursalTexto}
+                    </th>`;
         }
         html += '</tr>';
 
@@ -268,14 +299,25 @@ $(document).ready(function () {
                     const hBusqueda = (h === 24) ? 0 : h;
                     let tipo = (!esFranco && datos.horarios && datos.horarios[fecha]) ? (datos.horarios[fecha][hBusqueda] || '') : null;
                     let esMedia = false;
+                    
+                    const bloqueo = (data.bloqueosExternos && data.bloqueosExternos[id] && data.bloqueosExternos[id][fecha]) ? data.bloqueosExternos[id][fecha][hBusqueda] : null;
 
                     if (tipo && tipo.endsWith('_media')) {
                         esMedia = true;
                         tipo = tipo.replace('_media', '');
                     }
 
+                    let extraClass = '';
+                    let titleAttr = '';
                     if (esFranco) {
                         bgColor = '#e9ecef';
+                    } else if (bloqueo) {
+                        bgColor = '#343a40';
+                        texto = 'Ø';
+                        color = '#adb5bd';
+                        extraClass = 'bloqueo-externo';
+                        const nomSuc = data.nombres_sucursales ? (data.nombres_sucursales[bloqueo] || bloqueo) : bloqueo;
+                        titleAttr = `title="Ocupado en Sucursal: ${nomSuc}"`;
                     } else if (tipo) {
                         color = 'white';
                         if (tipo === 'extra') { bgColor = '#0d6efd'; texto = 'E'; }
@@ -286,7 +328,7 @@ $(document).ready(function () {
                         else { bgColor = '#198754'; texto = 'X'; }
                         if (esMedia) texto += ' <small>½</small>';
                     }
-                    html += `<td style="background-color: ${bgColor}; color: ${color}; font-weight: bold; text-align: center; vertical-align: middle; min-width: 30px; font-size: 0.8rem;">${texto}</td>`;
+                    html += `<td class="${extraClass}" ${titleAttr} style="background-color: ${bgColor}; color: ${color}; font-weight: bold; text-align: center; vertical-align: middle; min-width: 30px; font-size: 0.8rem;">${texto}</td>`;
                 }
 
                 // Franco (F)
@@ -371,6 +413,20 @@ $(document).ready(function () {
 
         html += '</tfoot></table>';
         container.html(html);
+
+        // Ajustar sticky headers si el alto de la fila 1 cambió (por ejemplo, al mostrar sucursal)
+        setTimeout(() => {
+            const firstRow = container.find('thead tr').eq(0);
+            if (firstRow.length) {
+                const h1 = firstRow.outerHeight();
+                const secondRow = container.find('thead tr').eq(1);
+                // Ajustamos el 'top' de la segunda fila de horas
+                secondRow.find('th').css('top', h1 + 'px');
+                
+                // Y las esquinas que también son sticky
+                secondRow.find('.sticky-left-0, .sticky-left-1').css('top', h1 + 'px');
+            }
+        }, 100);
     }
 
     // --- EVENTOS ---

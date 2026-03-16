@@ -285,12 +285,47 @@ try {
     foreach ($agenda as $u) {
         if (isset($u['sucursal_detalle'])) {
             foreach ($u['sucursal_detalle'] as $d) {
-                foreach ($d as $h => $sid)
-                    if ($sid > 0)
-                        $idsDeSucursales[$sid] = true;
+                foreach ($d as $h => $sid) if ($sid > 0) $idsDeSucursales[$sid] = true;
             }
         }
     }
+
+    // --- PASO E: BLOQUEOS EXTERNOS (Cruce de Sucursales) ---
+    $bloqueosExternos = [];
+    if (!empty($vendedoresIds)) {
+        $connSistemas = getConexionSistemas();
+        if ($connSistemas) {
+            $listaIdsStr = implode("','", array_keys($vendedoresIds));
+            if ($nroSucursal) {
+                $sqlBloq = "
+                    SELECT COD_VENDED, FECHA, HORA, NRO_SUCURSAL
+                    FROM FP_GESTION_HORARIOS 
+                    WHERE FECHA BETWEEN ? AND ? 
+                    AND NRO_SUCURSAL <> ? 
+                    AND COD_VENDED IN ('$listaIdsStr')
+                ";
+                $stmtBloq = sqlsrv_query($connSistemas, $sqlBloq, [$fechaInicio, $fechaFin, $nroSucursal]);
+            } else { $stmtBloq = false; }
+
+            if ($stmtBloq) {
+                while ($row = sqlsrv_fetch_array($stmtBloq, SQLSRV_FETCH_ASSOC)) {
+                    $id = trim($row['COD_VENDED']);
+                    $fecha = $row['FECHA']->format('Y-m-d');
+                    $hora = intval($row['HORA']);
+                    $sidExt = intval($row['NRO_SUCURSAL']);
+
+                    if (!isset($bloqueosExternos[$id])) $bloqueosExternos[$id] = [];
+                    if (!isset($bloqueosExternos[$id][$fecha])) $bloqueosExternos[$id][$fecha] = [];
+                    $bloqueosExternos[$id][$fecha][$hora] = $sidExt;
+                    if ($sidExt > 0) $idsDeSucursales[$sidExt] = true;
+                }
+                sqlsrv_free_stmt($stmtBloq);
+            }
+            sqlsrv_close($connSistemas);
+        }
+    }
+
+    // --- PASO D-2: RESOLVER NOMBRES DE SUCURSALES ---
     if (!empty($idsDeSucursales)) {
         $connCorp = getConexionCorp();
         if ($connCorp) {
@@ -300,8 +335,7 @@ try {
             if ($stmtSuc) {
                 while ($row = sqlsrv_fetch_array($stmtSuc, SQLSRV_FETCH_ASSOC)) {
                     $nom = trim($row['DESC_DEPARTAMENTO']);
-                    if (!mb_detect_encoding($nom, 'UTF-8', true))
-                        $nom = utf8_encode($nom);
+                    if (!mb_detect_encoding($nom, 'UTF-8', true)) $nom = utf8_encode($nom);
                     $nombresSucursales[intval($row['ID_DEPARTAMENTO'])] = $nom;
                 }
             }
@@ -309,7 +343,7 @@ try {
         }
     }
 
-    // --- PASO E: SALDOS BANCO DE HORAS ---
+    // --- PASO F: SALDOS BANCO DE HORAS ---
     $saldosAnteriores = [];
     if (!empty($vendedoresIds)) {
         $connSistemas = getConexionSistemas();
@@ -342,7 +376,8 @@ try {
         'nombres' => $nombresMap,
         'nombres_sucursales' => $nombresSucursales,
         'promociones' => $promocionesPorDia,
-        'saldosAnteriores' => $saldosAnteriores
+        'saldosAnteriores' => $saldosAnteriores,
+        'bloqueosExternos' => $bloqueosExternos
     ];
 
     echo json_encode($respuesta, JSON_PARTIAL_OUTPUT_ON_ERROR);

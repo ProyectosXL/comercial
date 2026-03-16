@@ -32,13 +32,6 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item">
-            <a class="nav-link" href="index.php">Gestión</a>
-          </li>
-          <!-- UNIFICADO -->
-          <li class="nav-item">
-            <a class="nav-link" href="rrhh.php">RRHH</a>
-          </li>
-          <li class="nav-item">
             <a class="nav-link text-warning" href="local.php">Mi Local</a>
           </li>
           <li class="nav-item ms-lg-3">
@@ -120,6 +113,7 @@
           <span class="badge text-bg-primary fs-6">E: Horas Extras</span>
           <span class="badge text-bg-warning text-dark fs-6">D: Horas a Devolver</span>
           <span class="badge text-white fs-6" style="background-color: #6f42c1;">F: Franco</span>
+          <span class="badge bloqueo-externo text-light fs-6">Ø: Otra Sucursal</span>
           <span class="badge bg-light text-dark border d-flex align-items-center gap-2">
             <i class="bi bi-chat-square-text-fill text-warning"></i> Nota Diaria
           </span>
