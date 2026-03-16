@@ -115,24 +115,28 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify({ codigos: codigos })
         })
         .then(response => {
-                if (response.ok) {
-                    return response.text().then(text => {
-                        // Verificar si la respuesta contiene HTML (posible error de PHP)
-                        if (text.includes('<br />') || text.includes('<b>Error') || text.includes('<b>Fatal error')) {
-                            console.error('Respuesta no válida:', text);
-                            throw new Error('Error en el servidor PHP. Consulte la consola para más detalles.');
-                        }
-                        
-                        try {
-                            return JSON.parse(text);
-                        } catch (e) {
-                            console.error('Respuesta no válida:', text);
-                            throw new Error('La respuesta del servidor no es JSON válido');
-                        }
-                    });
-                } else {
-                    throw new Error(`Error en la solicitud: ${response.status}`);
-                }
+                return response.text().then(text => {
+                    // Verificar si la respuesta contiene HTML (posible error de PHP)
+                    if (text.includes('<br />') || text.includes('<b>Error') || text.includes('<b>Fatal error')) {
+                        console.error('Respuesta no válida:', text);
+                        throw new Error('Error en el servidor PHP. Consulte la consola para más detalles.');
+                    }
+
+                    let parsed;
+                    try {
+                        parsed = JSON.parse(text);
+                    } catch (e) {
+                        console.error('Respuesta no válida:', text);
+                        throw new Error('La respuesta del servidor no es JSON válido');
+                    }
+
+                    if (!response.ok) {
+                        const serverMsg = parsed && parsed.error ? parsed.error : `Error en el servidor: ${response.status}`;
+                        throw new Error(serverMsg);
+                    }
+
+                    return parsed;
+                });
         })
         .then(data => {
             // Limpiar el contenedor

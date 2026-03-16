@@ -27,7 +27,7 @@ class Articulo
     public function obtenerDatosPrecio($codigoArticulo) 
     {
         $query = "SELECT A.COD_ARTICU,
-				CASE WHEN D.RUBRO = 'CARTERAS DE VINILICO' THEN D.CATEGORIA
+				ISNULL(CASE WHEN D.RUBRO = 'CARTERAS DE VINILICO' THEN D.CATEGORIA
                      WHEN D.RUBRO = 'CHALINAS' AND D.CATEGORIA = 'PONCHO' THEN 'RUANA'
                      WHEN D.RUBRO = 'CHALINAS' THEN D.CATEGORIA
 				     WHEN D.RUBRO LIKE 'BILLETERAS%' THEN 'BILLETERA'
@@ -36,7 +36,7 @@ class Articulo
                      WHEN D.RUBRO LIKE 'RELOJES' THEN 'RELOJ'
                      WHEN D.RUBRO LIKE 'CALZADOS' THEN 'CALZADO'
                      WHEN D.RUBRO LIKE 'EQUIPAJES' THEN 'VALIJA'
-                ELSE RUBRO END PRODUCTO, 
+                ELSE D.RUBRO END, A.DESCRIPCIO) PRODUCTO, 
                 CAST((C.PRECIO/(1+(E.PORCENTAJE/100))) AS DECIMAL(10,2)) PRECIO_S_IVA, CAST(C.PRECIO AS FLOAT) PRECIO_FINAL
                 FROM STA11 A
                 LEFT JOIN (SELECT COD_ARTICU, PRECIO FROM GVA17 WHERE NRO_DE_LIS = 20) C ON A.COD_ARTICU = C.COD_ARTICU
@@ -48,7 +48,10 @@ class Articulo
         $stmt = sqlsrv_query($this->cid_central, $query, $params);
         
         if ($stmt === false) {
-            return null;
+            $errors = sqlsrv_errors();
+            $errorMsg = isset($errors[0]['message']) ? $errors[0]['message'] : 'Error desconocido';
+            error_log("obtenerDatosPrecio SQL error para '$codigoArticulo': " . $errorMsg);
+            throw new Exception('Error en consulta SQL: ' . $errorMsg);
         }
         
         $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);

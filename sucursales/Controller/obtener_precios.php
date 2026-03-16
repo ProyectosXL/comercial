@@ -45,9 +45,10 @@ try {
         $resultado = $articulo->obtenerDatosPrecio($codigo);
         if ($resultado) {
             $resultados[] = $resultado;
-        } else {
+        } elseif ($resultado === null) {
             $codigosInvalidos[] = $codigo;
         }
+        // si $resultado es false (sqlsrv_fetch_array error) lo ignoramos silenciosamente
     }
 
     // Limpiar cualquier salida en búfer antes de enviar nuestra respuesta JSON
