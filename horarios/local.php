@@ -91,8 +91,14 @@
 
     <!-- Contenedor de la Tabla -->
     <div class="card shadow-sm border-0">
-      <div class="card-body p-0">
-        <div id="tablaVistaLocal" class="table-responsive">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0 text-muted fw-bold"><i class="bi bi-grid-3x3-gap-fill me-2"></i> Grilla de Horarios</h5>
+        <button id="btnExportarPDF" class="btn btn-outline-danger btn-sm" disabled>
+          <i class="bi bi-file-earmark-pdf-fill"></i> Exportar a PDF
+        </button>
+      </div>
+      <div class="card-body p-0" id="contenedorImprimir">
+        <div id="tablaVistaLocal" class="table-responsive bg-white">
           <!-- Aquí se dibujará la tabla JS -->
           <div class="text-center py-5 text-muted">
             <i class="bi bi-table display-1 opacity-25"></i>
@@ -272,6 +278,10 @@
 
   <!-- SELECT2 JS -->
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+  <!-- HTML2CANVAS y JSPDF para Exportación PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script src="assets/js/local.js"></script>
 </body>

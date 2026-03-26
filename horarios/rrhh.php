@@ -22,11 +22,12 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.php">Gestión</a></li>
-                    <!-- NUEVA SOLAPA RRHH (ACTIVA) -->
-                    <li class="nav-item"><a class="nav-link active fw-bold bg-secondary rounded px-3"
-                            href="rrhh.php">RRHH</a></li>
-                    <li class="nav-item"><a class="nav-link text-warning" href="local.php">Mi Local</a></li>
+                    <!-- SOLO RRHH VISIBLE EN ESTA VISTA -->
+                    <li class="nav-item">
+                        <a class="nav-link active fw-bold bg-secondary rounded px-3" href="rrhh.php">
+                            <i class="bi bi-person-badge-fill"></i> RRHH
+                        </a>
+                    </li>
                     <li class="nav-item ms-lg-3">
                         <button class="btn btn-outline-info text-white border-white btn-sm mt-1" data-bs-toggle="modal"
                             data-bs-target="#modalAyuda">
@@ -52,6 +53,12 @@
                 <button class="nav-link fw-bold" id="tab-asistencia" data-bs-toggle="tab"
                     data-bs-target="#panel-asistencia" type="button" role="tab">
                     <i class="bi bi-person-check-fill text-primary"></i> Asistencia - Gestión vs QuickPass
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="tab-importador" data-bs-toggle="tab"
+                    data-bs-target="#panel-importador" type="button" role="tab">
+                    <i class="bi bi-file-earmark-excel-fill text-dark"></i> REPORTE IMPORTADOR - QP
                 </button>
             </li>
         </ul>
@@ -228,6 +235,42 @@
                 </div>
             </div>
 
+            <!-- === PANEL 3: IMPORTADOR (QUICKPASS GLOBAL) === -->
+            <div class="tab-pane fade" id="panel-importador" role="tabpanel">
+                <div class="card shadow-sm mb-4 border-dark">
+                    <div class="card-header bg-dark text-white p-3">
+                        <h5 class="mb-0"><i class="bi bi-download me-2"></i> Reporte Importador - QuickPass Global</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-3">Instrucciones:</h6>
+                                <p class="text-muted small">
+                                    Este reporte genera el archivo Excel consolidado de <strong>todas las sucursales</strong> 
+                                    para la semana seleccionada. El formato es compatible con el importador de QuickPass.
+                                </p>
+                                <div class="alert alert-info py-2 small">
+                                    <i class="bi bi-info-circle-fill me-2"></i> 
+                                    No requiere selección de sucursal. Se descargan todos los legajos activos.
+                                </div>
+                            </div>
+                            <div class="col-md-6 border-start ps-md-4">
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Seleccionar Semana</label>
+                                    <div class="input-group input-group-lg">
+                                        <span class="input-group-text bg-white"><i class="bi bi-calendar3"></i></span>
+                                        <input type="week" id="imp_semanaSelector" class="form-control">
+                                    </div>
+                                </div>
+                                <button id="imp_btnDescargar" class="btn btn-dark btn-lg w-100 shadow-sm">
+                                    <i class="bi bi-file-earmark-excel me-2"></i> Descargar Excel Global QP
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div> <!-- Fin Tab Content -->
 
     </div>
@@ -327,6 +370,7 @@
     <!-- Scripts actualizados con prefijos -->
     <script src="assets/js/indicadores.js"></script>
     <script src="assets/js/comparacion.js"></script>
+    <script src="assets/js/importador.js"></script>
 
 </body>
 

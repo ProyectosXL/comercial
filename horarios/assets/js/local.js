@@ -93,6 +93,7 @@ $(document).ready(function () {
 
         $.getJSON(url, function (data) {
             renderTablaVistaLocal(data, primerDia);
+            $('#btnExportarPDF').prop('disabled', false);
         }).fail(function (jqXHR, textStatus, errorThrown) {
             console.error('Error al cargar datos:', textStatus, errorThrown);
             mostrarModalConTitulo("Error", "No se pudieron cargar los datos. Intente nuevamente.", "error");
@@ -482,6 +483,66 @@ $(document).ready(function () {
         $('#modalMensajeTexto').html(mensaje.replace(/\n/g, '<br>'));
         new bootstrap.Modal(document.getElementById('modalMensaje')).show();
     }
+
+    // --- EXPORTAR MATRIZ A PDF ---
+    $('#btnExportarPDF').on('click', function () {
+        const btn = $(this);
+        const originalText = btn.html();
+        
+        btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Generando PDF...');
+        btn.prop('disabled', true);
+
+        // Referencia al contenedor que incluye la estructura
+        const gridElement = document.getElementById('contenedorImprimir');
+        const $tableResp = $('#tablaVistaLocal');
+
+        // Ajustamos los estilos temporalmente para que se renderice COMPLETO (sin scroll)
+        const originalOverflow = gridElement.style.overflow;
+        gridElement.style.overflow = 'visible'; 
+        
+        // El contenedor de la tabla no debe cortar
+        $tableResp.removeClass('table-responsive');
+
+        // Un timeout pequeño salva el repintado del DOM (por si la magia CSS tarda)
+        setTimeout(() => {
+            html2canvas(gridElement, {
+                scale: 2, // Resolucion x2
+                useCORS: true, 
+                backgroundColor: '#ffffff', // Fondo blanco fuerte
+                windowWidth: gridElement.scrollWidth, // Forzamos ancho total
+                windowHeight: gridElement.scrollHeight
+            }).then(canvas => {
+                // Devolvemos las clases y estilos normales
+                gridElement.style.overflow = originalOverflow;
+                $tableResp.addClass('table-responsive');
+
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                const { jsPDF } = window.jspdf;
+                
+                // Formato Landscape A3, dado que la matriz es inmensamente horizontal
+                const pdf = new jsPDF('l', 'mm', 'a3');
+                
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                
+                const semanaNombre = $('#semanaSelector').val() || 'Semana';
+                pdf.save(`Matriz_Horarios_${semanaNombre}.pdf`);
+
+                btn.html(originalText);
+                btn.prop('disabled', false);
+
+            }).catch(err => {
+                console.error("Error al exportar PDF:", err);
+                gridElement.style.overflow = originalOverflow;
+                $tableResp.addClass('table-responsive');
+                btn.html(originalText);
+                btn.prop('disabled', false);
+                mostrarModalConTitulo("Error", "Ocurrió un problema generando el documento.", "error");
+            });
+        }, 500);
+    });
 
     function obtenerSemanaActual() {
         const d = new Date();
