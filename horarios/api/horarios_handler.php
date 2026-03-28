@@ -495,8 +495,10 @@ function cargarDatos()
     $francos = [];
     if ($stmtFrancos) {
         while ($row = sqlsrv_fetch_array($stmtFrancos, SQLSRV_FETCH_ASSOC)) {
+            $id = trim($row['COD_VENDED']);
             $row['FECHA_FRANCO'] = $row['FECHA_FRANCO']->format('Y-m-d');
             $francos[] = $row;
+            $vendedoresConActividad[$id] = true;
         }
         sqlsrv_free_stmt($stmtFrancos);
     }
@@ -656,10 +658,113 @@ function cargarDatos()
         }
     }
     $respuesta['bloqueosExternos'] = $bloqueosExternos;
+    // =================================================================================
+    // PASO 5: SOLICITUDES QUICKPASS (Permisos/Novedades)
+    // =================================================================================
+    $solicitudes = [];
+    if (!empty($respuesta['vendedoresConActividad'])) {
+        $solicitudes = fetchQuickPassSolicitudes($respuesta['vendedoresConActividad'], $fechaInicio, $fechaFin);
+    }
+    $respuesta['solicitudes'] = $solicitudes;
 
     sqlsrv_close($connSistemas);
 
     echo json_encode($respuesta);
+}
+
+/**
+ * FETCH QUICKPASS SOLICITUDES
+ */
+function fetchQuickPassSolicitudes($vendedores, $fechaDesde, $fechaHasta) {
+    if (empty($vendedores)) return [];
+    
+    // 1. Obtener Mapa Global de Legajos (COD_VENDED -> NRO_LEGAJO)
+    $connCorp = getConexionCorp();
+    $sqlLegajos = "SELECT BLOQUE, NRO_LEGAJO FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IS NOT NULL";
+    $stmtLegajos = sqlsrv_query($connCorp, $sqlLegajos);
+    $mapaLegajoAVendedor = []; 
+    if ($stmtLegajos) {
+        while ($row = sqlsrv_fetch_array($stmtLegajos, SQLSRV_FETCH_ASSOC)) {
+            $leg = trim($row['NRO_LEGAJO']);
+            $vend = trim($row['BLOQUE']);
+            $mapaLegajoAVendedor[$leg] = $vend;
+        }
+        sqlsrv_free_stmt($stmtLegajos);
+    }
+    sqlsrv_close($connCorp);
+
+    // 2. Llamada a API QuickPass
+    $fDesdeObj = new DateTime($fechaDesde);
+    $fHastaObj = new DateTime($fechaHasta);
+    $strDesde = $fDesdeObj->format('Ymd') . '0000';
+    $strHasta = $fHastaObj->format('Ymd') . '2359';
+
+    // IMPORTANTE: El endpoint correcto es HorasTrabajadas del dominio apireporting
+    $urlAPI = "https://apireporting.quickpassweb.com/HorasTrabajadas?fechaDesde={$strDesde}&fechaHasta={$strHasta}&noContarImpares=false&mostrarSoloDosFichadas=true";
+    
+    $headers = [
+        'Content-Type: application/json',
+        'idEmpresa: ' . $_ENV['QUICKPASS_ID'],
+        'apiKey: ' . $_ENV['QUICKPASS_KEY']
+    ];
+
+    $ch = curl_init($urlAPI);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode !== 200 || !$response) return [];
+
+    $apiData = json_decode($response, true);
+    if (!is_array($apiData)) return [];
+
+    // 3. Procesar y Filtrar (Mapear a nuestro Vendedor)
+    $resultado = [];
+    foreach ($apiData as $f) {
+        $legajo = trim($f['legajo'] ?? '');
+        
+        // Verificamos si hay algún tipo de "Novedad" o "Solicitud"
+        $sol = $f['solicitud'] ?? null;
+        $parte = trim($f['partes'] ?? '');
+        $esPermisoEnParte = !empty($parte) && preg_match('/PERMISO|LICENCIA|MUDANZA|ENFERMEDAD|SUSPENSION|VACACION/i', $parte);
+        
+        if (isset($mapaLegajoAVendedor[$legajo]) && ($sol || $esPermisoEnParte)) {
+            $vendId = $mapaLegajoAVendedor[$legajo];
+            
+            // La fecha de la solicitud en este reporte viene en fFecha (YYYYMMDD)
+            $fFecha = strval($f['fFecha'] ?? '');
+            if (strlen($fFecha) === 8) {
+                $fechaISO = substr($fFecha, 0, 4) . '-' . substr($fFecha, 4, 2) . '-' . substr($fFecha, 6, 2);
+            } else {
+                $fechaISO = $sol ? substr($sol['fechaDesde'] ?? '', 0, 10) : $fechaDesde;
+            }
+            
+            if (!isset($resultado[$vendId])) $resultado[$vendId] = [];
+            if (!isset($resultado[$vendId][$fechaISO])) $resultado[$vendId][$fechaISO] = [];
+
+            // Si no hay objeto solicitud, fabricamos uno basado en el 'parte'
+            $resSol = [
+                'id' => $sol['id'] ?? 0,
+                'motivo' => $sol['motivo'] ?? $parte,
+                'estado' => $sol['estadoSolicitud'] ?? 'Aprobado',
+                'desde' => $sol ? substr($sol['fechaDesde'] ?? '', 0, 16) : $fechaISO,
+                'hasta' => $sol ? substr($sol['fechaHasta'] ?? '', 0, 16) : $fechaISO,
+                'comentarios' => $sol['observaciones'] ?? ($f['obsPartes'] ?? ''),
+                'horaDesde' => $sol['horaDesde'] ?? '',
+                'horaHasta' => $sol['horaHasta'] ?? '',
+                'aprobado' => $sol['aprobado'] ?? 1
+            ];
+
+            $resultado[$vendId][$fechaISO][] = $resSol;
+        }
+    }
+    return $resultado;
 }
 
 // =========================================================

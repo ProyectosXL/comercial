@@ -222,13 +222,18 @@ $(document).ready(function () {
                     // 2. Franco
                     filasHTML += '<td class="dia-franco text-center p-0"><input type="checkbox" class="form-check-input franco-checkbox mt-1" value="' + fechaISO + '" style="transform:scale(0.8)"></td>';
 
-                    // 3. NUEVO: TURNO POR DÍA
+                    // 3. TURNO POR DÍA
                     filasHTML += '<td class="turno-dia text-center align-middle p-0">';
                     filasHTML += '<span class="turno-dia-badge badge bg-light text-dark border" data-fecha="' + fechaISO + '" title="Sin horario asignado">-</span>';
                     filasHTML += '</td>';
 
-                    // 4. Nota (FIN DE DÍA CON SEPARADOR)
-                    filasHTML += '<td class="text-center p-0 celda-dia-fin"><button class="btn-nota" data-vendedor="' + vendedorId + '" data-fecha="' + fechaISO + '"><i class="bi bi-chat-square"></i></button></td>';
+                    // 4. NUEVO: SOLICITUD QUICKPASS (S)
+                    filasHTML += `<td class="text-center align-middle p-0">`;
+                    filasHTML += `<a class="btn-solicitud" data-vendedor="${vendedorId}" data-fecha="${fechaISO}">S</a>`;
+                    filasHTML += '</td>';
+
+                    // 5. Nota (FIN DE DÍA CON SEPARADOR)
+                    filasHTML += '<td class="text-center p-0 celda-dia-fin"><button class="btn-nota border-0 bg-transparent text-secondary p-0" data-vendedor="' + vendedorId + '" data-fecha="' + fechaISO + '"><i class="bi bi-chat-square"></i></button></td>';
                 });
                 filasHTML += '</tr>';
             }
@@ -318,8 +323,8 @@ $(document).ready(function () {
             const mes = String(fechaActual.getMonth() + 1).padStart(2, '0');
 
             // --- CAMBIO: Añadir clase 'dia-header' para el borde derecho ---
-            // Colspan pasa a 21 (18 horas + F + T + N)
-            headerHTML += `<th colspan="21" class="sticky-top-0 bg-light dia-header">` + diasSemana[i] + ' ' + dia + '/' + mes + '</th>';
+            // Colspan pasa a 22 (18 horas + F + T + S + N)
+            headerHTML += `<th colspan="22" class="sticky-top-0 bg-light dia-header border-start border-end">` + diasSemana[i] + ' ' + dia + '/' + mes + '</th>';
         }
         headerHTML += '</tr>';
 
@@ -336,6 +341,7 @@ $(document).ready(function () {
 
             headerHTML += `<th class="sticky-top-1" style="width:30px; background-color:#e9ecef;" title="Franco">F</th>`;
             headerHTML += `<th class="sticky-top-1" style="width:40px; background-color:#f8f9fa;" title="Turno asignado">T</th>`;
+            headerHTML += `<th class="sticky-top-1" style="width:30px; background-color:#e0f7fa;" title="Solicitud QuickPass">S</th>`;
             headerHTML += `<th class="sticky-top-1 header-dia-fin" style="width:30px; background-color:#e9ecef;" title="Observación Diaria"><i class="bi bi-chat-square-text"></i></th>`;
         }
         headerHTML += '</tr></thead>';
@@ -389,6 +395,11 @@ $(document).ready(function () {
                 bodyHTML += '<span class="turno-dia-badge badge bg-light text-dark border" data-fecha="' + fechaISO + '" title="Sin horario asignado">-</span>';
                 bodyHTML += '</td>';
 
+                // 3.5 Celda Solicitud QuickPass (S)
+                bodyHTML += `<td class="text-center align-middle p-0">`;
+                bodyHTML += `<a class="btn-solicitud" data-vendedor="${vendedorId}" data-fecha="${fechaISO}">S</a>`;
+                bodyHTML += '</td>';
+
                 // 4. Celda Nota (FIN DE DÍA CON SEPARADOR)
                 bodyHTML += `<td class="text-center align-middle p-0 celda-dia-fin">`;
                 bodyHTML += '<button class="btn-nota border-0 bg-transparent text-secondary p-0" data-vendedor="' + vendedorId + '" data-fecha="' + fechaISO + '" title="Agregar nota">';
@@ -412,7 +423,8 @@ $(document).ready(function () {
             for (let h = 7; h <= 24; h++) {
                 footerHTML += `<td class="total-hora-columna text-center fw-bold" data-hora="${h}" data-dia-index="${d}" style="font-size: 0.85rem; background-color: #e9ecef;">0</td>`;
             }
-            // También agregar un relleno para las columnas F, T, N con la clase de borde para consistencia
+            // También agregar un relleno para las columnas F, T, S, N con la clase de borde para consistencia
+            footerHTML += `<td></td>`;
             footerHTML += `<td></td>`;
             footerHTML += `<td></td>`;
             footerHTML += `<td class="footer-dia-fin"></td>`;
@@ -422,7 +434,7 @@ $(document).ready(function () {
         // Fila Promociones
         footerHTML += '<tr><td><strong>Promociones</strong></td><td></td>';
         fechasSemana.forEach(function (fechaISO, diaIndex) { // Agregamos diaIndex aquí
-            footerHTML += `<td colspan="21" class="promo-cell small text-start align-top p-1 footer-dia-fin" data-fecha="${fechaISO}" style="white-space: normal; min-height: 50px;">-</td>`;
+            footerHTML += `<td colspan="22" class="promo-cell small text-start align-top p-1 footer-dia-fin" data-fecha="${fechaISO}" style="white-space: normal; min-height: 50px;">-</td>`;
         });
         footerHTML += '</tr>';
 
@@ -596,8 +608,61 @@ $(document).ready(function () {
             }
         }
 
+        // Cargar Solicitudes QuickPass
+        if (data.solicitudes) {
+            for (const [vId, fechas] of Object.entries(data.solicitudes)) {
+                for (const [fecha, listaSols] of Object.entries(fechas)) {
+                    if (listaSols && listaSols.length > 0) {
+                        const btn = $(`#tablaHorariosContainer .btn-solicitud[data-vendedor="${vId}"][data-fecha="${fecha}"]`);
+                        btn.addClass('tiene-solicitud');
+                        btn.data('info', listaSols); // Guardamos toda la lista de solicitudes del día
+                        btn.attr('title', 'Tiene solicitudes aprobadas/pendientes');
+                    }
+                }
+            }
+        }
+
         actualizarSumatorias();
+        $('#btnExportarPDF').prop('disabled', false);
+        $('#loader').hide();
     }
+
+    // Modal Solicitudes QuickPass
+    $(document).on('click', '.btn-solicitud.tiene-solicitud', function() {
+        const info = $(this).data('info');
+        if (!info || info.length === 0) return;
+
+        let html = '';
+        info.forEach((sol, idx) => {
+            const colorEstado = sol.estado.toLowerCase().includes('aprobado') ? 'success' : (sol.estado.toLowerCase().includes('denegado') ? 'danger' : 'warning');
+            
+            html += `<div class="card mb-3 border-${colorEstado} shadow-sm">
+                        <div class="card-header bg-${colorEstado} bg-opacity-10 py-2 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold fs-6"><i class="bi bi-tag-fill me-1"></i> ${sol.motivo}</span>
+                            <span class="badge bg-${colorEstado} text-uppercase">${sol.estado}</span>
+                        </div>
+                        <div class="card-body py-3">
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <small class="text-muted d-block"><i class="bi bi-clock me-1"></i> Desde</small>
+                                    <span class="fw-semibold">${sol.desde} ${sol.horaDesde || ''}</span>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block"><i class="bi bi-clock-fill me-1"></i> Hasta</small>
+                                    <span class="fw-semibold">${sol.hasta} ${sol.horaHasta || ''}</span>
+                                </div>
+                                <div class="col-12 mt-2 border-top pt-2">
+                                    <small class="text-muted d-block"><i class="bi bi-chat-left-text me-1"></i> Observaciones</small>
+                                    <p class="mb-0 small">${sol.comentarios || '<i>Sin comentarios</i>'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+        });
+
+        $('#cuerpoSolicitudQP').html(html);
+        new bootstrap.Modal(document.getElementById('modalSolicitudQP')).show();
+    });
 
     // Abrir Modal
     $('#tablaHorariosContainer').on('click', '.btn-nota', function () {
@@ -976,61 +1041,7 @@ $(document).ready(function () {
         return d;
     }
 
-    $('#guardarHorariosBtn').off('click').on('click', function () {
-        const boton = $(this);
-        let advertencias = [];
-        let erroresCriticos = [];
-
-        // 1. VALIDACIONES
-        $('tbody tr').each(function () {
-            let nombre = $(this).data('nombre');
-            if (!nombre || nombre === "undefined") {
-                nombre = $(this).find('td:first .text-truncate > div').first().text().trim();
-            }
-
-            const totalH_Semanal = parseFloat($(this).find('.total-n').text()) || 0;
-
-            // Regla A: Semanal 30, 36, 42, 48 (AHORA ES ADVERTENCIA)
-            // Validamos solo si tiene alguna hora asignada
-            if (totalH_Semanal > 0 && ![30, 36, 42, 48].includes(totalH_Semanal)) {
-                advertencias.push(`<b>${nombre}</b> suma ${totalH_Semanal} hs normales (H). Sugerido: 30, 36, 42 o 48.`);
-            }
-
-            // Regla B: Diario Max 12 (ERROR CRÍTICO)
-            let horasPorDia = {};
-            $(this).find('.hora-celda').each(function () {
-                if ($(this).hasClass('marcado') || $(this).hasClass('hora-extra') || $(this).hasClass('hora-devuelve') || $(this).hasClass('bloqueo-externo')) {
-                    const f = $(this).data('fecha');
-                    // Soporte media hora
-                    const val = $(this).hasClass('media-hora') ? 0.5 : 1;
-                    horasPorDia[f] = (horasPorDia[f] || 0) + val;
-                }
-            });
-
-            for (const [dia, cant] of Object.entries(horasPorDia)) {
-                if (cant > 12) erroresCriticos.push(`<b>${nombre}</b> excede 12hs el día ${dia} (Total acumulado: ${cant}).`);
-            }
-        });
-
-        // ERROR CRÍTICO: Bloquear
-        if (erroresCriticos.length > 0) {
-            let listaHtml = erroresCriticos.map(e => `<li>${e}</li>`).join('');
-            $('#listaErroresValidacion').html(listaHtml);
-            new bootstrap.Modal(document.getElementById('modalValidacion')).show();
-            return;
-        }
-
-        // ADVERTENCIA: Confirmar
-        if (advertencias.length > 0) {
-            const confirmMsg = "ADVERTENCIAS DE VALIDACIÓN:\n\n" + advertencias.map(a => a.replace(/<b>|<\/b>/g, '')).join('\n') + "\n\n¿Desea guardar de todos modos?";
-            if (!confirm(confirmMsg)) {
-                return;
-            }
-        }
-
-        // 2. PREPARACIÓN DE DATOS
-        boton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Guardando...');
-
+    function execGuardarHorarios() {
         const sucursalId = $('#sucursalSelector').val();
         const semana = $('#semanaSelector').val();
         const [year, weekNum] = semana.split('-W');
@@ -1040,7 +1051,7 @@ $(document).ready(function () {
         const fechaInicio = primerDia.toISOString().split('T')[0];
         const fechaFin = ultimoDia.toISOString().split('T')[0];
 
-        let horarios = [], francos = [], notas = [], vendedores = [];
+        let horarios = [], francos = [], notas = [], vendedoresEnGrilla = [];
 
         // A. Recolectar Horarios
         $('#tablaHorariosContainer .hora-celda.marcado, #tablaHorariosContainer .hora-celda.hora-extra, #tablaHorariosContainer .hora-celda.hora-devuelve, #tablaHorariosContainer .hora-celda.hora-permiso, #tablaHorariosContainer .hora-celda.hora-caja, #tablaHorariosContainer .hora-celda.hora-vacaciones').each(function () {
@@ -1054,16 +1065,11 @@ $(document).ready(function () {
             else if (celda.hasClass('hora-caja')) tipo = 'caja';
             else if (celda.hasClass('hora-vacaciones')) tipo = 'vacaciones';
 
-            // == MEDIA HORA SUPPORT ==
-            if (celda.hasClass('media-hora')) {
-                tipo += '_media';
-            }
-
-            const nombreVendedor = celda.closest('tr').data('nombre');
+            if (celda.hasClass('media-hora')) tipo += '_media';
 
             horarios.push({
                 codVended: String(celda.closest('tr').data('vendedor-id')),
-                nombreVendedor: nombreVendedor,
+                nombreVendedor: celda.closest('tr').data('nombre'),
                 fecha: celda.data('fecha'),
                 hora: (parseInt(celda.data('hora')) === 24) ? 0 : celda.data('hora'),
                 tipo: tipo
@@ -1072,14 +1078,11 @@ $(document).ready(function () {
 
         // B. Recolectar Francos
         $('#tablaHorariosContainer tbody tr').each(function () {
-            const fila = $(this);
-            const vid = String(fila.data('vendedor-id'));
-            vendedores.push(vid);
-
-            fila.find('.franco-checkbox:checked').each(function () {
-                const checkbox = $(this);
-                if (!checkbox.prop('disabled')) {
-                    francos.push({ codVended: vid, fechaFranco: checkbox.val() });
+            const vid = String($(this).data('vendedor-id'));
+            vendedoresEnGrilla.push(vid);
+            $(this).find('.franco-checkbox:checked').each(function () {
+                if (!$(this).prop('disabled')) {
+                    francos.push({ codVended: vid, fechaFranco: $(this).val() });
                 }
             });
         });
@@ -1103,9 +1106,12 @@ $(document).ready(function () {
             horarios: horarios,
             francos: francos,
             notas: notas,
-            vendedoresEnGrilla: vendedores,
+            vendedoresEnGrilla: vendedoresEnGrilla,
             observaciones: $('#observacionesSemana').val()
         };
+
+        const boton = $('#guardarHorariosBtn');
+        boton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Guardando...');
 
         $.ajax({
             url: apiHorariosURL,
@@ -1114,16 +1120,79 @@ $(document).ready(function () {
             data: JSON.stringify(payload),
             success: (res) => {
                 if (res.status === 'ok') {
-                    mostrarModal('¡Los horarios se guardaron correctamente en el sistema!', 'success');
+                    mostrarModalConTitulo('¡Éxito!', '¡Los horarios se guardaron correctamente en el sistema!', 'success');
                     $('#cargarHorariosBtn').click();
                 } else {
-                    mostrarModal(res.message, 'error');
+                    mostrarModalConTitulo('Error', res.message, 'error');
                 }
             },
-            error: () => mostrarModal('Error de conexión al intentar guardar.', 'error'),
-            complete: () => boton.prop('disabled', false).html('<i class="bi bi-save"></i> Guardar')
+            error: () => mostrarModalConTitulo('Error', 'Error de conexión al intentar guardar.', 'error'),
+            complete: () => boton.prop('disabled', false).html('<i class="bi bi-save"></i> Guardar Cambios')
         });
+    }
+
+    $('#guardarHorariosBtn').off('click').on('click', function () {
+        let advertencias = [];
+        let erroresCriticos = [];
+
+        // 1. VALIDACIONES
+        $('tbody tr').each(function () {
+            let nombre = $(this).data('nombre');
+            if (!nombre || nombre === "undefined") {
+                nombre = $(this).find('td:first .text-truncate > div').first().text().trim();
+            }
+
+            const totalH_Semanal = parseFloat($(this).find('.total-n').text()) || 0;
+
+            // Regla A: Semanal
+            if (totalH_Semanal > 0 && ![30, 36, 42, 48].includes(totalH_Semanal)) {
+                advertencias.push(`<b>${nombre}</b> suma ${totalH_Semanal} hs normales (H). Sugerido: 30, 36, 42 o 48.`);
+            }
+
+            // Regla B: Diario Max 12 (ADVERTENCIA)
+            let horasPorDia = {};
+            $(this).find('.hora-celda').each(function () {
+                if ($(this).hasClass('marcado') || $(this).hasClass('hora-extra') || $(this).hasClass('hora-devuelve') || $(this).hasClass('bloqueo-externo')) {
+                    const f = $(this).data('fecha');
+                    const val = $(this).hasClass('media-hora') ? 0.5 : 1;
+                    horasPorDia[f] = (horasPorDia[f] || 0) + val;
+                }
+            });
+
+            for (const [dia, cant] of Object.entries(horasPorDia)) {
+                if (cant > 12) advertencias.push(`<b>${nombre}</b> excede 12hs el día ${dia} (Acumulado: ${cant} hs).`);
+            }
+        });
+
+        // ERROR CRÍTICO: Bloquear
+        if (erroresCriticos.length > 0) {
+            let listaHtml = erroresCriticos.map(e => `<li>${e}</li>`).join('');
+            $('#listaErroresValidacion').html(listaHtml);
+            new bootstrap.Modal(document.getElementById('modalValidacion')).show();
+            return;
+        }
+
+        // ADVERTENCIA: Usar Modal en lugar de Confirm
+        if (advertencias.length > 0) {
+            let listaHtml = advertencias.map(a => `<li class="mb-1">${a}</li>`).join('');
+            $('#listaAdvertenciasGuardado').html(listaHtml);
+            new bootstrap.Modal(document.getElementById('modalConfirmarGuardado')).show();
+            return;
+        }
+
+        execGuardarHorarios();
     });
+
+    // Botón físico dentro del modal de confirmación
+    $('#btnConfirmarCargaFinal').off('click').on('click', function() {
+        bootstrap.Modal.getInstance(document.getElementById('modalConfirmarGuardado')).hide();
+        execGuardarHorarios();
+    });
+
+    // Wrapper para mantener compatibilidad si se usa mostrarModal en otras partes por error
+    function mostrarModal(mensaje, tipo = 'info') {
+        mostrarModalConTitulo("Aviso del Sistema", mensaje, tipo);
+    }
 
     function mostrarAlerta(mensaje, tipo) {
         $('.toast-container').remove();

@@ -16,6 +16,36 @@
     href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
 
   <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .btn-solicitud {
+        cursor: pointer;
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 900;
+        color: #adb5bd;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+    .btn-solicitud.tiene-solicitud {
+        background-color: #0dcaf0;
+        border-color: #0baccc;
+        color: #000 !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .btn-solicitud.tiene-solicitud:hover {
+        transform: scale(1.1);
+        background-color: #31d2f2;
+    }
+  </style>
 </head>
 
 <body class="bg-light">
@@ -115,9 +145,6 @@
         <div class="text-center d-flex flex-wrap gap-3">
           <span class="badge text-bg-success fs-6">H: Horas Normales</span>
           <span class="badge text-bg-info text-dark fs-6">C: Horas de Caja</span>
-          <span class="badge text-white fs-6" style="background-color: #d63384;">P: Permiso</span>
-          <span class="badge text-bg-primary fs-6">E: Horas Extras</span>
-          <span class="badge text-bg-warning text-dark fs-6">D: Horas a Devolver</span>
           <span class="badge text-white fs-6" style="background-color: #6f42c1;">F: Franco</span>
           <span class="badge bloqueo-externo text-light fs-6">Ø: Otra Sucursal</span>
           <span class="badge bg-light text-dark border d-flex align-items-center gap-2">

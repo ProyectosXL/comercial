@@ -17,6 +17,35 @@
             font-weight: 600;
         }
 
+        .btn-solicitud {
+            cursor: pointer;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 900;
+            color: #adb5bd;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-solicitud.tiene-solicitud {
+            background-color: #0dcaf0;
+            border-color: #0baccc;
+            color: #000 !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .btn-solicitud.tiene-solicitud:hover {
+            transform: scale(1.1);
+            background-color: #31d2f2;
+        }
+
         .accordion-button:not(.collapsed) {
             background-color: #e8f5e9;
             color: #198754;
@@ -696,20 +725,62 @@
         </div>
     </div>
 
-    <!-- Modal Validación -->
+    <!-- Modal Validación (Fijo para que no rompa bootstrap) -->
     <div class="modal fade" id="modalValidacion" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-danger">
                 <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">Error de Validación</h5><button type="button"
-                        class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title fw-bold">Errores de Validación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <p class="fw-bold">No se puede guardar:</p>
-                    <ul id="listaErroresValidacion" class="text-danger mb-3"></ul>
-                    <div class="alert alert-warning small">Recuerde las reglas de horas semanales y diarias.</div>
+                <div class="modal-body p-4" id="modalValidacionBody">
+                    <div class="alert alert-danger mb-0">
+                        <ul id="listaErroresValidacion" class="mb-0"></ul>
+                    </div>
                 </div>
-                <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Entendido</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Entendido</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Confirmar Advertencias de Guardado -->
+    <div class="modal fade" id="modalConfirmarGuardado" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-warning shadow-lg">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i> Advertencias de Validación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="fw-bold mb-3">Se han detectado los siguientes avisos en la planificación:</p>
+                    <div class="alert alert-warning border-warning bg-opacity-10 mb-3">
+                        <ul id="listaAdvertenciasGuardado" class="mb-0 small"></ul>
+                    </div>
+                    <p class="mb-0">¿Desea guardar los cambios de todos modos?</p>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-warning px-4 fw-bold" id="btnConfirmarCargaFinal">Sí, Guardar de Todos Modos</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Solicitud QuickPass (NUEVO) -->
+    <div class="modal fade" id="modalSolicitudQP" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-info shadow-lg">
+                <div class="modal-header bg-info text-dark">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-person-fill me-2"></i> Detalle de Solicitud (QuickPass)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" id="cuerpoSolicitudQP">
+                    <!-- Se llena vía JS -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary px-4" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </div>
         </div>

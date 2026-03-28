@@ -93,7 +93,6 @@ $(document).ready(function () {
 
         $.getJSON(url, function (data) {
             renderTablaVistaLocal(data, primerDia);
-            $('#btnExportarPDF').prop('disabled', false);
         }).fail(function (jqXHR, textStatus, errorThrown) {
             console.error('Error al cargar datos:', textStatus, errorThrown);
             mostrarModalConTitulo("Error", "No se pudieron cargar los datos. Intente nuevamente.", "error");
@@ -133,8 +132,11 @@ $(document).ready(function () {
 
         if (!agenda || Object.keys(agenda).length === 0) {
             container.html('<div class="alert alert-info text-center m-4">No hay horarios cargados para esta selección.</div>');
+            $('#btnExportarPDF').prop('disabled', true);
             return;
         }
+
+        $('#btnExportarPDF').prop('disabled', false);
 
         let fechasSemana = [];
         const diasSemanaNombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -190,8 +192,8 @@ $(document).ready(function () {
                 }
             }
 
-            // Colspan a 21 (18 horas + F + T + N)
-            html += `<th colspan="21" class="dia-header text-center fw-bold bg-light" style="min-width: 600px;">
+            // Colspan a 21 (18 horas + F + T + Note)
+            html += `<th colspan="21" class="dia-header text-center fw-bold bg-light" style="min-width: 500px;">
                         <div>${diasSemanaNombres[i]} ${diaNum}/${mesNum}</div>
                         ${sucursalTexto}
                     </th>`;
@@ -281,9 +283,6 @@ $(document).ready(function () {
                             <span class="text-primary fw-bold">E: ${tE % 1 === 0 ? tE : tE.toFixed(1)}</span>
                             <span class="text-warning fw-bold">D: ${tD % 1 === 0 ? tD : tD.toFixed(1)}</span>
                             <span class="fw-bold text-pink">P: ${tP % 1 === 0 ? tP : tP.toFixed(1)}</span>
-                            <span class="badge border ${colorSaldo} mt-1 badge-saldo">
-                                S: ${saldoFinal % 1 === 0 ? saldoFinal : saldoFinal.toFixed(1)}
-                            </span>
                         </div>
                      </td>`;
 
@@ -362,7 +361,6 @@ $(document).ready(function () {
                                     <span class="badge ${turnoColor}" style="font-size: 0.7rem;">${turno}</span>
                                  </td>`;
                 }
-
                 // Nota
                 const tieneNota = nota && nota.trim() !== '';
                 html += `<td class="text-center align-middle p-0 celda-dia-fin" style="min-width: 30px;">
@@ -390,9 +388,9 @@ $(document).ready(function () {
                 const suma = sumasHoras[d][h] || 0;
                 const fmtSuma = (suma % 1 === 0 ? suma : suma.toFixed(1));
                 const colorClass = suma > 0 ? 'text-success' : 'text-muted';
-                html += `<td class="text-center fw-bold bg-light ${colorClass}" style="font-size: 0.8rem; min-width: 30px;">${suma > 0 ? fmtSuma : '0'}</td>`;
+                html += `<td class="text-center fw-bold bg-light ${colorClass}" style="font-size: 0.8rem; min-width: 30px; width: 30px;">${suma > 0 ? fmtSuma : '0'}</td>`;
             }
-            html += '<td class="bg-light"></td><td class="bg-light"></td><td class="bg-light footer-dia-fin"></td>';
+            html += '<td class="bg-light" style="width:30px; min-width:30px;"></td><td class="bg-light" style="width:45px; min-width:45px;"></td><td class="bg-light footer-dia-fin" style="width:30px; min-width:30px;"></td>';
         }
         html += '</tr>';
 
@@ -414,6 +412,9 @@ $(document).ready(function () {
 
         html += '</tfoot></table>';
         container.html(html);
+
+        // Almacenar solicitudes para acceso rápido
+        window.solicitudesCache = data.solicitudes || {};
 
         // Ajustar sticky headers si el alto de la fila 1 cambió (por ejemplo, al mostrar sucursal)
         setTimeout(() => {
@@ -489,39 +490,92 @@ $(document).ready(function () {
         const btn = $(this);
         const originalText = btn.html();
         
-        btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Generando PDF...');
+        btn.html('<span class="spinner-border spinner-border-sm me-2"></span> Generando...');
         btn.prop('disabled', true);
 
-        // Referencia al contenedor que incluye la estructura
-        const gridElement = document.getElementById('contenedorImprimir');
+        const containerToPrint = document.getElementById('contenedorImprimir');
+        const tableElement = containerToPrint.querySelector('table');
         const $tableResp = $('#tablaVistaLocal');
 
-        // Ajustamos los estilos temporalmente para que se renderice COMPLETO (sin scroll)
-        const originalOverflow = gridElement.style.overflow;
-        gridElement.style.overflow = 'visible'; 
+        if (!tableElement) {
+            btn.html(originalText);
+            btn.prop('disabled', false);
+            return;
+        }
+
+        // PRE-CAPTURE: Remover sticky y responsive para que html2canvas capture TODO
+        // Seleccionamos TODO lo que pueda tener sticky en el CSS
+        const stickyElements = $(containerToPrint).find('thead th, tfoot td, tfoot th, .sticky-top-0, .sticky-top-1, .sticky-left-0, .sticky-left-1, .sticky-bottom');
         
-        // El contenedor de la tabla no debe cortar
-        $tableResp.removeClass('table-responsive');
+        // Guardamos los estilos originales para restaurarlos luego
+        const originalStyles = [];
+        stickyElements.each(function() {
+            originalStyles.push($(this).attr('style') || '');
+            $(this).css({
+                'position': 'static',
+                'top': 'auto',
+                'bottom': 'auto',
+                'left': 'auto',
+                'z-index': 'auto'
+            });
+        });
 
-        // Un timeout pequeño salva el repintado del DOM (por si la magia CSS tarda)
+        $tableResp.removeClass('table-responsive').css('overflow', 'visible');
+        
+        const originalStyle = containerToPrint.style.cssText;
+        // Forzamos al contenedor a tener el ancho de la tabla real
+        const totalWidth = tableElement.scrollWidth;
+        const totalHeight = tableElement.scrollHeight + 100; // Un margen extra
+
+        containerToPrint.style.width = totalWidth + 'px';
+        containerToPrint.style.minWidth = totalWidth + 'px';
+        containerToPrint.style.overflow = 'visible';
+
         setTimeout(() => {
-            html2canvas(gridElement, {
-                scale: 2, // Resolucion x2
-                useCORS: true, 
-                backgroundColor: '#ffffff', // Fondo blanco fuerte
-                windowWidth: gridElement.scrollWidth, // Forzamos ancho total
-                windowHeight: gridElement.scrollHeight
+            html2canvas(containerToPrint, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                width: totalWidth,
+                height: totalHeight,
+                windowWidth: totalWidth,
+                onclone: (clonedDoc) => {
+                    const clonedEl = clonedDoc.getElementById('contenedorImprimir');
+                    clonedEl.style.width = totalWidth + 'px';
+                    clonedEl.style.overflow = 'visible';
+                    // Nos aseguramos que la tabla dentro del clon también se estire
+                    const clonedTable = clonedEl.querySelector('table');
+                    if (clonedTable) {
+                        clonedTable.style.width = totalWidth + 'px';
+                        clonedTable.style.minWidth = totalWidth + 'px';
+                    }
+                }
             }).then(canvas => {
-                // Devolvemos las clases y estilos normales
-                gridElement.style.overflow = originalOverflow;
-                $tableResp.addClass('table-responsive');
+                // RESTORE
+                stickyElements.each(function(i) {
+                    if (originalStyles[i]) $(this).attr('style', originalStyles[i]);
+                    else $(this).removeAttr('style');
+                });
 
-                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                // Reiniciamos las cabeceras porque el JS las ajustó dinámicamente al cargar
+                if (typeof renderTablaVistaLocal === 'function') {
+                    // Un pequeño ajuste manual para que vuelvan los tops si se perdieron
+                    const firstRow = $tableResp.find('thead tr').eq(0);
+                    if (firstRow.length) {
+                        const h1 = firstRow.outerHeight();
+                        $tableResp.find('thead tr').eq(1).find('th').css('top', h1 + 'px');
+                    }
+                }
+
+                $tableResp.addClass('table-responsive').css('overflow', '');
+                containerToPrint.style.cssText = originalStyle;
+
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
                 const { jsPDF } = window.jspdf;
                 
-                // Formato Landscape A3, dado que la matriz es inmensamente horizontal
+                // Paisaje A3
                 const pdf = new jsPDF('l', 'mm', 'a3');
-                
                 const pdfWidth = pdf.internal.pageSize.getWidth();
                 const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
                 
@@ -535,11 +589,15 @@ $(document).ready(function () {
 
             }).catch(err => {
                 console.error("Error al exportar PDF:", err);
-                gridElement.style.overflow = originalOverflow;
-                $tableResp.addClass('table-responsive');
+                stickyElements.each(function(i) {
+                    if (originalStyles[i]) $(this).attr('style', originalStyles[i]);
+                    else $(this).removeAttr('style');
+                });
+                $tableResp.addClass('table-responsive').css('overflow', '');
+                containerToPrint.style.cssText = originalStyle;
                 btn.html(originalText);
                 btn.prop('disabled', false);
-                mostrarModalConTitulo("Error", "Ocurrió un problema generando el documento.", "error");
+                mostrarModalConTitulo("Error", "No se pudo generar el PDF.", "error");
             });
         }, 500);
     });
