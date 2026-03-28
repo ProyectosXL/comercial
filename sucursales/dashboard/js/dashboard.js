@@ -571,7 +571,7 @@ const Dashboard = (() => {
             rubros.forEach((r, i) => {
                 const pct = (r.unidades / max) * 100;
                 const target = r.unidades_prev || 0;
-                const targetPct = target > 0 ? (target / max) * 100 : 0;
+                const targetPct = target > 0 ? Math.min((target / max) * 100, 100) : 0;
                 const variacion = r.variacion || 0;
                 const colorClass = variacion >= 0 ? 'rubro-bar-green' : 'rubro-bar-red';
                 

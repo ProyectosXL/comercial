@@ -316,7 +316,7 @@ body.is-loading .toolbar {
 }
 .summary-prev-value {
     font-family: var(--font-display);
-    font-size: 1.1rem;
+    font-size: 1.4rem;
     font-weight: 600;
     color: var(--text-2);
     margin-top: 2px;
@@ -759,6 +759,75 @@ canvas { display: block; }
     font-weight   : 600;
     letter-spacing: .5px;
     color         : #fff;
+    display       : flex;
+    align-items   : center;
+    gap           : 8px;
+}
+
+/* ── BOTÓN INFO ─────────────────────────────────────── */
+.info-btn {
+    background   : none;
+    border       : none;
+    cursor       : pointer;
+    color        : rgba(255,255,255,.5);
+    padding      : 2px 5px;
+    border-radius: 4px;
+    font-size    : .95rem;
+    line-height  : 1;
+    margin-left  : auto;
+    flex-shrink  : 0;
+    transition   : color .15s, background .15s;
+}
+.info-btn:hover {
+    color      : #fff;
+    background : rgba(255,255,255,.14);
+}
+.info-btn.active {
+    color      : #fff;
+    background : rgba(255,255,255,.18);
+}
+
+/* ── POPOVER INFO ───────────────────────────────────── */
+.info-popover {
+    position     : fixed;
+    background   : #1a2340;
+    color        : #c8d0e8;
+    border-radius: 10px;
+    padding      : 14px 16px;
+    font-size    : .78rem;
+    max-width    : 260px;
+    box-shadow   : 0 10px 30px rgba(0,0,0,.35);
+    z-index      : 3000;
+    line-height  : 1.55;
+    font-family  : var(--font-body);
+    font-weight  : 400;
+    display      : none;
+    border       : 1px solid rgba(255,255,255,.1);
+}
+.info-popover-title {
+    color        : #fff;
+    font-family  : var(--font-display);
+    font-size    : .88rem;
+    font-weight  : 700;
+    letter-spacing: .4px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+    display      : flex;
+    align-items  : center;
+    gap          : 7px;
+}
+.info-popover-tip {
+    display    : flex;
+    gap        : 8px;
+    align-items: flex-start;
+    margin-top : 7px;
+}
+.info-popover-tip-icon {
+    color      : var(--accent3);
+    flex-shrink: 0;
+    font-size  : .8rem;
+    margin-top : 2px;
 }
 
 .panel-header {
@@ -862,9 +931,10 @@ canvas { display: block; }
     font-size  : .7rem;
     font-weight: 600;
     color      : var(--text-1);
-    width      : 38px;
+    min-width  : 72px;
     text-align : right;
     flex-shrink: 0;
+    padding-right: 4px;
 }
 
 /* Ranking Breadcrumb */
@@ -1053,6 +1123,84 @@ canvas { display: block; }
 @keyframes slideUp {
     from { opacity:0; transform: translateY(12px); }
     to   { opacity:1; transform: translateY(0); }
+}
+
+/* ── SKELETON LOADING — pestaña KPIs ────────────────── */
+@keyframes kpi-shimmer {
+    0%   { background-position: -300% center; }
+    100% { background-position:  300% center; }
+}
+@keyframes kpi-spinner {
+    to { transform: translate(-50%,-50%) rotate(360deg); }
+}
+
+/* Valores numéricos → bloque shimmer */
+body.is-loading .summary-value,
+body.is-loading .summary-prev-value,
+body.is-loading .summary-var,
+body.is-loading .summary-ingresados {
+    color           : transparent !important;
+    background      : linear-gradient(90deg, #dde2f0 25%, #c8cfe8 50%, #dde2f0 75%);
+    background-size : 300% auto;
+    animation       : kpi-shimmer 1.4s linear infinite;
+    border-radius   : 5px;
+    min-width       : 90px;
+    display         : inline-block;
+    pointer-events  : none;
+}
+body.is-loading .kpi-val,
+body.is-loading .kpi-bench-val {
+    color           : transparent !important;
+    background      : linear-gradient(90deg, #dde2f0 25%, #c8cfe8 50%, #dde2f0 75%);
+    background-size : 300% auto;
+    animation       : kpi-shimmer 1.4s linear infinite;
+    border-radius   : 4px;
+    min-width       : 60px;
+    display         : inline-block;
+    pointer-events  : none;
+}
+body.is-loading .kpi-var {
+    color           : transparent !important;
+    background      : linear-gradient(90deg, #dde2f0 25%, #c8cfe8 50%, #dde2f0 75%);
+    background-size : 300% auto;
+    animation       : kpi-shimmer 1.4s linear infinite;
+    border-radius   : 3px;
+    min-width       : 44px;
+    display         : inline-block;
+    pointer-events  : none;
+}
+
+/* Sparklines → shimmer sobre el canvas */
+body.is-loading .summary-sparkline,
+body.is-loading .kpi-spark {
+    background    : linear-gradient(90deg, #dde2f0 25%, #c8cfe8 50%, #dde2f0 75%);
+    background-size: 300% auto;
+    animation     : kpi-shimmer 1.4s linear infinite;
+    border-radius : 4px;
+}
+body.is-loading .summary-sparkline canvas,
+body.is-loading .kpi-spark canvas {
+    opacity: 0;
+}
+
+/* Donuts → spinner centrado */
+body.is-loading .donut-container {
+    position   : relative;
+    min-height : 220px;
+}
+body.is-loading .donut-container::after {
+    content      : '';
+    position     : absolute;
+    top          : 50%;
+    left         : 50%;
+    transform    : translate(-50%, -50%);
+    width        : 48px;
+    height       : 48px;
+    border       : 4px solid var(--border);
+    border-top-color: var(--accent2);
+    border-radius: 50%;
+    animation    : kpi-spinner .75s linear infinite;
+    z-index      : 5;
 }
 
 /* ── RESPONSIVE ────────────────────────────────────── */
