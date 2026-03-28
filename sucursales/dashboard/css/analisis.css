@@ -52,6 +52,37 @@
     background: var(--accent);
 }
 
+/* ── BOTÓN RECARGAR PESTAÑA ──────────────────────── */
+.tab-reload-btn {
+    margin-left  : auto;
+    align-self   : center;
+    background   : transparent;
+    border       : 1px solid rgba(255,255,255,.25);
+    border-radius: 6px;
+    color        : rgba(255,255,255,.65);
+    font-size    : .95rem;
+    width        : 32px;
+    height       : 28px;
+    display      : flex;
+    align-items  : center;
+    justify-content: center;
+    cursor       : pointer;
+    transition   : background var(--transition), color var(--transition), transform .3s ease;
+    flex-shrink  : 0;
+}
+.tab-reload-btn:hover {
+    background: rgba(255,255,255,.12);
+    color     : #fff;
+}
+.tab-reload-btn.spinning i {
+    display  : inline-block;
+    animation: tab-spin .7s linear infinite;
+}
+@keyframes tab-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
 /* ── CONTENIDO DE PESTAÑAS ───────────────────────── */
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }

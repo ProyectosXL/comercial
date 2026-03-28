@@ -22,6 +22,7 @@ $descLocal  = isset($_SESSION['descLocal']) ? $_SESSION['descLocal'] : 'Abasto';
     <link rel="icon" type="image/jpg" href="../../assets/css/images/icono.jpg">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/analisis.css">
+    <link rel="stylesheet" href="css/grupos.css">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <!-- Chart.js 4.x + DataLabels Plugin -->
@@ -112,6 +113,12 @@ $descLocal  = isset($_SESSION['descLocal']) ? $_SESSION['descLocal'] : 'Abasto';
         </button>
         <button class="tab-btn" id="tab-btn-analisis" role="tab" aria-controls="tab-analisis" aria-selected="false">
             <i class="bi bi-graph-up-arrow"></i>&nbsp; Análisis
+        </button>
+        <button class="tab-btn" id="tab-btn-grupos" role="tab" aria-controls="tab-grupos" aria-selected="false">
+            <i class="bi bi-diagram-2-fill"></i>&nbsp; Grupos
+        </button>
+        <button class="tab-reload-btn" id="btn-reload-tab" title="Recargar pestaña">
+            <i class="bi bi-arrow-clockwise"></i>
         </button>
     </nav>
 
@@ -446,58 +453,155 @@ $descLocal  = isset($_SESSION['descLocal']) ? $_SESSION['descLocal'] : 'Abasto';
     </div>
     <!-- /tab-analisis -->
 
+    <!-- ══ PESTAÑA: GRUPOS ═══════════════════════════════════════ -->
+    <div id="tab-grupos" class="tab-pane" role="tabpanel" aria-labelledby="tab-btn-grupos">
+        <div class="grupos-content">
+
+            <!-- ── 1) VERSUS DE SUCURSALES ──────────────────── -->
+            <div class="analisis-card">
+                <div class="analisis-section-header">
+                    <i class="bi bi-arrow-left-right"></i> Versus de Sucursales
+                </div>
+                <div class="versus-toolbar">
+                    <span class="versus-toolbar-label">Comparar</span>
+                    <strong class="versus-suc-a-name" id="versus-suc-a-name">—</strong>
+                    <span class="versus-vs-sep">VS</span>
+                    <select class="versus-suc-select" id="sel-suc-versus">
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
+                <div id="versus-content">
+                    <div class="analisis-loading"><i class="bi bi-arrow-repeat"></i> <span class="loading-text">Cargando</span></div>
+                </div>
+            </div>
+
+            <!-- ── 2) DESGLOSE POR GRUPO Y SUCURSAL ─────────── -->
+            <div class="analisis-card">
+                <div class="analisis-section-header">
+                    <i class="bi bi-table"></i> KPIs por Grupo y Sucursal
+                    <button class="info-btn" style="margin-left:auto"
+                        data-info-title="KPIs por Grupo y Sucursal"
+                        data-info-tips="Hacé clic en cualquier columna para ordenar|Hacé clic nuevamente para invertir el orden|★ indica la sucursal actual">
+                        <i class="bi bi-info-circle"></i>
+                    </button>
+                </div>
+                <div style="overflow-x:auto;max-height:500px;overflow-y:auto">
+                    <table class="grupos-tabla" id="tabla-grupos-desglose">
+                        <thead>
+                            <tr>
+                                <th style="min-width:180px;text-align:left">Grupo / Sucursal</th>
+                                <th style="min-width:90px;text-align:right">Unidades</th>
+                                <th style="min-width:110px;text-align:right">% Facturación</th>
+                                <th style="min-width:80px;text-align:right">Tickets</th>
+                                <th style="min-width:100px;text-align:right">Var. Tickets</th>
+                                <th style="min-width:120px;text-align:right">Ticket Prom.</th>
+                                <th style="min-width:90px;text-align:right">% 2do Prod.</th>
+                                <th style="min-width:90px;text-align:right">% 3er Prod.</th>
+                                <th style="min-width:90px;text-align:right">% Cambios</th>
+                                <th style="min-width:100px;text-align:right">% Incremental</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="10" class="analisis-loading"><i class="bi bi-arrow-repeat"></i> <span class="loading-text">Cargando</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── 3) TOP RUBROS % PARTICIPACIÓN (PIVOT) ─────── -->
+            <div class="analisis-card">
+                <div class="analisis-section-header">
+                    <i class="bi bi-grid-3x3-gap-fill"></i> % Participación por Rubro y Sucursal
+                    <button class="info-btn" style="margin-left:auto"
+                        data-info-title="% Participación por Rubro y Sucursal"
+                        data-info-tips="Hacé clic en cualquier columna para ordenar|Hacé clic nuevamente para invertir el orden|La intensidad del color indica mayor participación relativa en ese rubro|★ indica la sucursal actual">
+                        <i class="bi bi-info-circle"></i>
+                    </button>
+                </div>
+                <div class="rubros-pivot-wrap" id="grupos-rubros-wrap">
+                    <div class="analisis-loading"><i class="bi bi-arrow-repeat"></i> <span class="loading-text">Cargando</span></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <!-- /tab-grupos -->
+
 </div><!-- /dash-wrap -->
 
 <script src="js/dashboard.js"></script>
 <script src="js/analisis.js"></script>
+<script src="js/grupos.js"></script>
 <script>
 /**
- * Tab navigation — mínimo y sin dependencias externas.
- * Se inicializa DESPUÉS de que ambos módulos están listos.
+ * Tab navigation — 3 pestañas: KPIs / Análisis / Grupos
  */
 (function () {
+    const TABS = [
+        { btn: 'tab-btn-kpis',     pane: 'tab-kpis'     },
+        { btn: 'tab-btn-analisis', pane: 'tab-analisis'  },
+        { btn: 'tab-btn-grupos',   pane: 'tab-grupos'    },
+    ];
+
     let analisisLoaded = false;
+    let gruposLoaded   = false;
 
-    const btnKpis    = document.getElementById('tab-btn-kpis');
-    const btnAnalisis = document.getElementById('tab-btn-analisis');
-    const paneKpis   = document.getElementById('tab-kpis');
-    const paneAnalisis = document.getElementById('tab-analisis');
+    function activateTab(paneId) {
+        TABS.forEach(t => {
+            const active = t.pane === paneId;
+            document.getElementById(t.btn).classList.toggle('active', active);
+            document.getElementById(t.pane).classList.toggle('active', active);
+            document.getElementById(t.btn).setAttribute('aria-selected', active ? 'true' : 'false');
+        });
 
-    function activateTab(tab) {
-        if (tab === 'kpis') {
-            btnKpis.classList.add('active');
-            btnAnalisis.classList.remove('active');
-            paneKpis.classList.add('active');
-            paneAnalisis.classList.remove('active');
-            btnKpis.setAttribute('aria-selected', 'true');
-            btnAnalisis.setAttribute('aria-selected', 'false');
-        } else {
-            btnAnalisis.classList.add('active');
-            btnKpis.classList.remove('active');
-            paneAnalisis.classList.add('active');
-            paneKpis.classList.remove('active');
-            btnAnalisis.setAttribute('aria-selected', 'true');
-            btnKpis.setAttribute('aria-selected', 'false');
-
-            // Cargar análisis la primera vez que se activa la pestaña
-            if (!analisisLoaded) {
-                analisisLoaded = true;
-                Analisis.loadAll();
-            }
+        if (paneId === 'tab-analisis' && !analisisLoaded) {
+            analisisLoaded = true;
+            Analisis.loadAll();
+        }
+        if (paneId === 'tab-grupos' && !gruposLoaded) {
+            gruposLoaded = true;
+            Grupos.loadAll();
         }
     }
 
-    btnKpis.addEventListener('click', () => activateTab('kpis'));
-    btnAnalisis.addEventListener('click', () => activateTab('analisis'));
+    TABS.forEach(t => {
+        document.getElementById(t.btn).addEventListener('click', () => activateTab(t.pane));
+    });
 
-    // Cuando el Dashboard refresca (btn Aplicar), también actualizar análisis si está activo
+    // Btn Aplicar: forzar recarga en la pestaña activa
     document.getElementById('btn-aplicar').addEventListener('click', () => {
-        analisisLoaded = false; // forzar recarga en próxima visita
-        if (paneAnalisis.classList.contains('active')) {
+        analisisLoaded = false;
+        gruposLoaded   = false;
+        const activePane = document.querySelector('.tab-pane.active');
+        if (activePane?.id === 'tab-analisis') {
             Analisis.loadAll();
             analisisLoaded = true;
+        } else if (activePane?.id === 'tab-grupos') {
+            Grupos.loadAll();
+            gruposLoaded = true;
         }
     });
+
+    // Btn Recargar pestaña activa
+    const btnReload = document.getElementById('btn-reload-tab');
+    function reloadActiveTab() {
+        const activePane = document.querySelector('.tab-pane.active');
+        btnReload.classList.add('spinning');
+        const stop = () => btnReload.classList.remove('spinning');
+
+        if (!activePane || activePane.id === 'tab-kpis') {
+            Dashboard.loadAll().finally(stop);
+        } else if (activePane.id === 'tab-analisis') {
+            analisisLoaded = true;
+            Analisis.loadAll().finally(stop);
+        } else if (activePane.id === 'tab-grupos') {
+            gruposLoaded = true;
+            Grupos.loadAll().finally(stop);
+        } else {
+            stop();
+        }
+    }
+    btnReload.addEventListener('click', reloadActiveTab);
 })();
 </script>
 <script>
