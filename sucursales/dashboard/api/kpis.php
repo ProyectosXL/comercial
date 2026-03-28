@@ -69,6 +69,10 @@ try {
     $bench_tick = $db->getTicketsProductos($desde_act, $hasta_act);
     $bench_incr = $db->getIncremental($desde_act, $hasta_act);
 
+    // ── Conversión (ingresos físicos vs tickets) ─────────────────────
+    $conv_act  = $db->getConversion($desde_act, $hasta_act, $nroSucurs);
+    $conv_prev = $db->getConversion($desde_prev, $hasta_prev, $nroSucurs);
+
     // ── Mini-chart serie ────────────────────────────
     $serie_act  = $db->getSerieFacturacion($desde_act, $hasta_act, $nroSucurs, $vendedor, $rubro);
     $serie_prev = $db->getSerieFacturacion($desde_prev, $hasta_prev, $nroSucurs, $vendedor, $rubro);
@@ -101,6 +105,8 @@ try {
             'porc_2do'         => $tick_act['porc_2do'],
             'porc_3ro'         => $tick_act['porc_3ro'],
             'porc_incremental' => $incr_act['porc_incremental'],
+            'ingresos'         => $conv_act['ingresos'],
+            'conversion'       => $conv_act['conversion'],
         ],
         'previo' => [
             'facturacion'      => $kpi_prev['facturacion'],
@@ -112,6 +118,8 @@ try {
             'porc_2do'         => $tick_prev['porc_2do'],
             'porc_3ro'         => $tick_prev['porc_3ro'],
             'porc_incremental' => $incr_prev['porc_incremental'],
+            'ingresos'         => $conv_prev['ingresos'],
+            'conversion'       => $conv_prev['conversion'],
         ],
         'variacion' => [
             'facturacion'      => $var($kpi_act['facturacion'],     $kpi_prev['facturacion']),
@@ -123,6 +131,7 @@ try {
             'porc_3ro'         => $tick_act['porc_3ro'] - $tick_prev['porc_3ro'],
             'porc_cambios'     => $kpi_act['porc_cambios'] - $kpi_prev['porc_cambios'],
             'porc_incremental' => $incr_act['porc_incremental'] - $incr_prev['porc_incremental'],
+            'conversion'       => $var($conv_act['conversion'], $conv_prev['conversion']),
         ],
         'benchmark' => [
             'tickets_var'      => $var($bench_kpi['tickets'],         $kpi_prev['tickets']),

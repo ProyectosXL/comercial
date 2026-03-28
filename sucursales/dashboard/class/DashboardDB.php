@@ -513,6 +513,23 @@ class DashboardDB
         foreach ($incrData as $id) {
             $incrMap[$id['fecha']->format('Y-m-d')] = $id;
         }
+
+        // Ingresos por fecha (solo filtro por sucursal, es dato de local completo)
+        $sfIn  = $nroSucurs !== null ? "AND ig.NRO_SUCURS = ?" : "";
+        $sqlIn = "
+            SELECT
+                CAST(ig.FECHA AS DATE) AS fecha,
+                ISNULL(SUM(ig.INGRESOS), 0) AS ingresos
+            FROM BI_T_INGRESOS_SUCURSALES ig
+            WHERE CAST(ig.FECHA AS DATE) BETWEEN ? AND ?
+              {$sfIn}
+            GROUP BY CAST(ig.FECHA AS DATE)
+        ";
+        $ingresosData = $this->query($sqlIn, array_merge([$desde, $hasta], $suc));
+        $ingresosMap  = [];
+        foreach ($ingresosData as $ig) {
+            $ingresosMap[$ig['fecha']->format('Y-m-d')] = (int)$ig['ingresos'];
+        }
         
         // Combinar todos los datos
         $result = [];
@@ -544,10 +561,54 @@ class DashboardDB
                 'porc_3ro' => $tickets > 0 ? $tickets3ro / $tickets : 0,
                 'porc_cambios' => $unidadesPos > 0 ? $cambios / $unidadesPos : 0,
                 'porc_incremental' => $devoluciones != 0 ? ($cambiosIncr - $devoluciones) / $devoluciones : 0,
+                'ingresos'   => $ingresosMap[$fecha] ?? 0,
+                'conversion' => ($ingresosMap[$fecha] ?? 0) > 0 ? $tickets / $ingresosMap[$fecha] : 0,
             ];
         }
         
         return $result;
+    }
+
+    /* ──────────────────────────────────────────────
+     *  CONVERSIÓN (Tickets / Ingresos)
+     * ────────────────────────────────────────────── */
+
+    /**
+     * Devuelve ingresos totales, tickets totales y tasa de conversión
+     * para el período indicado. No filtra por vendedor/rubro porque
+     * los ingresos son un dato de sucursal completa.
+     */
+    public function getConversion(string $desde, string $hasta, ?int $nroSucurs = null): array
+    {
+        $sfI = $nroSucurs !== null ? "AND i.NRO_SUCURS = ?" : "";
+        $sfT = $nroSucurs !== null ? "AND t.NRO_SUCURS = ?" : "";
+        $suc = $nroSucurs !== null ? [$nroSucurs] : [];
+
+        $sqlI = "
+            SELECT ISNULL(SUM(i.INGRESOS), 0) AS total_ingresos
+            FROM BI_T_INGRESOS_SUCURSALES i
+            WHERE CAST(i.FECHA AS DATE) BETWEEN ? AND ?
+              {$sfI}
+        ";
+        $rowI = $this->queryOne($sqlI, array_merge([$desde, $hasta], $suc));
+
+        $sqlT = "
+            SELECT COUNT(DISTINCT t.N_COMP) AS total_tickets
+            FROM BI_SALES_TOTAL_TICKETS t
+            WHERE CAST(t.FECHA AS DATE) BETWEEN ? AND ?
+              AND t.T_COMP = 'FAC'
+              {$sfT}
+        ";
+        $rowT = $this->queryOne($sqlT, array_merge([$desde, $hasta], $suc));
+
+        $ingresos = (int)($rowI['total_ingresos'] ?? 0);
+        $tickets  = (int)($rowT['total_tickets']  ?? 0);
+
+        return [
+            'ingresos'   => $ingresos,
+            'tickets'    => $tickets,
+            'conversion' => $ingresos > 0 ? $tickets / $ingresos : 0,
+        ];
     }
 
     /* ──────────────────────────────────────────────

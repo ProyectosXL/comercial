@@ -179,6 +179,28 @@ $descLocal  = isset($_SESSION['descLocal']) ? $_SESSION['descLocal'] : 'Sucursal
                 </div>
             </div>
 
+            <!-- Personas + Conversión -->
+            <div class="summary-card conv">
+                <div class="summary-icon">🚶</div>
+                <div class="summary-body">
+                    <div class="summary-label">Tasa de Conversión período actual</div>
+                    <div class="summary-value" id="conv-act">—</div>
+                    <div class="summary-var" id="conv-var">—</div>
+                    <div class="summary-ingresados">
+                        <i class="bi bi-people-fill"></i>
+                        <span class="ingresados-val" id="conv-ingresos">—</span>
+                        <span class="ingresados-label">ingresos</span>
+                    </div>
+                </div>
+                <div class="summary-side">
+                    <div class="summary-prev-label">Período previo</div>
+                    <div class="summary-prev-value" id="conv-prev">—</div>
+                    <div class="summary-sparkline">
+                        <canvas id="spark-conv" width="120" height="45"></canvas>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <!-- ── KPI GRID (5 métricas secundarias) ─────────────────── -->

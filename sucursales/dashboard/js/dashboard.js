@@ -77,20 +77,20 @@ const Dashboard = (() => {
 
     /* ── SparkModal ──────────────────────────────── */
     const SparkModal = (() => {
-        // Registro de series: canvasId → { values, dates, color, formatFn, title }
+        // Registro de series: canvasId → { values, dates, color, formatFn, title, secondary? }
         const registry = {};
         let _modalChart = null;
 
-        function register(canvasId, values, dates, color, formatFn, title) {
-            registry[canvasId] = { values, dates, color, formatFn, title };
+        function register(canvasId, values, dates, color, formatFn, title, secondary = null) {
+            registry[canvasId] = { values, dates, color, formatFn, title, secondary };
         }
 
         function open(canvasId) {
             const entry = registry[canvasId];
             if (!entry) return;
-            const { values, dates, color, formatFn, title } = entry;
+            const { values, dates, color, formatFn, title, secondary } = entry;
 
-            // Estadísticas rápidas
+            // Estadísticas rápidas (serie principal)
             const max    = Math.max(...values);
             const min    = Math.min(...values);
             const avg    = values.reduce((a, b) => a + b, 0) / values.length;
@@ -107,6 +107,18 @@ const Dashboard = (() => {
             const trendClass = trend >= 0 ? 'pos' : 'neg';
             const trendSign  = trend >= 0 ? '+' : '';
 
+            // Estadístcas del eje secundario (si existe)
+            const secStatsHtml = secondary ? `
+                <div class="spark-modal-stat-divider"></div>
+                <div class="spark-modal-stat stat-secondary">
+                    <span class="spark-modal-stat-label">${secondary.label}<br>Total período</span>
+                    <span class="spark-modal-stat-val">${fmt.num(secondary.values.reduce((a, b) => a + b, 0))}</span>
+                </div>
+                <div class="spark-modal-stat stat-secondary">
+                    <span class="spark-modal-stat-label">${secondary.label}<br>Promedio diario</span>
+                    <span class="spark-modal-stat-val">${fmt.num(Math.round(secondary.values.reduce((a, b) => a + b, 0) / secondary.values.length))}</span>
+                </div>` : '';
+
             const root = document.getElementById('spark-modal-root');
             root.innerHTML = `
                 <div class="spark-modal-overlay" id="spark-overlay">
@@ -117,25 +129,29 @@ const Dashboard = (() => {
                         </div>
                         <div class="spark-modal-stats">
                             <div class="spark-modal-stat">
-                                <span class="spark-modal-stat-label">Último<br><small class="stat-date">${fmtStatDate(dates[lastIdx])}</small></span>
+                                <span class="spark-modal-stat-label">Último</span>
                                 <span class="spark-modal-stat-val">${formatFn(last)}</span>
+                                <span class="stat-date">${fmtStatDate(dates[lastIdx])}</span>
                             </div>
                             <div class="spark-modal-stat">
                                 <span class="spark-modal-stat-label">Promedio</span>
                                 <span class="spark-modal-stat-val">${formatFn(avg)}</span>
                             </div>
                             <div class="spark-modal-stat">
-                                <span class="spark-modal-stat-label">Máximo<br><small class="stat-date">${fmtStatDate(dates[maxIdx])}</small></span>
+                                <span class="spark-modal-stat-label">Máximo</span>
                                 <span class="spark-modal-stat-val">${formatFn(max)}</span>
+                                <span class="stat-date">${fmtStatDate(dates[maxIdx])}</span>
                             </div>
                             <div class="spark-modal-stat">
-                                <span class="spark-modal-stat-label">Mínimo<br><small class="stat-date">${fmtStatDate(dates[minIdx])}</small></span>
+                                <span class="spark-modal-stat-label">Mínimo</span>
                                 <span class="spark-modal-stat-val">${formatFn(min)}</span>
+                                <span class="stat-date">${fmtStatDate(dates[minIdx])}</span>
                             </div>
                             <div class="spark-modal-stat">
                                 <span class="spark-modal-stat-label">Tendencia</span>
                                 <span class="spark-modal-stat-val ${trendClass}">${trendSign}${(trend * 100).toLocaleString('es-AR', {minimumFractionDigits:1, maximumFractionDigits:1})} %</span>
                             </div>
+                            ${secStatsHtml}
                         </div>
                         <div class="spark-modal-canvas-wrap">
                             <canvas id="spark-modal-canvas"></canvas>
@@ -150,33 +166,92 @@ const Dashboard = (() => {
             document.getElementById('spark-modal-close-btn').addEventListener('click', close);
             document.addEventListener('keydown', _onKeyDown);
 
-            // Renderizar Chart.js
+            // ── Construir datasets ──
             if (_modalChart) { _modalChart.destroy(); _modalChart = null; }
             const labels = dates.map(d => new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit' }));
+
+            const datasets = [
+                {
+                    label          : title,
+                    data           : values,
+                    borderColor    : color,
+                    backgroundColor: color + '20',
+                    borderWidth    : 2.5,
+                    pointRadius    : values.length <= 31 ? 4 : 2,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: color,
+                    fill           : true,
+                    tension        : 0.35,
+                    yAxisID        : 'y',
+                    order          : 1,
+                }
+            ];
+
+            const scales = {
+                x: {
+                    grid : { color: 'rgba(255,255,255,.05)' },
+                    ticks: { color: '#9ba8c8', font: { size: 11 }, maxTicksLimit: 12 }
+                },
+                y: {
+                    position: 'left',
+                    grid    : { color: 'rgba(255,255,255,.07)' },
+                    ticks   : { color, font: { size: 11 }, callback: v => formatFn(v) }
+                }
+            };
+
+            // Eje secundario: barras de ingresos
+            if (secondary) {
+                datasets.push({
+                    label          : secondary.label,
+                    data           : secondary.values,
+                    type           : 'bar',
+                    backgroundColor: secondary.color + '35',
+                    borderColor    : secondary.color + '90',
+                    borderWidth    : 1,
+                    borderRadius   : 3,
+                    yAxisID        : 'y2',
+                    order          : 2,
+                });
+                scales.y2 = {
+                    position : 'right',
+                    grid     : { drawOnChartArea: false },
+                    ticks    : { color: secondary.color, font: { size: 11 }, callback: v => secondary.formatFn(v) },
+                    title    : { display: true, text: secondary.label, color: secondary.color, font: { size: 10 } },
+                };
+            }
+
+            const tooltipCallbacks = secondary ? {
+                title: items => {
+                    const idx = items[0].dataIndex;
+                    const d = new Date(dates[idx] + 'T00:00:00');
+                    return d.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+                },
+                label: ctx => {
+                    if (ctx.dataset.yAxisID === 'y2') {
+                        return `${secondary.label}: ${secondary.formatFn(ctx.parsed.y)}`;
+                    }
+                    return `${title}: ${formatFn(ctx.parsed.y)}`;
+                }
+            } : {
+                title: items => {
+                    const idx = items[0].dataIndex;
+                    const d = new Date(dates[idx] + 'T00:00:00');
+                    return d.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+                },
+                label: ctx => formatFn(ctx.parsed.y),
+            };
+
             _modalChart = new Chart(
                 document.getElementById('spark-modal-canvas').getContext('2d'),
                 {
                     type: 'line',
-                    data: {
-                        labels,
-                        datasets: [{
-                            data     : values,
-                            borderColor    : color,
-                            backgroundColor: color + '20',
-                            borderWidth: 2.5,
-                            pointRadius: values.length <= 31 ? 4 : 2,
-                            pointHoverRadius: 6,
-                            pointBackgroundColor: color,
-                            fill: true,
-                            tension: 0.35,
-                        }]
-                    },
+                    data: { labels, datasets },
                     options: {
                         responsive : true,
                         maintainAspectRatio: false,
                         interaction: { mode: 'index', intersect: false },
                         plugins: {
-                            legend: { display: false },
+                            legend: { display: !!secondary, labels: { color: '#9ba8c8', font: { size: 11 }, boxWidth: 12 } },
                             tooltip: {
                                 backgroundColor: '#1a2340',
                                 titleColor: '#9ba8c8',
@@ -184,29 +259,11 @@ const Dashboard = (() => {
                                 borderColor: color,
                                 borderWidth: 1,
                                 padding: 10,
-                                callbacks: {
-                                    title: items => {
-                                        const idx = items[0].dataIndex;
-                                        const d = new Date(dates[idx] + 'T00:00:00');
-                                        return d.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
-                                    },
-                                    label: ctx => formatFn(ctx.parsed.y),
-                                }
+                                callbacks: tooltipCallbacks,
                             },
                             datalabels: { display: false },
                         },
-                        scales: {
-                            x: {
-                                grid : { color: 'rgba(255,255,255,.05)' },
-                                ticks: { color: '#9ba8c8', font: { size: 11 }, maxTicksLimit: 12 }
-                            },
-                            y: {
-                                grid : { color: 'rgba(255,255,255,.07)' },
-                                ticks: { color: '#9ba8c8', font: { size: 11 },
-                                    callback: v => formatFn(v)
-                                }
-                            }
-                        }
+                        scales,
                     },
                     plugins: [ChartDataLabels]
                 }
@@ -226,7 +283,7 @@ const Dashboard = (() => {
     })();
 
     /* ── Mini sparkline con tooltip (Canvas API) ──── */
-    function drawSparkline(canvasId, values, dates, color = '#4ade80', formatFn = fmt.money) {
+    function drawSparkline(canvasId, values, dates, color = '#4ade80', formatFn = fmt.money, secondary = null) {
         const canvas = document.getElementById(canvasId);
         if (!canvas || !values?.length) return;
 
@@ -240,8 +297,9 @@ const Dashboard = (() => {
             'spark-tprom'        : 'Ticket Promedio',
             'spark-t3ro'         : 'Tickets 3er. Producto',
             'spark-incr'         : '% Incremental',
+            'spark-conv'         : 'Conversión (Tickets / Ingresos)',
         };
-        SparkModal.register(canvasId, values, dates, color, formatFn, titleMap[canvasId] || canvasId);
+        SparkModal.register(canvasId, values, dates, color, formatFn, titleMap[canvasId] || canvasId, secondary);
 
         // Botón expandir (se crea una vez por canvas)
         const wrap = canvas.parentElement;
@@ -888,6 +946,10 @@ const Dashboard = (() => {
             setEl('tickets-prev',  fmt.num(prev.tickets));
             setEl('tickets-var',   fmt.varPct(var_.tickets), var_.tickets);
             setEl('tickets-bench', fmt.varPct(bench.tickets_var));
+            setEl('conv-act',      fmt.pct(act.conversion));
+            setEl('conv-prev',     fmt.pct(prev.conversion));
+            setEl('conv-var',      fmt.varPct(var_.conversion), var_.conversion);
+            setEl('conv-ingresos', fmt.num(act.ingresos));
 
             /* ── KPI Cards métricas ── */
             const cards = [
@@ -919,10 +981,15 @@ const Dashboard = (() => {
             const serieT3ro = serieAct.map(r => r.porc_3ro);
             const serieIncr = serieAct.map(r => r.porc_incremental);
             
+            const serieConv    = serieAct.map(r => r.conversion);
+            const serieIngresos = serieAct.map(r => r.ingresos);
+            
             // Main KPIs sparklines
             drawSparkline('spark-fact', serieFacturacion, serieDates, '#00a878', fmt.money);
             drawSparkline('spark-unid', serieUnidades, serieDates, '#f59e0b', fmt.num);
             drawSparkline('spark-tickets-main', serieTickets, serieDates, '#8b5cf6', fmt.num);
+            drawSparkline('spark-conv', serieConv, serieDates, '#ec4899', fmt.pct,
+                { values: serieIngresos, color: '#38bdf8', label: 'Ingresos', formatFn: fmt.num });
             
             // Secondary KPIs sparklines
             drawSparkline('spark-t2do',    serieT2do, serieDates, '#60a5fa', fmt.pct);
