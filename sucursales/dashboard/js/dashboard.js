@@ -108,16 +108,17 @@ const Dashboard = (() => {
             const trendSign  = trend >= 0 ? '+' : '';
 
             // Estadístcas del eje secundario (si existe)
-            const secStatsHtml = secondary ? `
+            const secArr = Array.isArray(secondary) ? secondary : (secondary ? [secondary] : []);
+            const secStatsHtml = secArr.filter(sec => !sec.hideStats).map(sec => `
                 <div class="spark-modal-stat-divider"></div>
                 <div class="spark-modal-stat stat-secondary">
-                    <span class="spark-modal-stat-label">${secondary.label}<br>Total período</span>
-                    <span class="spark-modal-stat-val">${fmt.num(secondary.values.reduce((a, b) => a + b, 0))}</span>
+                    <span class="spark-modal-stat-label">${sec.label}<br>Total período</span>
+                    <span class="spark-modal-stat-val">${fmt.num(sec.values.reduce((a, b) => a + b, 0))}</span>
                 </div>
                 <div class="spark-modal-stat stat-secondary">
-                    <span class="spark-modal-stat-label">${secondary.label}<br>Promedio diario</span>
-                    <span class="spark-modal-stat-val">${fmt.num(Math.round(secondary.values.reduce((a, b) => a + b, 0) / secondary.values.length))}</span>
-                </div>` : '';
+                    <span class="spark-modal-stat-label">${sec.label}<br>Promedio diario</span>
+                    <span class="spark-modal-stat-val">${fmt.num(Math.round(sec.values.reduce((a, b) => a + b, 0) / sec.values.length))}</span>
+                </div>`).join('');
 
             const root = document.getElementById('spark-modal-root');
             root.innerHTML = `
@@ -199,28 +200,33 @@ const Dashboard = (() => {
                 }
             };
 
-            // Eje secundario: barras de ingresos
-            if (secondary) {
-                datasets.push({
-                    label          : secondary.label,
-                    data           : secondary.values,
-                    type           : 'bar',
-                    backgroundColor: secondary.color + '35',
-                    borderColor    : secondary.color + '90',
-                    borderWidth    : 1,
-                    borderRadius   : 3,
-                    yAxisID        : 'y2',
-                    order          : 2,
+            // Eje secundario: barras (soporta array o objeto único)
+            if (secArr.length) {
+                secArr.forEach((sec, i) => {
+                    const isInner = i === secArr.length - 1; // el último se dibuja encima (dentro)
+                    datasets.push({
+                        label             : sec.label,
+                        data              : sec.values,
+                        type              : 'bar',
+                        backgroundColor   : sec.color + (isInner ? '80' : '35'),
+                        borderColor       : sec.color + (isInner ? 'cc' : '70'),
+                        borderWidth       : 1,
+                        borderRadius      : 3,
+                        yAxisID           : 'y2',
+                        order             : 2 + (secArr.length - 1 - i), // último=2 (frente), primero=3+ (fondo)
+                        grouped           : false,
+                        barPercentage     : 1.0,
+                        categoryPercentage: 0.85,
+                    });
                 });
                 scales.y2 = {
                     position : 'right',
                     grid     : { drawOnChartArea: false },
-                    ticks    : { color: secondary.color, font: { size: 11 }, callback: v => secondary.formatFn(v) },
-                    title    : { display: true, text: secondary.label, color: secondary.color, font: { size: 10 } },
+                    ticks    : { color: secArr[0].color, font: { size: 11 }, callback: v => secArr[0].formatFn(v) },
                 };
             }
 
-            const tooltipCallbacks = secondary ? {
+            const tooltipCallbacks = secArr.length ? {
                 title: items => {
                     const idx = items[0].dataIndex;
                     const d = new Date(dates[idx] + 'T00:00:00');
@@ -228,7 +234,8 @@ const Dashboard = (() => {
                 },
                 label: ctx => {
                     if (ctx.dataset.yAxisID === 'y2') {
-                        return `${secondary.label}: ${secondary.formatFn(ctx.parsed.y)}`;
+                        const sec = secArr.find(s => s.label === ctx.dataset.label);
+                        return sec ? `${sec.label}: ${sec.formatFn(ctx.parsed.y)}` : ctx.dataset.label;
                     }
                     return `${title}: ${formatFn(ctx.parsed.y)}`;
                 }
@@ -251,7 +258,7 @@ const Dashboard = (() => {
                         maintainAspectRatio: false,
                         interaction: { mode: 'index', intersect: false },
                         plugins: {
-                            legend: { display: !!secondary, labels: { color: '#9ba8c8', font: { size: 11 }, boxWidth: 12 } },
+                            legend: { display: secArr.length > 0, labels: { color: '#9ba8c8', font: { size: 11 }, boxWidth: 12 } },
                             tooltip: {
                                 backgroundColor: '#1a2340',
                                 titleColor: '#9ba8c8',
@@ -988,8 +995,10 @@ const Dashboard = (() => {
             drawSparkline('spark-fact', serieFacturacion, serieDates, '#00a878', fmt.money);
             drawSparkline('spark-unid', serieUnidades, serieDates, '#f59e0b', fmt.num);
             drawSparkline('spark-tickets-main', serieTickets, serieDates, '#8b5cf6', fmt.num);
-            drawSparkline('spark-conv', serieConv, serieDates, '#ec4899', fmt.pct,
-                { values: serieIngresos, color: '#38bdf8', label: 'Ingresos', formatFn: fmt.num });
+            drawSparkline('spark-conv', serieConv, serieDates, '#ec4899', fmt.pct, [
+                { values: serieIngresos, color: '#38bdf8', label: 'Ingresos', formatFn: fmt.num },
+                { values: serieTickets,  color: '#8b5cf6', label: 'Tickets',  formatFn: fmt.num, hideStats: true },
+            ]);
             
             // Secondary KPIs sparklines
             drawSparkline('spark-t2do',    serieT2do, serieDates, '#60a5fa', fmt.pct);

@@ -72,6 +72,8 @@ try {
 
     $vendedoresIds = [];
     $sucursalesInvolucradas = [];
+    $promocionesInternasPorDia = [];
+    $nroSucursalTango = 0;
 
     // --- PASO A: PROMOCIONES BANCARIAS ---
     $idDeptoPromos = $nroSucursal;
@@ -91,37 +93,97 @@ try {
     if ($idDeptoPromos) {
         $connCorp = getConexionCorp();
         if ($connCorp) {
-            $sqlNomRRHH = "SELECT DESC_DEPARTAMENTO FROM DEPARTAMENTO WHERE ID_DEPARTAMENTO = ?";
+            $sqlNomRRHH = "SELECT DESC_DEPARTAMENTO, COD_DEPARTAMENTO FROM DEPARTAMENTO WHERE ID_DEPARTAMENTO = ?";
             $stmtNom = sqlsrv_query($connCorp, $sqlNomRRHH, [$idDeptoPromos]);
 
             $nombreSucursal = "";
+            $codigoSucursal = "";
             if ($stmtNom && $row = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
                 $nombreSucursal = trim($row['DESC_DEPARTAMENTO']);
+                $codigoSucursal = trim($row['COD_DEPARTAMENTO']);
             }
+            sqlsrv_free_stmt($stmtNom);
             sqlsrv_close($connCorp);
+        }
+    }
 
-            if (!empty($nombreSucursal)) {
-                $connPromos = getConexionCentral();
-                if ($connPromos) {
-                    $sqlP = "
-                        SELECT 
-                            A.DESC_PROMOCION_TARJETA, 
-                            A.APLICA_LUNES, A.APLICA_MARTES, A.APLICA_MIERCOLES, A.APLICA_JUEVES, 
-                            A.APLICA_VIERNES, A.APLICA_SABADO, A.APLICA_DOMINGO, 
-                            A.DESFE_VIGENCIA, A.HASFE_VIGENCIA 
-                        FROM PROMOCION_TARJETA A 
-                        INNER JOIN CTA_PROMOCION_TARJETA_POR_SUCURSAL B ON A.ID_PROMOCION_TARJETA = B.ID_PROMOCION_TARJETA 
-                        INNER JOIN SUCURSAL C ON B.ID_SUCURSAL = C.ID_SUCURSAL 
-                        WHERE (C.DESC_SUCURSAL = ? OR C.DESC_SUCURSAL LIKE ?) 
-                        AND A.HABILITADO = 'S'";
+    // --- PASO A.1: CARGAR PROMOCIONES ---
+    $nroSucursalTango = intval(str_ireplace('LOC', '', $codigoSucursal));
+    if (stripos($nombreSucursal, 'UNICENTER') !== false) { $nroSucursalTango = 2; }
 
-                    $stmtP = sqlsrv_query($connPromos, $sqlP, [$nombreSucursal, "%" . $nombreSucursal . "%"]);
+    if ($nroSucursalTango > 0) {
+        // 1. PROMOCIONES BANCARIAS (Usando NRO_SUCURSAL según tu query)
+        $connPromos = getConexionCentral();
+            if ($connPromos) {
+                $sqlP = "
+                    SELECT 
+                        A.DESC_PROMOCION_TARJETA, 
+                        A.APLICA_LUNES, A.APLICA_MARTES, A.APLICA_MIERCOLES, A.APLICA_JUEVES, 
+                        A.APLICA_VIERNES, A.APLICA_SABADO, A.APLICA_DOMINGO, 
+                        A.DESFE_VIGENCIA, A.HASFE_VIGENCIA 
+                    FROM PROMOCION_TARJETA A 
+                    INNER JOIN CTA_PROMOCION_TARJETA_POR_SUCURSAL B ON A.ID_PROMOCION_TARJETA = B.ID_PROMOCION_TARJETA 
+                    INNER JOIN SUCURSAL S ON B.ID_SUCURSAL = S.ID_SUCURSAL
+                    WHERE S.NRO_SUCURSAL = ? 
+                    AND A.HABILITADO = 'S'";
 
-                    if ($stmtP) {
-                        $promosRaw = [];
-                        while ($r = sqlsrv_fetch_array($stmtP, SQLSRV_FETCH_ASSOC)) {
-                            $promosRaw[] = $r;
+                $stmtP = sqlsrv_query($connPromos, $sqlP, [$nroSucursalTango]);
+
+                if ($stmtP) {
+                    $promosRaw = [];
+                    while ($r = sqlsrv_fetch_array($stmtP, SQLSRV_FETCH_ASSOC)) {
+                        $promosRaw[] = $r;
+                    }
+
+                    $diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+                    $fAct = new DateTime($fechaInicio);
+                    $fFinDT = new DateTime($fechaFin);
+
+                    while ($fAct <= $fFinDT) {
+                        $iso = $fAct->format('Y-m-d');
+                        $colDia = 'APLICA_' . strtoupper($diasSemana[$fAct->format('w')]);
+                        $fCheck = clone $fAct;
+                        $fCheck->setTime(0, 0, 0);
+                        $listaDia = [];
+
+                        foreach ($promosRaw as $p) {
+                            $desdeP = ($p['DESFE_VIGENCIA'] instanceof DateTime) ? $p['DESFE_VIGENCIA'] : new DateTime($p['DESFE_VIGENCIA']);
+                            $hastaP = ($p['HASFE_VIGENCIA'] instanceof DateTime) ? $p['HASFE_VIGENCIA'] : new DateTime($p['HASFE_VIGENCIA']);
+                            $desdeP->setTime(0, 0, 0);
+                            $hastaP->setTime(0, 0, 0);
+
+                            if ($fCheck >= $desdeP && $fCheck <= $hastaP) {
+                                $aplica = isset($p[$colDia]) ? trim($p[$colDia]) : 'N';
+                                if ($aplica === 'S' || $aplica === 's' || $aplica == 1) {
+                                    $txt = trim($p['DESC_PROMOCION_TARJETA']);
+                                    if (!mb_detect_encoding($txt, 'UTF-8', true))
+                                        $txt = utf8_encode($txt);
+                                    $listaDia[] = $txt;
+                                }
+                            }
                         }
+                        $promocionesPorDia[$iso] = array_values(array_unique($listaDia));
+                        $fAct->modify('+1 day');
+                    }
+                    sqlsrv_free_stmt($stmtP);
+                }
+                sqlsrv_close($connPromos);
+            }
+
+            // 2. PROMOCIONES INTERNAS (Usando NRO_SUCURSAL)
+            if ($nroSucursalTango !== 0) {
+                $connLocales = getConexionLocales();
+                if ($connLocales) {
+                    $sqlInt = "SELECT P.DESC_PROMOCION, P.APLICA_LUNES, P.APLICA_MARTES, P.APLICA_MIERCOLES, P.APLICA_JUEVES, P.APLICA_VIERNES, P.APLICA_SABADO, P.APLICA_DOMINGO, P.DESFE_VIGENCIA, P.HASFE_VIGENCIA 
+                               FROM PROMOCION P 
+                               INNER JOIN PROMOCION_SUCURSAL_DESTINO D ON P.ID_PROMOCION = D.ID_PROMOCION 
+                               INNER JOIN SUCURSAL S ON D.ID_SUCURSAL = S.ID_SUCURSAL
+                               WHERE S.NRO_SUCURSAL = ? AND P.HABILITADO = 1";
+                    
+                    $stmtInt = sqlsrv_query($connLocales, $sqlInt, [$nroSucursalTango]);
+                if ($stmtInt) {
+                    $promosIntRaw = [];
+                    while ($r = sqlsrv_fetch_array($stmtInt, SQLSRV_FETCH_ASSOC)) { $promosIntRaw[] = $r; }
 
                         $diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
                         $fAct = new DateTime($fechaInicio);
@@ -132,30 +194,27 @@ try {
                             $colDia = 'APLICA_' . strtoupper($diasSemana[$fAct->format('w')]);
                             $fCheck = clone $fAct;
                             $fCheck->setTime(0, 0, 0);
-                            $listaDia = [];
+                            $listaInt = [];
 
-                            foreach ($promosRaw as $p) {
-                                $desde = ($p['DESFE_VIGENCIA'] instanceof DateTime) ? $p['DESFE_VIGENCIA'] : new DateTime($p['DESFE_VIGENCIA']);
-                                $hasta = ($p['HASFE_VIGENCIA'] instanceof DateTime) ? $p['HASFE_VIGENCIA'] : new DateTime($p['HASFE_VIGENCIA']);
-                                $desde->setTime(0, 0, 0);
-                                $hasta->setTime(0, 0, 0);
+                            foreach ($promosIntRaw as $p) {
+                                $desdeP = ($p['DESFE_VIGENCIA'] instanceof DateTime) ? clone $p['DESFE_VIGENCIA'] : new DateTime($p['DESFE_VIGENCIA']);
+                                $hastaP = ($p['HASFE_VIGENCIA'] instanceof DateTime) ? clone $p['HASFE_VIGENCIA'] : new DateTime($p['HASFE_VIGENCIA']);
+                                $desdeP->setTime(0, 0, 0); $hastaP->setTime(0, 0, 0);
 
-                                if ($fCheck >= $desde && $fCheck <= $hasta) {
-                                    $aplica = isset($p[$colDia]) ? trim($p[$colDia]) : 'N';
-                                    if ($aplica === 'S' || $aplica === 's' || $aplica == 1) {
-                                        $txt = trim($p['DESC_PROMOCION_TARJETA']);
-                                        if (!mb_detect_encoding($txt, 'UTF-8', true))
-                                            $txt = utf8_encode($txt);
-                                        $listaDia[] = $txt;
+                                if ($fCheck >= $desdeP && $fCheck <= $hastaP) {
+                                    $valAplica = isset($p[$colDia]) ? $p[$colDia] : 0;
+                                    if ($valAplica == 1 || $valAplica === true || $valAplica === '1') {
+                                        $txt = trim($p['DESC_PROMOCION']);
+                                        if (!mb_detect_encoding($txt, 'UTF-8', true)) $txt = utf8_encode($txt);
+                                        $listaInt[] = $txt;
                                     }
                                 }
                             }
-                            $promocionesPorDia[$iso] = array_values(array_unique($listaDia));
+                            $promocionesInternasPorDia[$iso] = array_values(array_unique($listaInt));
                             $fAct->modify('+1 day');
                         }
-                        sqlsrv_free_stmt($stmtP);
-                    }
-                    sqlsrv_close($connPromos);
+                    sqlsrv_free_stmt($stmtInt);
+                    sqlsrv_close($connLocales);
                 }
             }
         }
@@ -376,6 +435,7 @@ try {
         'nombres' => $nombresMap,
         'nombres_sucursales' => $nombresSucursales,
         'promociones' => $promocionesPorDia,
+        'promociones_internas' => $promocionesInternasPorDia,
         'saldosAnteriores' => $saldosAnteriores,
         'bloqueosExternos' => $bloqueosExternos
     ];

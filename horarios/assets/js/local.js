@@ -394,9 +394,9 @@ $(document).ready(function () {
         }
         html += '</tr>';
 
-        // Promociones
+        // FILA 3: PROMOCIONES (BANCARIAS)
         html += '<tr>';
-        html += '<td class="sticky-left-0 bg-light fw-bold text-start p-2 col-vendedor">Promociones</td>';
+        html += '<td class="sticky-left-0 bg-light text-end fw-bold p-2 align-middle col-vendedor" style="font-size: 0.8rem;">PROMOCIONES</td>';
         html += '<td class="sticky-left-1 bg-light col-totales"></td>';
         fechasSemana.forEach(fecha => {
             const list = promociones[fecha] || [];
@@ -407,6 +407,22 @@ $(document).ready(function () {
                 </div>`;
             }
             html += `<td colspan="21" class="footer-dia-fin bg-light text-start p-1 align-top" style="max-width: 300px;">${promoHTML}</td>`;
+        });
+        html += '</tr>';
+
+        // FILA 4: PROMOCIONES INTERNAS
+        html += '<tr>';
+        html += '<td class="sticky-left-0 bg-light text-end fw-bold p-2 align-middle col-vendedor" style="font-size: 0.8rem;">PROMOCIONES INTERNAS</td>';
+        html += '<td class="sticky-left-1 bg-light col-totales"></td>';
+        fechasSemana.forEach(fecha => {
+            const listInt = (data.promociones_internas && data.promociones_internas[fecha]) ? data.promociones_internas[fecha] : [];
+            let promoIntHTML = '<span class="text-muted">-</span>';
+            if (listInt.length > 0) {
+                promoIntHTML = `<div class="d-flex flex-wrap gap-1">
+                    ${listInt.map(p => `<span class="badge bg-info text-dark px-1" style="font-size: 0.7rem; white-space: normal; text-align: left;">${p}</span>`).join('')}
+                </div>`;
+            }
+            html += `<td colspan="21" class="footer-dia-fin bg-light text-start p-1 align-top" style="max-width: 300px;">${promoIntHTML}</td>`;
         });
         html += '</tr>';
 

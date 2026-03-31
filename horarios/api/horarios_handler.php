@@ -392,18 +392,24 @@ function cargarDatos()
     // PASO 1: CARGAR PROMOCIONES BANCARIAS
     // =================================================================================
     $connCorp = getConexionCorp();
-    $sqlNomRRHH = "SELECT DESC_DEPARTAMENTO FROM DEPARTAMENTO WHERE ID_DEPARTAMENTO = ?";
+    $sqlNomRRHH = "SELECT DESC_DEPARTAMENTO, COD_DEPARTAMENTO FROM DEPARTAMENTO WHERE ID_DEPARTAMENTO = ?";
     $stmtNom = sqlsrv_query($connCorp, $sqlNomRRHH, [$nroSucursal]);
 
     $nombreSucursal = "";
+    $codigoSucursal = "";
     if ($stmtNom && $row = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
         $nombreSucursal = trim($row['DESC_DEPARTAMENTO']);
+        $codigoSucursal = trim($row['COD_DEPARTAMENTO']);
     }
     sqlsrv_free_stmt($stmtNom);
     sqlsrv_close($connCorp);
 
     $connPromos = getConexionCentral();
-    $paramBusqueda = !empty($nombreSucursal) ? $nombreSucursal : "NO_ENCONTRADO";
+    $nroSucursalTango = intval(str_ireplace('LOC', '', $codigoSucursal));
+
+    if (stripos($nombreSucursal, 'UNICENTER') !== false) {
+        $nroSucursalTango = 2;
+    }
 
     $sqlPromociones = "
         SELECT 
@@ -416,18 +422,13 @@ function cargarDatos()
         INNER JOIN 
             CTA_PROMOCION_TARJETA_POR_SUCURSAL B ON A.ID_PROMOCION_TARJETA = B.ID_PROMOCION_TARJETA
         INNER JOIN 
-            SUCURSAL C ON B.ID_SUCURSAL = C.ID_SUCURSAL
+            SUCURSAL S ON B.ID_SUCURSAL = S.ID_SUCURSAL
         WHERE
-            C.DESC_SUCURSAL = ?
+            S.NRO_SUCURSAL = ?
             AND A.HABILITADO = 'S'
     ";
 
-    $stmtPromociones = sqlsrv_query($connPromos, $sqlPromociones, [$paramBusqueda]);
-
-    if ($stmtPromociones === false || !sqlsrv_has_rows($stmtPromociones)) {
-        $sqlPromociones = str_replace("C.DESC_SUCURSAL =", "C.DESC_SUCURSAL LIKE", $sqlPromociones);
-        $stmtPromociones = sqlsrv_query($connPromos, $sqlPromociones, ["%" . $paramBusqueda . "%"]);
-    }
+    $stmtPromociones = sqlsrv_query($connPromos, $sqlPromociones, [$nroSucursalTango]);
 
     $promocionesPorDia = [];
     if ($stmtPromociones) {
@@ -466,7 +467,76 @@ function cargarDatos()
         sqlsrv_free_stmt($stmtPromociones);
     }
     $respuesta['promociones'] = $promocionesPorDia;
+
     sqlsrv_close($connPromos);
+
+    // =================================================================================
+    // PASO 1.5: CARGAR PROMOCIONES INTERNAS (NUEVO)
+    // =================================================================================
+    $connLocales = getConexionLocales();
+    $promocionesInternasPorDia = [];
+
+    if ($nroSucursalTango !== 0) {
+        $sqlPromosInternas = "
+            SELECT 
+                P.DESC_PROMOCION,
+                P.APLICA_LUNES, P.APLICA_MARTES, P.APLICA_MIERCOLES, P.APLICA_JUEVES, 
+                P.APLICA_VIERNES, P.APLICA_SABADO, P.APLICA_DOMINGO,
+                P.DESFE_VIGENCIA, P.HASFE_VIGENCIA
+            FROM 
+                PROMOCION P
+            INNER JOIN 
+                PROMOCION_SUCURSAL_DESTINO D ON P.ID_PROMOCION = D.ID_PROMOCION
+            INNER JOIN 
+                SUCURSAL S ON D.ID_SUCURSAL = S.ID_SUCURSAL
+            WHERE
+                S.NRO_SUCURSAL = ?
+                AND P.HABILITADO = 1
+        ";
+        $stmtPromosInt = sqlsrv_query($connLocales, $sqlPromosInternas, [$nroSucursalTango]);
+        
+        if ($stmtPromosInt) {
+            $promosPotencialesInt = [];
+            while ($rowInt = sqlsrv_fetch_array($stmtPromosInt, SQLSRV_FETCH_ASSOC)) {
+                $promosPotencialesInt[] = $rowInt;
+            }
+
+            $diasSemanaAbbr = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+            $fechaActual = new DateTime($fechaInicio);
+            $fechaFinDT = new DateTime($fechaFin);
+
+            while ($fechaActual <= $fechaFinDT) {
+                $fechaISO = $fechaActual->format('Y-m-d');
+                $promosDelDiaInt = [];
+                $columnaDia = 'APLICA_' . strtoupper($diasSemanaAbbr[$fechaActual->format('w')]);
+                $fechaCheck = clone $fechaActual;
+                $fechaCheck->setTime(0, 0, 0);
+
+                foreach ($promosPotencialesInt as $promo) {
+                    $desde = ($promo['DESFE_VIGENCIA'] instanceof DateTime) ? clone $promo['DESFE_VIGENCIA'] : new DateTime($promo['DESFE_VIGENCIA']);
+                    $hasta = ($promo['HASFE_VIGENCIA'] instanceof DateTime) ? clone $promo['HASFE_VIGENCIA'] : new DateTime($promo['HASFE_VIGENCIA']);
+                    $desde->setTime(0, 0, 0);
+                    $hasta->setTime(0, 0, 0);
+
+                    if ($fechaCheck >= $desde && $fechaCheck <= $hasta) {
+                        // Comprobación flexible: 1, '1', true
+                        $valAplica = isset($promo[$columnaDia]) ? $promo[$columnaDia] : 0;
+                        if ($valAplica == 1 || $valAplica === true || $valAplica === '1') {
+                            $promosDelDiaInt[] = trim($promo['DESC_PROMOCION']);
+                        }
+                    }
+                }
+                $promocionesInternasPorDia[$fechaISO] = array_values(array_unique($promosDelDiaInt));
+                $fechaActual->modify('+1 day');
+            }
+            sqlsrv_free_stmt($stmtPromosInt);
+        }
+    }
+    $respuesta['promociones_internas'] = $promocionesInternasPorDia;
+    // Campo de debug para el usuario (puedes verlo en el Preview del Network)
+    $respuesta['debug_sucursal_nro'] = $nroSucursalTango;
+
+    sqlsrv_close($connLocales);
 
     // =================================================================================
     // PASO 2: CARGAR DATOS (SISTEMAS)

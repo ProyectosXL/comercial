@@ -431,10 +431,17 @@ $(document).ready(function () {
         }
         footerHTML += '</tr>';
 
-        // Fila Promociones
-        footerHTML += '<tr><td><strong>Promociones</strong></td><td></td>';
-        fechasSemana.forEach(function (fechaISO, diaIndex) { // Agregamos diaIndex aquí
-            footerHTML += `<td colspan="22" class="promo-cell small text-start align-top p-1 footer-dia-fin" data-fecha="${fechaISO}" style="white-space: normal; min-height: 50px;">-</td>`;
+        // Fila Promociones (Bancarias)
+        footerHTML += '<tr><td class="text-start ps-2"><strong>Promociones</strong></td><td></td>';
+        fechasSemana.forEach(function (fechaISO, diaIndex) { 
+            footerHTML += `<td colspan="22" class="promo-cell small text-start align-top p-1 footer-dia-fin" data-fecha="${fechaISO}" style="white-space: normal; min-height: 50px; background-color: #f8f9fa;">-</td>`;
+        });
+        footerHTML += '</tr>';
+
+        // Fila Promociones Internas
+        footerHTML += '<tr><td class="text-start ps-2"><strong>Promociones Internas</strong></td><td></td>';
+        fechasSemana.forEach(function (fechaISO, diaIndex) { 
+            footerHTML += `<td colspan="22" class="promo-internas-cell small text-start align-top p-1 footer-dia-fin" data-fecha="${fechaISO}" style="white-space: normal; min-height: 50px; background-color: #f8f9fa;">-</td>`;
         });
         footerHTML += '</tr>';
 
@@ -537,12 +544,25 @@ $(document).ready(function () {
             $('#observacionesSemana').val(data.observaciones);
         }
 
-        // Carga de Promociones
+        // Carga de Promociones (Bancarias)
         if (data.promociones) {
             for (const [fecha, listaPromos] of Object.entries(data.promociones)) {
                 const cell = $(`.promo-cell[data-fecha="${fecha}"]`);
                 if (listaPromos && listaPromos.length > 0) {
                     const badgesHTML = listaPromos.map(textoPromo => `<span class="promo-badge" title="${textoPromo}">${textoPromo}</span>`).join('');
+                    cell.html(`<div class="promo-container">${badgesHTML}</div>`);
+                } else {
+                    cell.html('<span class="text-muted small">-</span>');
+                }
+            }
+        }
+
+        // Carga de Promociones Internas
+        if (data.promociones_internas) {
+            for (const [fecha, listaInt] of Object.entries(data.promociones_internas)) {
+                const cell = $(`.promo-internas-cell[data-fecha="${fecha}"]`);
+                if (listaInt && listaInt.length > 0) {
+                    const badgesHTML = listaInt.map(texto => `<span class="promo-badge bg-info text-dark border-info" title="${texto}">${texto}</span>`).join('');
                     cell.html(`<div class="promo-container">${badgesHTML}</div>`);
                 } else {
                     cell.html('<span class="text-muted small">-</span>');
