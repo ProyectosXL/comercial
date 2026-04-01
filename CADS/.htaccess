@@ -1,0 +1,20 @@
+# Proteger archivos sensibles
+<Files ".env">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "*.env*">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Prevenir listado de directorios
+Options -Indexes
+
+# Headers de seguridad
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
