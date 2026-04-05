@@ -374,12 +374,8 @@ $(document).ready(function () {
 
             html += '</tr>';
         });
-        html += '</tbody>';
 
-        // --- 3. FOOTER ---
-        html += '<tfoot class="sticky-bottom bg-white" style="z-index: 25;">';
-
-        // Totales por Hora
+        // FILA 1: TOTAL HS - MOVIDA AL CUERPO PARA MANTENER ORDEN Y EVITAR DUPLICADOS EN PDF
         html += '<tr class="total-por-hora-row">';
         html += '<td class="sticky-left-0 bg-light fw-bold text-start p-2 col-vendedor">Total Hs</td>';
         html += '<td class="sticky-left-1 bg-light col-totales"></td>';
@@ -394,7 +390,7 @@ $(document).ready(function () {
         }
         html += '</tr>';
 
-        // FILA 3: PROMOCIONES (BANCARIAS)
+        // FILA 3: PROMOCIONES (BANCARIAS) - MOVIDA AL CUERPO PARA EVITAR DUPLICADOS EN PDF
         html += '<tr>';
         html += '<td class="sticky-left-0 bg-light text-end fw-bold p-2 align-middle col-vendedor" style="font-size: 0.8rem;">PROMOCIONES</td>';
         html += '<td class="sticky-left-1 bg-light col-totales"></td>';
@@ -410,7 +406,7 @@ $(document).ready(function () {
         });
         html += '</tr>';
 
-        // FILA 4: PROMOCIONES INTERNAS
+        // FILA 4: PROMOCIONES INTERNAS - MOVIDA AL CUERPO PARA EVITAR DUPLICADOS EN PDF
         html += '<tr>';
         html += '<td class="sticky-left-0 bg-light text-end fw-bold p-2 align-middle col-vendedor" style="font-size: 0.8rem;">PROMOCIONES INTERNAS</td>';
         html += '<td class="sticky-left-1 bg-light col-totales"></td>';
@@ -426,7 +422,10 @@ $(document).ready(function () {
         });
         html += '</tr>';
 
-        html += '</tfoot></table>';
+        html += '</tbody>';
+
+        // --- 3. FOOTER VACIO (Para mantener estructura) ---
+        html += '<tfoot></tfoot></table>';
         container.html(html);
 
         // Almacenar solicitudes para acceso rápido

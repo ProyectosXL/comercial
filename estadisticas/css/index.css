@@ -15,6 +15,7 @@ body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+/* --- Navbar --- */
 .navbar {
     background: #1e293b !important;
     backdrop-filter: blur(10px);
@@ -38,71 +39,78 @@ body {
 
 .logout-btn:hover {
     background: rgba(239, 68, 68, 0.8);
+    color: white;
     transform: translateY(-1px);
 }
 
+/* --- Dashboard container --- */
 .dashboard-container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 1.5rem 2rem;
 }
 
+/* --- Welcome header (compacto) --- */
 .welcome-header {
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 2rem;
-    margin-bottom: 2rem;
+    border-radius: 14px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.25rem;
     border: 1px solid rgba(226, 232, 240, 0.8);
-    text-align: center;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
 .welcome-header h1 {
     color: #1e293b;
     font-weight: 700;
-    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+    margin: 0;
 }
 
 .welcome-header p {
     color: #64748b;
-    font-size: 1.1rem;
+    font-size: 0.875rem;
     margin: 0;
+}
+
+/* --- Main tabs container --- */
+.main-tabs-container {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
 }
 
 .section-title {
     color: #1e293b;
     font-weight: 600;
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-    padding-left: 1rem;
+    font-size: 1.25rem;
+    margin-bottom: 1.25rem;
+    padding-left: 0.75rem;
     border-left: 4px solid var(--primary-color);
 }
 
-/* Main Tabs Styling */
-.main-tabs-container {
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 20px;
-    padding: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
+/* --- Main nav pills --- */
 .main-nav-pills .nav-link {
     background: transparent;
     color: #64748b;
     border: 2px solid rgba(100, 116, 139, 0.2);
     border-radius: 12px;
-    padding: 12px 24px;
+    padding: 10px 20px;
     margin-right: 8px;
     font-weight: 600;
     transition: all 0.3s ease;
 }
 
 .main-nav-pills .nav-link:hover {
-    background: rgba(37, 99, 235, 0.1);
+    background: rgba(37, 99, 235, 0.08);
     color: var(--primary-color);
     border-color: var(--primary-color);
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .main-nav-pills .nav-link.active {
@@ -112,10 +120,10 @@ body {
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
-/* Sub Tabs Styling */
+/* --- Sub nav tabs --- */
 .sub-nav-tabs {
     border-bottom: 2px solid rgba(226, 232, 240, 0.8);
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
 }
 
 .sub-nav-tabs .nav-link {
@@ -124,7 +132,7 @@ body {
     border: none;
     border-bottom: 3px solid transparent;
     border-radius: 0;
-    padding: 12px 20px;
+    padding: 10px 18px;
     margin-right: 8px;
     font-weight: 500;
     transition: all 0.3s ease;
@@ -141,54 +149,79 @@ body {
     background: rgba(37, 99, 235, 0.05);
 }
 
+/* --- Cards (rediseño left-aligned) --- */
 .card {
-    background: rgba(255, 255, 255, 0.95);
-    border: none;
-    border-radius: 16px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+    transition: all 0.25s ease;
     height: 100%;
     overflow: hidden;
 }
 
 .card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
 
 .card-body {
-    padding: 2rem;
-    text-align: center;
-    position: relative;
+    padding: 1.4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
 }
 
+/* Icon container — pill/rounded box */
 .card-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.9;
+    width: 52px;
+    height: 52px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 0.9rem;
+    flex-shrink: 0;
 }
+
+.card-icon.color-primary   { color: var(--primary-color);   background-color: rgba(37, 99, 235, 0.1); }
+.card-icon.color-success   { color: var(--success-color);   background-color: rgba(16, 185, 129, 0.1); }
+.card-icon.color-info      { color: var(--info-color);      background-color: rgba(6, 182, 212, 0.1); }
+.card-icon.color-warning   { color: var(--warning-color);   background-color: rgba(245, 158, 11, 0.1); }
+.card-icon.color-danger    { color: var(--danger-color);    background-color: rgba(239, 68, 68, 0.1); }
+.card-icon.color-secondary { color: var(--secondary-color); background-color: rgba(100, 116, 139, 0.1); }
+.card-icon.color-purple    { color: var(--accent-color);    background-color: rgba(139, 92, 246, 0.1); }
 
 .card-title {
     font-weight: 600;
-    font-size: 1.2rem;
-    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
     color: var(--dark-color);
+    line-height: 1.3;
 }
 
 .card-subtitle {
     color: var(--secondary-color);
-    font-size: 0.9rem;
-    margin-bottom: 1.5rem;
+    font-size: 0.825rem;
+    margin-bottom: 1.1rem;
+    line-height: 1.4;
 }
 
+/* Push button to bottom */
 .btn-card {
     border: none;
-    border-radius: 10px;
-    padding: 10px 20px;
+    border-radius: 8px;
+    padding: 7px 16px;
     font-weight: 600;
-    transition: all 0.3s ease;
+    font-size: 0.85rem;
+    transition: all 0.25s ease;
     text-decoration: none;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: auto;
     position: relative;
     overflow: hidden;
 }
@@ -201,101 +234,87 @@ body {
     width: 100%;
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    transition: left 0.5s;
+    transition: left 0.4s;
 }
 
-.btn-card:hover::before {
-    left: 100%;
-}
+.btn-card:hover::before { left: 100%; }
 
 .btn-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
 }
 
-.btn-primary { background: var(--primary-color); color: white; }
-.btn-success { background: var(--success-color); color: white; }
-.btn-info { background: var(--info-color); color: white; }
-.btn-warning { background: var(--warning-color); color: white; }
-.btn-danger { background: var(--danger-color); color: white; }
+.btn-primary   { background: var(--primary-color);   color: white; }
+.btn-success   { background: var(--success-color);   color: white; }
+.btn-info      { background: var(--info-color);      color: white; }
+.btn-warning   { background: var(--warning-color);   color: white; }
+.btn-danger    { background: var(--danger-color);    color: white; }
 .btn-secondary { background: var(--secondary-color); color: white; }
-.btn-purple { background: var(--accent-color); color: white; }
+.btn-purple    { background: var(--accent-color);    color: white; }
 
-.color-primary { color: var(--primary-color); }
-.color-success { color: var(--success-color); }
-.color-info { color: var(--info-color); }
-.color-warning { color: var(--warning-color); }
-.color-danger { color: var(--danger-color); }
+/* Fallback color classes (for elements that aren't card-icon) */
+.color-primary   { color: var(--primary-color); }
+.color-success   { color: var(--success-color); }
+.color-info      { color: var(--info-color); }
+.color-warning   { color: var(--warning-color); }
+.color-danger    { color: var(--danger-color); }
 .color-secondary { color: var(--secondary-color); }
-.color-purple { color: var(--accent-color); }
+.color-purple    { color: var(--accent-color); }
 
+/* --- BI section colors (top border per sub-tab) --- */
+#comercial .card { border-top: 3px solid var(--primary-color) !important; }
+#ecommerce .card { border-top: 3px solid #f97316 !important; }
+#stock     .card { border-top: 3px solid var(--success-color) !important; }
+
+/* --- Stats grid --- */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 3rem;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
 }
 
-.company-logo {
-    max-width: 200px;
-    height: auto;
-    margin: 1rem 0;
-    opacity: 0.9;
-}
-
-/* Tab Content Animations */
+/* --- Tab animations --- */
 .tab-pane {
-    animation: fadeIn 0.5s ease-in-out;
+    animation: fadeIn 0.35s ease-in-out;
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Mobile Responsive */
+/* --- Mobile Responsive --- */
 @media (max-width: 768px) {
-    .dashboard-container {
-        padding: 1rem;
-    }
-    
-    .card-body {
-        padding: 1.5rem;
-    }
-    
-    .section-title {
-        font-size: 1.3rem;
-    }
-    
-    .main-nav-pills .nav-link {
-        margin-bottom: 8px;
-        margin-right: 4px;
-        padding: 10px 16px;
-        font-size: 0.9rem;
-    }
-    
-    .sub-nav-tabs .nav-link {
-        padding: 10px 12px;
-        font-size: 0.85rem;
-    }
-    
+    .dashboard-container { padding: 1rem; }
+
     .welcome-header {
-        padding: 1.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
     }
-    
-    .main-tabs-container {
-        padding: 1.5rem;
+
+    .card-body { padding: 1.25rem; }
+
+    .section-title { font-size: 1.1rem; }
+
+    .main-nav-pills .nav-link {
+        margin-bottom: 6px;
+        margin-right: 4px;
+        padding: 8px 14px;
+        font-size: 0.875rem;
     }
-    
+
+    .sub-nav-tabs .nav-link {
+        padding: 8px 10px;
+        font-size: 0.82rem;
+    }
+
+    .main-tabs-container { padding: 1rem; }
+
     .stats-grid {
         grid-template-columns: 1fr;
-        gap: 1rem;
+        gap: 0.9rem;
     }
 }
 
@@ -303,19 +322,15 @@ body {
     .main-nav-pills {
         flex-direction: column;
     }
-    
+
     .main-nav-pills .nav-link {
         margin-right: 0;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
         width: 100%;
         text-align: center;
     }
-    
-    .sub-nav-tabs {
-        flex-wrap: wrap;
-    }
-    
-    .navbar-brand {
-        font-size: 1.2rem;
-    }
+
+    .sub-nav-tabs { flex-wrap: wrap; }
+
+    .navbar-brand { font-size: 1.1rem; }
 }

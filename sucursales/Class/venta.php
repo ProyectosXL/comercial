@@ -184,7 +184,7 @@ class Venta
         }
         return $rows;
     }
-
+    
     public function traerVentasVsObjetivosPropios($desde = null, $hasta = null){
         if ($desde === null) {
             $desde = date('Y-m-d', strtotime('-30 days'));

@@ -423,7 +423,6 @@ $(document).ready(function () {
             for (let h = 7; h <= 24; h++) {
                 footerHTML += `<td class="total-hora-columna text-center fw-bold" data-hora="${h}" data-dia-index="${d}" style="font-size: 0.85rem; background-color: #e9ecef;">0</td>`;
             }
-            // También agregar un relleno para las columnas F, T, S, N con la clase de borde para consistencia
             footerHTML += `<td></td>`;
             footerHTML += `<td></td>`;
             footerHTML += `<td></td>`;

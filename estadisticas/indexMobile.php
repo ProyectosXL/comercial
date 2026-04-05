@@ -24,7 +24,7 @@
         <!-- Sección superior -->
         <div class="p-3 welcome-card shadow-sm mb-4 position-relative">
             <h1 class="h4 mb-0"><i class="bi bi-emoji-smile"></i> Bienvenida, <?php echo htmlspecialchars($nombre); ?>!</h1>
-            <i class="bi bi-box-arrow-right exit-icon" onclick="window.location='../logout.php'" title="Salir"></i>
+            <i class="bi bi-box-arrow-right exit-icon" onclick="window.location='../../sistemas/login.php'" title="Salir"></i>
         </div>
 
         <!-- Menú de cards -->
@@ -32,15 +32,15 @@
             <div class="row">
                 <!-- Ventas -->
                 <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card menu-card">
+                    <div class="card menu-card ventas-card">
                         <div class="card-header d-flex justify-content-between align-items-center" onclick="toggleCard(this)">
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-cart-check menu-icon"></i>
                                 <h5 class="card-title mb-0">Ventas</h5>
                             </div>
-                            <i class="bi bi-plus-lg"></i>
+                            <i class="bi bi-dash-lg"></i>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body open">
                             <div class="sub-card p-2">
                                 <a href="../../comercial/sucursales/ventasPropios.php"><i class="bi bi-shop me-2"></i>Locales propios</a>
                             </div>
@@ -59,7 +59,7 @@
 
                 <!-- Objetivos -->
                 <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card menu-card">
+                    <div class="card menu-card objetivos-card">
                         <div class="card-header d-flex justify-content-between align-items-center" onclick="toggleCard(this)">
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-bullseye menu-icon"></i>
@@ -67,7 +67,7 @@
                             </div>
                             <i class="bi bi-plus-lg"></i>
                         </div>
-                        <div class="card-body" style="display: none;">
+                        <div class="card-body">
                             <div class="sub-card p-2">
                                 <a href="../../comercial/sucursales/ObjetivosPropios.php"><i class="bi bi-shop me-2"></i>Locales propios</a>
                             </div>
@@ -86,7 +86,7 @@
 
                 <!-- Tableros -->
                 <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card menu-card">
+                    <div class="card menu-card tableros-card">
                         <div class="card-header d-flex justify-content-between align-items-center" onclick="toggleCard(this)">
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-clipboard-data menu-icon"></i>
@@ -131,7 +131,7 @@
 
                 <!-- Aplicaciones -->
                 <div class="col-12 col-md-6 col-lg-4">
-                    <div class="card menu-card">
+                    <div class="card menu-card aplicaciones-card">
                         <div class="card-header d-flex justify-content-between align-items-center" onclick="toggleCard(this)">
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-app menu-icon"></i>
@@ -164,21 +164,15 @@
     <script>
 
     function toggleCard(header) {
-    const body = header.nextElementSibling;
-    const icon = header.querySelector('.bi-plus-lg, .bi-dash-lg');
-    
-    if (body && icon) {
-        if (body.style.display === "none" || body.style.display === "") {
-            body.style.display = "block";
-            icon.classList.replace('bi-plus-lg', 'bi-dash-lg');
-        } else {
-            body.style.display = "none";
-            icon.classList.replace('bi-dash-lg', 'bi-plus-lg');
+        const body = header.nextElementSibling;
+        const icon = header.querySelector('.bi-plus-lg, .bi-dash-lg');
+        if (body && icon) {
+            body.classList.toggle('open');
+            const isOpen = body.classList.contains('open');
+            icon.classList.toggle('bi-plus-lg', !isOpen);
+            icon.classList.toggle('bi-dash-lg', isOpen);
         }
-    } else {
-        console.error('No se pudo encontrar el cuerpo de la card o el icono');
     }
-}
     </script>
 </body>
 </html>

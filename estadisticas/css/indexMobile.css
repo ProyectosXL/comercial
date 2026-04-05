@@ -1,48 +1,139 @@
 
-        body {
-            background-color: #f8f9fa;
-        }
-        .welcome-card {
-            background-color: #6610f2;
-            color: white;
-        }
-        .menu-card {
-            border-radius: 7px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            background-color: #e6f3e6;
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-        .menu-icon {
-            font-size: 2rem;
-            margin-right: 0.5rem;
-        }
-        .sub-card {
-            background-color: #c8e6c9;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            transition: transform 0.3s ease;
-        }
-        .sub-card:hover {
-            transform: translateY(-3px);
-        }
-        .sub-card a {
-            color: #2e7d32;
-            text-decoration: none;
-        }
-        .card-header {
-            background-color: #4CAF50;
-            color: white;
-            cursor: pointer;
-        }
-        .card-body {
-            display: none;
-        }
-        .exit-icon {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 1.5rem;
-            color: white;
-            cursor: pointer;
-        }
+body {
+    background-color: #f1f5f9;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* --- Welcome bar --- */
+.welcome-card {
+    background-color: #ffffff;
+    color: #1e293b;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1rem 1.25rem;
+}
+
+.welcome-card h1 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.exit-icon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    right: 1rem;
+    font-size: 1.3rem;
+    color: #64748b;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.exit-icon:hover {
+    color: #ef4444;
+}
+
+/* --- Menu cards --- */
+.menu-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    margin-bottom: 14px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #cbd5e1; /* overridden per category */
+}
+
+/* Category accent colors */
+.ventas-card       { border-left-color: #22c55e; }
+.objetivos-card    { border-left-color: #f97316; }
+.tableros-card     { border-left-color: #3b82f6; }
+.aplicaciones-card { border-left-color: #8b5cf6; }
+
+/* --- Card header --- */
+.card-header {
+    background-color: #ffffff;
+    border-bottom: none;
+    cursor: pointer;
+    padding: 0.85rem 1rem;
+    user-select: none;
+    transition: background-color 0.15s;
+}
+
+.card-header:hover {
+    background-color: #f8fafc;
+}
+
+.card-header .card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.ventas-card       .card-title { color: #15803d; }
+.objetivos-card    .card-title { color: #c2410c; }
+.tableros-card     .card-title { color: #1d4ed8; }
+.aplicaciones-card .card-title { color: #6d28d9; }
+
+.menu-icon {
+    font-size: 1.25rem;
+    margin-right: 0.5rem;
+    opacity: 0.85;
+}
+
+.card-header > i:last-child {
+    color: #94a3b8;
+    font-size: 0.85rem;
+    transition: transform 0.3s ease;
+}
+
+/* --- Accordion animation (CSS max-height) --- */
+.card-body {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 0.75rem;
+    transition: max-height 0.35s ease-out, padding 0.2s ease;
+}
+
+.card-body.open {
+    max-height: 700px;
+    padding: 0.75rem;
+}
+
+/* --- Sub-items --- */
+.sub-card {
+    background-color: #f8fafc;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    border: 1px solid #e2e8f0;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.sub-card:last-child {
+    margin-bottom: 0;
+}
+
+.sub-card:hover {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.sub-card a {
+    color: #334155;
+    text-decoration: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.875rem;
+}
+
+.sub-card a::after {
+    content: '›';
+    font-size: 1.1rem;
+    color: #94a3b8;
+    line-height: 1;
+}
+
+.sub-card a:hover {
+    color: #0f172a;
+}

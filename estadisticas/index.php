@@ -33,7 +33,7 @@ if (!isset($_SESSION['username'])) {
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <div class="ms-auto">
-                    <button class="btn logout-btn" onclick="window.location='../logout.php'">
+                    <button class="btn logout-btn" onclick="window.location='../../sistemas/login.php'">
                         <i class="bi bi-box-arrow-right me-2"></i>
                         Cerrar Sesión
                     </button>
@@ -114,13 +114,7 @@ if (!isset($_SESSION['username'])) {
                     <!-- Subtabs para BI -->
                     <ul class="nav nav-tabs sub-nav-tabs mb-4" id="biTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="stock-tab" data-bs-toggle="tab" data-bs-target="#stock" type="button" role="tab">
-                                <i class="bi bi-boxes me-2"></i>
-                                Control de Stock
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="comercial-tab" data-bs-toggle="tab" data-bs-target="#comercial" type="button" role="tab">
+                            <button class="nav-link active" id="comercial-tab" data-bs-toggle="tab" data-bs-target="#comercial" type="button" role="tab">
                                 <i class="bi bi-graph-up me-2"></i>
                                 Comercial
                             </button>
@@ -131,49 +125,31 @@ if (!isset($_SESSION['username'])) {
                                 E-commerce
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="stock-tab" data-bs-toggle="tab" data-bs-target="#stock" type="button" role="tab">
+                                <i class="bi bi-boxes me-2"></i>
+                                Control de Stock
+                            </button>
+                        </li>
                     </ul>
 
                     <div class="tab-content" id="biTabsContent">
-                        <!-- Control de Stock -->
-                        <div class="tab-pane fade show active" id="stock" role="tabpanel">
-                            <section class="mb-5">
-                                <h2 class="section-title">
-                                    <i class="bi bi-boxes me-2"></i>
-                                    Control de Stock
-                                </h2>
-                                <div class="row row-cols-1 row-cols-md-2 g-4">
-                                    <div class="col">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <i class="bi bi-box-seam card-icon color-primary"></i>
-                                                <h5 class="card-title">Inventarios</h5>
-                                                <p class="card-subtitle">Control de stock y almacenes</p>
-                                                <a href="../../bi/tableros/inventarios.html" class="btn btn-primary btn-card">Ver Dashboard</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <i class="bi bi-list-ol card-icon color-success"></i>
-                                                <h5 class="card-title">Conteos</h5>
-                                                <p class="card-subtitle">Reportes de inventarios físicos</p>
-                                                <a href="../../bi/tableros/conteos.html" class="btn btn-success btn-card">Ver Dashboard</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </section>
-                        </div>
-
                         <!-- Comercial -->
-                        <div class="tab-pane fade" id="comercial" role="tabpanel">
+                        <div class="tab-pane fade show active" id="comercial" role="tabpanel">
                             <section class="mb-5">
                                 <h2 class="section-title">
                                     <i class="bi bi-graph-up me-2"></i>
                                     Reportes Comerciales
                                 </h2>
                                 <div class="stats-grid">
+                                    <div class="card border-warning border-3 shadow-lg">
+                                        <div class="card-body">
+                                            <i class="bi bi-shop card-icon color-primary"></i>
+                                            <h5 class="card-title">Sales Unificado <span class="badge bg-warning text-dark ms-1">Beta</span></h5>
+                                            <p class="card-subtitle">Dashboard de ventas ARG, UY y Franquicias</p>
+                                            <a href="../../bi/index.php" class="btn btn-primary btn-card">Ver Dashboard</a>
+                                        </div>
+                                    </div>
                                     <div class="card">
                                         <div class="card-body">
                                             <i class="bi bi-shop card-icon color-primary"></i>
@@ -296,6 +272,38 @@ if (!isset($_SESSION['username'])) {
                                             <h5 class="card-title">Promociones E-commerce</h5>
                                             <p class="card-subtitle">Gestión de promociones online</p>
                                             <a href="../../bi/tableros/promocionesEcommerce.html" class="btn btn-info btn-card">Ver Dashboard</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+
+                        <!-- Control de Stock -->
+                        <div class="tab-pane fade" id="stock" role="tabpanel">
+                            <section class="mb-5">
+                                <h2 class="section-title">
+                                    <i class="bi bi-boxes me-2"></i>
+                                    Control de Stock
+                                </h2>
+                                <div class="row row-cols-1 row-cols-md-2 g-4">
+                                    <div class="col">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <i class="bi bi-box-seam card-icon color-primary"></i>
+                                                <h5 class="card-title">Inventarios</h5>
+                                                <p class="card-subtitle">Control de stock y almacenes</p>
+                                                <a href="../../bi/tableros/inventarios.html" class="btn btn-primary btn-card">Ver Dashboard</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <i class="bi bi-list-ol card-icon color-success"></i>
+                                                <h5 class="card-title">Conteos</h5>
+                                                <p class="card-subtitle">Reportes de inventarios físicos</p>
+                                                <a href="../../bi/tableros/conteos.html" class="btn btn-success btn-card">Ver Dashboard</a>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
