@@ -221,6 +221,26 @@ const traerData = () => {
     // Obtener valores del formulario - usar Select2 si existe, sino input normal
     let desde = document.querySelector('#desde').value;
     let hasta = document.querySelector('#hasta').value;
+    
+    // Validar rango de fechas para evitar timeout del servidor
+    const fechaDesde = new Date(desde);
+    const fechaHasta = new Date(hasta);
+    const diffTime = Math.abs(fechaHasta - fechaDesde);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Límite máximo de días para consulta (aumentado con timeout de 120s)
+    const maxDiasConsulta = 31;
+    
+    if (diffDays > maxDiasConsulta) {
+        // Restaurar estado del botón
+        spinner.classList.remove("loading");
+        btnBuscar.disabled = false;
+        btnBuscar.innerHTML = btnText;
+        
+        alert(`El rango de fechas es demasiado amplio (${diffDays} días).\n\nPor favor, seleccione un rango máximo de ${maxDiasConsulta} días para evitar problemas de rendimiento.`);
+        return;
+    }
+    
     let cliente = $('#cliente').length && $('#cliente').hasClass('select2-hidden-accessible') ? $('#cliente').val() : document.querySelector('#cliente').value;
     let estado = document.querySelector('#estado').value;
     let vendedor = document.querySelector('#vendedor').value;
@@ -228,7 +248,14 @@ const traerData = () => {
     let guia = document.querySelector('#guia').value;
     let token = localStorage.getItem('token');
 
-    // Procesar valores vacíos (usando la lógica original)
+    // Guardar valores originales para filtrado en frontend
+    let filtroEstadoOriginal = estado;
+    let filtroClienteOriginal = cliente;
+    let filtroVendedorOriginal = vendedor;
+    let filtroTranspOriginal = transp;
+    let filtroGuiaOriginal = guia;
+
+    // Procesar valores vacíos (el backend maneja el LIKE internamente)
     cliente = cliente != '' ? cliente : '%';
     estado = estado != '' ? estado : '%';
     vendedor = vendedor != '' ? vendedor : '%';
@@ -245,6 +272,7 @@ const traerData = () => {
         method: 'POST',
         contentType: "application/json",
         dataType: "json",
+        timeout: 120000, // Timeout de 120 segundos (2 minutos) para consultas grandes
         headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -271,8 +299,58 @@ const traerData = () => {
                 table.innerHTML = '';
                 
                 console.log('Datos recibidos:', data);
+                console.log('Total registros del backend:', data.body.length);
                 
-                data.body.forEach(function(v) {
+                // Filtrar datos en frontend para corregir problema del backend (OR ESTADO IS NULL)
+                let datosFiltrados = data.body.filter(function(registro) {
+                    // Filtrar por estado si fue seleccionado
+                    if (filtroEstadoOriginal !== '' && registro.ESTADO !== filtroEstadoOriginal) {
+                        return false;
+                    }
+                    
+                    // Filtrar por vendedor si fue seleccionado
+                    if (filtroVendedorOriginal !== '' && registro.COD_VENDED !== filtroVendedorOriginal) {
+                        return false;
+                    }
+                    
+                    // Filtrar por cliente si fue ingresado (búsqueda parcial case-insensitive)
+                    if (filtroClienteOriginal !== '' && registro.RAZON_SOCI) {
+                        if (!registro.RAZON_SOCI.toUpperCase().includes(filtroClienteOriginal.toUpperCase())) {
+                            return false;
+                        }
+                    }
+                    
+                    // Filtrar por transporte si fue ingresado (búsqueda parcial case-insensitive)
+                    if (filtroTranspOriginal !== '' && registro.NOMBRE_TRA) {
+                        if (!registro.NOMBRE_TRA.toUpperCase().includes(filtroTranspOriginal.toUpperCase())) {
+                            return false;
+                        }
+                    }
+                    
+                    // Filtrar por guía si fue ingresado (búsqueda exacta)
+                    if (filtroGuiaOriginal !== '' && registro.NRO_GUIA) {
+                        if (registro.NRO_GUIA.toString() !== filtroGuiaOriginal.toString()) {
+                            return false;
+                        }
+                    }
+                    
+                    return true;
+                });
+                
+                console.log('Registros después de filtrado frontend:', datosFiltrados.length);
+                
+                // Verificar si hay registros después del filtrado
+                if (datosFiltrados.length === 0) {
+                    table.innerHTML = '<tr><td colspan="11" class="text-center py-4"><i class="bi bi-info-circle"></i> No se encontraron registros que coincidan con los filtros seleccionados</td></tr>';
+                    
+                    // Restaurar estado del spinner y botón
+                    spinner.classList.remove("loading");
+                    btnBuscar.disabled = false;
+                    btnBuscar.innerHTML = btnText;
+                    return;
+                }
+                
+                datosFiltrados.forEach(function(v) {
                     var row = table.insertRow();
 
                     // Aplicar estilos originales

@@ -61,73 +61,73 @@
 							<input type="date" class="form-control form-control-custom" name="hasta" id="hasta" value="<?php if(!isset($_GET['hasta'])){	echo $hoy;}else{ echo $_GET['hasta'] ;}?>">
 						</div>
 
-						<div class="form-group-inline col-estado">
-							<label for="estado">Estado:</label>
-							<select class="form-control form-control-custom" name="estado" id="estado">
-								<option value="" selected>Todos</option>
-								<option value="PENDIENTE" <?php echo (isset($_GET['estado']) && $_GET['estado'] == 'PENDIENTE') ? 'selected' : ''; ?>>PENDIENTE</option>
-								<option value="GUIA" <?php echo (isset($_GET['estado']) && $_GET['estado'] == 'GUIA') ? 'selected' : ''; ?>>GUÍA</option>
-								<option value="CONTACTADO" <?php echo (isset($_GET['estado']) && $_GET['estado'] == 'CONTACTADO') ? 'selected' : ''; ?>>CONTACTADO</option>
-								<option value="DESPACHADO" <?php echo (isset($_GET['estado']) && $_GET['estado'] == 'DESPACHADO') ? 'selected' : ''; ?>>DESPACHADO</option>
-							</select>
-						</div>
-						
-						<div class="form-group-inline col-vendedor">
-							<label for="vendedor">Vendedor:</label>
-							<select class="form-control form-control-custom" name="vended" id="vendedor">
-								<option value="" selected>Todos</option>
-								<option value="Z2" <?php echo (isset($_GET['vended']) && $_GET['vended'] == 'Z2') ? 'selected' : ''; ?>>Beatriz Gavalda</option>
-								<option value="Z3" <?php echo (isset($_GET['vended']) && $_GET['vended'] == 'Z3') ? 'selected' : ''; ?>>Valeria Villarreal</option>
-								<option value="Z4" <?php echo (isset($_GET['vended']) && $_GET['vended'] == 'Z4') ? 'selected' : ''; ?>>Sergio Lopez</option>
-								<option value="Z5" <?php echo (isset($_GET['vended']) && $_GET['vended'] == 'Z5') ? 'selected' : ''; ?>>Cristian Nacke</option>
-								<option value="Z6" <?php echo (isset($_GET['vended']) && $_GET['vended'] == 'Z6') ? 'selected' : ''; ?>>Gabriela Bonapasta</option>
-								<option value="ZZ" <?php echo (isset($_GET['vended']) && $_GET['vended'] == 'ZZ') ? 'selected' : ''; ?>>Empresa</option>
-							</select>
-						</div>
-
+					<div class="form-group-inline col-estado">
+						<label for="estado">Estado:</label>
+						<select class="form-control form-control-custom" name="estado" id="estado">
+							<option value="" selected>Todos</option>
+							<option value="PENDIENTE" <?php echo (isset($_GET['estado']) && $_GET['estado'] == 'PENDIENTE') ? 'selected' : ''; ?>>PENDIENTE</option>
+							<option value="GUIA" <?php echo (isset($_GET['estado']) && $_GET['estado'] == 'GUIA') ? 'selected' : ''; ?>>GUÍA</option>
+							<option value="CONTACTADO" <?php echo (isset($_GET['estado']) && $_GET['estado'] == 'CONTACTADO') ? 'selected' : ''; ?>>CONTACTADO</option>
+							<option value="DESPACHADO" <?php echo (isset($_GET['estado']) && $_GET['estado'] == 'DESPACHADO') ? 'selected' : ''; ?>>DESPACHADO</option>
+						</select>
 					</div>
-
-					<!-- Segunda fila: Cliente, Transporte, Guía, Botones -->
-					<div class="form-row-custom">
-						
-						<div class="form-group-inline col-cliente">
-							<label for="cliente">Cliente:</label>
-							<select class="form-control form-control-custom" name="cliente" id="cliente" style="width: 100%;">
-								<option value="">Seleccionar cliente...</option>
-								<?php if(isset($_GET['cliente']) && $_GET['cliente'] != ''): ?>
-									<option value="<?php echo $_GET['cliente']; ?>" selected><?php echo $_GET['cliente']; ?></option>
-								<?php endif; ?>
-							</select>
-						</div>
-						
-						<div class="form-group-inline col-transporte">
-							<label for="transp">Transporte:</label>
-							<select class="form-control form-control-custom" name="transp" id="transp" style="width: 100%;">
-								<option value="">Seleccionar transporte...</option>
-								<?php if(isset($_GET['transp']) && $_GET['transp'] != ''): ?>
-									<option value="<?php echo $_GET['transp']; ?>" selected><?php echo $_GET['transp']; ?></option>
-								<?php endif; ?>
-							</select>
-						</div>
-						
-						<div class="form-group-inline col-guia">
-							<label for="guia">N° Guía:</label>
-							<input type="text" class="form-control form-control-custom" name="guia" id="guia" value="<?php echo isset($_GET['guia']) ? $_GET['guia'] : ''; ?>" placeholder="Número de guía...">
-						</div>
-						
-						<div class="form-group-inline col-buttons">
-							<label>&nbsp;</label>
-							<div class="btn-group-custom">
-								<button type="button" class="btn btn-search" onclick="traerData()">
-									<i class="bi bi-search"></i> Buscar
-								</button>
-								<button type="button" class="btn btn-clear" onclick="limpiarFiltros()" title="Limpiar filtros">
-									<i class="bi bi-x-circle"></i> Limpiar
-								</button>
-							</div>
-						</div>
 					
+					<div class="form-group-inline col-vendedor">
+						<label for="vendedor">Vendedor:</label>
+						<select class="form-control form-control-custom" name="vended" id="vendedor">
+							<option value="" selected>Todos</option>
+							<option value="Z2" <?php echo (isset($_GET['vended']) && $_GET['vended'] == 'Z2') ? 'selected' : ''; ?>>Beatriz Gavalda</option>
+							<option value="Z3" <?php echo (isset($_GET['vended']) && $_GET['vended'] == 'Z3') ? 'selected' : ''; ?>>Valeria Villarreal</option>
+							<option value="Z4" <?php echo (isset($_GET['vended']) && $_GET['vended'] == 'Z4') ? 'selected' : ''; ?>>Sergio Lopez</option>
+							<option value="Z5" <?php echo (isset($_GET['vended']) && $_GET['vended'] == 'Z5') ? 'selected' : ''; ?>>Cristian Nacke</option>
+							<option value="Z6" <?php echo (isset($_GET['vended']) && $_GET['vended'] == 'Z6') ? 'selected' : ''; ?>>Gabriela Bonapasta</option>
+							<option value="ZZ" <?php echo (isset($_GET['vended']) && $_GET['vended'] == 'ZZ') ? 'selected' : ''; ?>>Empresa</option>
+						</select>
 					</div>
+
+			</div>
+
+			<!-- Segunda fila: Cliente, Transporte, Guía, Botones -->
+			<div class="form-row-custom">
+				
+				<div class="form-group-inline col-cliente">
+					<label for="cliente">Cliente:</label>
+					<select class="form-control form-control-custom" name="cliente" id="cliente" style="width: 100%;">
+						<option value="">Seleccionar cliente...</option>
+						<?php if(isset($_GET['cliente']) && $_GET['cliente'] != ''): ?>
+							<option value="<?php echo $_GET['cliente']; ?>" selected><?php echo $_GET['cliente']; ?></option>
+						<?php endif; ?>
+					</select>
+				</div>
+				
+				<div class="form-group-inline col-transporte">
+					<label for="transp">Transporte:</label>
+					<select class="form-control form-control-custom" name="transp" id="transp" style="width: 100%;">
+						<option value="">Seleccionar transporte...</option>
+						<?php if(isset($_GET['transp']) && $_GET['transp'] != ''): ?>
+							<option value="<?php echo $_GET['transp']; ?>" selected><?php echo $_GET['transp']; ?></option>
+						<?php endif; ?>
+					</select>
+				</div>
+				
+				<div class="form-group-inline col-guia">
+					<label for="guia">N° Guía:</label>
+					<input type="text" class="form-control form-control-custom" name="guia" id="guia" value="<?php echo isset($_GET['guia']) ? $_GET['guia'] : ''; ?>" placeholder="Número de guía...">
+				</div>
+				
+				<div class="form-group-inline col-buttons">
+					<label>&nbsp;</label>
+					<div class="btn-group-custom">
+						<button type="button" class="btn btn-search" onclick="traerData()">
+							<i class="bi bi-search"></i> Buscar
+						</button>
+						<button type="button" class="btn btn-clear" onclick="limpiarFiltros()" title="Limpiar filtros">
+							<i class="bi bi-x-circle"></i> Limpiar
+						</button>
+					</div>
+				</div>
+			
+			</div>
 				</form>
 
 				<!-- Tabla de Resultados -->
