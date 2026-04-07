@@ -4,5 +4,6 @@
     
     # Redirige todas las solicitudes a public/
     RewriteCond %{REQUEST_URI} !^/comercial/auditoria/public/
+    RewriteCond %{REQUEST_URI} !^/comercial/auditoria/promociones/
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>

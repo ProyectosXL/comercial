@@ -31,9 +31,9 @@ class VentaModel {
     }
 
     public function getSucursales() {
-        $sql = "SELECT NRO_SUCURSAL, DESC_SUCURSAL FROM LAKER_SA.dbo.SUCURSALES_LAKERSW WHERE CANAL = 'PROPIOS' ORDER BY DESC_SUCURSAL ASC";
+        $sql = "SELECT NRO_SUCURSAL, DESC_SUCURSAL FROM SUCURSALES_LAKERS ORDER BY DESC_SUCURSAL ASC";
         try {
-            $pdo = Database::getConnectionLaker();
+            $pdo = Database::getConnectionLocales();
             $stmt = $pdo->prepare($sql);
             $stmt->execute();
             $sucursalesArray = [];
@@ -122,11 +122,11 @@ class VentaModel {
 
         public function getDatosContactoSucursal($nro_sucursal) {
         $sql = "SELECT DESC_SUCURSAL, MAIL 
-                FROM LAKER_SA.dbo.SUCURSALES_LAKERSW 
+                FROM SUCURSALES_LAKERS 
                 WHERE NRO_SUCURSAL = :nro_sucursal";
                 
         try {
-            $pdo = Database::getConnectionLaker();
+            $pdo = Database::getConnectionLocales();
             $stmt = $pdo->prepare($sql);
             $stmt->bindParam(':nro_sucursal', $nro_sucursal, PDO::PARAM_INT);
             $stmt->execute();

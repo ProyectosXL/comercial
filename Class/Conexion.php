@@ -15,6 +15,8 @@ if (!class_exists('Conexion')) {
         private $database_apps;
         private $host_locales;
         private $database_locales;
+        private $database_power_franquicias;
+        private $database_franquicias;
         private $user;
         private $pass;
         private $pass_locales;
@@ -40,6 +42,8 @@ if (!class_exists('Conexion')) {
             $this->database_apps = $this->envVars['DATABASE_APPS'];
             $this->host_locales = $this->envVars['HOST_LOCALES'];
             $this->database_locales = $this->envVars['DATABASE_LOCALES'];
+            $this->database_power_franquicias = $this->envVars['DATABASE_POWER_FRANQUICIAS'];
+            $this->database_franquicias = $this->envVars['DATABASE_FRANQUICIAS'];
             $this->user = $this->envVars['USER'];
             $this->pass = $this->envVars['PASS'];
             $this->pass_locales = $this->envVars['PASS_LOCALES'];
@@ -67,6 +71,10 @@ if (!class_exists('Conexion')) {
                 return array($this->host_apps, $this->database_power);
             } elseif ($nameServer == 'power_uy') {
                 return array($this->host_apps, $this->database_power_uy);
+            } elseif ($nameServer == 'power_franquicias') {
+                return array($this->host_apps, $this->database_power_franquicias);
+            } elseif ($nameServer == 'franquicias') {
+                return array($this->host_locales, $this->database_franquicias);
             } else {
                 // Solo usar sesión si no se especifica servidor o si se especifica uno no reconocido
                 if (session_status() === PHP_SESSION_NONE) {
@@ -93,7 +101,7 @@ if (!class_exists('Conexion')) {
 
                 error_log("Intentando conectar a: " . $serverDB[0] . " - " . $serverDB[1]);
 
-                if ($this->env == 'PROD' && (strtolower($serverDB[0]) == strtolower('XL-LAKERBIS'))) {
+                if ($this->env == 'PROD' && (strtolower($serverDB[0]) == strtolower('XL-LAKERBIS') || strtolower($serverDB[0]) == strtolower('lakerbis'))) {
                     $pass = $this->pass_locales;
                 } else {
                     $pass = $this->pass;

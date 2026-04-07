@@ -1,0 +1,567 @@
+/* =============================================
+   Auditoría de Promociones — Estilos globales
+   Bootstrap 5 light mode
+   ============================================= */
+
+/* ---------- Base ---------- */
+body {
+    background-color: #f4f6f9;
+    color: #212529;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 0.9rem;
+}
+
+/* ---------- Navbar ---------- */
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+
+/* ---------- Filtros ---------- */
+.filter-bar {
+    background: #ffffff;
+    border-bottom: 1px solid #dee2e6;
+    padding: 1rem 1.5rem;
+}
+
+.filter-bar .form-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+}
+
+.filter-bar .form-control {
+    font-size: 0.875rem;
+    border-color: #dee2e6;
+}
+
+.filter-bar .form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+/* ---------- Tabs ---------- */
+.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+    background: #ffffff;
+    padding: 0 1.5rem;
+}
+
+.nav-tabs .nav-link {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6c757d;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: -2px;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #0d6efd;
+    border-bottom-color: #b8d4ff;
+}
+
+.nav-tabs .nav-link.active {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+    background: transparent;
+    font-weight: 600;
+}
+
+.nav-tabs .nav-link .badge {
+    font-size: 0.65rem;
+    vertical-align: middle;
+}
+
+/* ---------- Tab content area ---------- */
+.tab-content-wrapper {
+    padding: 1.5rem;
+}
+
+/* ---------- KPI Cards ---------- */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 1400px) {
+    .kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.kpi-card {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 1.1rem 1.25rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+    border-top: 3px solid #dee2e6;
+    transition: box-shadow 0.15s;
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi-card:hover {
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Color accent por tipo de KPI */
+.kpi-card.kpi-venta-total     { border-top-color: #0d6efd; }
+.kpi-card.kpi-venta-promo     { border-top-color: #198754; }
+.kpi-card.kpi-pct-promo       { border-top-color: #6610f2; }
+.kpi-card.kpi-ticket          { border-top-color: #fd7e14; }
+.kpi-card.kpi-segundo-prod    { border-top-color: #0dcaf0; }
+
+.kpi-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #6c757d;
+    margin-bottom: 0.35rem;
+}
+
+.kpi-value {
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: #212529;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kpi-sub {
+    font-size: 0.72rem;
+    color: #adb5bd;
+    margin-top: 0.2rem;
+}
+
+/* ---------- Tabla ---------- */
+.table-wrapper {
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+    /* Sin overflow:hidden — el dropdown de columnas necesita escapar del contenedor */
+}
+
+.table-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: 1px solid #f0f0f0;
+    border-radius: 10px 10px 0 0;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    position: relative;
+    z-index: 20; /* dropdown por encima de la tabla */
+}
+
+.table-toolbar h6 {
+    margin: 0;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.875rem;
+}
+
+/* DataTables overrides */
+#bancariasTable_wrapper .dataTables_filter input {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+#bancariasTable_wrapper .dataTables_filter input:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
+}
+
+#bancariasTable_wrapper .dataTables_length select {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+#bancariasTable_wrapper .dataTables_info {
+    font-size: 0.78rem;
+    color: #6c757d;
+    padding-top: 0.75rem;
+}
+
+#bancariasTable_wrapper .dataTables_paginate {
+    padding-top: 0.5rem;
+}
+
+#bancariasTable_wrapper .paginate_button {
+    font-size: 0.8rem !important;
+    padding: 0.25rem 0.6rem !important;
+    border-radius: 5px !important;
+}
+
+#bancariasTable_wrapper .paginate_button.current {
+    background: #0d6efd !important;
+    color: #fff !important;
+    border-color: #0d6efd !important;
+}
+
+#bancariasTable_wrapper .paginate_button:hover:not(.current):not(.disabled) {
+    background: #e9ecef !important;
+    color: #0d6efd !important;
+    border-color: #dee2e6 !important;
+}
+
+/* Table */
+#bancariasTable {
+    font-size: 0.8rem;
+    width: 100% !important;
+}
+
+#bancariasTable thead th {
+    background: #f8f9fa;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
+    padding: 0.6rem 0.75rem;
+    vertical-align: middle;
+}
+
+#bancariasTable thead th.sorting::after,
+#bancariasTable thead th.sorting_asc::after,
+#bancariasTable thead th.sorting_desc::after {
+    opacity: 0.5;
+}
+
+#bancariasTable tbody tr {
+    transition: background-color 0.1s;
+}
+
+#bancariasTable tbody tr:hover {
+    background-color: #f0f6ff;
+}
+
+#bancariasTable tbody td {
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+    border-color: #f0f0f0;
+    white-space: nowrap;
+}
+
+/* Badge para banco */
+.badge-banco {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.3em 0.65em;
+    border-radius: 20px;
+    background-color: #e8f0fe;
+    color: #1a56db;
+    letter-spacing: 0.3px;
+    display: inline-block;
+}
+
+/* Badge para promo */
+.badge-promo {
+    font-size: 0.7rem;
+    padding: 0.3em 0.65em;
+    border-radius: 20px;
+    background-color: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+    display: inline-block;
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+/* Crecimiento positivo/negativo (texto inline) */
+.crec-positivo {
+    color: #198754;
+    font-weight: 600;
+}
+
+.crec-negativo {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+/* ---------- Semáforo de celdas ---------- */
+td.sem-verde {
+    background-color: #f0fdf4 !important;
+    color: #14532d;
+    font-weight: 600;
+}
+
+td.sem-amarillo {
+    background-color: #fffbeb !important;
+    color: #78350f;
+    font-weight: 600;
+}
+
+td.sem-rojo {
+    background-color: #fff5f5 !important;
+    color: #842029;
+    font-weight: 600;
+}
+
+/* ---------- Badge Diagnóstico ---------- */
+.diag-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.25em 0.65em;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.diag-eficiente {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.diag-parcial {
+    background-color: #fef9c3;
+    color: #713f12;
+}
+
+.diag-ineficiente {
+    background-color: #fee2e2;
+    color: #7f1d1d;
+}
+
+/* ---------- Accordion criterios ---------- */
+#acordeonCriterios {
+    margin-bottom: 1rem;
+}
+
+#acordeonCriterios .accordion-button {
+    background-color: #f8f9fa;
+    color: #495057;
+    font-size: 0.85rem;
+}
+
+#acordeonCriterios .accordion-button:not(.collapsed) {
+    background-color: #e8f0fe;
+    color: #0d6efd;
+    box-shadow: none;
+}
+
+#acordeonCriterios .accordion-button::after {
+    filter: opacity(0.5);
+}
+
+#acordeonCriterios .accordion-body {
+    background-color: #f8f9fa;
+    font-size: 0.82rem;
+    padding: 0.75rem 1.25rem 1rem;
+}
+
+#acordeonCriterios .criterios-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+#acordeonCriterios .criterios-tabla th {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #6c757d;
+    padding: 0.4rem 0.75rem;
+    border-bottom: 2px solid #dee2e6;
+    text-align: left;
+}
+
+#acordeonCriterios .criterios-tabla td {
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: middle;
+}
+
+#acordeonCriterios .criterios-tabla tr:last-child td {
+    border-bottom: none;
+}
+
+.crit-rojo   { color: #842029; font-weight: 600; }
+.crit-amarillo { color: #78350f; font-weight: 600; }
+.crit-verde  { color: #14532d; font-weight: 600; }
+
+.criterios-nota {
+    font-size: 0.78rem;
+    color: #6c757d;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: #ffffff;
+    border-left: 3px solid #0d6efd;
+    border-radius: 0 4px 4px 0;
+}
+
+/* ColVis dropdown personalizado */
+#bancarias-colvis .dropdown-item:hover {
+    background-color: #f0f6ff;
+}
+
+#bancarias-colvis .colvis-chk {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+#bancarias-colvis .dropdown-header {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+}
+
+/* ---------- Fila clickeable (detalle) ---------- */
+#bancariasTable tbody tr.kpi-row {
+    cursor: pointer;
+}
+
+#bancariasTable tbody tr.kpi-row:hover {
+    background-color: #e8f0fe !important;
+}
+
+/* ---------- Modal de detalle ---------- */
+.detalle-resumen-bar {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.82rem;
+}
+
+.detalle-resumen-bar .resumen-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.detalle-resumen-bar .resumen-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #6c757d;
+}
+
+.detalle-resumen-bar .resumen-valor {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #212529;
+}
+
+#detalleTable {
+    font-size: 0.82rem;
+}
+
+#detalleTable thead th {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #495057;
+    background: #f8f9fa;
+    white-space: nowrap;
+}
+
+/* ---------- Loader global ---------- */
+#loader-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.75);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.75rem;
+    backdrop-filter: blur(2px);
+}
+
+#loader-overlay .loader-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* ---------- Estado vacío / Error ---------- */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: #adb5bd;
+}
+
+.empty-state i {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    display: block;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+.alert-error {
+    border-left: 4px solid #dc3545;
+    background: #fff5f5;
+    color: #842029;
+    font-size: 0.875rem;
+}
+
+/* ---------- Placeholder tabs ---------- */
+.placeholder-tab {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #adb5bd;
+}
+
+.placeholder-tab .placeholder-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+    opacity: 0.4;
+}
+
+.placeholder-tab h5 {
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+.placeholder-tab p {
+    font-size: 0.875rem;
+    max-width: 340px;
+    margin: 0 auto;
+}

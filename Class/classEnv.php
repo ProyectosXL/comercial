@@ -60,6 +60,8 @@ class DotEnv
             'DATABASE_APPS' => getenv('DATABASE_APPS'),
             'DATABASE_POWER' => getenv('DATABASE_POWER'),
             'DATABASE_POWER_UY' => getenv('DATABASE_POWER_UY'),
+            'DATABASE_POWER_FRANQUICIAS' => getenv('DATABASE_POWER_FRANQUICIAS'),
+            'DATABASE_FRANQUICIAS' => getenv('DATABASE_FRANQUICIAS'),
             'USER' => getenv('USER'),
             'PASS' => getenv('PASS'),
             'PASS_LOCALES' => getenv('PASS_LOCALES'),

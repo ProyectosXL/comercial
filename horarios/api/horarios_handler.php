@@ -6,6 +6,7 @@ error_reporting(E_ALL);
 
 header('Content-Type: application/json');
 require_once 'conexion.php';
+require_once 'EmailNotification.php';
 
 session_start();
 $usuarioActual = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : 'SISTEMA';
@@ -309,6 +310,16 @@ function guardarDatos($usuario)
         // CONFIRMAR TRANSACCIÓN
         // =========================================================
         sqlsrv_commit($conn);
+
+        // --- NOTIFICACIÓN POR EMAIL (NUEVO) ---
+        try {
+            $semanaInfo = date('d/m/Y', strtotime($fechaInicio)) . " al " . date('d/m/Y', strtotime($fechaFin));
+            $notifier = new EmailNotification();
+            $notifier->notificarActualizacionHorarios($nroSucursal, $semanaInfo);
+        } catch (Exception $eMail) {
+            error_log("Error al disparar notificación de mail (Sucursal $nroSucursal): " . $eMail->getMessage());
+        }
+
         echo json_encode([
             'status' => 'ok',
             'message' => 'Los horarios se guardaron correctamente en el sistema!',

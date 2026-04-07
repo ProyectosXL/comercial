@@ -1,6 +1,6 @@
 <?php
-// ACTIVAR ERRORES PARA DEPURACIÓN (Si sigue fallando, verás el error real en la consola)
-ini_set('display_errors', 0); // Lo dejamos en 0 para producción, pero manejamos excepciones
+// ACTIVAR ERRORES PARA DEPURACIÓN
+ini_set('display_errors', 0); 
 error_reporting(E_ALL);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -13,6 +13,15 @@ try {
         require_once '../conexion.php';
     } else {
         throw new Exception("No se encuentra el archivo conexion.php");
+    }
+
+    // Incluimos la clase de notificación con manejo de ruta
+    if (file_exists('EmailNotification.php')) {
+        require_once 'EmailNotification.php';
+    } elseif (file_exists('../api/EmailNotification.php')) {
+        require_once '../api/EmailNotification.php';
+    } elseif (file_exists('api/EmailNotification.php')) {
+        require_once 'api/EmailNotification.php';
     }
 
     // Verificar que las funciones de conexión existan
@@ -46,6 +55,15 @@ try {
                 $res = sqlsrv_query($conn, $sqlIns, [$suc, $vend, $fecha, $msgSQL]);
                 if (!$res)
                     throw new Exception("Error al guardar feedback.");
+                
+                // --- NOTIFICACIÓN POR EMAIL (NUEVO) ---
+                try {
+                    $notifier = new EmailNotification();
+                    // Usamos una descripción amigable para la semana si podemos, o pasamos la fecha
+                    $notifier->notificarFeedbackGenerado($suc, $vend, $fecha);
+                } catch (Exception $eMail) {
+                    error_log("Error al disparar notificación de feedback (Sucursal $suc): " . $eMail->getMessage());
+                }
             }
             sqlsrv_close($conn);
             echo json_encode(['status' => 'ok']);

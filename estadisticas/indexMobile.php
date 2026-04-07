@@ -20,6 +20,12 @@
         $nombre = isset($_SESSION['descLocal']) ? $_SESSION['descLocal'] : 'Usuario';
     ?>
 
+    <!-- Spinner de navegación -->
+    <div id="nav-spinner">
+        <div class="spinner-ring"></div>
+        <span>Cargando...</span>
+    </div>
+
     <div class="container-fluid p-0">
         <!-- Sección superior -->
         <div class="p-3 welcome-card shadow-sm mb-4 position-relative">
@@ -162,6 +168,21 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+
+    // Spinner de navegación
+    document.querySelectorAll('.sub-card a').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            const href = this.getAttribute('href');
+            if (href && href !== '#') {
+                document.getElementById('nav-spinner').classList.add('active');
+            }
+        });
+    });
+
+    // Ocultar spinner si el usuario vuelve con el botón atrás
+    window.addEventListener('pageshow', function(e) {
+        document.getElementById('nav-spinner').classList.remove('active');
+    });
 
     function toggleCard(header) {
         const body = header.nextElementSibling;

@@ -6,24 +6,24 @@ class Database {
 
     private static $pdo_powerbi = null;
     private static $pdo_laker = null;
+    private static $pdo_locales = null;
     private static $pdo_sistemas = null;
 
     /**
      * Crea una conexión PDO a SQL Server con la configuración más compatible.
-     * La única opción que se establece es el modo de error, que es universal.
      */
-    private static function createConnection($dsn) {
-        // Opciones de conexión a prueba de balas.
-        // Se elimina PDO::ATTR_EMULATE_PREPARES y PDO::ATTR_DEFAULT_FETCH_MODE de la conexión inicial.
+    private static function createConnection($dsn, $user = null, $pass = null) {
         $options = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
         ];
 
+        // Usamos los parámetros pasados, o por defecto las variables de entorno principales
+        $username = $user ?? Env::get('USER');
+        $password = $pass ?? Env::get('PASS');
+
         try {
-            // Creamos la nueva conexión PDO con las credenciales y las opciones seguras.
-            return new PDO($dsn, Env::get('USER'), Env::get('PASS'), $options);
+            return new PDO($dsn, $username, $password, $options);
         } catch (\PDOException $e) {
-            // Si la conexión falla, lanzamos una excepción clara.
             throw new \PDOException($e->getMessage(), (int)$e->getCode());
         }
     }
@@ -48,6 +48,18 @@ class Database {
             self::$pdo_laker = self::createConnection($dsn);
         }
         return self::$pdo_laker;
+    }
+
+    /**
+     * Obtiene la conexión a la base de datos locales_lakers (XL-LAKERBIS).
+     */
+    public static function getConnectionLocales() {
+        if (self::$pdo_locales === null) {
+            $dsn = "sqlsrv:Server=" . Env::get('HOST_LOCALES') . ";Database=" . Env::get('DATABASE_LOCALES');
+            // Usamos específicamente el PASS_LOCALES para este servidor
+            self::$pdo_locales = self::createConnection($dsn, Env::get('USER'), Env::get('PASS_LOCALES'));
+        }
+        return self::$pdo_locales;
     }
 
     /**

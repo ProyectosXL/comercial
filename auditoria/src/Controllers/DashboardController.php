@@ -13,12 +13,6 @@ class DashboardController extends BaseController {
         $auditModel = new AuditModel();
         $ventaModel = new VentaModel();
 
-        if (!isset($_GET['estado']) && !isset($_GET['fecha_desde'])) {
-            $_GET['estado'] = 'Pendiente';
-            $_GET['fecha_desde'] = date('Y-m-01'); 
-            $_GET['fecha_hasta'] = date('Y-m-d');  
-        }
-
         $filters = [
             'sucursal' => $_GET['sucursal'] ?? null,
             'estado' => $_GET['estado'] ?? null,

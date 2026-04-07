@@ -360,6 +360,14 @@ if (!isset($_SESSION['username'])) {
                                     <a href="../../sistemas/stockYPrecios/stockDepositos.php" class="btn btn-secondary btn-card">Acceder</a>
                                 </div>
                             </div>
+                            <div class="card">
+                                <div class="card-body">
+                                    <i class="bi bi-shield-check card-icon color-info"></i>
+                                    <h5 class="card-title">Autorizaciones OC</h5>
+                                    <p class="card-subtitle">Gestión de órdenes de compra</p>
+                                    <a href="../../compras/AutorizacionesOc/index.php?usuario=<?php echo urlencode($_SESSION['username']); ?>" class="btn btn-info btn-card">Acceder</a>
+                                </div>
+                            </div>
                         </div>
                     </section>
                 </div>

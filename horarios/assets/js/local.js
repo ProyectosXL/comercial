@@ -455,6 +455,10 @@ $(document).ready(function () {
     });
 
     $('#btnGuardarFeed').on('click', function () {
+        const btn = $(this);
+        const btnCancel = btn.siblings('.btn-secondary'); // El botón de cancelar
+        const originalText = btn.html();
+
         const payload = {
             accion: 'guardar_feedback',
             sucursal: $('#sucursalSelector').val() || 0,
@@ -463,6 +467,10 @@ $(document).ready(function () {
             mensaje: $('#feedTexto').val()
         };
 
+        // Estado de CARGANDO
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span> Enviando...');
+        btnCancel.prop('disabled', true);
+
         $.ajax({
             url: apiVistaURL,
             type: 'POST',
@@ -470,12 +478,20 @@ $(document).ready(function () {
             data: JSON.stringify(payload),
             success: function (res) {
                 if (res.status === 'ok') {
-                    mostrarModalConTitulo("Éxito", "Feedback guardado correctamente.", "success");
+                    mostrarModalConTitulo("Éxito", "Feedback guardado y notificado correctamente.", "success");
                     $('#btnVerAgenda').trigger('click');
                     bootstrap.Modal.getInstance(document.getElementById('modalFeedback')).hide();
                 } else {
-                    mostrarModalConTitulo("Error", "Error al guardar.", "error");
+                    mostrarModalConTitulo("Error", "Error al guardar: " + (res.message || 'Error desconocido'), "error");
                 }
+            },
+            error: function() {
+                mostrarModalConTitulo("Error", "No se pudo conectar con el servidor para enviar el feedback.", "error");
+            },
+            complete: function() {
+                // Restauramos el botón
+                btn.prop('disabled', false).html(originalText);
+                btnCancel.prop('disabled', false);
             }
         });
     });
