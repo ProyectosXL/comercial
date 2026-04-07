@@ -1065,6 +1065,4 @@ document.addEventListener('DOMContentLoaded', async () => {
         new bootstrap.Tooltip(el, { trigger: 'hover focus', boundary: 'window' });
     });
 
-    // Auto-refresh cada 5 min
-    setInterval(refreshAll, 5 * 60 * 1000);
 });

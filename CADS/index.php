@@ -537,7 +537,6 @@ $fechaActual = date('d/m/Y H:i');
 <!-- Comment placeholder removed -->
 <footer class="footer">
     Control Operativo CADS &nbsp;|&nbsp; Última actualización: <span id="last-update"><?= $fechaActual ?></span>
-    &nbsp;|&nbsp; Auto-refresh cada 5 min
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
