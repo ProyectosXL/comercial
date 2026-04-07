@@ -259,6 +259,7 @@ const traerData = () => {
             guia: guia
         }),
         success: function (data) {
+            console.log('Respuesta recibida:', data);
             var table = document.querySelector("#tableBody");
             
             // Destruir DataTable existente correctamente
@@ -266,7 +267,7 @@ const traerData = () => {
                 $('#tablaTracking').DataTable().destroy();
             }
 
-            if(data.length > 0 && data.body && data.body.length > 0){
+            if(data.body && data.body.length > 0){
                 table.innerHTML = '';
                 
                 console.log('Datos recibidos:', data);
@@ -318,35 +319,48 @@ const traerData = () => {
                     }
                 });
                 
-                // Inicializar tooltips
-                $('[data-toggle="tooltip"]').tooltip();
+                // Inicializar tooltips con manejo de errores
+                try {
+                    if (typeof $.fn.tooltip !== 'undefined') {
+                        $('[data-toggle="tooltip"]').tooltip();
+                    }
+                } catch (error) {
+                    console.warn('Error inicializando tooltips:', error);
+                }
  
                 // Inicializar DataTable con configuración original (con pequeña pausa)
                 setTimeout(function() {
-                    $('#tablaTracking').DataTable({
-                        "bLengthChange": true,
-                        "language": {
-                            "lengthMenu": "mostrar _MENU_ registros",
-                            "info": "Mostrando registros del _START_ al _END_ de un total de  _TOTAL_ registros",
-                            "paginate": {
-                                "next": "Siguiente",
-                                "previous": "Anterior"
+                    try {
+                        if ($.fn.DataTable.isDataTable('#tablaTracking')) {
+                            $('#tablaTracking').DataTable().destroy();
+                        }
+                        $('#tablaTracking').DataTable({
+                            "bLengthChange": true,
+                            "language": {
+                                "lengthMenu": "mostrar _MENU_ registros",
+                                "info": "Mostrando registros del _START_ al _END_ de un total de  _TOTAL_ registros",
+                                "paginate": {
+                                    "next": "Siguiente",
+                                    "previous": "Anterior"
+                                },
                             },
-                        },
-                        "bInfo": true,
-                        "aaSorting": false,
-                        'columnDefs': [
-                            {
-                                "targets": "_all", 
-                                "className": "text-center",
-                                "sortable": false,
+                            "bInfo": true,
+                            "aaSorting": false,
+                            'columnDefs': [
+                                {
+                                    "targets": "_all", 
+                                    "className": "text-center",
+                                    "sortable": false,
+                                },
+                            ],
+                            "oLanguage": {
+                                "sSearch": "Busqueda rapida:",
+                                "sSearchPlaceholder": "Sobre cualquier campo"
                             },
-                        ],
-                        "oLanguage": {
-                            "sSearch": "Busqueda rapida:",
-                            "sSearchPlaceholder": "Sobre cualquier campo"
-                        },
-                    });
+                        });
+                    } catch (error) {
+                        console.warn('Error inicializando DataTable:', error);
+                    }
                 }, 100);
 
             } else {
@@ -355,7 +369,7 @@ const traerData = () => {
                 alert('No se encontraron registros');
             }
 
-            // Restaurar estado original del spinner y botón
+            // Restaurar estado original del spinner y botón SIEMPRE
             spinner.classList.remove("loading");
             btnBuscar.disabled = false;
             btnBuscar.innerHTML = btnText;
