@@ -7,12 +7,16 @@ require_once __DIR__ . '/../config/api_helpers.php';
  * Q2 — Valor Pendiente (aprox. precio al momento de carga del CAD)
  * Q3 — Tiempo Medio Recibido→NC (MinutosHastaNCEmitida, solo CADs completados)
  * Q4 — Total Devoluciones en el período
- * Q5 — CADs en estado Recibido (7) / NC Emitida (9)
+ * Q5 — CADs en estado Recibido (7) / NC Emitida (9) — misma vista/filtros que Q1,
+ *       sin filtro de estado del UI (se fuerzan los estados buscados).
  */
 try {
     $f1    = buildFilters($_GET, 'CodigoClienteTango', 'FechaAlta', 'EstadoActual');
     $f2    = buildFilters($_GET, 'p.CodigoClienteTango', 'p.FechaAlta', 'p.EstadoActual');
     $f3    = buildFilters($_GET, null, 'FechaCreacion', null);
+    // f4: mismos filtros de franquiciado y fecha que Q1, pero SIN filtro de estado
+    // (se aplica el estado manualmente en Q5 para contar Recibido y NC Emitida).
+    $f4    = buildFilters($_GET, 'CodigoClienteTango', 'FechaAlta', null);
     $fFech = buildFilters($_GET, null, 'Fecha', null);
 
     $pendStates = "'CAD Autorizado','CAD Enviado','CAD Recibido','CAD Controlado'";
@@ -66,22 +70,30 @@ try {
         error_log('[kpis/Q3] ' . $e3->getMessage());
     }
 
-    // ── Q4: conteo por estado Recibido / NC Emitida ───────────────────────
+    // ── Q5: conteo por estado Recibido / NC Emitida ───────────────────────
+    // Usa vw_UnidadesPendientes con los mismos filtros de franquiciado y fecha que Q1
+    // (f4 = sin filtro de estado del UI) y fuerza los estados a contar.
     $byEstado = ['CAD Recibido' => 0, 'CAD NC Emitida' => 0];
     try {
-        $q4Sql = $f3['sql'] ?? '';
+        $q5States = "'CAD Recibido','CAD NC Emitida'";
+        $q5Sql    = $f4['sql']
+            ? $f4['sql'] . " AND EstadoActual IN ($q5States)"
+            : "WHERE EstadoActual IN ($q5States)";
         $row4 = dbFetchOne(
             "SELECT
-                 SUM(CASE WHEN EstadoUltimo = 'CAD Recibido'       THEN 1 ELSE 0 END) AS TotalRecibidos,
-                 SUM(CASE WHEN MinutosHastaNCEmitida IS NOT NULL    THEN 1 ELSE 0 END) AS TotalNcEmitidas
-             FROM vw_TiemposDevolucion
-             $q4Sql",
-            $f3['params']
+                 SUM(CASE WHEN EstadoActual = 'CAD Recibido'    THEN 1 ELSE 0 END) AS TotalRecibidos,
+                 SUM(CASE WHEN EstadoActual = 'CAD NC Emitida'  THEN 1 ELSE 0 END) AS TotalNcEmitidas
+             FROM (
+                 SELECT DISTINCT IdDevolucion, EstadoActual
+                 FROM vw_UnidadesPendientes
+                 $q5Sql
+             ) sub",
+            $f4['params']
         );
         $byEstado['CAD Recibido']   = (int)($row4['TotalRecibidos']  ?? 0);
         $byEstado['CAD NC Emitida'] = (int)($row4['TotalNcEmitidas'] ?? 0);
     } catch (Throwable $e4) {
-        error_log('[kpis/Q4] ' . $e4->getMessage());
+        error_log('[kpis/Q5] ' . $e4->getMessage());
     }
 
     jsonResponse([
