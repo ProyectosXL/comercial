@@ -68,7 +68,7 @@ function buildFilters(
     $franquiciado = sanitizeString($input['franquiciado'] ?? null);
     $fechaDesde   = sanitizeDate($input['fecha_desde'] ?? null);
     $fechaHasta   = sanitizeDate($input['fecha_hasta'] ?? null);
-    $estado       = sanitizeString($input['estado'] ?? null);
+    $estadoRaw    = $input['estado'] ?? null;
 
     if ($colFranquiciado !== null && $franquiciado !== '') {
         $where[]  = "$colFranquiciado = ?";
@@ -85,9 +85,17 @@ function buildFilters(
         $params[] = $fechaHasta;
     }
 
-    if ($colEstado !== null && $estado !== '') {
-        $where[]  = "$colEstado = ?";
-        $params[] = $estado;
+    if ($colEstado !== null) {
+        if (is_array($estadoRaw)) {
+            $estados = array_values(array_filter(array_map('sanitizeString', $estadoRaw)));
+            if (!empty($estados)) {
+                $where[]  = "$colEstado IN (" . implode(',', array_fill(0, count($estados), '?')) . ")";
+                $params   = array_merge($params, $estados);
+            }
+        } elseif (is_string($estadoRaw) && trim($estadoRaw) !== '') {
+            $where[]  = "$colEstado = ?";
+            $params[] = sanitizeString($estadoRaw);
+        }
     }
 
     $sql = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';

@@ -290,10 +290,10 @@ body {
     box-shadow: var(--shadow);
     padding: 1rem 1.5rem;
     margin-bottom: 1.5rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    align-items: flex-end;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: .85rem 1rem;
+    align-items: end;
 }
 
 .filters-bar .form-label {
@@ -309,7 +309,7 @@ body {
     font-size: .875rem;
     border-radius: 6px;
     border-color: #dde;
-    min-width: 160px;
+    width: 100%;
 }
 
 .btn-apply {
@@ -340,7 +340,7 @@ body {
 /* ─── KPI Cards ───────────────────────────────────────── */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 1.2rem;
     margin-bottom: 1.5rem;
 }
@@ -380,10 +380,12 @@ body {
 .kpi-value {
     font-size: 2rem;
     font-weight: 800;
-    line-height: 1;
+    line-height: 1.1;
     color: #1a1f36;
     font-variant-numeric: tabular-nums;
     transition: color var(--transition);
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .kpi-sub {
@@ -437,19 +439,7 @@ body {
 .chart-card canvas { max-height: 280px; }
 
 /* ─── Filtros locales de reporte ───────────────────────── */
-.reporte-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .9rem 1.2rem;
-    align-items: flex-end;
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 1rem 1.5rem;
-    margin-bottom: 1.2rem;
-}
 .reporte-filters > div { min-width: 160px; }
-.reporte-filters .form-label { font-size: .78rem; font-weight: 600; color: #555; margin-bottom: .25rem; display:flex; align-items:center; gap:.3rem; }
 
 /* ─── Columnas ordenables ─────────────────────────────── */
 th.sortable { cursor: pointer; white-space: nowrap; user-select: none; }
@@ -891,9 +881,7 @@ th.sortable.desc .sort-icon::before { content: "\F124"; }  /* bi-arrow-down */
 @media (max-width: 768px) {
     .charts-grid { grid-template-columns: 1fr; }
     .kpi-grid    { grid-template-columns: repeat(2, 1fr); }
-    .filters-bar { flex-direction: column; }
-    .filters-bar .form-control,
-    .filters-bar .form-select { min-width: 100%; }
+    .filters-bar { grid-template-columns: 1fr; }
     .table-search { width: 150px; }
     .table-search:focus { width: 180px; }
     .section-nav-link { font-size: .72rem; padding: .55rem .5rem; }

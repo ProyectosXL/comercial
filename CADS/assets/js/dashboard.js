@@ -6,12 +6,14 @@
 
 // ── State ────────────────────────────────────────────────────
 const Charts = {};
-let _detalleData      = [];
-let _clientesData     = [];
-let _franquiciadoData = [];
-let _tiemposData      = [];
-let _reporteData      = [];
-let _reporteSort      = { col: 'IdDevolucion', dir: 'desc' };
+let _detalleData       = [];
+let _clientesData      = [];
+let _franquiciadoData  = [];
+let _franquiciadoNCData= [];
+let _tiemposData       = [];
+let _flujoNCData       = [];
+let _reporteData       = [];
+let _reporteSort       = { col: 'IdDevolucion', dir: 'desc' };
 
 // ── Paleta ───────────────────────────────────────────────────
 const PALETTE = { blue:'#4a5fc1', orange:'#f5a623', red:'#e84040', green:'#28a745', teal:'#17a2b8', yellow:'#ffc107' };
@@ -34,6 +36,14 @@ function fmtDate(str) {
     const d = new Date(str);
     return isNaN(d) ? String(str).substring(0, 10) : d.toLocaleDateString(loc);
 }
+function fmtDT(str) {
+    if (!str) return '—';
+    const d = new Date(str);
+    if (isNaN(d)) return String(str).substring(0, 16);
+    const date = d.toLocaleDateString(loc, { day: '2-digit', month: '2-digit' });
+    const time = d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
+    return `${date}<br><small class="text-muted">${time}</small>`;
+}
 function fmtMinutes(min) {
     if (min == null || isNaN(min)) return '—';
     const m = Math.round(min);
@@ -41,15 +51,23 @@ function fmtMinutes(min) {
     if (m < 1440) return `${Math.round(m / 60)} hs`;
     return `${Math.round(m / 1440)} días`;
 }
+function fmtDays(dias) {
+    if (dias == null || isNaN(dias)) return '—';
+    const d = Math.round(dias * 10) / 10;
+    return `${d} día${d === 1 ? '' : 's'}`;
+}
 
 // ── Filtros ──────────────────────────────────────────────────
 function getFilters() {
-    return new URLSearchParams({
+    const p = new URLSearchParams({
         franquiciado: document.getElementById('f-franquiciado')?.value ?? '',
         fecha_desde:  document.getElementById('f-fecha-desde')?.value  ?? '',
         fecha_hasta:  document.getElementById('f-fecha-hasta')?.value  ?? '',
-        estado:       document.getElementById('f-estado')?.value       ?? '',
     });
+    const tsEl    = document.getElementById('f-estado');
+    const estados = tsEl?.tomselect ? tsEl.tomselect.getValue() : (tsEl?.value ? [tsEl.value] : []);
+    estados.forEach(e => { if (e) p.append('estado[]', e); });
+    return p;
 }
 
 // ── UI helpers ───────────────────────────────────────────────
@@ -81,15 +99,30 @@ function setKpiCard(id, value, sub, level) {
     if (!card) return;
     const valEl = card.querySelector('.kpi-value');
     valEl.classList.remove('loading');
-    // Pop animation on value change
-    if (valEl.textContent !== value && valEl.textContent !== '\u2014') {
+    // Pop animation on value change (textContent para ignorar el <span> wrapper)
+    const prevText = valEl.querySelector('span')?.textContent ?? valEl.textContent;
+    if (prevText !== value && prevText !== '\u2014') {
         valEl.classList.remove('updated');
         void valEl.offsetWidth;
         valEl.classList.add('updated');
     }
-    valEl.textContent = value;
+    // Envolver en span para medir el ancho real del texto (span inline no queda
+    // restringido por overflow:hidden del padre, por lo que offsetWidth refleja
+    // el ancho real del contenido independientemente del overflow del contenedor)
+    valEl.innerHTML = `<span>${value}</span>`;
     card.querySelector('.kpi-sub').textContent   = sub ?? '';
     card.className = `kpi-card ${level ?? 'info'}`;
+    // Reduce font-size hasta que el texto quepa (doble rAF para layout estable)
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        valEl.style.fontSize = '';
+        const span = valEl.querySelector('span');
+        if (!span) return;
+        let size = parseFloat(getComputedStyle(valEl).fontSize) || 32;
+        while (span.offsetWidth > valEl.clientWidth && size > 11) {
+            size -= 1;
+            valEl.style.fontSize = size + 'px';
+        }
+    }));
 }
 
 // ── Tendencia en KPI cards ───────────────────────────────────
@@ -109,7 +142,7 @@ function setKpiTrend(cardId, deltaPct, higherIsBad = true) {
 
     const arrow = up ? '▲' : '▼';
     const pct   = Math.abs(deltaPct).toFixed(1);
-    const label = `${arrow} ${pct}% vs sem. anterior`;
+    const label = `${arrow} ${pct}% vs año anterior`;
 
     let cls;
     if (higherIsBad) cls = up ? 'trend-up' : 'trend-down';
@@ -181,9 +214,10 @@ async function loadAlerts() {
 // ── KPIs + trend ─────────────────────────────────────────────
 async function loadKPIs() {
     try {
+        const filters = getFilters();
         const [k, t] = await Promise.all([
-            apiFetch('kpis.php', getFilters()),
-            apiFetch('kpis_trend.php').catch(() => null),
+            apiFetch('kpis.php', filters),
+            apiFetch('kpis_trend.php', filters).catch(() => null),
         ]);
 
         const pendientes  = k.TotalUnidadesPendientes  ?? 0;
@@ -191,18 +225,23 @@ async function loadKPIs() {
         const tiempoMin   = k.TiempoMedioProcesoMinutos ?? 0;
         const totalDev    = k.TotalDevoluciones         ?? 0;
         const tiempoDias  = tiempoMin / 1440;
+        const recibidos   = k.TotalRecibidos            ?? 0;
+        const ncEmitidas  = k.TotalNcEmitidas           ?? 0;
 
-        setKpiCard('kpi-pendientes', fmt(pendientes),   'unidades pendientes',     kpiLevel(pendientes, 50, 200, false));
-        setKpiCard('kpi-monto',      fmtMoney(monto),   'valor total pendiente',   kpiLevel(monto, 500000, 2000000, false));
-        setKpiCard('kpi-tiempo',     fmtMinutes(tiempoMin), 'tiempo medio proceso', kpiLevel(tiempoDias, 10, 20, true));
-        setKpiCard('kpi-total',      fmt(totalDev),     'total devoluciones',      'info');
+        setKpiCard('kpi-pendientes',  fmt(pendientes),        'en proceso (estados 3,6,7,8)',    kpiLevel(pendientes, 50, 200, false));
+        setKpiCard('kpi-monto',       fmtMoney(monto),        'aprox. al precio de carga',       kpiLevel(monto, 500000, 2000000, false));
+        setKpiCard('kpi-tiempo',      fmtDays(tiempoDias),    'Recibido → NC Emitida',           kpiLevel(tiempoDias, 10, 20, true));
+        setKpiCard('kpi-total',       fmt(totalDev),          'total registradas',               'info');
+        setKpiCard('kpi-recibidos',   fmt(recibidos),         'en espera de control',            'info');
+        setKpiCard('kpi-nc-emitidas', fmt(ncEmitidas),        'completadas con NC',              'ok');
 
         if (t) {
-            setKpiTrend('kpi-pendientes', t.unidades?.delta_pct,     true);
-            setKpiTrend('kpi-total',      t.devoluciones?.delta_pct, true);
-            // monto y tiempo no tienen trend disponible desde kpis_trend — dejar vacío
-            setKpiTrend('kpi-monto',   null);
-            setKpiTrend('kpi-tiempo',  null);
+            setKpiTrend('kpi-pendientes',  t.unidades?.delta_pct,     true);
+            setKpiTrend('kpi-total',       t.devoluciones?.delta_pct, true);
+            setKpiTrend('kpi-monto',       null);
+            setKpiTrend('kpi-tiempo',      null);
+            setKpiTrend('kpi-recibidos',   null);
+            setKpiTrend('kpi-nc-emitidas', null);
         }
     } catch (e) { console.error('[KPIs]', e); }
 }
@@ -223,11 +262,27 @@ async function loadTendencia(params) {
             data: {
                 labels: data.map(r => fmtDate(r.Fecha)),
                 datasets: [
-                    { label: 'Nuevas devoluciones', data: data.map(r => r.NuevasDevoluciones ?? 0), borderColor: PALETTE.blue,   backgroundColor: 'rgba(74,95,193,.1)',  fill: true,  tension: .4, pointRadius: 3 },
-                    { label: 'Unidades pendientes', data: data.map(r => r.UnidadesPendientes  ?? 0), borderColor: PALETTE.orange, backgroundColor: 'rgba(245,166,35,.08)', fill: false, tension: .4, pointRadius: 3, borderDash: [4,3] },
+                    { label: 'Nuevas devoluciones', data: data.map(r => r.NuevasDevoluciones ?? 0), borderColor: PALETTE.blue,   backgroundColor: 'rgba(74,95,193,.1)',  fill: true,  tension: .4, pointRadius: 3, yAxisID: 'y' },
+                    { label: 'Unidades pendientes', data: data.map(r => r.UnidadesPendientes  ?? 0), borderColor: PALETTE.orange, backgroundColor: 'rgba(245,166,35,.08)', fill: false, tension: .4, pointRadius: 3, borderDash: [4,3], yAxisID: 'y' },
+                    { label: 'Valor diario ($)',    data: data.map(r => r.ValorDiario         ?? 0), borderColor: PALETTE.green,  backgroundColor: 'rgba(40,167,69,.07)',  fill: true,  tension: .4, pointRadius: 2, borderDash: [3,2], yAxisID: 'y2' },
                 ],
             },
-            options: { responsive: true, plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } }, scales: { x: { ticks: { maxTicksLimit: 12 } }, y: { beginAtZero: true, ticks: { precision: 0 } } } },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12 } },
+                    tooltip: { callbacks: {
+                        label: c => c.datasetIndex === 2
+                            ? ` Valor: ${fmtMoney(c.raw)}`
+                            : ` ${c.dataset.label}: ${fmt(c.raw)}`,
+                    }},
+                },
+                scales: {
+                    x:  { ticks: { maxTicksLimit: 12 } },
+                    y:  { beginAtZero: true, ticks: { precision: 0 }, position: 'left' },
+                    y2: { beginAtZero: true, ticks: { callback: v => '$' + fmt(v) }, position: 'right', grid: { drawOnChartArea: false } },
+                },
+            },
         });
     } catch (e) { console.error('[Tendencia]', e); }
 }
@@ -252,103 +307,84 @@ async function loadAging(params) {
             },
             options: {
                 indexAxis: 'y', responsive: true,
-                plugins: { legend: { display: false }, tooltip: { callbacks: { afterLabel: (c) => { const r = data[c.dataIndex]; return [`Unidades: ${fmt(r.UnidadesPendientes)}`, `Valor: ${fmtMoney(r.ValorPendiente)}`]; } } } },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { afterLabel: (c) => {
+                    const r     = data[c.dataIndex];
+                    const total = data.reduce((s, x) => s + (x.CountDevoluciones ?? 0), 0);
+                    const pct   = total > 0 ? ((c.raw / total) * 100).toFixed(1) : 0;
+                    return [
+                        `Unidades pendientes: ${fmt(r.UnidadesPendientes)}`,
+                        `Valor estimado: ${fmtMoney(r.ValorPendiente)}`,
+                        `% del total: ${pct}%`,
+                    ];
+                }}}},
                 scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
             },
         });
     } catch (e) { console.error('[Aging]', e); }
 }
 
-// ── Franquiciados ────────────────────────────────────────────
-// Horizontal bars, colores semáforo por umbral, tooltip con valor $
-const FRANC_WARN = 20;   // unidades → amarillo
-const FRANC_CRIT = 50;   // unidades → rojo
-
-async function loadFranquiciados(params) {
+// ── Franquiciados — pendiente NC ───────────────────────────────────
+async function loadFranquiciadosNC(params) {
+    const tbody = document.querySelector('#tabla-franq-nc tbody');
     try {
-        const data = await apiFetch('franquiciados.php', params);
-        const ctx  = document.getElementById('chart-franquiciados');
-        if (!ctx) return;
-        destroyChart('franquiciados');
+        const data = await apiFetch('franquiciados_nc.php', params);
+        _franquiciadoNCData = data;
+        if (!tbody) return;
+        if (!data.length) { tbody.innerHTML = `<tr><td colspan="5" class="no-data">Sin pendientes de NC.</td></tr>`; return; }
+        tbody.innerHTML = data.map((r, i) => {
+            const code = (r.CodigoCliente ?? '').replace(/[^a-zA-Z0-9_-]/g, '_');
+            return `<tr class="franq-nc-row" style="cursor:pointer" onclick="toggleFranqDetail('${code}',this)">
+                <td class="text-center"><strong>#${i + 1}</strong></td>
+                <td><i class="bi bi-chevron-right" id="chev-${code}" style="font-size:.75rem;margin-right:.3rem"></i>${r.Label ?? r.CodigoCliente ?? '—'}</td>
+                <td class="text-end">${fmt(r.CantidadCADs ?? 0)}</td>
+                <td class="text-end">${fmt(r.UnidadesPendientes ?? 0)}</td>
+                <td class="text-end">${fmtMoney(r.ValorPendiente ?? 0)}</td>
+            </tr>
+            <tr id="franq-detail-${code}" hidden>
+                <td colspan="5" style="padding:0;background:var(--bg)">
+                    <div id="franq-detail-inner-${code}" style="padding:.75rem 1.5rem"></div>
+                </td>
+            </tr>`;
+        }).join('');
+    } catch (e) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="no-data text-critico">Error al cargar.</td></tr>`;
+        console.error('[FranquiciadosNC]', e);
+    }
+}
 
-        if (!data.length) { setChartEmpty('franquiciados', true); return; }
-        setChartEmpty('franquiciados', false);
-
-        // Ordenar de mayor a menor para leer de arriba a abajo
-        const sorted = [...data].sort((a, b) => (b.UnidadesPendientes ?? 0) - (a.UnidadesPendientes ?? 0));
-
-        const labels  = sorted.map(r => r.Label ?? r.CodigoCliente ?? '—');
-        const valores = sorted.map(r => r.UnidadesPendientes ?? 0);
-        const valores2= sorted.map(r => r.ValorPendiente     ?? 0);
-
-        // Colores semáforo por fila
-        const barColors = valores.map(v =>
-            v >= FRANC_CRIT ? 'rgba(220,53,69,.85)'  :   // rojo
-            v >= FRANC_WARN ? 'rgba(255,193,7,.9)'   :   // amarillo
-                              'rgba(40,167,69,.8)'       // verde
-        );
-
-        Charts.franquiciados = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Unidades pendientes',
-                    data: valores,
-                    backgroundColor: barColors,
-                    borderRadius: 4,
-                    borderSkipped: false,
-                }],
-            },
-            options: {
-                indexAxis: 'y',          // horizontal
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label:       c => ` ${fmt(c.raw)} unidades pendientes`,
-                            afterLabel:  c => ` Valor: ${fmtMoney(valores2[c.dataIndex])}`,
-                            footer:      c => {
-                                const v = c[0].raw;
-                                return v >= FRANC_CRIT ? '🔴 Nivel crítico'
-                                     : v >= FRANC_WARN ? '🟡 Requiere atención'
-                                     :                   '🟢 Dentro de rango';
-                            },
-                        },
-                        footerColor: '#fff',
-                        footerFont:  { weight: 'bold' },
-                    },
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        ticks: { precision: 0 },
-                        grid: { color: 'rgba(0,0,0,.05)' },
-                    },
-                    y: {
-                        ticks: {
-                            font: { size: 12 },
-                            // En Chart.js 4 el callback recibe el índice; getLabelForValue devuelve el string
-                            callback: function(value) {
-                                const lbl = this.getLabelForValue(value) ?? '';
-                                return lbl.length > 28 ? lbl.substring(0, 27) + '…' : lbl;
-                            },
-                        },
-                        grid: { display: false },
-                    },
-                },
-                // Altura dinámica: mínimo 200px, 42px por barra
-                layout: { padding: { right: 8 } },
-            },
-        });
-
-        // Ajustar altura del canvas según cantidad de barras
-        const wrapper = ctx.closest('.chart-wrapper') ?? ctx.parentElement;
-        if (wrapper) wrapper.style.height = Math.max(200, sorted.length * 44) + 'px';
-
-    } catch (e) { console.error('[Franquiciados]', e); }
+async function toggleFranqDetail(code, row) {
+    const detailRow = document.getElementById(`franq-detail-${code}`);
+    const chev      = document.getElementById(`chev-${code}`);
+    if (!detailRow) return;
+    if (!detailRow.hidden) {
+        detailRow.hidden = true;
+        if (chev) chev.className = 'bi bi-chevron-right';
+        return;
+    }
+    detailRow.hidden = false;
+    if (chev) chev.className = 'bi bi-chevron-down';
+    const inner = document.getElementById(`franq-detail-inner-${code}`);
+    if (!inner || inner.dataset.loaded === '1') return;
+    inner.innerHTML = '<div class="no-data">Cargando…</div>';
+    const p = new URLSearchParams({ franquiciado: code });
+    p.append('estado[]', 'CAD Recibido');
+    p.append('estado[]', 'CAD Controlado');
+    const detalle = await apiFetch('pendientes.php', p).catch(() => null);
+    inner.dataset.loaded = '1';
+    if (!detalle?.length) { inner.innerHTML = '<div class="no-data">Sin registros.</div>'; return; }
+    inner.innerHTML = `<table class="table-custom" style="margin:0">
+        <thead><tr>
+            <th>ID Dev.</th><th>Artículo</th><th>Fecha Alta</th>
+            <th class="text-end">Uds. Pend.</th><th>Estado</th>
+        </tr></thead>
+        <tbody>${detalle.map(r => `<tr>
+            <td>${r.IdDevolucion ?? '—'}</td>
+            <td><small>${r.CodigoArticulo ?? '—'}</small></td>
+            <td>${fmtDate(r.FechaAlta)}</td>
+            <td class="text-end">${fmt(r.UnidadesPendientes ?? 0)}</td>
+            <td><span class="badge-estado ${(r.EstadoActual ?? '').toLowerCase().replace(/\s+/g, '-')}">${r.EstadoActual ?? '—'}</span></td>
+        </tr>`).join('')}</tbody>
+    </table>`;
 }
 
 // ── Motivos ──────────────────────────────────────────────────
@@ -366,15 +402,22 @@ async function loadMotivos(params) {
         Charts.motivos = new Chart(ctx, {
             type: 'doughnut',
             data: { labels: data.map(r => r.Motivo ?? '—'), datasets: [{ data: data.map(r => r.CantidadDevoluciones ?? 0), backgroundColor: PALETTE_PIE.slice(0, data.length), borderWidth: 2, borderColor: '#fff' }] },
-            options: { responsive: true, plugins: { legend: { position: 'right', labels: { boxWidth: 13, font: { size: 11 } } }, tooltip: { callbacks: { afterLabel: c => `Valor: ${fmtMoney(data[c.dataIndex]?.ValorTotal)}` } } }, cutout: '55%' },
+            options: { responsive: true, plugins: { legend: { position: 'right', labels: { boxWidth: 13, font: { size: 11 } } }, tooltip: { callbacks: {
+                label: c => ` ${c.label}: ${fmt(c.raw)} devoluciones`,
+                afterLabel: c => {
+                    const total = data.reduce((s, r) => s + (r.CantidadDevoluciones ?? 0), 0);
+                    const pct   = total > 0 ? ((c.raw / total) * 100).toFixed(1) : 0;
+                    return [`${pct}% del total`, `Valor: ${fmtMoney(data[c.dataIndex]?.ValorTotal)}`];
+                },
+            }}}, cutout: '55%' },
         });
     } catch (e) { console.error('[Motivos]', e); }
 }
 
-// ── Franquiciados — chart + tabla ────────────────────────────
+// ── Franquiciados — NC + tabla ranking ─────────────────────────
 async function loadFranquiciadosSection(params) {
     await Promise.all([
-        loadFranquiciados(params),
+        loadFranquiciadosNC(params),
         loadTablaFranquiciados(params),
     ]);
 }
@@ -524,71 +567,125 @@ async function loadValorClientes(params) {
 // ── Tiempos — promedio por estado + tabla outliers ────────────
 async function loadTiemposSection(params) {
     await Promise.all([
-        loadTiemposPromedio(params),
         loadTablaTiempos(params),
+        loadTiemposFlujo(params),
+        loadTiemposTransicion(params),
+        loadFlujoNC(params),
     ]);
 }
 
-async function loadTiemposPromedio(params = null) {
+async function loadTiemposTransicion(params) {
+    const tbody = document.querySelector('#tabla-tiempos-transicion tbody');
+    if (!tbody) return;
     try {
-        const data = await apiFetch('tiempos_promedio.php', params);
-        const ctx  = document.getElementById('chart-tiempos-estado');
-        if (!ctx) return;
-        destroyChart('tiemposEstado');
+        const p = new URLSearchParams();
+        if (params) {
+            const fr = params.get('franquiciado'); if (fr) p.set('franquiciado', fr);
+            const fd = params.get('fecha_desde');  if (fd) p.set('fecha_desde',  fd);
+            const fh = params.get('fecha_hasta');  if (fh) p.set('fecha_hasta',  fh);
+        }
+        const data = await apiFetch('tiempos_transicion.php', p);
+        if (!data.length) {
+            tbody.innerHTML = `<tr><td colspan="5" class="no-data">Sin datos.</td></tr>`;
+            return;
+        }
+        const filtered = data.filter(r => r.Registros > 0);
+        if (!filtered.length) {
+            tbody.innerHTML = `<tr><td colspan="5" class="no-data">Sin datos.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = filtered.map(r => {
+            const avg = r.PromedioDias;
+            // Umbral: amarillo > 5 días, rojo > 15 días
+            const cls = avg > 15 ? 'critico' : avg > 5 ? 'atencion' : 'resuelto';
+            const isLast = r.Transicion.includes('NC');
+            return `<tr${isLast ? ' class="fw-semibold"' : ''}>
+                <td>${r.Transicion}</td>
+                <td class="text-end"><span class="badge-estado ${cls}">${fmt(avg, 1)} días</span></td>
+                <td class="text-end text-muted"><small>${fmt(r.MinDias, 1)} días</small></td>
+                <td class="text-end text-muted"><small>${fmt(r.MaxDias, 1)} días</small></td>
+                <td class="text-end text-muted">${fmt(r.Registros)}</td>
+            </tr>`;
+        }).join('');
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" class="no-data text-critico">Error al cargar.</td></tr>`;
+        console.error('[TiemposTransicion]', e);
+    }
+}
 
-        if (!data.length) { setChartEmpty('tiempos-estado', true); return; }
-        setChartEmpty('tiempos-estado', false);
+async function loadTiemposFlujo(params) {
+    const tbody = document.querySelector('#tabla-tiempos-flujo tbody');
+    if (!tbody) return;
+    try {
+        const data = await apiFetch('tiempos_flujo.php', params);
+        if (!data.length) { tbody.innerHTML = `<tr><td colspan="3" class="no-data">Sin datos de flujo completo.</td></tr>`; return; }
+        tbody.innerHTML = data.map(r => {
+            const dias = Math.round((r.PromedioMinutos ?? 0) / 1440 * 10) / 10;
+            const cls  = dias >= 3 ? 'critico' : dias >= 1 ? 'atencion' : 'resuelto';
+            return `<tr>
+                <td>${r.Estado ?? '—'}</td>
+                <td class="text-end"><span class="badge-estado ${cls}">${fmt(dias, 1)} días</span></td>
+                <td class="text-end text-muted">${fmt(r.Registros ?? 0)}</td>
+            </tr>`;
+        }).join('');
+    } catch (e) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="3" class="no-data text-critico">Error al cargar flujo.</td></tr>`;
+        console.error('[TiemposFlujo]', e);
+    }
+}
 
-        const sorted = [...data].sort((a, b) => (b.PromedioMinutos ?? 0) - (a.PromedioMinutos ?? 0));
-        const horas  = sorted.map(r => Math.round((r.PromedioMinutos ?? 0) / 60 * 10) / 10);
+function renderFlujoNC(data) {
+    const tbody = document.querySelector('#tabla-flujo-nc tbody');
+    const count = document.getElementById('flujo-nc-count');
+    if (!tbody) return;
+    const q = document.getElementById('search-flujo-nc')?.value.toLowerCase().trim() ?? '';
+    const filtered = q
+        ? data.filter(r => String(r.IdDevolucion ?? '').includes(q)
+               || String(r.Cliente  ?? '').toLowerCase().includes(q)
+               || String(r.NCEmitida ?? '').toLowerCase().includes(q))
+        : data;
+    if (count) count.textContent = filtered.length ? `(${fmt(filtered.length)} registros)` : '';
+    if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="11" class="no-data">${q ? 'Sin resultados.' : 'Sin CADs con NC en el período seleccionado.'}</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = filtered.map(r => {
+        const dias = r.DiasTotal ?? 0;
+        const cls  = dias > 20 ? 'critico' : dias > 10 ? 'atencion' : 'resuelto';
+        return `<tr>
+            <td>${r.IdDevolucion}</td>
+            <td><small>${r.Cliente || '—'}</small></td>
+            <td><small>${r.NCEmitida || '—'}</small></td>
+            <td class="text-center"><small>${fmtDT(r.FechaSolicitado)}</small></td>
+            <td class="text-center"><small>${fmtDT(r.FechaPendiente)}</small></td>
+            <td class="text-center"><small>${fmtDT(r.FechaAutorizado)}</small></td>
+            <td class="text-center"><small>${fmtDT(r.FechaEnviado)}</small></td>
+            <td class="text-center"><small>${fmtDT(r.FechaRecibido)}</small></td>
+            <td class="text-center"><small>${fmtDT(r.FechaControlado)}</small></td>
+            <td class="text-center"><small>${fmtDT(r.FechaNC)}</small></td>
+            <td class="text-end"><span class="badge-estado ${cls}">${fmt(dias)}</span></td>
+        </tr>`;
+    }).join('');
+}
 
-        // Colores: verde si < 24hs, amarillo < 72hs, rojo >= 72hs
-        const bgColors = horas.map(h =>
-            h >= 72 ? 'rgba(220,53,69,.8)' :
-            h >= 24 ? 'rgba(255,193,7,.85)' :
-                      'rgba(40,167,69,.8)'
-        );
-
-        Charts.tiemposEstado = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: sorted.map(r => r.Estado ?? '—'),
-                datasets: [{
-                    label: 'Promedio (hs)',
-                    data: horas,
-                    backgroundColor: bgColors,
-                    borderRadius: 4,
-                }, {
-                    label: 'Desvío (hs)',
-                    data: sorted.map(r => Math.round((r.DesviacionMinutos ?? 0) / 60 * 10) / 10),
-                    backgroundColor: 'rgba(74,95,193,.25)',
-                    borderRadius: 4,
-                }],
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top', labels: { boxWidth: 12 } },
-                    tooltip: { callbacks: {
-                        afterLabel: (c) => {
-                            const r = sorted[c.dataIndex];
-                            return `Registros: ${fmt(r.Registros ?? 0)}`;
-                        },
-                    }},
-                },
-                scales: {
-                    x: { beginAtZero: true, ticks: { callback: v => v + 'hs' } },
-                    y: { grid: { display: false } },
-                },
-            },
-        });
-
-        const wrapper = ctx.closest('.chart-wrapper') ?? ctx.parentElement;
-        if (wrapper) wrapper.style.height = Math.max(400, sorted.length * 54) + 'px';
-
-    } catch (e) { console.error('[TiemposPromedio]', e); setChartEmpty('tiempos-estado', true); }
+async function loadFlujoNC(params) {
+    const tbody = document.querySelector('#tabla-flujo-nc tbody');
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="11" class="no-data">Cargando…</td></tr>`;
+    try {
+        const p = new URLSearchParams();
+        if (params) {
+            const fr = params.get('franquiciado'); if (fr) p.set('franquiciado', fr);
+            const fd = params.get('fecha_desde');  if (fd) p.set('fecha_desde',  fd);
+            const fh = params.get('fecha_hasta');  if (fh) p.set('fecha_hasta',  fh);
+        }
+        const data = await apiFetch('flujo_nc.php', p);
+        _flujoNCData = data;
+        renderFlujoNC(data);
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="11" class="no-data text-critico">Error al cargar.</td></tr>`;
+        console.error('[FlujoNC]', e);
+    }
 }
 
 async function loadTablaTiempos(params) {
@@ -599,17 +696,21 @@ async function loadTablaTiempos(params) {
 
         // KPIs de tiempo
         if (data.length) {
-            const dias   = data.map(r => r.DiasHastaUltimoEstado ?? 0).filter(d => d != null);
-            const maxD   = Math.max(...dias);
+            const dias     = data.map(r => r.DiasHastaUltimoEstado ?? 0).filter(d => d != null);
+            const maxD     = Math.max(...dias);
+            const minD     = Math.min(...dias);
+            const avgD     = dias.length ? Math.round(dias.reduce((a, b) => a + b, 0) / dias.length) : 0;
             const outliers = dias.filter(d => d > 20).length;
 
-            setKpiCard('kpi-tiempo-max',      fmtMinutes(maxD * 1440),  'registro más lento',          maxD > 20 ? 'critico' : maxD > 10 ? 'atencion' : 'ok');
+            setKpiCard('kpi-tiempo-min',      fmtDays(minD),  'caso más rápido',               'ok');
+            setKpiCard('kpi-tiempo-avg',      fmtDays(avgD),  'promedio días pendiente',       kpiLevel(avgD, 10, 20, true));
+            setKpiCard('kpi-tiempo-max',      fmtDays(maxD),  'registro más lento',            maxD > 20 ? 'critico' : maxD > 10 ? 'atencion' : 'ok');
             setKpiCard('kpi-tiempo-outliers', fmt(outliers),            'más de 20 días sin resolución', outliers > 0 ? 'critico' : 'ok');
         }
 
         if (!tbody) return;
         if (!data.length) {
-            tbody.innerHTML = `<tr><td colspan="5" class="no-data">Sin registros.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" class="no-data">Sin registros.</td></tr>`;
             return;
         }
 
@@ -624,12 +725,11 @@ async function loadTablaTiempos(params) {
                 <td>${fmtDate(r.FechaCreacion)}</td>
                 <td><span class="badge-estado ${estado}">${r.EstadoUltimo ?? '—'}</span></td>
                 <td class="text-end"><span class="badge-estado ${cls}">${fmt(dias)}</span></td>
-                <td class="text-end">${fmt(r.HorasHastaUltimoEstado ?? 0)}</td>
             </tr>`;
         }).join('');
 
     } catch (e) {
-        if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="no-data text-critico">Error.</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="4" class="no-data text-critico">Error.</td></tr>`;
         console.error('[TablaTiempos]', e);
     }
 }
@@ -719,17 +819,28 @@ function renderTablaClientes(data) {
         : data;
 
     if (!filtered.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="no-data">${q ? 'Sin resultados.' : 'Sin registros.'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="no-data">${q ? 'Sin resultados.' : 'Sin registros.'}</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = filtered.map((r, i) => `<tr>
-        <td><strong>#${i + 1}</strong></td>
-        <td>${r.CodigoCliente        ?? '—'}</td>
-        <td>${r.UsuarioAlias         ?? '—'}</td>
-        <td class="text-end">${fmt(r.CantidadDevoluciones ?? 0)}</td>
-        <td class="text-end">${fmtMoney(r.ValorTotal ?? 0)}</td>
-    </tr>`).join('');
+    tbody.innerHTML = filtered.map((r, i) => {
+        const delta   = r.DeltaPct;
+        let varCell   = '—';
+        if (delta !== null && delta !== undefined) {
+            const cls  = delta > 0 ? 'trend-up' : 'trend-down';
+            const sign = delta > 0 ? '▲' : '▼';
+            varCell = `<span class="${cls}">${sign} ${Math.abs(delta).toFixed(1)}%</span>`;
+        }
+        return `<tr>
+            <td><strong>#${i + 1}</strong></td>
+            <td>${r.CodigoCliente        ?? '—'}</td>
+            <td>${r.UsuarioAlias         ?? '—'}</td>
+            <td class="text-end">${fmt(r.CantidadDevoluciones ?? 0)}</td>
+            <td class="text-end">${fmtMoney(r.ValorTotal ?? 0)}</td>
+            <td class="text-end text-muted">${r.ValorTotalAnioAnterior != null ? fmtMoney(r.ValorTotalAnioAnterior) : '—'}</td>
+            <td class="text-end">${varCell}</td>
+        </tr>`;
+    }).join('');
 }
 
 async function loadTablaClientes(params) {
@@ -747,11 +858,13 @@ async function loadTablaClientes(params) {
 // ── Exportar CSV ─────────────────────────────────────────────
 function exportCSV(which) {
     const map = {
-        detalle:       { data: _detalleData,       file: 'devoluciones_detalle.csv' },
-        clientes:      { data: _clientesData,       file: 'top_clientes.csv' },
-        franquiciados: { data: _franquiciadoData,   file: 'franquiciados.csv' },
-        tiempos:       { data: _tiemposData,        file: 'tiempos_gestion.csv' },
-        reporte:       { data: _reporteData,        file: 'reporte_devoluciones.csv' },
+        detalle:         { data: _detalleData,        file: 'devoluciones_detalle.csv' },
+        clientes:        { data: _clientesData,        file: 'top_clientes.csv' },
+        franquiciados:   { data: _franquiciadoData,    file: 'franquiciados.csv' },
+        franquiciadosNC: { data: _franquiciadoNCData,  file: 'franquiciados_nc.csv' },
+        tiempos:         { data: _tiemposData,         file: 'tiempos_gestion.csv' },
+        flujoNC:         { data: _flujoNCData,         file: 'flujo_completo_nc.csv' },
+        reporte:         { data: _reporteData,         file: 'reporte_devoluciones.csv' },
     };
     const { data, file: filename } = map[which] ?? { data: [], file: 'export.csv' };
 
@@ -788,6 +901,13 @@ async function loadFranquiciadosSelect() {
             opt.textContent = item.label ?? item;
             sel.appendChild(opt);
         });
+        if (typeof TomSelect !== 'undefined') {
+            new TomSelect(sel, {
+                placeholder:    'Todos los franquiciados',
+                allowEmptyOption: true,
+                maxOptions:     200,
+            });
+        }
     } catch { /* no bloqueante */ }
 }
 
@@ -796,21 +916,24 @@ async function loadEstadosSelect() {
     if (!sel) return;
     try {
         const data = await apiFetch('estados_list.php');
-        while (sel.options.length > 1) sel.remove(1);
         data.forEach(e => {
             const opt = document.createElement('option');
             opt.value = opt.textContent = e.label;
             sel.appendChild(opt);
         });
+        if (typeof TomSelect !== 'undefined') {
+            new TomSelect(sel, {
+                plugins:     ['remove_button'],
+                placeholder: 'Todos los estados',
+                maxOptions:  20,
+            });
+        }
     } catch { /* mantiene opciones estáticas */ }
 }
 
 // ── Navegación por pestañas ───────────────────────────────────
 function initSectionNav() {
     const links = document.querySelectorAll('.section-nav-link');
-
-    // Secciones que NO usan el filtro global (tienen filtros propios)
-    const NO_GLOBAL_FILTER = new Set(['sec-reporte']);
 
     function showTab(targetId) {
         document.querySelectorAll('.dashboard-section').forEach(s => s.classList.remove('tab-active'));
@@ -819,9 +942,11 @@ function initSectionNav() {
         document.querySelector(`.section-nav-link[href="#${targetId}"]`)?.classList.add('active');
         history.replaceState(null, '', `#${targetId}`);
 
-        // Mostrar/ocultar barra de filtro global según la pestaña
-        const filtersBar = document.querySelector('.filters-bar');
-        if (filtersBar) filtersBar.style.display = NO_GLOBAL_FILTER.has(targetId) ? 'none' : '';
+        const isReporte     = targetId === 'sec-reporte';
+        const filtersBar    = document.querySelector('.filters-bar:not(.reporte-filters)');
+        const reporteBar    = document.getElementById('reporte-filters-bar');
+        if (filtersBar) filtersBar.style.display = isReporte ? 'none' : '';
+        if (reporteBar) reporteBar.style.display  = isReporte ? ''     : 'none';
 
         requestAnimationFrame(() => {
             Object.values(Charts).forEach(c => { try { c.resize(); } catch (_) {} });
@@ -887,7 +1012,7 @@ function renderTablaReporte(data) {
     if (!tbody) return;
 
     if (!data.length) {
-        tbody.innerHTML = `<tr><td colspan="10" class="no-data">Sin resultados.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" class="no-data">Sin resultados.</td></tr>`;
         if (count) count.textContent = '';
         return;
     }
@@ -917,14 +1042,14 @@ function renderTablaReporte(data) {
 
     tbody.innerHTML = sorted.map(r => {
         const estado  = (r.EstadoActual ?? '—').toLowerCase().replace(/\s+/g, '-');
-        const articulo = [r.CodigoArticulo, r.DescripcionArticulo].filter(Boolean).join(' — ');
         const ncCell  = r.NCEmitida
             ? `<span class="badge-estado ok" title="${r.NCEmitida}">${r.NCEmitida}</span>`
             : '<span class="text-muted">—</span>';
         return `<tr>
             <td>${r.IdDevolucion ?? '—'}</td>
             <td>${r.NombreCliente || r.CodigoClienteTango || '—'}</td>
-            <td><small>${articulo || '—'}</small></td>
+            <td><small>${r.CodigoArticulo || '—'}</small></td>
+            <td><small>${r.DescripcionArticulo || '—'}</small></td>
             <td><small>${r.Motivo ?? '—'}</small></td>
             <td>${fmtDate(r.FechaAlta)}</td>
             <td>${fmtDate(r.UltimoEstado)}</td>
@@ -938,13 +1063,13 @@ function renderTablaReporte(data) {
 
 async function loadReporte() {
     const tbody = document.querySelector('#tabla-reporte tbody');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="10" class="no-data">Cargando…</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="no-data">Cargando…</td></tr>`;
     try {
         const data = await apiFetch('reporte_devoluciones.php', getRptFilters());
         _reporteData = data;
         renderTablaReporte(data);
     } catch (e) {
-        if (tbody) tbody.innerHTML = `<tr><td colspan="10" class="no-data text-critico">Error al cargar.</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="11" class="no-data text-critico">Error al cargar.</td></tr>`;
         console.error('[Reporte]', e);
     }
 }
@@ -1010,9 +1135,7 @@ async function refreshAll() {
             loadAging(params),
             loadMotivos(params),
             loadFranquiciadosSection(params),
-            loadValorizacion(params),
             loadTiemposSection(params),
-            loadTablaDetalle(params),
             loadTablaClientes(params),
         ]);
     } finally {
@@ -1032,7 +1155,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const pad    = n => String(n).padStart(2, '0');
     const fmtIso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     const hoy    = new Date();
-    const desde  = new Date(hoy); desde.setDate(hoy.getDate() - 30);
+    const desde  = new Date(hoy); desde.setDate(hoy.getDate() - 90);
 
     const fdEl = document.getElementById('f-fecha-desde');
     const fhEl = document.getElementById('f-fecha-hasta');
@@ -1046,16 +1169,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Botones filtros
     document.getElementById('btn-apply')?.addEventListener('click', refreshAll);
     document.getElementById('btn-reset')?.addEventListener('click', () => {
-        document.getElementById('f-franquiciado').value = '';
+        const frEl = document.getElementById('f-franquiciado');
+        if (frEl?.tomselect) frEl.tomselect.clear(); else if (frEl) frEl.value = '';
         document.getElementById('f-fecha-desde').value  = fmtIso(desde);
         document.getElementById('f-fecha-hasta').value  = fmtIso(hoy);
-        document.getElementById('f-estado').value        = '';
+        const tsEl = document.getElementById('f-estado');
+        if (tsEl?.tomselect) tsEl.tomselect.clear(); else if (tsEl) tsEl.value = '';
         refreshAll();
     });
 
     // Búsqueda en tiempo real
-    document.getElementById('search-detalle')?.addEventListener('input',  () => renderTablaDetalle(_detalleData));
-    document.getElementById('search-clientes')?.addEventListener('input', () => renderTablaClientes(_clientesData));
+    document.getElementById('search-detalle')?.addEventListener('input',   () => renderTablaDetalle(_detalleData));
+    document.getElementById('search-clientes')?.addEventListener('input',  () => renderTablaClientes(_clientesData));
+    document.getElementById('search-flujo-nc')?.addEventListener('input',  () => renderFlujoNC(_flujoNCData));
 
     // Campana
     document.getElementById('btn-notif')?.addEventListener('click', openNotifPanel);

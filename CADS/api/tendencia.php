@@ -1,17 +1,20 @@
 <?php
 require_once __DIR__ . '/../config/api_helpers.php';
 
-// Computa tendencia desde vw_UnidadesPendientes agrupando por FechaAlta.
-// Admite todos los filtros: franquiciado (CodigoClienteTango), fecha, estado.
+// Tendencia diaria con valor estimado (JOIN vw_ValorizacionCADs).
 try {
-    $filters = buildFilters($_GET, 'CodigoClienteTango', 'FechaAlta', 'EstadoActual');
+    $filters = buildFilters($_GET, 'u.CodigoClienteTango', 'u.FechaAlta', 'u.EstadoActual');
     $sql     = "SELECT
-                    CAST(FechaAlta AS DATE)           AS Fecha,
-                    COUNT(DISTINCT IdDevolucion)      AS NuevasDevoluciones,
-                    SUM(UnidadesPendientes)           AS UnidadesPendientes
-                FROM vw_UnidadesPendientes
+                    CAST(u.FechaAlta AS DATE)                  AS Fecha,
+                    COUNT(DISTINCT u.IdDevolucion)             AS NuevasDevoluciones,
+                    SUM(u.UnidadesPendientes)                  AS UnidadesPendientes,
+                    ISNULL(SUM(v.ValorCalculadoPerDetalle), 0) AS ValorDiario
+                FROM vw_UnidadesPendientes u
+                LEFT JOIN vw_ValorizacionCADs v
+                       ON v.IdDevolucion        = u.IdDevolucion
+                      AND v.IdDetalleDevolucion = u.IdDetalleDevolucion
                 {$filters['sql']}
-                GROUP BY CAST(FechaAlta AS DATE)
+                GROUP BY CAST(u.FechaAlta AS DATE)
                 ORDER BY Fecha ASC";
     $data = dbFetchAll($sql, $filters['params']);
     jsonResponse($data);

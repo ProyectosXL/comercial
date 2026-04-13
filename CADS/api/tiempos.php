@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config/api_helpers.php';
 try {
     $filters = buildFilters($_GET, 'p.CodigoClienteTango', 't.FechaCreacion', 't.EstadoUltimo');
 
-    $whereBase  = 'WHERE t.EstadoUltimo IS NOT NULL';
+    $whereBase  = "WHERE t.EstadoUltimo IN ('CAD Recibido','CAD Controlado')";
     $extraWhere = $filters['sql'] ? str_replace('WHERE', 'AND', $filters['sql']) : '';
 
     $sql = "SELECT DISTINCT
