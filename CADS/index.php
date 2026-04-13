@@ -218,7 +218,7 @@ $fechaActual = date('d/m/Y H:i');
                 <div class="card-title">
                     <i class="bi bi-graph-up-arrow text-primary"></i>
                     Tendencia diaria de devoluciones
-                    <button class="help-btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Evolución día a día dentro del período filtrado.<br><b>Línea azul:</b> nuevas devoluciones ingresadas.<br><b>Línea naranja:</b> unidades pendientes acumuladas.<br>Permite detectar picos de actividad y tendencias."><i class="bi bi-question-circle"></i></button>
+                    <button class="help-btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Evolución día a día dentro del período filtrado.<br><b>Línea azul:</b> nuevas devoluciones ingresadas.<br><b>Línea naranja:</b> unidades pendientes (eje izquierdo).<br><b>Línea verde:</b> valor estimado diario (eje derecho).<br>Permite detectar picos de actividad y tendencias."><i class="bi bi-question-circle"></i></button>
                 </div>
                 <div class="chart-wrapper">
                     <canvas id="chart-tendencia"></canvas>
@@ -503,8 +503,8 @@ $fechaActual = date('d/m/Y H:i');
             <div class="table-card-header">
                 <span class="card-title mb-0">
                     <i class="bi bi-diagram-3 text-primary"></i> Flujo promedio de estados
-                    <span class="card-title-hint">solo CADs que llegaron a NC Emitida</span>
-                    <button class="help-btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Tiempo promedio (en horas) que los CADs permanecieron en cada estado durante el flujo completo hasta NC Emitida.<br>Solo incluye devoluciones que completaron el ciclo."><i class="bi bi-question-circle"></i></button>
+                    <span class="card-title-hint">todos los CADs del período por estado</span>
+                    <button class="help-btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Tiempo promedio (en días) que los CADs permanecieron en cada estado del flujo.<br>Incluye todos los CADs registrados en el período, sin importar su estado final."><i class="bi bi-question-circle"></i></button>
                 </span>
             </div>
             <table class="table-custom" id="tabla-tiempos-flujo">
