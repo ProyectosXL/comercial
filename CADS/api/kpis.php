@@ -13,7 +13,7 @@ require_once __DIR__ . '/../config/api_helpers.php';
 try {
     $f1    = buildFilters($_GET, 'CodigoClienteTango', 'FechaAlta', 'EstadoActual');
     $f2    = buildFilters($_GET, 'p.CodigoClienteTango', 'p.FechaAlta', 'p.EstadoActual');
-    $f3    = buildFilters($_GET, null, 'FechaCreacion', null);
+    // Q3 construye sus propios filtros directamente (ver abajo)
     // f4: mismos filtros de franquiciado y fecha que Q1, pero SIN filtro de estado
     // (se aplica el estado manualmente en Q5 para contar Recibido y NC Emitida).
     $f4    = buildFilters($_GET, 'CodigoClienteTango', 'FechaAlta', null);
@@ -54,17 +54,46 @@ try {
         error_log('[kpis/Q2] ' . $e2->getMessage());
     }
 
-    // ── Q3: tiempo medio Recibido → NC (solo CADs que completaron flujo) ──
+    // ── Q3: tiempo medio Recibido → NC ────────────────────────────────────
+    // Misma población que Q5: CADs de vw_UnidadesPendientes con EstadoActual = NC Emitida,
+    // filtrados por FechaAlta y franquiciado. El tiempo se calcula directo desde
+    // LogCambioEstadoDevolucion (estado 7 = Recibido, estado 9 = NC Emitida),
+    // igual que tiempos_transicion.php. vw_TiemposDevolucion no incluye CADs completados.
     $row3 = null;
     try {
-        $q3Sql = $f3['sql']
-            ? $f3['sql'] . ' AND MinutosHastaNCEmitida IS NOT NULL'
-            : 'WHERE MinutosHastaNCEmitida IS NOT NULL';
+        $q3Where  = [];
+        $q3Params = [];
+
+        $q3Franq = sanitizeString($_GET['franquiciado'] ?? null);
+        $q3Desde = sanitizeDate($_GET['fecha_desde'] ?? null);
+        $q3Hasta = sanitizeDate($_GET['fecha_hasta'] ?? null);
+
+        if ($q3Franq !== '')    { $q3Where[] = 'p.CodigoClienteTango = ?';                         $q3Params[] = $q3Franq; }
+        if ($q3Desde !== null)  { $q3Where[] = 'p.FechaAlta >= CAST(? AS DATE)';                  $q3Params[] = $q3Desde; }
+        if ($q3Hasta !== null)  { $q3Where[] = 'p.FechaAlta < DATEADD(day, 1, CAST(? AS DATE))';  $q3Params[] = $q3Hasta; }
+
+        $q3Extra = !empty($q3Where) ? 'AND ' . implode(' AND ', $q3Where) : '';
+
         $row3 = dbFetchOne(
-            "SELECT ISNULL(AVG(CAST(MinutosHastaNCEmitida AS FLOAT)), 0) AS TiempoMedioProcesoMinutos
-             FROM vw_TiemposDevolucion
-             $q3Sql",
-            $f3['params']
+            "WITH NcIds AS (
+                 SELECT DISTINCT p.IdDevolucion
+                 FROM   vw_UnidadesPendientes p
+                 WHERE  p.EstadoActual = 'CAD NC Emitida'
+                 $q3Extra
+             ),
+             Fechas AS (
+                 SELECT l.IdDevolucion,
+                        MIN(CASE WHEN l.IdEstadoDevolucion = 7 THEN l.Fecha END) AS FechaRecibido,
+                        MIN(CASE WHEN l.IdEstadoDevolucion = 9 THEN l.Fecha END) AS FechaNC
+                 FROM   LogCambioEstadoDevolucion l
+                 JOIN   NcIds n ON n.IdDevolucion = l.IdDevolucion
+                 GROUP  BY l.IdDevolucion
+             )
+             SELECT ISNULL(AVG(CAST(DATEDIFF(minute, FechaRecibido, FechaNC) AS FLOAT)), 0)
+                    AS TiempoMedioProcesoMinutos
+             FROM   Fechas
+             WHERE  FechaRecibido IS NOT NULL AND FechaNC IS NOT NULL",
+            $q3Params
         );
     } catch (Throwable $e3) {
         error_log('[kpis/Q3] ' . $e3->getMessage());
