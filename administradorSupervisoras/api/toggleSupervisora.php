@@ -14,7 +14,7 @@ if ($id === null) {
 
 try {
     $sup = dbFetchOne(
-        "SELECT ID, ACTIVA FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].RO_T_SUPERVISORAS_COMERCIAL WHERE ID = ?",
+        "SELECT ID, ACTIVA FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL WHERE ID = ?",
         [$id]
     );
 
@@ -29,7 +29,7 @@ try {
     if ($nuevoEstado === 0) {
         $row = dbFetchOne(
             "SELECT COUNT(*) AS CANT
-             FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS
+             FROM [dbo].SUCURSALES_LAKERS
              WHERE ID_SUPERVISORA = ? AND HABILITADO = 1 AND CANAL = 'PROPIOS'",
             [$id]
         );
@@ -37,7 +37,7 @@ try {
     }
 
     dbExecute(
-        "UPDATE [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].RO_T_SUPERVISORAS_COMERCIAL
+        "UPDATE [dbo].RO_T_SUPERVISORAS_COMERCIAL
          SET ACTIVA = ?
          WHERE ID = ?",
         [$nuevoEstado, $id]

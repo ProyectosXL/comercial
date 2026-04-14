@@ -19,7 +19,7 @@ if ($nombre === '') {
 try {
     // Verificar que existe
     $existe = dbFetchOne(
-        "SELECT ID FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].RO_T_SUPERVISORAS_COMERCIAL WHERE ID = ?",
+        "SELECT ID FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL WHERE ID = ?",
         [$id]
     );
     if (!$existe) {
@@ -28,7 +28,7 @@ try {
 
     // Verificar que el nombre no lo use otra
     $duplicado = dbFetchOne(
-        "SELECT ID FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].RO_T_SUPERVISORAS_COMERCIAL
+        "SELECT ID FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL
          WHERE UPPER(NOMBRE) = ? AND ID <> ?",
         [$nombre, $id]
     );
@@ -37,7 +37,7 @@ try {
     }
 
     dbExecute(
-        "UPDATE [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].RO_T_SUPERVISORAS_COMERCIAL
+        "UPDATE [dbo].RO_T_SUPERVISORAS_COMERCIAL
          SET NOMBRE = ?
          WHERE ID = ?",
         [$nombre, $id]

@@ -14,7 +14,7 @@ if ($id === null) {
 
 try {
     $sup = dbFetchOne(
-        "SELECT ID, NOMBRE FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].RO_T_SUPERVISORAS_COMERCIAL WHERE ID = ?",
+        "SELECT ID, NOMBRE FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL WHERE ID = ?",
         [$id]
     );
 
@@ -25,7 +25,7 @@ try {
     // Bloquear eliminación si tiene sucursales asignadas
     $row = dbFetchOne(
         "SELECT COUNT(*) AS CANT
-         FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS
+         FROM [dbo].SUCURSALES_LAKERS
          WHERE ID_SUPERVISORA = ? AND HABILITADO = 1 AND CANAL = 'PROPIOS'",
         [$id]
     );
@@ -36,7 +36,7 @@ try {
     }
 
     dbExecute(
-        "DELETE FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].RO_T_SUPERVISORAS_COMERCIAL WHERE ID = ?",
+        "DELETE FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL WHERE ID = ?",
         [$id]
     );
 

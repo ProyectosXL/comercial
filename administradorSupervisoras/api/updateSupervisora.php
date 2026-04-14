@@ -19,7 +19,7 @@ if ($nroSucursal === null) {
 try {
     // Verificar que la sucursal existe
     $suc = dbFetchOne(
-        "SELECT NRO_SUCURSAL FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS
+        "SELECT NRO_SUCURSAL FROM [dbo].SUCURSALES_LAKERS
          WHERE NRO_SUCURSAL = ? AND HABILITADO = 1 AND CANAL = 'PROPIOS'",
         [$nroSucursal]
     );
@@ -31,7 +31,7 @@ try {
     // Verificar que la supervisora existe (si se asigna una)
     if ($idSupervisora !== 0) {
         $sup = dbFetchOne(
-            "SELECT ID FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].RO_T_SUPERVISORAS_COMERCIAL
+            "SELECT ID FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL
              WHERE ID = ? AND ACTIVA = 1",
             [$idSupervisora]
         );
@@ -44,7 +44,7 @@ try {
     $nuevoValor = ($idSupervisora === 0) ? null : $idSupervisora;
 
     dbExecute(
-        "UPDATE [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS
+        "UPDATE [dbo].SUCURSALES_LAKERS
          SET ID_SUPERVISORA = ?
          WHERE NRO_SUCURSAL = ?",
         [$nuevoValor, $nroSucursal]

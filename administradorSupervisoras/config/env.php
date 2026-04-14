@@ -40,5 +40,5 @@ function loadEnv(string $path): void
     }
 }
 
-// Cargar .env desde la raíz del proyecto comercial
-loadEnv(dirname(__DIR__, 2) . '/.env');
+// Cargar .env desde la raíz del servidor (document root)
+loadEnv(dirname(__DIR__, 3) . '/.env');

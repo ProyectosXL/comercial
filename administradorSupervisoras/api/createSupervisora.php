@@ -15,7 +15,7 @@ if ($nombre === '') {
 try {
     // Verificar que no exista ya con ese nombre
     $existe = dbFetchOne(
-        "SELECT ID FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].RO_T_SUPERVISORAS_COMERCIAL
+        "SELECT ID FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL
          WHERE UPPER(NOMBRE) = ?",
         [$nombre]
     );
@@ -25,15 +25,15 @@ try {
     }
 
     dbExecute(
-        "INSERT INTO [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].RO_T_SUPERVISORAS_COMERCIAL
-             (NOMBRE, ACTIVA)
-         VALUES (?, 1)",
+        "INSERT INTO [dbo].RO_T_SUPERVISORAS_COMERCIAL
+             (ID, NOMBRE, ACTIVA)
+         VALUES (ISNULL((SELECT MAX(ID) FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL), 0) + 1, ?, 1)",
         [$nombre]
     );
 
     // Recuperar el registro recién creado
     $nueva = dbFetchOne(
-        "SELECT ID, NOMBRE, ACTIVA FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].RO_T_SUPERVISORAS_COMERCIAL
+        "SELECT ID, NOMBRE, ACTIVA FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL
          WHERE UPPER(NOMBRE) = ?",
         [$nombre]
     );

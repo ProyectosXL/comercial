@@ -13,10 +13,10 @@ function getDbConnection(): PDO
         return $pdo;
     }
 
-    $host = getenv('HOST_CENTRAL') ?: '';
-    $db   = getenv('DATABASE_CENTRAL') ?: '';
+    $host = getenv('HOST_LOCALES') ?: '';
+    $db   = getenv('DATABASE_LOCALES') ?: '';
     $user = getenv('USER') ?: '';
-    $pass = getenv('PASS') ?: '';
+    $pass = getenv('PASS_LOCALES') ?: '';
 
     if (!$host || !$db || !$user) {
         throw new RuntimeException('Variables de entorno de base de datos no configuradas.');
@@ -27,7 +27,7 @@ function getDbConnection(): PDO
     $options = [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES   => false,
+        PDO::ATTR_EMULATE_PREPARES   => true,
     ];
 
     try {
@@ -45,7 +45,9 @@ function dbFetchAll(string $sql, array $params = []): array
     $pdo  = getDbConnection();
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    return $stmt->fetchAll();
+    $rows = $stmt->fetchAll();
+    $stmt->closeCursor();
+    return $rows;
 }
 
 function dbFetchOne(string $sql, array $params = []): ?array
@@ -54,6 +56,7 @@ function dbFetchOne(string $sql, array $params = []): ?array
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $row = $stmt->fetch();
+    $stmt->closeCursor();
     return $row ?: null;
 }
 
@@ -62,5 +65,7 @@ function dbExecute(string $sql, array $params = []): int
     $pdo  = getDbConnection();
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
-    return $stmt->rowCount();
+    $count = $stmt->rowCount();
+    $stmt->closeCursor();
+    return $count;
 }
