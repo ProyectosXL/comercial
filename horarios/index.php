@@ -175,8 +175,8 @@
                                         value="permiso"><label class="btn btn-outline-danger" for="tipoPermiso"
                                         style="border-color:#d63384; color:#d63384;">P (PERM)</label>
                                     <input type="radio" class="btn-check" name="tipoHora" id="tipoExtra"
-                                        value="extra"><label class="btn btn-outline-primary" for="tipoExtra">E
-                                        (EXTRA)</label>
+                                        value="extra"><label class="btn btn-outline-primary" for="tipoExtra">A
+                                        (ADICIONAL)</label>
                                     <input type="radio" class="btn-check" name="tipoHora" id="tipoDevuelve"
                                         value="devuelve"><label class="btn btn-outline-warning" for="tipoDevuelve">D
                                         (DEV)</label>
@@ -219,7 +219,7 @@
                         <div class="vr"></div>
                         <div><strong style="color:#d63384">P (Permiso):</strong> Justif. paga (Suma a H).</div>
                         <div class="vr"></div>
-                        <div><strong class="text-primary">E (Extra):</strong> Adicionales.</div>
+                        <div><strong class="text-primary">A (Adicional):</strong> Adicionales.</div>
                         <div class="vr"></div>
                         <div><strong class="text-warning text-dark">D (Devuelve):</strong> Recupero.</div>
                     </div>
@@ -262,7 +262,7 @@
                                     <span class="badge text-bg-success">H: Normal</span>
                                     <span class="badge text-bg-info text-dark">C: Caja</span>
                                     <span class="badge text-white" style="background:#d63384">P: Permiso</span>
-                                    <span class="badge text-bg-primary">E: Extra</span>
+                                    <span class="badge text-bg-primary">A: Adicional</span>
                                     <span class="badge text-bg-warning text-dark">D: Devuelve</span>
                                     <span class="badge text-white" style="background:#6f42c1">F: Franco</span>
                                     <span class="badge bg-light text-dark border"><i
@@ -303,8 +303,8 @@
                                         value="normal" checked><label class="btn btn-outline-success" for="baseNormal">X
                                         (Normal)</label>
                                     <input type="radio" class="btn-check" name="baseTipoHora" id="baseExtra"
-                                        value="extra"><label class="btn btn-outline-primary" for="baseExtra">E
-                                        (Extra)</label>
+                                        value="extra"><label class="btn btn-outline-primary" for="baseExtra">A
+                                        (Adicional)</label>
                                 </div>
                             </div>
                             <div class="col-md-1">

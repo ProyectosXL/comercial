@@ -369,7 +369,9 @@ $(document).ready(function () {
             bodyHTML += '<td class="total-horas-empleado align-middle p-1">';
             bodyHTML += '<div class="d-flex flex-column align-items-center" style="font-size: 0.85rem; line-height: 1.1;">';
             bodyHTML += '<span class="text-success fw-bold" title="Horas Normales (H)">H: <span class="total-n">0</span></span>';
-            bodyHTML += '<span class="text-primary fw-bold" title="Horas Extras (E)">E: <span class="total-e">0</span></span>';
+            bodyHTML += '<span class="text-info fw-bold" title="Horas de Caja (C)">C: <span class="total-c">0</span></span>';
+            bodyHTML += '<span class="text-pink fw-bold" title="Horas de Permiso (P)" style="color: #d63384;">P: <span class="total-p">0</span></span>';
+            bodyHTML += '<span class="text-primary fw-bold" title="Horas Adicionales (A)">A: <span class="total-e">0</span></span>';
             bodyHTML += '<span class="text-warning fw-bold" title="Horas Devuelve (D)">D: <span class="total-d">0</span></span>';
             bodyHTML += '<span class="badge bg-light text-secondary border mt-3 total-saldo-container" title="Banco de Horas (Deuda)" style="font-size:0.9em;">';
             bodyHTML += 'Saldo: <span class="total-saldo">0</span>';
@@ -507,7 +509,7 @@ $(document).ready(function () {
                         let esMedia = tipoRaw.endsWith('_media');
                         let tipo = esMedia ? tipoRaw.replace('_media', '') : tipoRaw;
 
-                        if (tipo === 'extra') celda.addClass('hora-extra').text('E');
+                        if (tipo === 'extra') celda.addClass('hora-extra').text('A');
                         else if (tipo === 'devuelve') celda.addClass('hora-devuelve').text('D');
                         else if (tipo === 'permiso') celda.addClass('hora-permiso').text('P');
                         else if (tipo === 'caja') celda.addClass('hora-caja').text('C');
@@ -920,7 +922,9 @@ $(document).ready(function () {
             // .toFixed(1).replace('.0', '') para mostrar entero si es entero
             const fmt = (num) => (num % 1 === 0 ? num : num.toFixed(1));
 
-            fila.find('.total-n').text(fmt(totalH_Visual));
+            fila.find('.total-n').text(fmt(n)); // Solo normales reales
+            fila.find('.total-c').text(fmt(c)); // Caja
+            fila.find('.total-p').text(fmt(p)); // Permiso
             fila.find('.total-e').text(fmt(e));
             fila.find('.total-d').text(fmt(d));
 
@@ -989,7 +993,7 @@ $(document).ready(function () {
             $(this).html(''); // Limpiar indicador VISUAL
             // Restaurar texto base
             let textobase = 'X';
-            if ($(this).hasClass('hora-extra')) textobase = 'E';
+            if ($(this).hasClass('hora-extra')) textobase = 'A';
             if ($(this).hasClass('hora-devuelve')) textobase = 'D';
             if ($(this).hasClass('hora-permiso')) textobase = 'P';
             if ($(this).hasClass('hora-caja')) textobase = 'C';
@@ -1033,7 +1037,7 @@ $(document).ready(function () {
             const esMedia = celda.hasClass('media-hora');
 
             if (modoPintadoHoras === 'extra') {
-                celda.addClass('hora-extra').text('E');
+                celda.addClass('hora-extra').text('A');
             } else if (modoPintadoHoras === 'devuelve') {
                 celda.addClass('hora-devuelve').text('D');
             } else if (modoPintadoHoras === 'permiso') {
