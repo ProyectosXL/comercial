@@ -192,7 +192,7 @@ $(document).ready(function () {
                 filasHTML += '<div class="d-flex justify-content-between align-items-center">';
                 filasHTML += '<div class="text-truncate" style="max-width: 180px;" title="' + vendedor.NOMBRE_VEN + '">';
                 filasHTML += '<div>' + vendedor.NOMBRE_VEN + '</div>';
-                filasHTML += '<small class="d-block text-muted fw-normal">' + vendedor.TAREA_HABITUAL + ' <span class="badge bg-warning text-dark">Refuerzo</span></small>';
+                filasHTML += '<small class="d-block text-muted fw-normal"><span class="badge bg-warning text-dark">Refuerzo</span></small>';
                 filasHTML += '</div>';
                 filasHTML += '<span class="icono-feedback d-none ms-auto" data-vendedor-id="' + vendedorId + '" title="Sin Feedback" style="cursor:pointer;">';
                 filasHTML += '<i class="bi bi-chat-left-dots-fill text-secondary fs-5"></i>';
@@ -358,7 +358,6 @@ $(document).ready(function () {
             bodyHTML += '<div class="d-flex justify-content-between align-items-center">';
             bodyHTML += '<div class="text-truncate" style="max-width: 180px;" title="' + vendedor.NOMBRE_VEN + '">';
             bodyHTML += '<div>' + vendedor.NOMBRE_VEN + '</div>';
-            bodyHTML += '<small class="d-block text-muted fw-normal">' + vendedor.TAREA_HABITUAL + '</small>';
             bodyHTML += '</div>';
             bodyHTML += '<span class="icono-feedback ms-auto" data-vendedor-id="' + vendedorId + '" title="Sin Feedback" style="cursor:pointer; opacity: 0.2;">';
             bodyHTML += '<i class="bi bi-chat-left-dots-fill text-secondary fs-5"></i>';

@@ -19,64 +19,79 @@ class DotEnv
         $this->path = $path;
     }
 
-    private function load() :void
+    private function load(): array
     {
         if (!is_readable($this->path)) {
-            throw new \RuntimeException(sprintf('%s file is not readable', $this->path));
+            error_log(sprintf('DotEnv Error: %s file is not readable', $this->path));
+            return [];
         }
 
+        $variables = [];
         $lines = file($this->path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($lines as $line) {
-
-            if (strpos(trim($line), '#') === 0) {
+            $line = trim($line);
+            if (empty($line) || strpos($line, '#') === 0) {
                 continue;
             }
 
-            list($name, $value) = explode('=', $line, 2);
-            $name = trim($name);
-            $value = trim($value);
+            if (strpos($line, '=') !== false) {
+                list($name, $value) = explode('=', $line, 2);
+                $name = trim($name);
+                $value = trim($value);
+                
+                // Remove quotes if present
+                if (preg_match('/^"(.*)"$/', $value, $matches) || preg_match("/^'(.*)'$/", $value, $matches)) {
+                    $value = $matches[1];
+                }
 
-            if (!array_key_exists($name, $_SERVER) && !array_key_exists($name, $_ENV)) {
+                $variables[$name] = $value;
+                
+                // Still set them in environment for compatibility, but prioritize our array
                 putenv(sprintf('%s=%s', $name, $value));
                 $_ENV[$name] = $value;
                 $_SERVER[$name] = $value;
             }
         }
+        return $variables;
     }
 
-    public function listVars(){
-        (new DotEnv(__DIR__ . '/../../.env'))->load();
+    public function listVars()
+    {
+        $loadedVars = $this->load();
 
-        $vars = array(
-
-            'HOST_CENTRAL' => getenv('HOST_CENTRAL'),
-            'HOST_LOCALES' => getenv('HOST_LOCALES'),
-            'DATABASE_CENTRAL' => getenv('DATABASE_CENTRAL'),
-            'DATABASE_LOCALES' => getenv('DATABASE_LOCALES'),
-            'DATABASE_UY' => getenv('DATABASE_UY'),
-            'DATABASE_TANGOBIS' => getenv('DATABASE_TANGOBIS'),
-            'DATABASE_SUC_UY' => getenv('DATABASE_SUC_UY'),
-            'HOST_APPS' => getenv('HOST_APPS'),
-            'DATABASE_APPS' => getenv('DATABASE_APPS'),
-            'DATABASE_POWER' => getenv('DATABASE_POWER'),
-            'DATABASE_POWER_UY' => getenv('DATABASE_POWER_UY'),
-            'DATABASE_POWER_FRANQUICIAS' => getenv('DATABASE_POWER_FRANQUICIAS'),
-            'DATABASE_FRANQUICIAS' => getenv('DATABASE_FRANQUICIAS'),
-            'USER' => getenv('USER'),
-            'PASS' => getenv('PASS'),
-            'PASS_LOCALES' => getenv('PASS_LOCALES'),
-            'CHARACTER' => getenv('CHARACTER'),
-            'ENV' => getenv('ENV'),
-            'HOST_EMAIL' => getenv('HOST_EMAIL'),
-            'USER_EMAIL' => getenv('USER_EMAIL'),
-            'PASS_EMAIL' => getenv('PASS_EMAIL'),
-            
-
+        $defaultVars = array(
+            'HOST_CENTRAL' => '',
+            'HOST_LOCALES' => '',
+            'DATABASE_CENTRAL' => '',
+            'DATABASE_LOCALES' => '',
+            'DATABASE_UY' => '',
+            'DATABASE_TANGOBIS' => '',
+            'DATABASE_SUC_UY' => '',
+            'HOST_APPS' => '',
+            'DATABASE_APPS' => '',
+            'DATABASE_POWER' => '',
+            'DATABASE_POWER_UY' => '',
+            'DATABASE_POWER_FRANQUICIAS' => '',
+            'DATABASE_FRANQUICIAS' => '',
+            'USER' => '',
+            'PASS' => '',
+            'PASS_LOCALES' => '',
+            'CHARACTER' => 'UTF-8',
+            'ENV' => 'PROD',
+            'HOST_EMAIL' => '',
+            'USER_EMAIL' => '',
+            'PASS_EMAIL' => '',
         );
 
-        return $vars;
+        foreach ($defaultVars as $key => $default) {
+            if (isset($loadedVars[$key])) {
+                $defaultVars[$key] = $loadedVars[$key];
+            } elseif (getenv($key) !== false) {
+                $defaultVars[$key] = getenv($key);
+            }
+        }
 
-
+        return $defaultVars;
     }
 
 }

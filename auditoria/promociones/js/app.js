@@ -6,8 +6,12 @@
 const PromoApp = (() => {
     'use strict';
 
-    const LS_KEY_DESDE = 'promos_filtro_desde';
-    const LS_KEY_HASTA = 'promos_filtro_hasta';
+    const LS_KEY_DESDE   = 'promos_filtro_desde';
+    const LS_KEY_HASTA   = 'promos_filtro_hasta';
+    const LS_KEY_ENTORNO = 'promos_entorno';
+
+    // Entorno activo: 'central' (ARG) o 'uy' (Uruguay)
+    let entornoActivo = localStorage.getItem(LS_KEY_ENTORNO) || 'central';
 
     // -------------------------------------------------------
     // Helpers de fecha
@@ -104,8 +108,44 @@ const PromoApp = (() => {
 
         // Disparar evento para que cada módulo reaccione
         document.dispatchEvent(new CustomEvent('promos:consultar', {
-            detail: { fechaDesde, fechaHasta }
+            detail: { fechaDesde, fechaHasta, entorno: entornoActivo }
         }));
+    }
+
+    // -------------------------------------------------------
+    // Switch de entorno
+    // -------------------------------------------------------
+    const ENTORNOS = {
+        central: { flagCode: 'ar', label: 'Argentina', badgeClass: 'arg' },
+        uy:      { flagCode: 'uy', label: 'Uruguay',   badgeClass: 'uy'  },
+    };
+
+    function aplicarEntorno(entorno) {
+        entornoActivo = entorno;
+        localStorage.setItem(LS_KEY_ENTORNO, entorno);
+
+        // Actualizar botones del switch
+        document.querySelectorAll('.entorno-btn').forEach(btn => {
+            btn.classList.toggle('activo', btn.dataset.entorno === entorno);
+        });
+
+        // Actualizar badge en filter-bar
+        const badge = document.getElementById('entorno-badge-bar');
+        if (badge) {
+            const cfg = ENTORNOS[entorno];
+            badge.className = `entorno-badge ${cfg.badgeClass}`;
+            badge.innerHTML = `<span class="fi fi-${cfg.flagCode} me-1"></span>${cfg.label}`;
+        }
+    }
+
+    function inicializarEntorno() {
+        aplicarEntorno(entornoActivo);
+
+        document.getElementById('entorno-opciones').addEventListener('click', function (e) {
+            const btn = e.target.closest('.entorno-btn');
+            if (!btn || btn.classList.contains('activo')) return;
+            aplicarEntorno(btn.dataset.entorno);
+        });
     }
 
     // -------------------------------------------------------
@@ -113,6 +153,7 @@ const PromoApp = (() => {
     // -------------------------------------------------------
     function init() {
         inicializarFiltros();
+        inicializarEntorno();
 
         document.getElementById('btn-consultar').addEventListener('click', consultarActivo);
 
@@ -129,6 +170,7 @@ const PromoApp = (() => {
         init,
         mostrarLoader,
         ocultarLoader,
+        getEntorno: () => entornoActivo,
     };
 
 })();

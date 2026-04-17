@@ -12,9 +12,111 @@ body {
 }
 
 /* ---------- Navbar ---------- */
+.navbar.navbar-app {
+    background: linear-gradient(90deg, #1a2340 0%, #1e3a5f 100%);
+    border-bottom: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+}
+
 .navbar-brand {
     font-weight: 700;
     letter-spacing: -0.3px;
+    color: #ffffff !important;
+}
+
+.navbar-brand i {
+    color: #60a5fa !important;
+}
+
+.navbar-app .btn-volver {
+    color: rgba(255,255,255,0.75);
+    border-color: rgba(255,255,255,0.25);
+    font-size: 0.8rem;
+}
+
+.navbar-app .btn-volver:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border-color: rgba(255,255,255,0.5);
+}
+
+/* ---------- Switch de entorno ---------- */
+.entorno-switch {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 0.3px;
+}
+
+.entorno-switch-label {
+    white-space: nowrap;
+}
+
+.entorno-opciones {
+    display: flex;
+    background: rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 3px;
+    gap: 2px;
+}
+
+.entorno-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 16px;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+}
+
+.entorno-btn:hover {
+    color: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.1);
+}
+
+.entorno-btn.activo {
+    background: #ffffff;
+    color: #1a2340;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+}
+
+.entorno-btn .fi {
+    width: 1.1em;
+    height: 0.85em;
+    border-radius: 2px;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+/* Badge de entorno activo en filter-bar */
+.entorno-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.2em 0.6em;
+    border-radius: 10px;
+    vertical-align: middle;
+    margin-left: 0.4rem;
+}
+
+.entorno-badge.arg {
+    background: #e8f0fe;
+    color: #1a56db;
+}
+
+.entorno-badge.uy {
+    background: #fef9c3;
+    color: #713f12;
 }
 
 /* ---------- Filtros ---------- */
@@ -228,10 +330,16 @@ body {
     border-color: #dee2e6 !important;
 }
 
+/* Scroll horizontal en el contenedor — evita el doble-tabla de scrollX */
+#bancarias-table-wrap .p-3 {
+    overflow-x: auto;
+}
+
 /* Table */
 #bancariasTable {
     font-size: 0.8rem;
     width: 100% !important;
+    min-width: max-content;
 }
 
 #bancariasTable thead th {

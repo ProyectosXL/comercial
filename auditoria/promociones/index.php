@@ -12,6 +12,8 @@
     <!-- DataTables + Bootstrap 5 integration -->
     <link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
 
+    <!-- Flag icons (SVG, compatible Windows) -->
+    <link href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css" rel="stylesheet">
     <!-- Estilos del módulo -->
     <link href="css/styles.css" rel="stylesheet">
     <!-- SheetJS para exportar Excel desde el modal de detalle -->
@@ -28,14 +30,28 @@
 </div>
 
 <!-- ===================== NAVBAR ===================== -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm">
+<nav class="navbar navbar-app">
     <div class="container-fluid px-4">
         <a class="navbar-brand d-flex align-items-center gap-2" href="#">
-            <i class="bi bi-graph-up-arrow text-primary fs-5"></i>
+            <i class="bi bi-graph-up-arrow fs-5"></i>
             <span>Auditoría de Promociones</span>
         </a>
+
         <div class="d-flex align-items-center gap-3 ms-auto">
-            <a href="/comercial/auditoria/" class="btn btn-sm btn-outline-secondary">
+            <!-- Switch de entorno -->
+            <div class="entorno-switch">
+                <span class="entorno-switch-label">Entorno:</span>
+                <div class="entorno-opciones" id="entorno-opciones">
+                    <button class="entorno-btn activo" data-entorno="central" id="btn-entorno-arg">
+                        <span class="fi fi-ar"></span> ARG
+                    </button>
+                    <button class="entorno-btn" data-entorno="uy" id="btn-entorno-uy">
+                        <span class="fi fi-uy"></span> UY
+                    </button>
+                </div>
+            </div>
+
+            <a href="/comercial/auditoria/" class="btn btn-sm btn-volver">
                 <i class="bi bi-arrow-left me-1"></i>Auditoría principal
             </a>
         </div>
@@ -60,6 +76,10 @@
                 </button>
             </div>
             <div id="filtro-aplicado" class="ms-2 text-muted small" style="display:none;"></div>
+            <div class="ms-auto d-flex align-items-center">
+                <span class="text-muted small me-1">Entorno activo:</span>
+                <span id="entorno-badge-bar" class="entorno-badge arg"><span class="fi fi-ar me-1"></span>Argentina</span>
+            </div>
         </div>
     </div>
 </div>
@@ -201,7 +221,17 @@
             <div id="bancarias-table-wrap" class="table-wrapper d-none">
                 <div class="table-toolbar">
                     <h6><i class="bi bi-table me-2 text-primary"></i>Detalle por Fecha y Banco</h6>
-                    <div id="bancarias-colvis"></div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="btn-group btn-group-sm" id="bancarias-vista-toggle" role="group" aria-label="Vista">
+                            <button type="button" class="btn btn-outline-secondary active" data-vista="diaria">
+                                <i class="bi bi-calendar3 me-1"></i>Por día
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" data-vista="evento">
+                                <i class="bi bi-calendar-range me-1"></i>Por evento
+                            </button>
+                        </div>
+                        <div id="bancarias-colvis"></div>
+                    </div>
                 </div>
                 <div class="p-3">
                     <table id="bancariasTable" class="table table-bordered table-hover w-100">
@@ -209,6 +239,7 @@
                             <tr>
                                 <th data-bs-toggle="tooltip" data-bs-title="Año del evento promocional">Año</th>
                                 <th data-bs-toggle="tooltip" data-bs-title="Mes del evento promocional">Mes</th>
+                                <th data-bs-toggle="tooltip" data-bs-title="Día del mes del evento promocional">Día</th>
                                 <th data-bs-toggle="tooltip" data-bs-title="Canal de venta (VTEX = ecommerce)">Canal</th>
                                 <th data-bs-toggle="tooltip" data-bs-title="Entidad bancaria de la promoción">Banco</th>
                                 <th data-bs-toggle="tooltip" data-bs-title="Descripción de la promoción vigente ese día">Promoción</th>

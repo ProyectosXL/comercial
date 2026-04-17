@@ -7,8 +7,41 @@
     <title>RRHH - Tablero de Control</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    
+    <!-- Select2 CSS (Buscador lindo) -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+
     <link rel="stylesheet" href="assets/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .btn-solicitud {
+            cursor: pointer;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 900;
+            color: #adb5bd;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .btn-solicitud.tiene-solicitud {
+            background-color: #0dcaf0;
+            border-color: #0baccc;
+            color: #000 !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .btn-solicitud.tiene-solicitud:hover {
+            transform: scale(1.1);
+            background-color: #31d2f2;
+        }
+    </style>
 </head>
 
 <body class="bg-light">
@@ -59,6 +92,12 @@
                 <button class="nav-link fw-bold" id="tab-importador" data-bs-toggle="tab"
                     data-bs-target="#panel-importador" type="button" role="tab">
                     <i class="bi bi-file-earmark-excel-fill text-dark"></i> REPORTE IMPORTADOR - QP
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="tab-planificacion" data-bs-toggle="tab"
+                    data-bs-target="#panel-planificacion" type="button" role="tab">
+                    <i class="bi bi-grid-3x3-gap-fill text-warning"></i> Planificación Horaria
                 </button>
             </li>
         </ul>
@@ -172,6 +211,9 @@
                                     <button id="ind_btnExportarDetalle"
                                         class="btn btn-sm btn-outline-success me-2 disabled"><i
                                             class="bi bi-file-earmark-excel"></i> Exportar Detalle</button>
+                                    <button id="ind_btnExportarCajas"
+                                        class="btn btn-sm btn-outline-info me-2 disabled"><i
+                                            class="bi bi-file-earmark-excel"></i> Reporte Horas Caja</button>
                                     <a href="#" id="ind_btnDescargarReporte9hs"
                                         class="btn btn-sm btn-outline-danger disabled" target="_blank"><i
                                             class="bi bi-file-earmark-excel"></i> Reporte >9hs</a>
@@ -271,8 +313,126 @@
                 </div>
             </div>
 
+            <!-- === PANEL 4: PLANIFICACIÓN HORARIA (CLON MI LOCAL) === -->
+            <div class="tab-pane fade" id="panel-planificacion" role="tabpanel">
+                <!-- Filtros Matriz -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-4 bg-white rounded">
+                        <div class="row g-3 align-items-end">
+                            <!-- Selector Sucursal -->
+                            <div class="col-md-4">
+                                <label class="form-label text-muted small fw-bold text-uppercase">Sucursal</label>
+                                <select id="sucursalSelector" class="form-select form-select-lg fw-bold border-secondary">
+                                    <option value="">-- Seleccionar --</option>
+                                </select>
+                            </div>
+                            <!-- Selector Semana -->
+                            <div class="col-md-3">
+                                <label class="form-label text-muted small fw-bold text-uppercase">Semana</label>
+                                <input type="week" id="semanaSelector" class="form-control form-control-lg border-secondary">
+                            </div>
+                            <!-- Buscador Vendedor -->
+                            <div class="col-md-3">
+                                <label class="form-label text-muted small fw-bold text-uppercase">O buscar Vendedor</label>
+                                <select id="vendedorSelector" class="form-select" style="width: 100%;">
+                                    <option></option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button id="btnVerAgenda" class="btn btn-dark btn-lg w-100">
+                                    <i class="bi bi-eye-fill"></i> Ver
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenedor Matriz -->
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0 text-muted fw-bold"><i class="bi bi-grid-3x3-gap-fill me-2"></i> Grilla de Horarios</h5>
+                        <button id="btnExportarPDF" class="btn btn-outline-danger btn-sm" disabled>
+                            <i class="bi bi-file-earmark-pdf-fill"></i> Exportar a PDF
+                        </button>
+                    </div>
+                    <div class="card-body p-0" id="contenedorImprimir">
+                        <div id="tablaVistaLocal" class="table-responsive bg-white">
+                            <div class="text-center py-5 text-muted">
+                                <i class="bi bi-table display-1 opacity-25"></i>
+                                <p class="mt-3 fs-5">Seleccione filtros para ver los horarios.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LEYENDA -->
+                <div class="card mt-4 mb-4">
+                    <div class="card-body p-3">
+                        <h6 class="card-title text-muted mb-3"><i class="bi bi-palette-fill"></i> Leyenda</h6>
+                        <div class="text-center d-flex flex-wrap gap-3">
+                            <span class="badge text-bg-success fs-6">H: Horas Normales</span>
+                            <span class="badge text-bg-info text-dark fs-6">C: Horas de Caja</span>
+                            <span class="badge text-white fs-6" style="background-color: #d63384;">P: Permiso</span>
+                            <span class="badge text-white fs-6" style="background-color: #fd7e14;">D: Devolución</span>
+                            <span class="badge text-bg-primary fs-6">A: Horas Adicionales</span>
+                            <span class="badge text-white fs-6" style="background-color: #6f42c1;">F: Franco</span>
+                            <span class="badge bloqueo-externo text-light fs-6">Ø: Otra Sucursal</span>
+                            <span class="badge bg-light text-dark border d-flex align-items-center gap-2">
+                                <i class="bi bi-chat-square-text-fill text-warning"></i> Nota Diaria
+                            </span>
+                            <span class="badge bg-light text-dark border d-flex align-items-center gap-2">
+                                <i class="bi bi-chat-left-quote-fill text-primary"></i> Feedback
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div> <!-- Fin Tab Content -->
 
+    </div>
+
+    <!-- MODAL DE FEEDBACK -->
+    <div class="modal fade" id="modalFeedback" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-chat-dots-fill me-2"></i> Feedback / Solicitudes</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="feedVendedor">
+                    <p class="mb-2">Comentarios sobre <b><span id="feedNombre"></span></b> para esta semana:</p>
+                    <textarea id="feedTexto" class="form-control" rows="5"
+                        placeholder="Ej: Solicita cambio de franco, llega tarde el martes..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary px-4" id="btnGuardarFeed">
+                        <i class="bi bi-send-fill"></i> Enviar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE MENSAJES -->
+    <div class="modal fade" id="modalMensaje" tabindex="-1" aria-hidden="true" style="z-index: 1080;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header text-white" id="modalMensajeHeader">
+                    <h5 class="modal-title" id="modalMensajeTitulo"></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center p-4">
+                    <div id="modalMensajeIcono" class="mb-3" style="font-size: 3rem;"></div>
+                    <p id="modalMensajeTexto" class="fs-5 mb-0"></p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal Ayuda Contextual: RRHH (Premium) -->
@@ -367,10 +527,18 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
+    <!-- SELECT2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- HTML2CANVAS y JSPDF para Exportación PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <!-- Scripts actualizados con prefijos -->
     <script src="assets/js/indicadores.js"></script>
     <script src="assets/js/comparacion.js"></script>
     <script src="assets/js/importador.js"></script>
+    <script src="assets/js/local.js"></script>
 
 </body>
 

@@ -7,10 +7,18 @@ class Bancarias
 {
     private $conn;
 
-    public function __construct()
+    /**
+     * @param string $entorno  'central' (Argentina) o 'uy' (Uruguay)
+     */
+    public function __construct(string $entorno = 'central')
     {
-        $conexion = new Conexion();
-        $this->conn = $conexion->conectar('central');
+        $entornosValidos = ['central', 'uy'];
+        if (!in_array($entorno, $entornosValidos, true)) {
+            $entorno = 'central';
+        }
+
+        $conexion   = new Conexion();
+        $this->conn = $conexion->conectar($entorno);
 
         if (!$this->conn) {
             throw new RuntimeException('No se pudo establecer conexión con la base de datos.');
@@ -27,9 +35,16 @@ class Bancarias
      */
     public function getBancarias(string $fechaDesde, string $fechaHasta): array
     {
-        $sql = "EXEC RO_SP_REPORTE_PROMOS_BANCARIAS_VTEX
-                    @FECHA_DESDE = ?,
-                    @FECHA_HASTA = ?";
+        $sql = "SELECT
+                    FECHA, ANIO, NRO_MES, NRO_DIA,
+                    CANAL, BANCO, DESC_PROMO, PORC_REINTEGRO,
+                    PEDIDOS_TOTAL_DIA, VTA_TOTAL_DIA,
+                    PEDIDOS_CON_PROMO, VTA_PROMO, TKT_CON_PROMO, PORC_2DO_CON_PROMO,
+                    PEDIDOS_SIN_PROMO, TKT_SIN_PROMO, PORC_2DO_SIN_PROMO,
+                    PORC_VTA_PROMO, CREC_TKT, PROPORCION
+                FROM RO_T_PROMOS_BANCARIAS_VTEX
+                WHERE FECHA BETWEEN ? AND ?
+                ORDER BY FECHA, BANCO";
 
         $params = [
             [$fechaDesde, SQLSRV_PARAM_IN, null, SQLSRV_SQLTYPE_DATE],
@@ -42,14 +57,13 @@ class Bancarias
             $errors  = sqlsrv_errors(SQLSRV_ERR_ALL);
             $mensaje = !empty($errors[0]['message'])
                 ? $errors[0]['message']
-                : 'Error desconocido al ejecutar el stored procedure.';
+                : 'Error desconocido al consultar los datos.';
             throw new RuntimeException($mensaje);
         }
 
         $resultado = [];
 
         while ($fila = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-            // FECHA puede venir como DateTime desde sqlsrv; la formateamos a string
             $fecha = $fila['FECHA'];
             if ($fecha instanceof DateTime) {
                 $fecha = $fecha->format('Y-m-d');
@@ -59,6 +73,7 @@ class Bancarias
                 'FECHA'              => $fecha,
                 'ANIO'               => (int)   $fila['ANIO'],
                 'NRO_MES'            => (int)   $fila['NRO_MES'],
+                'NRO_DIA'            => (int)   $fila['NRO_DIA'],
                 'CANAL'              =>          $fila['CANAL'],
                 'BANCO'              =>          $fila['BANCO'],
                 'DESC_PROMO'         =>          $fila['DESC_PROMO'],

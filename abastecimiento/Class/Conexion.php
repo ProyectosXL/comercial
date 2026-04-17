@@ -60,6 +60,14 @@ class Conexion{
         try {
 
             $serverDB = $this->servidor($nameServer);
+            
+            // Check if we have a valid host and database
+            if (empty($serverDB[0]) || empty($serverDB[1])) {
+                error_log("Error: Host or Database is empty. Host: " . var_export($serverDB[0], true) . ", DB: " . var_export($serverDB[1], true));
+                if ($nameServer) {
+                    error_log("Requested server was: " . $nameServer);
+                }
+            }
 
             if($this->env == 'PROD' && (strtolower($serverDB[0]) == strtolower('XL-LAKERBIS'))){
                 $pass = $this->pass_locales;
@@ -68,25 +76,31 @@ class Conexion{
             }
 
             $params = array( 
-                "Database" => $serverDB[1], 
-                "UID" => $this->user, 
-                "PWD" => $pass, 
-                "CharacterSet" => $this->character
+                "Database" => (string)$serverDB[1], 
+                "UID" => (string)$this->user, 
+                "PWD" => (string)$pass, 
+                "CharacterSet" => (string)$this->character
             );
 
-$cid = sqlsrv_connect($serverDB[0], $params);
+            $cid = sqlsrv_connect((string)$serverDB[0], $params);
 
-if(!$cid) {
-    // CÓDIGO DE DIAGNÓSTICO (Borrar después de arreglar)
-    echo "<h3>Error Fatal de Conexión SQL</h3>";
-    echo "<b>Intentando conectar a:</b> " . $serverDB[0] . "<br>";
-    echo "<b>Usuario:</b> " . $this->user . "<br>";
-    echo "<b>Base de datos:</b> " . $serverDB[1] . "<br><br>";
-    echo "<b>Detalle del error:</b><br>";
-    die(print_r(sqlsrv_errors(), true));
-}
+            if(!$cid) {
+                $errors = sqlsrv_errors();
+                error_log("SQL Connection Failed to " . $serverDB[0] . " [" . $serverDB[1] . "]. Errors: " . print_r($errors, true));
+                
+                // CÓDIGO DE DIAGNÓSTICO (Borrar después de arreglar)
+                echo "<h3>Error Fatal de Conexión SQL</h3>";
+                echo "<b>Intentando conectar a:</b> " . htmlspecialchars($serverDB[0]) . "<br>";
+                echo "<b>Usuario:</b> " . htmlspecialchars($this->user) . "<br>";
+                echo "<b>Base de datos:</b> " . htmlspecialchars($serverDB[1]) . "<br><br>";
+                echo "<b>Detalle del error:</b><br>";
+                echo "<pre>";
+                print_r($errors);
+                echo "</pre>";
+                die();
+            }
 
-// este cid va a cambiar mil veces
+            // este cid va a cambiar mil veces
             $_SESSION['cid'] = $cid;
             return $cid;
             

@@ -1,6 +1,8 @@
 $(document).ready(function () {
     const apiDatosURL = 'api/obtener_datos.php';
     const apiVistaURL = 'api/vista_local_handler.php';
+    let lastDataLoaded = null;
+    let lastPrimerDia = null;
 
     // 1. INICIALIZAR SELECT2
     $('#vendedorSelector').select2({
@@ -92,6 +94,8 @@ $(document).ready(function () {
         }
 
         $.getJSON(url, function (data) {
+            lastDataLoaded = data;
+            lastPrimerDia = primerDia;
             renderTablaVistaLocal(data, primerDia);
         }).fail(function (jqXHR, textStatus, errorThrown) {
             console.error('Error al cargar datos:', textStatus, errorThrown);
@@ -124,7 +128,7 @@ $(document).ready(function () {
 
         const agenda = data.agenda;
         const nombres = data.nombres;
-        const nombresSucursales = data.nombres_sucursales || {};
+        const nombresSucursales = data.nombresSucursales || {};
         const promociones = data.promociones || {};
         const saldosAnteriores = data.saldosAnteriores || {};
 
@@ -224,7 +228,7 @@ $(document).ready(function () {
             const tarea = infoVend.tarea;
             const saldoBase = saldosAnteriores[id] || saldosAnteriores[parseInt(id)] || 0;
 
-            let tH = 0, tE = 0, tD = 0, tP = 0;
+            let tH = 0, tE = 0, tD = 0, tP = 0, tC = 0;
 
             // Pre-calcular sumatorias para el vendedor
             fechasSemana.forEach((fecha, diaIndex) => {
@@ -242,10 +246,11 @@ $(document).ready(function () {
                         if (tipo) {
                             if (tipo === 'vacaciones') continue;
 
-                            if (tipo === 'normal' || tipo === 'caja') tH += valor;
+                            if (tipo === 'normal') tH += valor;
+                            else if (tipo === 'caja') tC += valor;
+                            else if (tipo === 'permiso') tP += valor;
                             else if (tipo === 'extra') tE += valor;
                             else if (tipo === 'devuelve') tD += valor;
-                            else if (tipo === 'permiso') tP += valor;
 
                             sumasHoras[diaIndex][h] += valor;
                         }
@@ -263,7 +268,6 @@ $(document).ready(function () {
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="text-truncate" style="max-width: 160px;">
                                 <div class="fw-bold mb-0 vendedor-nombre">${nombre}</div>
-                                <small class="text-muted vendedor-tarea">${tarea}</small>
                             </div>
                             <button class="btn-feedback ${tieneFeedback ? 'tiene-feedback' : ''}" 
                                     data-id="${id}" data-nombre="${nombre}" data-texto="${feedbackTexto}">
@@ -278,11 +282,15 @@ $(document).ready(function () {
             else if (saldoFinal < 0) colorSaldo = 'bg-success text-white';
 
             html += `<td class="sticky-left-1 bg-white align-middle p-0 col-totales">
-                        <div class="d-flex flex-column align-items-center summary-container">
+                        <div class="d-flex flex-column align-items-center summary-container" style="font-size: 0.8rem; line-height: 1.1;">
                             <span class="text-success fw-bold">H: ${tH % 1 === 0 ? tH : tH.toFixed(1)}</span>
-                            <span class="text-primary fw-bold">E: ${tE % 1 === 0 ? tE : tE.toFixed(1)}</span>
+                            <span class="text-info fw-bold">C: ${tC % 1 === 0 ? tC : tC.toFixed(1)}</span>
+                            <span class="text-pink fw-bold" style="color: #d63384;">P: ${tP % 1 === 0 ? tP : tP.toFixed(1)}</span>
+                            <span class="text-primary fw-bold">A: ${tE % 1 === 0 ? tE : tE.toFixed(1)}</span>
                             <span class="text-warning fw-bold">D: ${tD % 1 === 0 ? tD : tD.toFixed(1)}</span>
-                            <span class="fw-bold text-pink">P: ${tP % 1 === 0 ? tP : tP.toFixed(1)}</span>
+                            <span class="badge ${colorSaldo} border mt-1" title="Banco de Horas (Saldo)" style="font-size:0.85em; padding: 2px 4px;">
+                                Saldo: ${saldoFinal % 1 === 0 ? saldoFinal : saldoFinal.toFixed(1)}
+                            </span>
                         </div>
                      </td>`;
 
@@ -316,11 +324,11 @@ $(document).ready(function () {
                         texto = 'Ø';
                         color = '#adb5bd';
                         extraClass = 'bloqueo-externo';
-                        const nomSuc = data.nombres_sucursales ? (data.nombres_sucursales[bloqueo] || bloqueo) : bloqueo;
+                        const nomSuc = nombresSucursales ? (nombresSucursales[bloqueo] || bloqueo) : bloqueo;
                         titleAttr = `title="Ocupado en Sucursal: ${nomSuc}"`;
                     } else if (tipo) {
                         color = 'white';
-                        if (tipo === 'extra') { bgColor = '#0d6efd'; texto = 'E'; }
+                        if (tipo === 'extra') { bgColor = '#0d6efd'; texto = 'A'; }
                         else if (tipo === 'devuelve') { bgColor = '#fd7e14'; texto = 'D'; }
                         else if (tipo === 'permiso') { bgColor = '#d63384'; texto = 'P'; }
                         else if (tipo === 'caja') { bgColor = '#0dcaf0'; texto = 'C'; color = '#000'; }
@@ -516,121 +524,166 @@ $(document).ready(function () {
         new bootstrap.Modal(document.getElementById('modalMensaje')).show();
     }
 
-    // --- EXPORTAR MATRIZ A PDF ---
-    $('#btnExportarPDF').on('click', function () {
+    // --- EXPORTAR MATRIZ A PDF (TODO EN UNA PÁGINA) ---
+    $('#btnExportarPDF').on('click', async function () {
+        if (!lastDataLoaded) return;
+        
         const btn = $(this);
         const originalText = btn.html();
-        
-        btn.html('<span class="spinner-border spinner-border-sm me-2"></span> Generando...');
+        btn.html('<span class="spinner-border spinner-border-sm me-2"></span> Generando PDF...');
         btn.prop('disabled', true);
 
-        const containerToPrint = document.getElementById('contenedorImprimir');
-        const tableElement = containerToPrint.querySelector('table');
-        const $tableResp = $('#tablaVistaLocal');
+        try {
+            const sucursalNombre = $('#sucursalSelector option:selected').text() || 'Sucursal';
+            const primerDia = lastPrimerDia;
+            const ultimoDia = new Date(primerDia);
+            ultimoDia.setDate(primerDia.getDate() + 6);
+            const rangoFechas = `${primerDia.toISOString().split('T')[0]} al ${ultimoDia.toISOString().split('T')[0]}`;
 
-        if (!tableElement) {
-            btn.html(originalText);
-            btn.prop('disabled', false);
-            return;
+            const diasNombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            const agenda = lastDataLoaded.agenda;
+            const nombres = lastDataLoaded.nombres;
+            const promos = lastDataLoaded.promociones || {};
+            const promosInt = lastDataLoaded.promociones_internas || {};
+
+            const vIds = Object.keys(agenda).sort((a, b) => {
+                const nA = (nombres[a]?.nombre || a).toLowerCase();
+                const nB = (nombres[b]?.nombre || b).toLowerCase();
+                return nA.localeCompare(nB);
+            });
+
+            // Generar TODO el HTML de la semana como un solo bloque ultra compacto
+            let fullHtml = `
+                <div style="font-family: Arial, Helvetica, sans-serif; background: white; padding: 8px;">
+                    <div style="font-size: 13px; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        ${sucursalNombre} &mdash; Semana ${rangoFechas}
+                    </div>
+            `;
+
+            for (let d = 0; d < 7; d++) {
+                let fAct = new Date(primerDia);
+                fAct.setDate(primerDia.getDate() + d);
+                const fISO = fAct.toISOString().split('T')[0];
+                const dd = String(fAct.getDate()).padStart(2, '0');
+                const mm = String(fAct.getMonth() + 1).padStart(2, '0');
+
+                fullHtml += `
+                    <div style="margin-bottom: 4px;">
+                        <div style="background: #2c3e50; color: white; padding: 2px 6px; font-weight: bold; font-size: 10px;">
+                            ${diasNombres[d]} ${dd}/${mm}
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 9px; line-height: 1.15;">
+                            <thead>
+                                <tr style="background: #eaedf0;">
+                                    <th style="border: 1px solid #aaa; padding: 1px 2px; text-align: left; width: 90px; max-width: 90px;">Vendedor</th>
+                                    <th style="border: 1px solid #aaa; padding: 1px 2px; text-align: center; width: 22px;">Leg</th>
+                                    ${Array.from({length: 18}, (_, i) => {
+                                        const h = i + 7;
+                                        const lb = (h === 24) ? '00' : h;
+                                        return `<th style="border: 1px solid #aaa; padding: 0px; text-align: center; width: 10px; font-size: 8px;">${lb}</th>`;
+                                    }).join('')}
+                                    <th style="border: 1px solid #aaa; padding: 1px; text-align: center; width: 12px;">F</th>
+                                    <th style="border: 1px solid #aaa; padding: 1px; text-align: center; width: 22px;">T</th>
+                                    <th style="border: 1px solid #aaa; padding: 1px; text-align: center; width: 14px;">Hs</th>
+                                    <th style="border: 1px solid #aaa; padding: 1px 2px; text-align: left; width: 70px; max-width: 70px;">Promos banco</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                vIds.forEach(vid => {
+                    const inf = nombres[vid] || nombres[parseInt(vid)] || { nombre: vid, legajo: vid };
+                    const dat = agenda[vid] || {};
+                    const franco = dat.francos && dat.francos[fISO];
+                    let tH = 0, turno = '-', hDia = [];
+                    if (!franco && dat.horarios && dat.horarios[fISO]) {
+                        Object.entries(dat.horarios[fISO]).forEach(([h, t]) => {
+                            let v = t && t.endsWith('_media') ? 0.5 : 1;
+                            if (t !== 'vacaciones') { tH += v; hDia.push(parseInt(h)); }
+                        });
+                        turno = calcularTurnoTexto(hDia);
+                    }
+
+                    fullHtml += `<tr>
+                        <td style="border: 1px solid #bbb; padding: 1px 2px; font-weight: bold; width: 90px; max-width: 90px; word-break: break-word;">${inf.nombre}</td>
+                        <td style="border: 1px solid #bbb; padding: 1px; text-align: center; color: #555;">${inf.legajo || vid}</td>`;
+
+                    for (let h = 7; h <= 24; h++) {
+                        const hb = (h === 24) ? 0 : h;
+                        const tipo = (!franco && dat.horarios && dat.horarios[fISO]) ? (dat.horarios[fISO][hb] || '') : null;
+                        let tx = '', bg = '';
+                        if (tipo) {
+                            tx = tipo.endsWith('_media') ? '½' : 'X';
+                            bg = '#198754';
+                            if (tipo === 'caja') { tx = 'C'; bg = '#0dcaf0'; }
+                            else if (tipo === 'extra') { tx = 'E'; bg = '#0d6efd'; }
+                            else if (tipo === 'devuelve') { tx = 'D'; bg = '#ffc107'; }
+                            else if (tipo === 'permiso') { tx = 'P'; bg = '#d63384'; }
+                        }
+                        fullHtml += `<td style="border: 1px solid #bbb; padding: 0px; text-align: center; width: 10px; background: ${bg}; color: ${bg ? 'white' : 'transparent'}; font-weight: 700; font-size: 8px;">${tx}</td>`;
+                    }
+
+                    fullHtml += `
+                        <td style="border: 1px solid #bbb; padding: 1px; text-align: center; background: ${franco ? '#6c757d' : ''}; color: white; font-weight: bold;">${franco ? 'F' : ''}</td>
+                        <td style="border: 1px solid #bbb; padding: 1px; text-align: center; font-weight: bold;">${turno}</td>
+                        <td style="border: 1px solid #bbb; padding: 1px; text-align: center; font-weight: bold;">${tH > 0 ? (tH % 1 === 0 ? tH : tH.toFixed(1)) : '0'}</td>
+                        <td style="border: 1px solid #bbb; padding: 1px 2px; font-size: 7px; color: #333; width: 70px; max-width: 70px; word-break: break-word;">${(promos[fISO] || []).join(', ')}</td>
+                    </tr>`;
+                });
+
+                fullHtml += `</tbody></table></div>`;
+            }
+
+            fullHtml += `</div>`;
+
+            // Renderizar en un contenedor temporal fuera de pantalla
+            const tempDiv = $('<div style="width: 1100px; position: absolute; left: -9999px; background: white;"></div>');
+            tempDiv.html(fullHtml);
+            $('body').append(tempDiv);
+
+            // Esperar un frame para que el navegador renderice
+            await new Promise(r => setTimeout(r, 300));
+
+            const canvas = await html2canvas(tempDiv[0], {
+                scale: 2.5,
+                useCORS: true,
+                backgroundColor: '#ffffff'
+            });
+            tempDiv.remove();
+
+            const imgData = canvas.toDataURL('image/jpeg', 0.92);
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = pdf.internal.pageSize.getHeight();
+            const m = 5;
+            const usableW = pdfW - (m * 2);
+            const usableH = pdfH - (m * 2);
+            
+            // Escalar para que entre exacto en una página
+            let imgW = usableW;
+            let imgH = (canvas.height * imgW) / canvas.width;
+            
+            // Si la altura excede la página, re-escalar por altura
+            if (imgH > usableH) {
+                imgH = usableH;
+                imgW = (canvas.width * imgH) / canvas.height;
+            }
+
+            // Centrar horizontalmente
+            const offsetX = m + (usableW - imgW) / 2;
+            pdf.addImage(imgData, 'JPEG', offsetX, m, imgW, imgH);
+
+            const semanaVal = $('#semanaSelector').val() || 'Semana';
+            pdf.save(`Horarios_${sucursalNombre}_${semanaVal}.pdf`);
+
+        } catch (err) {
+            console.error('Error al generar PDF:', err);
+            mostrarModalConTitulo("Error", "No se pudo generar el PDF.", "error");
         }
 
-        // PRE-CAPTURE: Remover sticky y responsive para que html2canvas capture TODO
-        // Seleccionamos TODO lo que pueda tener sticky en el CSS
-        const stickyElements = $(containerToPrint).find('thead th, tfoot td, tfoot th, .sticky-top-0, .sticky-top-1, .sticky-left-0, .sticky-left-1, .sticky-bottom');
-        
-        // Guardamos los estilos originales para restaurarlos luego
-        const originalStyles = [];
-        stickyElements.each(function() {
-            originalStyles.push($(this).attr('style') || '');
-            $(this).css({
-                'position': 'static',
-                'top': 'auto',
-                'bottom': 'auto',
-                'left': 'auto',
-                'z-index': 'auto'
-            });
-        });
-
-        $tableResp.removeClass('table-responsive').css('overflow', 'visible');
-        
-        const originalStyle = containerToPrint.style.cssText;
-        // Forzamos al contenedor a tener el ancho de la tabla real
-        const totalWidth = tableElement.scrollWidth;
-        const totalHeight = tableElement.scrollHeight + 100; // Un margen extra
-
-        containerToPrint.style.width = totalWidth + 'px';
-        containerToPrint.style.minWidth = totalWidth + 'px';
-        containerToPrint.style.overflow = 'visible';
-
-        setTimeout(() => {
-            html2canvas(containerToPrint, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                logging: false,
-                width: totalWidth,
-                height: totalHeight,
-                windowWidth: totalWidth,
-                onclone: (clonedDoc) => {
-                    const clonedEl = clonedDoc.getElementById('contenedorImprimir');
-                    clonedEl.style.width = totalWidth + 'px';
-                    clonedEl.style.overflow = 'visible';
-                    // Nos aseguramos que la tabla dentro del clon también se estire
-                    const clonedTable = clonedEl.querySelector('table');
-                    if (clonedTable) {
-                        clonedTable.style.width = totalWidth + 'px';
-                        clonedTable.style.minWidth = totalWidth + 'px';
-                    }
-                }
-            }).then(canvas => {
-                // RESTORE
-                stickyElements.each(function(i) {
-                    if (originalStyles[i]) $(this).attr('style', originalStyles[i]);
-                    else $(this).removeAttr('style');
-                });
-
-                // Reiniciamos las cabeceras porque el JS las ajustó dinámicamente al cargar
-                if (typeof renderTablaVistaLocal === 'function') {
-                    // Un pequeño ajuste manual para que vuelvan los tops si se perdieron
-                    const firstRow = $tableResp.find('thead tr').eq(0);
-                    if (firstRow.length) {
-                        const h1 = firstRow.outerHeight();
-                        $tableResp.find('thead tr').eq(1).find('th').css('top', h1 + 'px');
-                    }
-                }
-
-                $tableResp.addClass('table-responsive').css('overflow', '');
-                containerToPrint.style.cssText = originalStyle;
-
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                const { jsPDF } = window.jspdf;
-                
-                // Paisaje A3
-                const pdf = new jsPDF('l', 'mm', 'a3');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                
-                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-                
-                const semanaNombre = $('#semanaSelector').val() || 'Semana';
-                pdf.save(`Matriz_Horarios_${semanaNombre}.pdf`);
-
-                btn.html(originalText);
-                btn.prop('disabled', false);
-
-            }).catch(err => {
-                console.error("Error al exportar PDF:", err);
-                stickyElements.each(function(i) {
-                    if (originalStyles[i]) $(this).attr('style', originalStyles[i]);
-                    else $(this).removeAttr('style');
-                });
-                $tableResp.addClass('table-responsive').css('overflow', '');
-                containerToPrint.style.cssText = originalStyle;
-                btn.html(originalText);
-                btn.prop('disabled', false);
-                mostrarModalConTitulo("Error", "No se pudo generar el PDF.", "error");
-            });
-        }, 500);
+        btn.html(originalText);
+        btn.prop('disabled', false);
     });
 
     function obtenerSemanaActual() {

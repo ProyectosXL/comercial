@@ -882,8 +882,8 @@ td.franco-activo {
 }
 
 #tablaVistaLocal .btn-feedback:not(.tiene-feedback) i {
-    color: #ced4da !important;
-    opacity: 0.3;
+    color: #000000 !important;
+    opacity: 0.8;
 }
 
 /* TOOLTIPS PARA VISTA LOCAL */

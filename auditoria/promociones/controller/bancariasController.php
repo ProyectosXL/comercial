@@ -7,6 +7,7 @@ require_once __DIR__ . '/../class/Bancarias.php';
 // --- Validación de parámetros ---
 $fechaDesde = trim($_GET['fecha_desde'] ?? '');
 $fechaHasta = trim($_GET['fecha_hasta'] ?? '');
+$entorno    = trim($_GET['entorno']     ?? 'central');
 
 if ($fechaDesde === '' || $fechaHasta === '') {
     http_response_code(400);
@@ -14,7 +15,6 @@ if ($fechaDesde === '' || $fechaHasta === '') {
     exit;
 }
 
-// Validar formato Y-m-d
 $regexFecha = '/^\d{4}-\d{2}-\d{2}$/';
 if (!preg_match($regexFecha, $fechaDesde) || !preg_match($regexFecha, $fechaHasta)) {
     http_response_code(400);
@@ -22,16 +22,20 @@ if (!preg_match($regexFecha, $fechaDesde) || !preg_match($regexFecha, $fechaHast
     exit;
 }
 
-// Validar que desde ≤ hasta
 if ($fechaDesde > $fechaHasta) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'La fecha desde debe ser menor o igual a la fecha hasta.']);
     exit;
 }
 
+$entornosPermitidos = ['central', 'uy'];
+if (!in_array($entorno, $entornosPermitidos, true)) {
+    $entorno = 'central';
+}
+
 // --- Ejecutar consulta ---
 try {
-    $bancarias = new Bancarias();
+    $bancarias = new Bancarias($entorno);
     $data      = $bancarias->getBancarias($fechaDesde, $fechaHasta);
 
     echo json_encode([

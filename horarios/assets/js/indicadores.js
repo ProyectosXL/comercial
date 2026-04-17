@@ -99,9 +99,11 @@ $(document).ready(function() {
         if (tTotal > 0) {
             $('#ind_btnDescargarReporte9hs').removeClass('disabled');
             $('#ind_btnExportarDetalle').removeClass('disabled');
+            $('#ind_btnExportarCajas').removeClass('disabled');
         } else {
             $('#ind_btnDescargarReporte9hs').addClass('disabled');
             $('#ind_btnExportarDetalle').addClass('disabled');
+            $('#ind_btnExportarCajas').addClass('disabled');
         }
 
         // Gráfico
@@ -187,6 +189,24 @@ myChart = new Chart(ctx, {
         const fechaFin = ultimoDia.toISOString().split('T')[0];
 
         let url = `${apiExportarURL}?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&tipo=${tipoFiltro}`;
+        if (sucursal) url += `&sucursal=${sucursal}`;
+        window.location.href = url;
+    });
+
+    // REPORTE HORAS CAJA
+    $('#ind_btnExportarCajas').on('click', function() {
+        if ($(this).hasClass('disabled')) return;
+        const sucursal = $('#ind_sucursalSelector').val();
+        const semana = $('#ind_semanaSelector').val();
+        
+        const [year, weekNum] = semana.split('-W');
+        const primerDia = getPrimerDiaDeSemana(year, weekNum);
+        let ultimoDia = new Date(primerDia);
+        ultimoDia.setDate(primerDia.getDate() + 6);
+        const fechaInicio = primerDia.toISOString().split('T')[0];
+        const fechaFin = ultimoDia.toISOString().split('T')[0];
+
+        let url = `api/reporte_cajas.php?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
         if (sucursal) url += `&sucursal=${sucursal}`;
         window.location.href = url;
     });

@@ -330,27 +330,55 @@ try {
     }
     sqlsrv_close($connSistemas);
 
-    // --- PASO C: NOMBRES VENDEDORES (RRHH) ---
+    // --- PASO C: NOMBRES VENDEDORES (CENTRAL + RRHH) ---
     if (!empty($vendedoresIds)) {
-        $connCorp = getConexionCorp();
-        if ($connCorp) {
-            $listaIds = implode("','", array_keys($vendedoresIds));
-            // Usamos RO_LEGAJOS_PERSONAL para nombre y tarea
-            $sqlNom = "SELECT BLOQUE as COD_VENDED, APELLIDO, NOMBRE, TAREA_HABITUAL FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ('$listaIds')";
-            $stmtNom = sqlsrv_query($connCorp, $sqlNom);
-            if ($stmtNom) {
-                while ($row = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
-                    $nom = trim($row['APELLIDO']) . ' ' . trim($row['NOMBRE']);
-                    $tarea = trim($row['TAREA_HABITUAL'] ?? '');
-                    if (!mb_detect_encoding($nom, 'UTF-8', true))
-                        $nom = utf8_encode($nom);
-                    if (!mb_detect_encoding($tarea, 'UTF-8', true))
-                        $tarea = utf8_encode($tarea);
+        $listaIdsStr = implode("','", array_keys($vendedoresIds));
+        
+        // 1. Prioridad: Obtener Nombres de GVA23 (Tango Central - Siempre tiene a todos)
+        $connCentral = getConexionCentral();
+        if ($connCentral) {
+            $sqlGva = "SELECT COD_VENDED, NOMBRE_VEN FROM GVA23 WHERE COD_VENDED IN ('$listaIdsStr')";
+            $stmtGva = sqlsrv_query($connCentral, $sqlGva);
+            if ($stmtGva) {
+                while ($row = sqlsrv_fetch_array($stmtGva, SQLSRV_FETCH_ASSOC)) {
+                    $nom = trim($row['NOMBRE_VEN']);
+                    if (!mb_detect_encoding($nom, 'UTF-8', true)) $nom = utf8_encode($nom);
+                    
+                    // Limpieza opcional de números al final del nombre en Tango
+                    $nom = preg_replace('/[\s-]*[0-9]+$/', '', $nom);
 
                     $nombresMap[trim($row['COD_VENDED'])] = [
                         'nombre' => $nom,
-                        'tarea' => $tarea
+                        'tarea' => '' // Se completa en el siguiente paso si existe en RRHH
                     ];
+                }
+            }
+            sqlsrv_close($connCentral);
+        }
+
+        // 2. Complemento: Tareas Habituales, Legajos y Nombres Formateados de RRHH (Corp)
+        $connCorp = getConexionCorp();
+        if ($connCorp) {
+            $sqlNom = "SELECT BLOQUE as COD_VENDED, NRO_LEGAJO, APELLIDO, NOMBRE, TAREA_HABITUAL FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ('$listaIdsStr')";
+            $stmtNom = sqlsrv_query($connCorp, $sqlNom);
+            if ($stmtNom) {
+                while ($row = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
+                    $id = trim($row['COD_VENDED']);
+                    $legajo = trim($row['NRO_LEGAJO'] ?? '');
+                    $nomFormateado = trim($row['APELLIDO']) . ' ' . trim($row['NOMBRE']);
+                    $tarea = trim($row['TAREA_HABITUAL'] ?? '');
+
+                    if (!mb_detect_encoding($nomFormateado, 'UTF-8', true)) $nomFormateado = utf8_encode($nomFormateado);
+                    if (!mb_detect_encoding($tarea, 'UTF-8', true)) $tarea = utf8_encode($tarea);
+
+                    // Si ya estaba en el map (por GVA23), preferimos el nombre de RRHH y agregamos tarea
+                    if (!isset($nombresMap[$id])) {
+                        $nombresMap[$id] = ['nombre' => $nomFormateado, 'tarea' => $tarea, 'legajo' => $legajo];
+                    } else {
+                        $nombresMap[$id]['nombre'] = $nomFormateado;
+                        $nombresMap[$id]['tarea'] = $tarea;
+                        $nombresMap[$id]['legajo'] = $legajo;
+                    }
                 }
             }
             sqlsrv_close($connCorp);
@@ -398,6 +426,32 @@ try {
                 }
                 sqlsrv_free_stmt($stmtBloq);
             }
+
+            // --- PASO F: BANCO DE HORAS (SALDO ANTERIOR) ---
+            $saldosAnteriores = [];
+            $sqlSaldo = "
+                SELECT 
+                    COD_VENDED,
+                    SUM(CASE WHEN TIPO_HORA = 'permiso' THEN 1 ELSE 0 END) as TotalP,
+                    SUM(CASE WHEN TIPO_HORA = 'devuelve' THEN 1 ELSE 0 END) as TotalD
+                FROM FP_GESTION_HORARIOS
+                WHERE FECHA < ? 
+                AND (TIPO_HORA = 'permiso' OR TIPO_HORA = 'devuelve')
+                AND COD_VENDED IN ('$listaIdsStr')
+                GROUP BY COD_VENDED
+            ";
+
+            $stmtSaldo = sqlsrv_query($connSistemas, $sqlSaldo, [$fechaInicio]);
+
+            if ($stmtSaldo) {
+                while ($row = sqlsrv_fetch_array($stmtSaldo, SQLSRV_FETCH_ASSOC)) {
+                    $p = intval($row['TotalP']);
+                    $d = intval($row['TotalD']);
+                    $saldosAnteriores[trim($row['COD_VENDED'])] = $p - $d;
+                }
+                sqlsrv_free_stmt($stmtSaldo);
+            }
+
             sqlsrv_close($connSistemas);
         }
     }
@@ -448,17 +502,16 @@ try {
     }
 
     // RESPUESTA JSON FINAL
-    $respuesta = [
+    echo json_encode([
+        'status' => 'ok',
         'agenda' => $agenda,
         'nombres' => $nombresMap,
-        'nombres_sucursales' => $nombresSucursales,
         'promociones' => $promocionesPorDia,
         'promociones_internas' => $promocionesInternasPorDia,
-        'saldosAnteriores' => $saldosAnteriores,
-        'bloqueosExternos' => $bloqueosExternos
-    ];
-
-    echo json_encode($respuesta, JSON_PARTIAL_OUTPUT_ON_ERROR);
+        'nombresSucursales' => $nombresSucursales,
+        'bloqueosExternos' => $bloqueosExternos,
+        'saldosAnteriores' => $saldosAnteriores
+    ]);
 
 } catch (Exception $e) {
     // CAPTURAR EL ERROR REAL Y MOSTRARLO EN EL JSON

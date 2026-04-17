@@ -261,15 +261,51 @@ body {
 .color-secondary { color: var(--secondary-color); }
 .color-purple    { color: var(--accent-color); }
 
+/* --- Sales Global card --- */
+.card-sales-global {
+    position: relative;
+    border: 2px solid rgba(139, 92, 246, 0.35) !important;
+    background: linear-gradient(155deg, #ffffff 60%, rgba(139, 92, 246, 0.06) 100%) !important;
+}
+
+.badge-nuevo {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+    color: white;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
+    z-index: 1;
+}
+
+.btn-purple-gradient {
+    background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+    color: white;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+}
+
+.btn-purple-gradient:hover {
+    background: linear-gradient(135deg, #6d28d9, #7c3aed);
+    color: white;
+    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.5);
+}
+
 /* --- BI section colors (top border per sub-tab) --- */
 #comercial .card { border-top: 3px solid var(--primary-color) !important; }
+#comercial .card.card-sales-global { border-top: 2px solid rgba(139, 92, 246, 0.35) !important; }
 #ecommerce .card { border-top: 3px solid #f97316 !important; }
 #stock     .card { border-top: 3px solid var(--success-color) !important; }
 
 /* --- Stats grid --- */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(265px, 1fr));
     gap: 1.25rem;
     margin-bottom: 2rem;
 }

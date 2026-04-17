@@ -145,6 +145,9 @@
         <div class="text-center d-flex flex-wrap gap-3">
           <span class="badge text-bg-success fs-6">H: Horas Normales</span>
           <span class="badge text-bg-info text-dark fs-6">C: Horas de Caja</span>
+          <span class="badge text-white fs-6" style="background-color: #d63384;">P: Permiso</span>
+          <span class="badge text-white fs-6" style="background-color: #fd7e14;">D: Devolución</span>
+          <span class="badge text-bg-primary fs-6">A: Horas Adicionales</span>
           <span class="badge text-white fs-6" style="background-color: #6f42c1;">F: Franco</span>
           <span class="badge bloqueo-externo text-light fs-6">Ø: Otra Sucursal</span>
           <span class="badge bg-light text-dark border d-flex align-items-center gap-2">

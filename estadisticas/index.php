@@ -142,12 +142,15 @@ if (!isset($_SESSION['username'])) {
                                     Reportes Comerciales
                                 </h2>
                                 <div class="stats-grid">
-                                    <div class="card border-warning border-3 shadow-lg">
-                                        <div class="card-body">
-                                            <i class="bi bi-shop card-icon color-primary"></i>
-                                            <h5 class="card-title">Sales Unificado <span class="badge bg-warning text-dark ms-1">Beta</span></h5>
-                                            <p class="card-subtitle">Dashboard de ventas ARG, UY y Franquicias</p>
-                                            <a href="../../bi/index.php" class="btn btn-primary btn-card">Ver Dashboard</a>
+                                    <div class="card card-sales-global">
+                                        <span class="badge-nuevo">NUEVO</span>
+                                        <div class="card-body align-items-center text-center">
+                                            <i class="bi bi-diagram-3-fill card-icon color-purple mx-auto"></i>
+                                            <h5 class="card-title">Sales Global</h5>
+                                            <p class="card-subtitle">Visión consolidada de todos los canales</p>
+                                            <a href="../../bi/index.php" class="btn btn-purple-gradient btn-card">
+                                                <i class="bi bi-box-arrow-up-right"></i> Ver Reporte
+                                            </a>
                                         </div>
                                     </div>
                                     <div class="card">

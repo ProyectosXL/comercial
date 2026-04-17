@@ -98,7 +98,7 @@
                                             foreach ($rubros as $key => $value) {
                                         ?>
                                             <option value="<?= $value['SIGLA'] ?>-<?= $value['DESC_RUBRO'] ?>" <?php if( $descRubro == $value['DESC_RUBRO']){ echo "selected" ; }?> >
-                                                <?= $value['DESC_RUBRO'] ?>
+                                                <?= $value['SIGLA'] ?> - <?= $value['DESC_RUBRO'] ?>
                                             </option>
                                         <?php 
                                             }

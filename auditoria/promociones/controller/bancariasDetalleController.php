@@ -5,8 +5,14 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../class/Bancarias.php';
 
 // --- Validación de parámetros ---
-$fecha = trim($_GET['fecha'] ?? '');
-$banco = trim($_GET['banco'] ?? '');
+$fecha   = trim($_GET['fecha']   ?? '');
+$banco   = trim($_GET['banco']   ?? '');
+$entorno = trim($_GET['entorno'] ?? 'central');
+
+$entornosPermitidos = ['central', 'uy'];
+if (!in_array($entorno, $entornosPermitidos, true)) {
+    $entorno = 'central';
+}
 
 if ($fecha === '' || $banco === '') {
     http_response_code(400);
@@ -29,7 +35,7 @@ if (!preg_match('/^[A-ZÁÉÍÓÚÜÑ\s]+$/i', $banco)) {
 
 // --- Ejecutar consulta ---
 try {
-    $bancarias = new Bancarias();
+    $bancarias = new Bancarias($entorno);
     $data      = $bancarias->getDetallePedidos($fecha, strtoupper($banco));
 
     echo json_encode([
