@@ -6,6 +6,7 @@ class Database {
 
     private static $pdo_sistemas = null;
     private static $pdo_tango = null;
+    private static $pdo_wms = null;
 
     /**
      * Crea una conexión PDO a SQL Server.
@@ -45,5 +46,16 @@ class Database {
             self::$pdo_tango = self::createConnection($dsn);
         }
         return self::$pdo_tango;
+    }
+
+    /**
+     * Conexión a Servidor WMS -> base UbicacionesStockMvc
+     */
+    public static function getConnectionWMS() {
+        if (self::$pdo_wms === null) {
+            $dsn = "sqlsrv:Server=192.168.0.226;Database=UbicacionesStockMvc";
+            self::$pdo_wms = self::createConnection($dsn);
+        }
+        return self::$pdo_wms;
     }
 }

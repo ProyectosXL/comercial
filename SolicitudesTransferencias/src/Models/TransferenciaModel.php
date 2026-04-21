@@ -246,4 +246,40 @@ class TransferenciaModel {
         $stmt = $pdo->prepare($sql);
         return $stmt->execute([':id' => $id]);
     }
+
+    /**
+     * Obtener ubicaciones y stock desde el servidor WMS.
+     */
+    public static function obtenerUbicacionesWMS($codigos) {
+        if (empty($codigos)) return [];
+        
+        try {
+            $pdo = Database::getConnectionWMS();
+            // Creamos los placeholders para los códigos (IN clause)
+            $placeholders = implode(',', array_fill(0, count($codigos), '?'));
+            
+            $sql = "SELECT COD_ARTICULO, UBICACION, STOCK_UBIC 
+                    FROM SOF_STOCK_WMS 
+                    WHERE COD_ARTICULO IN ($placeholders)
+                    AND STOCK_UBIC > 0
+                    ORDER BY COD_ARTICULO, TIPO_Ubicacion DESC, UBICACION";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($codigos);
+            $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Agrupamos por código de artículo para facilitar el consumo
+            $agrupados = [];
+            foreach ($resultados as $row) {
+                $agrupados[$row['COD_ARTICULO']][] = [
+                    'u' => trim($row['UBICACION']),
+                    's' => (int)$row['STOCK_UBIC']
+                ];
+            }
+            return $agrupados;
+        } catch (\Exception $e) {
+            error_log("Error en obtenerUbicacionesWMS: " . $e->getMessage());
+            return [];
+        }
+    }
 }

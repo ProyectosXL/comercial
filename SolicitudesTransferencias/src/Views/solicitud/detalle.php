@@ -146,6 +146,33 @@
                             <td><strong style="color:var(--primary);"><?php echo htmlspecialchars($art['cod_articu']); ?></strong></td>
                             <td>
                                 <?php echo htmlspecialchars($art['descripcion']); ?>
+                                
+                                <?php if (isset($isLogistica) && $isLogistica && !empty($ubicacionesWMS[$art['cod_articu']])): ?>
+                                    <div style="margin-top:8px;">
+                                        <button class="btn-modern" onclick="$(this).next().slideToggle(200)" style="font-size:10px; padding:2px 6px; background:var(--primary-bg); color:var(--primary); border:none; border-radius:4px; cursor:pointer; font-weight:600;">
+                                            <i class="fas fa-warehouse mr-1"></i> Ver Ubicaciones WMS
+                                        </button>
+                                        <div style="display:none; margin-top:8px; border:1px solid #e2e8f0; border-radius:6px; background:#f8fafc; overflow:hidden;">
+                                            <table style="width:100%; font-size:11px; border-collapse:collapse;">
+                                                <thead style="background:#f1f5f9; color:#64748b;">
+                                                    <tr>
+                                                        <th style="padding:4px 8px; text-align:left; border-bottom:1px solid #e2e8f0;">Ubicación</th>
+                                                        <th style="padding:4px 8px; text-align:center; border-bottom:1px solid #e2e8f0;">Stock</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($ubicacionesWMS[$art['cod_articu']] as $loc): ?>
+                                                        <tr>
+                                                            <td style="padding:4px 8px; border-bottom:1px solid #f1f5f9; font-weight:600; color:#334155;"><?php echo $loc['u']; ?></td>
+                                                            <td style="padding:4px 8px; border-bottom:1px solid #f1f5f9; text-align:center; color:var(--primary);"><?php echo $loc['s']; ?></td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
                                 <?php if (!empty($art['obs_logistica'])): ?>
                                     <div style="margin-top:4px; font-size:11px; padding:4px 8px; background:#fff7ed; border-left:2px solid #f97316; border-radius:4px; color:#9a3412;">
                                         <i class="fas fa-edit mr-1"></i> <strong>Cambio:</strong> <?php echo htmlspecialchars($art['obs_logistica']); ?>

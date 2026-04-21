@@ -35,7 +35,18 @@ class SolicitudController extends BaseController {
         if (!$solicitud) {
             die("Solicitud no encontrada.");
         }
+        
         $isLogistica = (isset($_GET['mode']) && $_GET['mode'] === 'logistics');
+        $ubicacionesWMS = [];
+        
+        if ($isLogistica) {
+            $articulosArr = json_decode($solicitud['ARTICULOS'], true);
+            if (is_array($articulosArr)) {
+                $codigos = array_column($articulosArr, 'cod_articu');
+                $ubicacionesWMS = TransferenciaModel::obtenerUbicacionesWMS($codigos);
+            }
+        }
+        
         require_once __DIR__ . '/../Views/solicitud/detalle.php';
     }
 
