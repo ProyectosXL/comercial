@@ -368,8 +368,7 @@ $(document).ready(function () {
             // Columna Totales
             bodyHTML += '<td class="total-horas-empleado align-middle p-1">';
             bodyHTML += '<div class="d-flex flex-column align-items-center" style="font-size: 0.85rem; line-height: 1.1;">';
-            bodyHTML += '<span class="text-success fw-bold" title="Horas Normales (H)">H: <span class="total-n">0</span></span>';
-            bodyHTML += '<span class="text-info fw-bold" title="Horas de Caja (C)">C: <span class="total-c">0</span></span>';
+            bodyHTML += '<span class="text-success fw-bold" title="Horas Normales (H: Base + Caja)">H: <span class="total-n">0</span></span>';
             bodyHTML += '<span class="text-pink fw-bold" title="Horas de Permiso (P)" style="color: #d63384;">P: <span class="total-p">0</span></span>';
             bodyHTML += '<span class="text-primary fw-bold" title="Horas Adicionales (A)">A: <span class="total-e">0</span></span>';
             bodyHTML += '<span class="text-warning fw-bold" title="Horas Devuelve (D)">D: <span class="total-d">0</span></span>';
@@ -922,9 +921,8 @@ $(document).ready(function () {
             // .toFixed(1).replace('.0', '') para mostrar entero si es entero
             const fmt = (num) => (num % 1 === 0 ? num : num.toFixed(1));
 
-            fila.find('.total-n').text(fmt(n)); // Solo normales reales
-            fila.find('.total-c').text(fmt(c)); // Caja
-            fila.find('.total-p').text(fmt(p)); // Permiso
+            fila.find('.total-n').text(fmt(n + c)); // H = Normal + Caja
+            fila.find('.total-p').text(fmt(p));     // Permiso (separado)
             fila.find('.total-e').text(fmt(e));
             fila.find('.total-d').text(fmt(d));
 

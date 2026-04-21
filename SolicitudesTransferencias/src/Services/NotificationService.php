@@ -18,8 +18,8 @@ class NotificationService
             $this->mailer->isSMTP();
             $this->mailer->Host = Env::get('HOST_EMAIL_EGRESOS', 'smtp.gmail.com');
             $this->mailer->SMTPAuth = true;
-            $this->mailer->Username = Env::get('USER_EMAIL_EGRESOS');
-            $this->mailer->Password = Env::get('PASS_EMAIL_EGRESOS');
+            $this->mailer->Username = Env::get('USER_EMAIL_TRANSFERENCIAS');
+            $this->mailer->Password = Env::get('PASS_EMAIL_TRANSFERENCIAS');
             $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $this->mailer->Port = Env::get('PORT_EMAIL_EGRESOS', 587);
             $this->mailer->CharSet = 'UTF-8';
@@ -47,7 +47,9 @@ class NotificationService
             $this->mailer->send();
             return true;
         } catch (Exception $e) {
-            error_log("Error al enviar email a {$to}: {$this->mailer->ErrorInfo}");
+            $errorMsg = "[" . date('Y-m-d H:i:s') . "] Error al enviar email a {$to}: " . $this->mailer->ErrorInfo . " \n";
+            file_put_contents(__DIR__ . '/../../email_error.log', $errorMsg, FILE_APPEND);
+            error_log($errorMsg);
             return false;
         }
     }

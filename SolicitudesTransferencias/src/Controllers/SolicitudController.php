@@ -86,6 +86,7 @@ class SolicitudController extends BaseController {
      */
     public function guardar() {
         header('Content-Type: application/json');
+        set_time_limit(120); // Aumentar tiempo de ejecución para el envío de correos
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             http_response_code(405);
@@ -117,20 +118,22 @@ class SolicitudController extends BaseController {
             return;
         }
 
-        // Validar stock para cada artículo
-        $erroresStock = TransferenciaModel::validarStock($data['articulos']);
-        if (!empty($erroresStock)) {
-            http_response_code(400);
-            $mensajes = [];
-            foreach ($erroresStock as $err) {
-                $mensajes[] = "Artículo {$err['cod_articu']} ({$err['descripcion']}): solicitado {$err['cantidad_solicitada']}, disponible {$err['stock_disponible']}";
+        // Validar stock solo si el origen es 01-Central
+        if ($data['origen'] === '01-Central') {
+            $erroresStock = TransferenciaModel::validarStock($data['articulos']);
+            if (!empty($erroresStock)) {
+                http_response_code(400);
+                $mensajes = [];
+                foreach ($erroresStock as $err) {
+                    $mensajes[] = "Artículo {$err['cod_articu']} ({$err['descripcion']}): solicitado {$err['cantidad_solicitada']}, disponible {$err['stock_disponible']}";
+                }
+                echo json_encode([
+                    'error' => 'Stock insuficiente',
+                    'detalle' => $mensajes,
+                    'articulos_sin_stock' => $erroresStock
+                ]);
+                return;
             }
-            echo json_encode([
-                'error' => 'Stock insuficiente',
-                'detalle' => $mensajes,
-                'articulos_sin_stock' => $erroresStock
-            ]);
-            return;
         }
 
         try {
@@ -237,6 +240,59 @@ class SolicitudController extends BaseController {
         try {
             TransferenciaModel::actualizarNroTransferencia($data['id'], $data['nro_transferencia']);
             echo json_encode(['success' => true, 'message' => 'N° Transferencia actualizado']);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * POST: Cambiar un artículo por otro (Logística).
+     */
+    public function cambiarArticulo() {
+        header('Content-Type: application/json');
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $id = $data['id'] ?? null;
+        $index = $data['index'] ?? null;
+        $nuevoArt = $data['nuevoArticulo'] ?? null;
+        $observacion = $data['observacion'] ?? '';
+
+        if (!$id || $index === null || !$nuevoArt || empty($observacion)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Faltan datos obligatorios (ID, índice, nuevo artículo y observación)']);
+            return;
+        }
+
+        try {
+            $solicitud = TransferenciaModel::obtenerSolicitudPorId($id);
+            if (!$solicitud) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Solicitud no encontrada']);
+                return;
+            }
+
+            $articulos = json_decode($solicitud['ARTICULOS'], true);
+            if (!isset($articulos[$index])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Índice de artículo inválido']);
+                return;
+            }
+
+            // Registrar el cambio
+            $oldArt = $articulos[$index]['cod_articu'];
+            $articulos[$index] = [
+                'cod_articu' => $nuevoArt['cod_articu'],
+                'descripcion' => $nuevoArt['descripcion'],
+                'rubro' => $nuevoArt['rubro'],
+                'cantidad' => $articulos[$index]['cantidad'], // Mantenemos la cantidad original solicitada
+                'obs_logistica' => $observacion,
+                'reemplaza_a' => $oldArt,
+                'cambiado_fecha' => date('d/m/Y H:i')
+            ];
+
+            TransferenciaModel::actualizarArticulos($id, json_encode($articulos, JSON_UNESCAPED_UNICODE));
+            echo json_encode(['success' => true, 'message' => 'Artículo actualizado']);
         } catch (\Exception $e) {
             http_response_code(500);
             echo json_encode(['error' => $e->getMessage()]);

@@ -12,7 +12,7 @@
 
 <script>
 // Toast notifications
-function showToast(message, type = 'success') {
+function showToast(message, type = 'success', sticky = false) {
     const container = document.getElementById('toast-container');
     const icons = {
         success: '<i class="fas fa-check-circle" style="color:var(--success);"></i>',
@@ -22,6 +22,9 @@ function showToast(message, type = 'success') {
     
     const toast = document.createElement('div');
     toast.className = `toast-modern toast-${type}`;
+    // Si es sticky, le agregamos un borde más grueso para que se note
+    if (sticky) toast.style.borderLeftWidth = '6px';
+
     toast.innerHTML = `
         <span class="toast-icon">${icons[type] || icons.success}</span>
         <span class="toast-message">${message}</span>
@@ -29,12 +32,17 @@ function showToast(message, type = 'success') {
     `;
     container.appendChild(toast);
     
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(40px)';
-        toast.style.transition = 'all .3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 5000);
+    // Solo auto-eliminar si NO es sticky
+    if (!sticky) {
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(40px)';
+                toast.style.transition = 'all .3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, 5000);
+    }
 }
 </script>
 

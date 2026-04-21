@@ -31,7 +31,7 @@
             <tbody>
                 <?php foreach ($solicitudes as $sol): ?>
                 <tr>
-                    <td style="font-weight:700; color:var(--primary);">#<?php echo $sol['ID']; ?></td>
+                    <td data-order="<?php echo $sol['ID']; ?>" style="font-weight:700; color:var(--primary);">#<?php echo $sol['ID']; ?></td>
                     <td><?php echo date('d/m/Y H:i', strtotime($sol['FECHA'])); ?></td>
                     <td>
                         <span style="font-size: 12px; font-weight: 500; color: var(--gray-600);">

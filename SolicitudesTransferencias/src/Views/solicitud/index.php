@@ -112,7 +112,7 @@
                             }
                         ?>
                         <tr data-estado="<?php echo $sol['ESTADO']; ?>" style="vertical-align: middle;">
-                            <td><strong style="color:var(--primary); font-size:14px;">#<?php echo $sol['ID']; ?></strong></td>
+                            <td data-order="<?php echo $sol['ID']; ?>"><strong style="color:var(--primary); font-size:14px;">#<?php echo $sol['ID']; ?></strong></td>
                             <td class="text-muted"><i class="far fa-calendar-alt mr-1"></i><?php echo $fecha; ?></td>
                             <td>
                                 <span style="display:inline-flex;align-items:center;gap:8px; font-weight: 500;">

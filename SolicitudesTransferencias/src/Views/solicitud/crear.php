@@ -361,6 +361,11 @@ select.input-premium {
                                 </div>
                             </div>
                         </div>
+                        <div class="articles-header" style="background:#f1f5f9; border-top:1px solid #e2e8f0; border-radius:0 0 12px 12px; grid-template-columns: 2fr 3fr 2fr 1fr 50px;">
+                            <div style="grid-column: 1/4; text-align:right; padding-right:16px;">TOTAL ARTÍCULOS:</div>
+                            <div style="text-align:center; font-weight:800; color:var(--primary); font-size:16px;" id="totalArticulos">0</div>
+                            <div></div>
+                        </div>
                     </div>
                     
                     <button type="button" class="btn-add-row" id="btnAddRow">
@@ -437,15 +442,33 @@ $(document).ready(function() {
     // Eliminar fila
     $body.on("click", ".btn-remove-row", function() {
         if ($(".article-row").length > 1) {
-            $(this).closest(".article-row").fadeOut(200, function() { $(this).remove(); });
+            $(this).closest(".article-row").fadeOut(200, function() { 
+                $(this).remove(); 
+                actualizarTotal();
+            });
         } else {
             // Si es la última, solo limpiarla
             const $row = $(this).closest(".article-row");
             $row.find("input").val("");
             $row.find(".input-cantidad").prop("disabled", true);
             $row.find(".codigo-input").focus();
+            actualizarTotal();
         }
     });
+
+    // Actualizar total cuando cambia la cantidad
+    $body.on("input change", ".input-cantidad", function() {
+        actualizarTotal();
+    });
+
+    function actualizarTotal() {
+        let total = 0;
+        $(".input-cantidad").each(function() {
+            let val = parseInt($(this).val()) || 0;
+            total += val;
+        });
+        $("#totalArticulos").text(total);
+    }
 
     // Enter en cantidad avanza a nueva linea
     $body.on("keydown", ".input-cantidad", function(e) {
@@ -526,6 +549,7 @@ $(document).ready(function() {
         
         const $inputCant = $row.find(".input-cantidad");
         $inputCant.prop("disabled", false).val(1).focus().select();
+        actualizarTotal();
     });
 
     // ----------------------------------------------------
@@ -587,6 +611,7 @@ $(document).ready(function() {
             url: "/comercial/SolicitudesTransferencias/public/solicitud/guardar",
             type: "POST",
             contentType: "application/json",
+            timeout: 60000, // 60 segundos por los correos
             data: JSON.stringify(data),
             success: function(resp) {
                 if (resp.success) {
@@ -600,18 +625,18 @@ $(document).ready(function() {
                     }, 1500);
                 }
             },
-            error: function(xhr) {
-                $btn.prop("disabled", false).html(prevHtml);
-                const err = xhr.responseJSON;
-                if (err && err.error) {
-                    showToast(err.error, "error");
-                    if (err.detalle) {
-                        err.detalle.forEach(msg => showToast(msg, "warning"));
+                error: function(xhr) {
+                    $btn.prop("disabled", false).html(prevHtml);
+                    const err = xhr.responseJSON;
+                    if (err && err.error) {
+                        showToast(err.error, "error", true); // Sticky para que vean el error
+                        if (err.detalle) {
+                            err.detalle.forEach(msg => showToast(msg, "warning", true)); // Sticky para ver talles/cantidades
+                        }
+                    } else {
+                        showToast("Ups, ocurrió un error de conexión inesperado.", "error");
                     }
-                } else {
-                    showToast("Ups, ocurrió un error de conexión inesperado.", "error");
                 }
-            }
         });
     });
 });

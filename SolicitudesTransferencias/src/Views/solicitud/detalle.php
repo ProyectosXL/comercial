@@ -1,5 +1,49 @@
 <?php require_once __DIR__ . '/../layouts/header.php'; ?>
 
+<style>
+/* Estilos para el buscador automático en el modal */
+.relative-wrapper {
+    position: relative;
+    width: 100%;
+}
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+    z-index: 3000;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+}
+.autocomplete-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+}
+.autocomplete-item:hover {
+    background: #f8fafc;
+}
+.auto-title {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 13px;
+}
+.auto-desc {
+    color: var(--gray-700);
+    font-size: 12px;
+}
+
+/* Modal adjustments */
+.modal-backdrop-modern.show {
+    display: flex !important;
+}
+</style>
+
 <div class="page-header">
     <div>
         <div class="breadcrumb-modern">
@@ -64,12 +108,10 @@
                                 <td style="color:var(--gray-500);">Destino:</td>
                                 <td><strong><?php echo htmlspecialchars($solicitud['DESTINO']); ?></strong></td>
                             </tr>
-                            <?php if ($solicitud['OBSERVACIONES']): ?>
                             <tr>
                                 <td style="color:var(--gray-500);">Observaciones:</td>
                                 <td><em><?php echo nl2br(htmlspecialchars($solicitud['OBSERVACIONES'])); ?></em></td>
                             </tr>
-                            <?php endif; ?>
                         </table>
                     </div>
                 </div>
@@ -80,7 +122,7 @@
             <div class="card-header-modern">
                 <h2><i class="fas fa-box-open mr-2" style="color:var(--primary);"></i>Artículos Solicitados</h2>
             </div>
-            <div class="card-body-modern" style="padding:0;">
+            <div class="card-body-modern p-0">
                 <table class="table-modern">
                     <thead>
                         <tr>
@@ -88,21 +130,43 @@
                             <th>Descripción</th>
                             <th>Rubro</th>
                             <th class="text-center">Cantidad</th>
+                            <?php if (isset($isLogistica) && $isLogistica && $solicitud['ESTADO'] === 'PENDIENTE'): ?>
+                                <th class="text-center">Editar</th>
+                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
                         <?php 
                         $articulos = json_decode($solicitud['ARTICULOS'], true);
                         if (is_array($articulos)):
+                            $index = 0;
                             foreach ($articulos as $art): 
                         ?>
                         <tr>
                             <td><strong style="color:var(--primary);"><?php echo htmlspecialchars($art['cod_articu']); ?></strong></td>
-                            <td><?php echo htmlspecialchars($art['descripcion']); ?></td>
-                            <td><span style="color:var(--gray-500);font-size:12px;"><?php echo htmlspecialchars($art['rubro']); ?></span></td>
+                            <td>
+                                <?php echo htmlspecialchars($art['descripcion']); ?>
+                                <?php if (!empty($art['obs_logistica'])): ?>
+                                    <div style="margin-top:4px; font-size:11px; padding:4px 8px; background:#fff7ed; border-left:2px solid #f97316; border-radius:4px; color:#9a3412;">
+                                        <i class="fas fa-edit mr-1"></i> <strong>Cambio:</strong> <?php echo htmlspecialchars($art['obs_logistica']); ?>
+                                        <br><span style="color:#c2410c; opacity:0.8;">(Reemplaza a <?php echo htmlspecialchars($art['reemplaza_a']); ?> el <?php echo $art['cambiado_fecha']; ?>)</span>
+                                    </div>
+                                <?php endif; ?>
+                            </td>
+                            <td><span style="color:var(--gray-500);font-size:12px;"><?php echo htmlspecialchars($art['rubro'] ?? '-'); ?></span></td>
                             <td class="text-center"><strong><?php echo htmlspecialchars($art['cantidad']); ?></strong></td>
+                            <?php if (isset($isLogistica) && $isLogistica && $solicitud['ESTADO'] === 'PENDIENTE'): ?>
+                                <td class="text-center">
+                                    <button class="btn-modern btn-outline-modern btn-sm-modern" 
+                                            onclick="abrirModalCambio(<?php echo $index; ?>, '<?php echo $art['cod_articu']; ?>')" 
+                                            title="Cambiar artículo" style="padding:4px 8px;">
+                                        <i class="fas fa-pencil-alt" style="color:var(--primary);"></i>
+                                    </button>
+                                </td>
+                            <?php endif; ?>
                         </tr>
                         <?php 
+                            $index++;
                             endforeach; 
                         endif;
                         ?>
@@ -151,12 +215,159 @@
     </div>
 </div>
 
+<!-- Modal para cambiar artículo -->
+<div class="modal-backdrop-modern" id="modalArticulo" style="z-index: 2500;">
+    <div class="modal-modern" style="max-width: 550px;">
+        <div class="modal-header-modern">
+            <h2 id="modalTitle">Cambiar Artículo</h2>
+            <button type="button" class="btn-modern" onclick="cerrarModal()" style="padding:4px; background:none; border:none; cursor:pointer;"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body-modern" style="padding:24px;">
+            <input type="hidden" id="edit_index">
+            
+            <div class="form-group-modern">
+                <label>Artículo Original</label>
+                <input type="text" id="art_original" class="form-control-modern" readonly style="background:#f8fafc;">
+            </div>
+
+            <div class="form-group-modern">
+                <label>Nuevo Artículo</label>
+                <div class="relative-wrapper">
+                    <input type="text" id="nuevo_cod_articu" class="form-control-modern" placeholder="Escriba código para buscar..." autocomplete="off">
+                    <div id="sugerencias_modal" class="autocomplete-suggestions"></div>
+                </div>
+            </div>
+
+            <div id="info_nuevo_art" style="display:none; margin-bottom:20px; padding:12px; background:var(--primary-bg); border-radius:8px;">
+                <div style="font-weight:700; color:var(--primary);" id="disp_cod"></div>
+                <div style="font-size:13px;" id="disp_desc"></div>
+            </div>
+
+            <div class="form-group-modern">
+                <label>Observación del Cambio (Obligatorio)</label>
+                <textarea id="obs_cambio" class="form-control-modern" rows="3" placeholder="Indique el motivo del cambio..."></textarea>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px;">
+                <button type="button" class="btn-modern btn-outline-modern" onclick="cerrarModal()">Cancelar</button>
+                <button type="button" class="btn-modern btn-primary-modern" id="btnGuardarCambio" onclick="guardarCambioArticulo()" disabled>
+                    <i class="fas fa-save mr-2"></i> Guardar Cambio
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php 
 $pageScripts = '<script>
 $(document).ready(function() {
+    let selectedArticle = null;
+
+    window.abrirModalCambio = function(index, originalCod) {
+        $("#edit_index").val(index);
+        $("#art_original").val(originalCod);
+        $("#nuevo_cod_articu").val("");
+        $("#obs_cambio").val("");
+        $("#info_nuevo_art").hide();
+        $("#btnGuardarCambio").prop("disabled", true);
+        selectedArticle = null;
+        $("#modalArticulo").addClass("show");
+    };
+
+    window.cerrarModal = function() {
+        $("#modalArticulo").removeClass("show");
+    };
+
+    let timeoutId;
+    $("#nuevo_cod_articu").on("input", function() {
+        const query = $(this).val().trim();
+        const $suggestions = $("#sugerencias_modal");
+
+        if (query.length < 3) {
+            $suggestions.hide();
+            return;
+        }
+
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(function() {
+            $.ajax({
+                url: "/comercial/SolicitudesTransferencias/public/solicitud/buscarArticulos",
+                data: { q: query },
+                success: function(data) {
+                    $suggestions.empty();
+                    if (data && data.length > 0) {
+                        data.forEach(function(item) {
+                            let div = $(\'<div>\').addClass(\'autocomplete-item select-item-modal\')
+                                .attr(\'data-cod\', item.COD_ARTICU)
+                                .attr(\'data-desc\', item.DESCRIPCION)
+                                .attr(\'data-rubro\', item.RUBRO)
+                                .html(\'<div class="auto-title">\' + item.COD_ARTICU + \'</div><div class="auto-desc">\' + item.DESCRIPCION + \'</div>\');
+                            $suggestions.append(div);
+                        });
+                        $suggestions.show();
+                    } else {
+                        $suggestions.hide();
+                    }
+                }
+            });
+        }, 300);
+    });
+
+    $(document).on("click", ".select-item-modal", function() {
+        const cod = $(this).data("cod");
+        const desc = $(this).data("desc");
+        const rubro = $(this).data("rubro");
+        
+        selectedArticle = { cod_articu: cod, descripcion: desc, rubro: rubro };
+        
+        $("#nuevo_cod_articu").val(cod);
+        $("#disp_cod").text(cod);
+        $("#disp_desc").text(desc);
+        $("#info_nuevo_art").fadeIn();
+        $("#sugerencias_modal").hide();
+        validarFormCambio();
+    });
+
+    $("#obs_cambio").on("input", function() {
+        validarFormCambio();
+    });
+
+    function validarFormCambio() {
+        const obs = $("#obs_cambio").val().trim();
+        $("#btnGuardarCambio").prop("disabled", !(selectedArticle && obs.length > 5));
+    }
+
+    window.guardarCambioArticulo = function() {
+        const data = {
+            id: $("#solicitud_id").val(),
+            index: $("#edit_index").val(),
+            nuevoArticulo: selectedArticle,
+            observacion: $("#obs_cambio").val().trim()
+        };
+
+        $("#btnGuardarCambio").prop("disabled", true).html(\'<i class="fas fa-spinner fa-spin"></i> Guardando...\');
+
+        $.ajax({
+            url: "/comercial/SolicitudesTransferencias/public/solicitud/cambiarArticulo",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(data),
+            success: function(resp) {
+                if (resp.success) {
+                    showToast("Artículo actualizado correctamente", "success");
+                    location.reload();
+                }
+            },
+            error: function(xhr) {
+                $("#btnGuardarCambio").prop("disabled", false).html(\'<i class="fas fa-save mr-2"></i> Guardar Cambio\');
+                const err = xhr.responseJSON;
+                showToast(err ? err.error : "Error al actualizar", "error");
+            }
+        });
+    };
+
     $("#formFinalizar").on("submit", function(e) {
         e.preventDefault();
-        
         let nro = $("#nro_transferencia").val().trim();
         let id = $("#solicitud_id").val();
 
@@ -165,7 +376,7 @@ $(document).ready(function() {
             return;
         }
 
-        if (confirm("¿Está seguro de finalizar esta solicitud con el N° de transferencia: " + nro + "? Esta acción no se puede deshacer y enviará un email de confirmación.")) {
+        if (confirm("¿Está seguro de finalizar esta solicitud?")) {
             let btn = $("#btnFinalizar");
             btn.prop("disabled", true).html(\'<i class="fas fa-spinner fa-spin"></i> Finalizando...\');
 

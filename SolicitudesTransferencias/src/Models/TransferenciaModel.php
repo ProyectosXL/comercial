@@ -11,7 +11,7 @@ class TransferenciaModel {
         $pdo = Database::getConnectionTango();
         $sql = "SELECT TOP 20 COD_ARTICU, DESCRIPCION, RUBRO 
                 FROM MAESTRO_ARTICULOS_CODIGOS_ACTIVOS 
-                WHERE COD_ARTICU LIKE :termino 
+                WHERE UPPER(COD_ARTICU) LIKE UPPER(:termino)
                 ORDER BY COD_ARTICU";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([':termino' => '%' . $termino . '%']);
@@ -59,6 +59,25 @@ class TransferenciaModel {
      */
     public static function crearSolicitud($datos) {
         $pdo = Database::getConnectionSistemas();
+        
+        // --- ANTI-DUPLICADO: Buscar si ya existe una solicitud idéntica en los últimos 30 segundos ---
+        $checkSql = "SELECT ID FROM FP_SOLICITUDES_TRANSFERENCIAS 
+                     WHERE USUARIO = :usuario 
+                     AND ORIGEN = :origen 
+                     AND DESTINO = :destino 
+                     AND TIPO_TRANSFERENCIA = :tipo
+                     AND DATEDIFF(SECOND, CREADO_FECHA, GETDATE()) < 30";
+        $checkStmt = $pdo->prepare($checkSql);
+        $checkStmt->execute([
+            ':usuario' => $datos['usuario'],
+            ':origen' => $datos['origen'],
+            ':destino' => $datos['destino'],
+            ':tipo' => $datos['tipo_transferencia']
+        ]);
+        
+        if ($oldId = $checkStmt->fetchColumn()) {
+            return $oldId; // Retornamos el ID existente en lugar de recrear
+        }
         
         $sql = "INSERT INTO FP_SOLICITUDES_TRANSFERENCIAS 
                 (FECHA, TIPO_TRANSFERENCIA, USUARIO, ORIGEN, DESTINO, ESTADO, OBSERVACIONES, ARTICULOS, CREADO_POR, CREADO_FECHA) 
@@ -154,6 +173,21 @@ class TransferenciaModel {
         $sql = "DELETE FROM FP_SOLICITUDES_TRANSFERENCIAS WHERE ID = :id";
         $stmt = $pdo->prepare($sql);
         return $stmt->execute([':id' => $id]);
+    }
+
+    /**
+     * Actualizar la lista de artículos (incluyendo observaciones de cambios).
+     */
+    public static function actualizarArticulos($id, $json_articulos) {
+        $pdo = Database::getConnectionSistemas();
+        $sql = "UPDATE FP_SOLICITUDES_TRANSFERENCIAS 
+                SET ARTICULOS = :articulos 
+                WHERE ID = :id";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([
+            ':articulos' => $json_articulos,
+            ':id' => $id
+        ]);
     }
 
     // --- MÉTODOS DE CONFIGURACIÓN DINÁMICA ---

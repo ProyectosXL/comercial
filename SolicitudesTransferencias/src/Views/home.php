@@ -89,7 +89,7 @@
                         }
                     ?>
                     <tr>
-                        <td><strong>#<?php echo $sol['ID']; ?></strong></td>
+                        <td data-order="<?php echo $sol['ID']; ?>"><strong>#<?php echo $sol['ID']; ?></strong></td>
                         <td><?php echo $fecha; ?></td>
                         <td><?php echo htmlspecialchars($sol['TIPO_TRANSFERENCIA']); ?></td>
                         <td><?php echo htmlspecialchars($sol['USUARIO']); ?></td>
@@ -120,9 +120,19 @@
     </div>
 </div>
 
-<?php require_once __DIR__ . '/layouts/footer.php'; ?>
+<?php 
+$pageScripts = '<script>
+$(document).ready(function() {
+    $(".table-modern:has(tbody tr)").DataTable({
+        language: {
+            url: "https://cdn.datatables.net/plug-ins/1.10.21/i18n/Spanish.json"
+        },
+        order: [[0, "desc"]],
+        pageLength: 10,
+        dom: \'rt\',
+    });
+});
 
-<script>
 function eliminarSolicitud(id) {
     if (!confirm("¿Está seguro de que desea eliminar la solicitud #" + id + "? Esta acción no se puede deshacer.")) return;
 
@@ -144,4 +154,7 @@ function eliminarSolicitud(id) {
         }
     });
 }
-</script>
+</script>';
+
+require_once __DIR__ . '/layouts/footer.php'; 
+?>
