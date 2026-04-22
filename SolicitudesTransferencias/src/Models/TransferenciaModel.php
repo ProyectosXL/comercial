@@ -1,0 +1,285 @@
+<?php
+// src/Models/TransferenciaModel.php
+
+class TransferenciaModel {
+
+    /**
+     * Buscar artículos por código (autocomplete, mínimo 3 caracteres).
+     * Usa XL-TANGO -> LAKER_SA -> MAESTRO_ARTICULOS_CODIGOS_ACTIVOS
+     */
+    public static function buscarArticulos($termino) {
+        $pdo = Database::getConnectionTango();
+        $sql = "SELECT TOP 20 COD_ARTICU, DESCRIPCION, RUBRO 
+                FROM MAESTRO_ARTICULOS_CODIGOS_ACTIVOS 
+                WHERE UPPER(COD_ARTICU) LIKE UPPER(:termino)
+                ORDER BY COD_ARTICU";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':termino' => '%' . $termino . '%']);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Obtener stock disponible de un artículo.
+     * Usa XL-TANGO -> LAKER_SA -> STOCK_CENTRAL_DISPONIBLE
+     */
+    public static function getStockDisponible($codArticulo) {
+        $pdo = Database::getConnectionTango();
+        $sql = "SELECT STOCK_DISPONIBLE 
+                FROM STOCK_CENTRAL_DISPONIBLE 
+                WHERE COD_ARTICU = :cod";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':cod' => $codArticulo]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? (float)$row['STOCK_DISPONIBLE'] : 0;
+    }
+
+    /**
+     * Validar stock para múltiples artículos.
+     * Retorna array con artículos que no tienen stock suficiente.
+     */
+    public static function validarStock($articulos) {
+        $errores = [];
+        foreach ($articulos as $art) {
+            $stockDisponible = self::getStockDisponible($art['cod_articu']);
+            if ((float)$art['cantidad'] > $stockDisponible) {
+                $errores[] = [
+                    'cod_articu' => $art['cod_articu'],
+                    'descripcion' => $art['descripcion'],
+                    'cantidad_solicitada' => (float)$art['cantidad'],
+                    'stock_disponible' => $stockDisponible
+                ];
+            }
+        }
+        return $errores;
+    }
+
+    /**
+     * Crear una nueva solicitud de transferencia.
+     * Guarda en XL-APPS -> sistemas -> FP_SOLICITUDES_TRANSFERENCIAS
+     */
+    public static function crearSolicitud($datos) {
+        $pdo = Database::getConnectionSistemas();
+        
+        // --- ANTI-DUPLICADO: Buscar si ya existe una solicitud idéntica en los últimos 30 segundos ---
+        $checkSql = "SELECT ID FROM FP_SOLICITUDES_TRANSFERENCIAS 
+                     WHERE USUARIO = :usuario 
+                     AND ORIGEN = :origen 
+                     AND DESTINO = :destino 
+                     AND TIPO_TRANSFERENCIA = :tipo
+                     AND DATEDIFF(SECOND, CREADO_FECHA, GETDATE()) < 30";
+        $checkStmt = $pdo->prepare($checkSql);
+        $checkStmt->execute([
+            ':usuario' => $datos['usuario'],
+            ':origen' => $datos['origen'],
+            ':destino' => $datos['destino'],
+            ':tipo' => $datos['tipo_transferencia']
+        ]);
+        
+        if ($oldId = $checkStmt->fetchColumn()) {
+            return $oldId; // Retornamos el ID existente en lugar de recrear
+        }
+        
+        $sql = "INSERT INTO FP_SOLICITUDES_TRANSFERENCIAS 
+                (FECHA, TIPO_TRANSFERENCIA, USUARIO, ORIGEN, DESTINO, ESTADO, OBSERVACIONES, ARTICULOS, CREADO_POR, CREADO_FECHA) 
+                VALUES 
+                (:fecha, :tipo, :usuario, :origen, :destino, 'PENDIENTE', :observaciones, :articulos, :creado_por, GETDATE())";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':fecha' => $datos['fecha'],
+            ':tipo' => $datos['tipo_transferencia'],
+            ':usuario' => $datos['usuario'],
+            ':origen' => $datos['origen'],
+            ':destino' => $datos['destino'],
+            ':observaciones' => $datos['observaciones'],
+            ':articulos' => json_encode($datos['articulos'], JSON_UNESCAPED_UNICODE),
+            ':creado_por' => $datos['creado_por']
+        ]);
+
+        return $pdo->lastInsertId();
+    }
+
+    /**
+     * Obtener todas las solicitudes.
+     */
+    public static function obtenerSolicitudes($estado = null) {
+        $pdo = Database::getConnectionSistemas();
+        
+        $sql = "SELECT * FROM FP_SOLICITUDES_TRANSFERENCIAS";
+        $params = [];
+
+        if ($estado) {
+            $sql .= " WHERE ESTADO = :estado";
+            $params[':estado'] = $estado;
+        }
+
+        $sql .= " ORDER BY ID DESC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Obtener una solicitud por ID.
+     */
+    public static function obtenerSolicitudPorId($id) {
+        $pdo = Database::getConnectionSistemas();
+        $sql = "SELECT * FROM FP_SOLICITUDES_TRANSFERENCIAS WHERE ID = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Actualizar N° Transferencia y finalizar.
+     */
+    public static function finalizarSolicitud($id, $nroTransferencia) {
+        $pdo = Database::getConnectionSistemas();
+        $sql = "UPDATE FP_SOLICITUDES_TRANSFERENCIAS 
+                SET NRO_TRANSFERENCIA = :nro, 
+                    ESTADO = 'FINALIZADA',
+                    FINALIZADO_FECHA = GETDATE()
+                WHERE ID = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':nro' => $nroTransferencia,
+            ':id' => $id
+        ]);
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Actualizar solo el N° de transferencia (sin finalizar).
+     */
+    public static function actualizarNroTransferencia($id, $nroTransferencia) {
+        $pdo = Database::getConnectionSistemas();
+        $sql = "UPDATE FP_SOLICITUDES_TRANSFERENCIAS 
+                SET NRO_TRANSFERENCIA = :nro
+                WHERE ID = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':nro' => $nroTransferencia,
+            ':id' => $id
+        ]);
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Eliminar una solicitud por ID.
+     */
+    public static function eliminarSolicitud($id) {
+        $pdo = Database::getConnectionSistemas();
+        $sql = "DELETE FROM FP_SOLICITUDES_TRANSFERENCIAS WHERE ID = :id";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([':id' => $id]);
+    }
+
+    /**
+     * Actualizar la lista de artículos (incluyendo observaciones de cambios).
+     */
+    public static function actualizarArticulos($id, $json_articulos) {
+        $pdo = Database::getConnectionSistemas();
+        $sql = "UPDATE FP_SOLICITUDES_TRANSFERENCIAS 
+                SET ARTICULOS = :articulos 
+                WHERE ID = :id";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([
+            ':articulos' => $json_articulos,
+            ':id' => $id
+        ]);
+    }
+
+    // --- MÉTODOS DE CONFIGURACIÓN DINÁMICA ---
+
+    /**
+     * Obtener opciones de configuración por categoría.
+     */
+    public static function getConfig($categoria) {
+        $pdo = Database::getConnectionSistemas();
+        $sql = "SELECT * FROM FP_SOLICITUDES_TRANSFERENCIAS_CONFIG 
+                WHERE CATEGORIA = :cat AND ACTIVO = 1 
+                ORDER BY VALOR ASC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':cat' => $categoria]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Obtener toda la configuración (para gestión).
+     */
+    public static function getAllConfig() {
+        $pdo = Database::getConnectionSistemas();
+        $sql = "SELECT * FROM FP_SOLICITUDES_TRANSFERENCIAS_CONFIG ORDER BY CATEGORIA, VALOR";
+        $stmt = $pdo->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Guardar nueva opción de configuración.
+     */
+    public static function guardarConfig($categoria, $valor) {
+        $pdo = Database::getConnectionSistemas();
+        $sql = "INSERT INTO FP_SOLICITUDES_TRANSFERENCIAS_CONFIG (CATEGORIA, VALOR) VALUES (:cat, :val)";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([':cat' => $categoria, ':val' => $valor]);
+    }
+
+    /**
+     * Eliminar opción de configuración.
+     */
+    public static function eliminarConfig($id) {
+        $pdo = Database::getConnectionSistemas();
+        $sql = "DELETE FROM FP_SOLICITUDES_TRANSFERENCIAS_CONFIG WHERE ID = :id";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([':id' => $id]);
+    }
+
+    /**
+     * Cambiar estado activo/inactivo de una opción.
+     */
+    public static function toggleConfig($id) {
+        $pdo = Database::getConnectionSistemas();
+        $sql = "UPDATE FP_SOLICITUDES_TRANSFERENCIAS_CONFIG 
+                SET ACTIVO = CASE WHEN ACTIVO = 1 THEN 0 ELSE 1 END 
+                WHERE ID = :id";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([':id' => $id]);
+    }
+
+    /**
+     * Obtener ubicaciones y stock desde el servidor WMS.
+     */
+    public static function obtenerUbicacionesWMS($codigos) {
+        if (empty($codigos)) return [];
+        
+        try {
+            $pdo = Database::getConnectionWMS();
+            // Creamos los placeholders para los códigos (IN clause)
+            $placeholders = implode(',', array_fill(0, count($codigos), '?'));
+            
+            $sql = "SELECT COD_ARTICULO, UBICACION, STOCK_UBIC 
+                    FROM SOF_STOCK_WMS 
+                    WHERE COD_ARTICULO IN ($placeholders)
+                    AND STOCK_UBIC > 0
+                    ORDER BY COD_ARTICULO, TIPO_Ubicacion DESC, UBICACION";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($codigos);
+            $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Agrupamos por código de artículo para facilitar el consumo
+            $agrupados = [];
+            foreach ($resultados as $row) {
+                $agrupados[$row['COD_ARTICULO']][] = [
+                    'u' => trim($row['UBICACION']),
+                    's' => (int)$row['STOCK_UBIC']
+                ];
+            }
+            return $agrupados;
+        } catch (\Exception $e) {
+            error_log("Error en obtenerUbicacionesWMS: " . $e->getMessage());
+            return [];
+        }
+    }
+}
