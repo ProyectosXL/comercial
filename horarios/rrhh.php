@@ -100,6 +100,12 @@
                     <i class="bi bi-grid-3x3-gap-fill text-warning"></i> Planificación Horaria
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="tab-pvc" data-bs-toggle="tab"
+                    data-bs-target="#panel-pvc" type="button" role="tab">
+                    <i class="bi bi-currency-dollar text-danger"></i> PVC
+                </button>
+            </li>
         </ul>
 
         <!-- CONTENIDO DE LAS PESTAÑAS -->
@@ -388,6 +394,76 @@
                 </div>
             </div>
 
+            <!-- === PANEL 5: PVC === -->
+            <div class="tab-pane fade" id="panel-pvc" role="tabpanel">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Mes del Período</label>
+                                <select id="pvc_mesSelector" class="form-select">
+                                    <option value="1">Enero</option>
+                                    <option value="2">Febrero</option>
+                                    <option value="3">Marzo</option>
+                                    <option value="4">Abril</option>
+                                    <option value="5">Mayo</option>
+                                    <option value="6">Junio</option>
+                                    <option value="7">Julio</option>
+                                    <option value="8">Agosto</option>
+                                    <option value="9">Septiembre</option>
+                                    <option value="10">Octubre</option>
+                                    <option value="11">Noviembre</option>
+                                    <option value="12">Diciembre</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Año</label>
+                                <select id="pvc_anioSelector" class="form-select"></select>
+                            </div>
+                            <div class="col-md-3">
+                                <button id="pvc_btnFiltrar" class="btn btn-danger w-100 text-white">
+                                    <i class="bi bi-search"></i> Calcular PVC
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button id="pvc_btnExportar" class="btn btn-outline-success w-100" disabled>
+                                    <i class="bi bi-file-earmark-excel"></i> Exportar Excel
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2 small text-muted">
+                            <i class="bi bi-info-circle"></i> El período seleccionado comprende del <b>26 del mes anterior</b> al <b>25 del mes actual</b>.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-list-check me-2"></i> Detalle de Horas de Caja</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="tablaPVC">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th colspan="2">Vendedor / Detalle</th>
+                                        <th class="text-center" style="width: 150px;">Horas</th>
+                                        <th class="text-end px-3" style="width: 200px;">Importe PVC</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pvc_body">
+                                    <tr>
+                                        <td colspan="6" class="text-center py-5 text-muted">
+                                            Seleccione un período para visualizar la información.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div> <!-- Fin Tab Content -->
 
     </div>
@@ -539,6 +615,7 @@
     <script src="assets/js/comparacion.js"></script>
     <script src="assets/js/importador.js"></script>
     <script src="assets/js/local.js"></script>
+    <script src="assets/js/pvc.js"></script>
 
 </body>
 

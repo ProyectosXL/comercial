@@ -311,7 +311,8 @@ function guardarDatos($usuario)
         // =========================================================
         sqlsrv_commit($conn);
 
-        // --- NOTIFICACIÓN POR EMAIL (NUEVO) ---
+        /* 
+        // --- NOTIFICACIÓN POR EMAIL (DESACTIVADO MOMENTÁNEAMENTE) ---
         try {
             $semanaInfo = date('d/m/Y', strtotime($fechaInicio)) . " al " . date('d/m/Y', strtotime($fechaFin));
             $notifier = new EmailNotification();
@@ -319,6 +320,7 @@ function guardarDatos($usuario)
         } catch (Exception $eMail) {
             error_log("Error al disparar notificación de mail (Sucursal $nroSucursal): " . $eMail->getMessage());
         }
+        */
 
         echo json_encode([
             'status' => 'ok',
