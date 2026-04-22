@@ -164,17 +164,60 @@ function closeNotifPanel() {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNotifPanel(); });
 
+// ── Alertas — dismiss ─────────────────────────────────────────
+const DISMISS_KEY = 'cads_dismissed_alerts';
+const DISMISS_TTL = 24 * 60 * 60 * 1000; // 24 h en ms
+
+function alertDismissKey(a) {
+    return `${a.nivel}:${a.categoria}` + (a.bucket ? `:${a.bucket}` : '');
+}
+
+function getDismissed() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(DISMISS_KEY) || '{}');
+        const now = Date.now();
+        const valid = {};
+        for (const [k, ts] of Object.entries(raw)) {
+            if (now - ts < DISMISS_TTL) valid[k] = ts;
+        }
+        // limpiar expirados
+        if (Object.keys(valid).length !== Object.keys(raw).length) {
+            localStorage.setItem(DISMISS_KEY, JSON.stringify(valid));
+        }
+        return valid;
+    } catch { return {}; }
+}
+
+function dismissAlert(key) {
+    try {
+        const current = getDismissed();
+        current[key] = Date.now();
+        localStorage.setItem(DISMISS_KEY, JSON.stringify(current));
+    } catch {}
+    loadAlerts();
+}
+
+function restoreDismissed() {
+    try { localStorage.removeItem(DISMISS_KEY); } catch {}
+    loadAlerts();
+}
+
 // ── Alertas ──────────────────────────────────────────────────
 async function loadAlerts() {
-    const list  = document.getElementById('notif-list');
-    const badge = document.getElementById('notif-badge');
-    const meta  = document.getElementById('notif-meta');
-    const bell  = document.getElementById('btn-notif');
+    const list    = document.getElementById('notif-list');
+    const badge   = document.getElementById('notif-badge');
+    const meta    = document.getElementById('notif-meta');
+    const bell    = document.getElementById('btn-notif');
+    const restore = document.getElementById('notif-restore');
 
     try {
-        const data   = await apiFetch('alerts.php');
-        const alerts = data.alerts ?? [];
-        const total  = alerts.length;
+        const data      = await apiFetch('alerts.php');
+        const allAlerts = data.alerts ?? [];
+        const dismissed = getDismissed();
+
+        const alerts    = allAlerts.filter(a => !dismissed[alertDismissKey(a)]);
+        const nDismissed = allAlerts.length - alerts.length;
+        const total     = alerts.length;
 
         if (badge) {
             const prev = parseInt(badge.textContent) || 0;
@@ -201,11 +244,26 @@ async function loadAlerts() {
             }
         }
 
+        if (restore) {
+            restore.hidden    = nDismissed === 0;
+            restore.textContent = `Mostrar ${nDismissed} descartada${nDismissed !== 1 ? 's' : ''}`;
+        }
+
         if (!list) return;
         const iconMap = { critico:'<i class="bi bi-exclamation-octagon-fill"></i>', atencion:'<i class="bi bi-exclamation-triangle-fill"></i>', ok:'<i class="bi bi-check-circle-fill"></i>' };
         list.innerHTML = total === 0
             ? `<div class="notif-item ok"><span class="notif-item-icon"><i class="bi bi-check-circle-fill"></i></span><div class="notif-item-body"><div class="notif-item-cat">sistema</div><div class="notif-item-msg">Operación dentro de parámetros normales.</div></div></div>`
-            : alerts.map(a => `<div class="notif-item ${a.nivel}"><span class="notif-item-icon">${iconMap[a.nivel]??'⚠'}</span><div class="notif-item-body"><div class="notif-item-cat">${(a.categoria??'').toUpperCase()}</div><div class="notif-item-msg">${a.mensaje}</div></div></div>`).join('');
+            : alerts.map(a => {
+                const key = alertDismissKey(a).replace(/"/g, '&quot;');
+                return `<div class="notif-item ${a.nivel}">
+                    <span class="notif-item-icon">${iconMap[a.nivel]??'⚠'}</span>
+                    <div class="notif-item-body">
+                        <div class="notif-item-cat">${(a.categoria??'').toUpperCase()}</div>
+                        <div class="notif-item-msg">${a.mensaje}</div>
+                    </div>
+                    <button class="notif-dismiss-btn" title="Descartar por 24 h" onclick="dismissAlert('${key}')"><i class="bi bi-x"></i></button>
+                </div>`;
+            }).join('');
     } catch {
         if (list) list.innerHTML = `<div class="notif-item atencion"><span class="notif-item-icon"><i class="bi bi-wifi-off"></i></span><div class="notif-item-body"><div class="notif-item-cat">conexión</div><div class="notif-item-msg">No se pudieron cargar las alertas.</div></div></div>`;
     }

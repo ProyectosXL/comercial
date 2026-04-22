@@ -264,6 +264,36 @@ body {
 .notif-item.atencion .notif-item-icon { color: #e6a817; }
 .notif-item.ok       .notif-item-icon { color: var(--color-ok);       }
 
+.notif-dismiss-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 1rem;
+    line-height: 1;
+    padding: .1rem .25rem;
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity .15s, color .15s, background .15s;
+    align-self: flex-start;
+    margin-top: -.05rem;
+}
+.notif-item:hover .notif-dismiss-btn { opacity: 1; }
+.notif-dismiss-btn:hover { color: #333; background: rgba(0,0,0,.08); }
+
+.notif-restore-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: .78rem;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    float: right;
+}
+.notif-restore-btn:hover { color: #444; }
+
 /* Skeleton loader */
 .notif-skeleton {
     height: 62px;

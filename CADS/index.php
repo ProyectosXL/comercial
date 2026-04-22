@@ -55,6 +55,9 @@ $fechaActual = date('d/m/Y H:i');
         <button class="btn-apply w-100" onclick="refreshAll();closeNotifPanel();">
             <i class="bi bi-arrow-repeat"></i> Actualizar ahora
         </button>
+        <button id="notif-restore" class="notif-restore-btn mt-1" hidden onclick="restoreDismissed()">
+            Mostrar descartadas
+        </button>
     </div>
 </aside>
 
