@@ -1,0 +1,49 @@
+-- =============================================
+-- SP: RO_SP_CARGAR_PROMOS_BANCARIAS_VTEX
+-- Borra y recarga RO_T_PROMOS_BANCARIAS_VTEX
+-- para el período indicado.
+-- Ejecutado por job automático.
+-- =============================================
+
+CREATE OR ALTER PROCEDURE RO_SP_CARGAR_PROMOS_BANCARIAS_VTEX
+    @FECHA_DESDE    DATE = NULL,
+    @FECHA_HASTA    DATE = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @FECHA_DESDE IS NULL SET @FECHA_DESDE = CAST(GETDATE() - 30 AS DATE);
+    IF @FECHA_HASTA IS NULL SET @FECHA_HASTA = CAST(GETDATE() - 1  AS DATE);
+
+    DELETE FROM RO_T_PROMOS_BANCARIAS_VTEX
+    WHERE FECHA BETWEEN @FECHA_DESDE AND @FECHA_HASTA;
+
+    INSERT INTO RO_T_PROMOS_BANCARIAS_VTEX (
+        FECHA,
+        ANIO,
+        NRO_MES,
+        NRO_DIA,
+        CANAL,
+        BANCO,
+        DESC_PROMO,
+        PORC_REINTEGRO,
+        PEDIDOS_TOTAL_DIA,
+        VTA_TOTAL_DIA,
+        PEDIDOS_CON_PROMO,
+        VTA_PROMO,
+        TKT_CON_PROMO,
+        PORC_2DO_CON_PROMO,
+        FECHA_REF,
+        PEDIDOS_SIN_PROMO,
+        TKT_SIN_PROMO,
+        PORC_2DO_SIN_PROMO,
+        PORC_VTA_PROMO,
+        CREC_TKT,
+        PROPORCION
+    )
+    EXEC RO_SP_REPORTE_PROMOS_BANCARIAS_VTEX
+        @FECHA_DESDE = @FECHA_DESDE,
+        @FECHA_HASTA = @FECHA_HASTA;
+
+END;
+GO

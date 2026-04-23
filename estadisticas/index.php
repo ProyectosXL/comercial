@@ -365,10 +365,10 @@ if (!isset($_SESSION['username'])) {
                             </div>
                             <div class="card">
                                 <div class="card-body">
-                                    <i class="bi bi-shield-check card-icon color-info"></i>
-                                    <h5 class="card-title">Autorizaciones OC</h5>
-                                    <p class="card-subtitle">Gestión de órdenes de compra</p>
-                                    <a href="../../compras/AutorizacionesOc/index.php?usuario=<?php echo urlencode($_SESSION['username']); ?>" class="btn btn-info btn-card">Acceder</a>
+                                    <i class="bi bi-calendar-week card-icon color-purple"></i>
+                                    <h5 class="card-title">Gestión de Horarios</h5>
+                                    <p class="card-subtitle">Vista local y planificación horaria</p>
+                                    <a href="../horarios/local.php" class="btn btn-purple btn-card">Acceder</a>
                                 </div>
                             </div>
                         </div>

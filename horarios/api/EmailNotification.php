@@ -164,7 +164,7 @@ class EmailNotification {
                     <p>Se ha generado un nuevo comentario/feedback en el sistema de horarios:</p>
                     <ul>
                         <li><strong>Local:</strong> $nombreSucursal</li>
-                        <li><strong>Persona que lo generó:</strong> $nombreVendedor</li>
+                        <li><strong>Feedback sobre:</strong> $nombreVendedor</li>
                         <li><strong>Semana:</strong> $semana</li>
                     </ul>
                     <p>Por favor, revisá la plataforma de Gestión de Horarios para ver el detalle del mensaje.</p>

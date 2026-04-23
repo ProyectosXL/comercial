@@ -604,7 +604,8 @@ function cargarDatos()
     $respuesta['notasVendedor'] = $notasVendedor;
 
     $feedbackVendedor = [];
-    $sqlFeed = "SELECT COD_VENDED, MENSAJE FROM FP_GESTION_FEEDBACK WHERE NRO_SUCURSAL = ? AND FECHA_SEMANA = ?";
+    // Permitimos traer feedback con sucursal 0 para no perder mensajes huérfanos
+    $sqlFeed = "SELECT COD_VENDED, MENSAJE FROM FP_GESTION_FEEDBACK WHERE (NRO_SUCURSAL = ? OR NRO_SUCURSAL = 0) AND FECHA_SEMANA = ?";
     $stmtFeed = sqlsrv_query($connSistemas, $sqlFeed, [$nroSucursal, $fechaInicio]);
     if ($stmtFeed) {
         while ($row = sqlsrv_fetch_array($stmtFeed, SQLSRV_FETCH_ASSOC)) {

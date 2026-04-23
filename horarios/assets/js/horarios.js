@@ -194,7 +194,7 @@ $(document).ready(function () {
                 filasHTML += '<div>' + vendedor.NOMBRE_VEN + '</div>';
                 filasHTML += '<small class="d-block text-muted fw-normal"><span class="badge bg-warning text-dark">Refuerzo</span></small>';
                 filasHTML += '</div>';
-                filasHTML += '<span class="icono-feedback d-none ms-auto" data-vendedor-id="' + vendedorId + '" title="Sin Feedback" style="cursor:pointer;">';
+                filasHTML += '<span class="icono-feedback ms-auto" data-vendedor-id="' + vendedorId + '" title="Sin Feedback" style="cursor:pointer; opacity: 0.2;">';
                 filasHTML += '<i class="bi bi-chat-left-dots-fill text-secondary fs-5"></i>';
                 filasHTML += '</span>';
                 filasHTML += '</div>';

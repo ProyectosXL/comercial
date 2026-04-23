@@ -467,9 +467,31 @@ $(document).ready(function () {
         const btnCancel = btn.siblings('.btn-secondary'); // El botón de cancelar
         const originalText = btn.html();
 
+        // Intentar resolver la sucursal si es 0 (cuando buscan por vendedor)
+        let sucursalId = $('#sucursalSelector').val();
+        if (!sucursalId || sucursalId == 0) {
+            // Si no hay sucursal seleccionada, intentamos sacarla de los datos cargados del vendedor
+            const vId = $('#feedVendedor').val();
+            if (lastDataLoaded && lastDataLoaded.agenda && lastDataLoaded.agenda[vId]) {
+                const det = lastDataLoaded.agenda[vId].sucursal_detalle;
+                if (det) {
+                    // Buscamos la primera sucursal válida que aparezca en su agenda de la semana
+                    for (let f in det) {
+                        for (let h in det[f]) {
+                            if (det[f][h] > 0) {
+                                sucursalId = det[f][h];
+                                break;
+                            }
+                        }
+                        if (sucursalId > 0) break;
+                    }
+                }
+            }
+        }
+
         const payload = {
             accion: 'guardar_feedback',
-            sucursal: $('#sucursalSelector').val() || 0,
+            sucursal: sucursalId || 0,
             vendedor: $('#feedVendedor').val(),
             fechaSemana: getPrimerDiaDeSemana(...$('#semanaSelector').val().split('-W')).toISOString().split('T')[0],
             mensaje: $('#feedTexto').val()

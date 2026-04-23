@@ -70,6 +70,12 @@ const Bancarias = (() => {
         return Number(valor).toFixed(2) + 'x';
     }
 
+    /** Envuelve un valor con tooltip de fecha de referencia */
+    function wrapConRef(contenido, fechaRefLabel) {
+        if (!fechaRefLabel) return contenido;
+        return `<span data-bs-toggle="tooltip" data-bs-title="${escHtml('Ref.: ' + fechaRefLabel)}">${contenido}</span>`;
+    }
+
     // -------------------------------------------------------
     // Cálculo de KPIs a partir de los TR filtrados en DataTables.
     // Usa dtInstance.rows({search:'applied'}).nodes() para cubrir
@@ -194,6 +200,11 @@ const Bancarias = (() => {
             ? formatearFecha(acc._fechaMin)
             : `${formatearFecha(acc._fechaMin)} \u2013 ${formatearFecha(acc._fechaMax)}`;
 
+        const refFechasArr  = [...acc._refFechas].filter(Boolean).sort();
+        const fechaRefLabel = refFechasArr.length === 0 ? null
+            : refFechasArr.length === 1 ? formatearFecha(refFechasArr[0])
+            : refFechasArr.map(formatearFecha).join(', ');
+
         return {
             BANCO:              acc.BANCO,
             DESC_PROMO:         acc.DESC_PROMO,
@@ -213,6 +224,7 @@ const Bancarias = (() => {
             CREC_TKT:           crecTkt,
             RANGO_FECHAS:       rangoFechas,
             DIAS:               acc._dias,
+            FECHA_REF:          fechaRefLabel,
         };
     }
 
@@ -267,6 +279,7 @@ const Bancarias = (() => {
                     _fechaMin:         fecha,
                     _fechaMax:         fecha,
                     _dias:             1,
+                    _refFechas:        new Set(fila.FECHA_REF ? [fila.FECHA_REF] : []),
                 };
             } else {
                 // Extender evento en curso
@@ -281,6 +294,7 @@ const Bancarias = (() => {
                 if (!acc._vtaMap.has(fecha)) acc._vtaMap.set(fecha, vta);
                 acc._fechaMax = fecha;                          // sorted asc → último visto = máximo
                 acc._dias     = diffDias(acc._fechaMin, fecha) + 1;
+                if (fila.FECHA_REF) acc._refFechas.add(fila.FECHA_REF);
             }
         });
 
@@ -400,13 +414,13 @@ const Bancarias = (() => {
                 <th data-bs-toggle="tooltip" data-bs-title="Participación de la venta con promo sobre la venta total del evento">% Promo</th>
                 <th data-bs-toggle="tooltip" data-bs-title="Total de pedidos del sitio durante el evento">Ped. Total</th>
                 <th data-bs-toggle="tooltip" data-bs-title="Pedidos que calificaron para el beneficio durante el evento">Ped. c/Promo</th>
-                <th data-bs-toggle="tooltip" data-bs-title="Pedidos que no calificaron para la promoción durante el evento">Ped. s/Promo</th>
-                <th data-bs-toggle="tooltip" data-bs-title="Relación entre pedidos totales y pedidos sin promo durante el evento">Proporción</th>
+                <th data-bs-toggle="tooltip" data-bs-title="Pedidos totales del último mismo día de semana sin promo activa por banco (fecha visible en cada celda)">Ped. s/Promo</th>
+                <th data-bs-toggle="tooltip" data-bs-title="Relación entre pedidos con promo del día y pedidos del día de referencia sin promo">Proporción</th>
                 <th data-bs-toggle="tooltip" data-bs-title="Ticket promedio ponderado de los pedidos con promoción en el evento">Tkt Prom. c/Promo</th>
-                <th data-bs-toggle="tooltip" data-bs-title="Ticket promedio ponderado de los pedidos sin promoción en el evento">Tkt Prom. s/Promo</th>
-                <th data-bs-toggle="tooltip" data-bs-title="Variación del ticket con promo respecto al ticket sin promo en el evento">Crec. Tkt</th>
+                <th data-bs-toggle="tooltip" data-bs-title="Ticket promedio del último mismo día de semana sin promo activa por banco (fecha visible en cada celda)">Tkt Prom. s/Promo</th>
+                <th data-bs-toggle="tooltip" data-bs-title="Variación del ticket con promo respecto al ticket del día de referencia sin promo">Crec. Tkt</th>
                 <th data-bs-toggle="tooltip" data-bs-title="Porcentaje ponderado de pedidos con promo que incluyeron 2do producto">% 2do Prod. c/Promo</th>
-                <th data-bs-toggle="tooltip" data-bs-title="Porcentaje ponderado de pedidos sin promo que incluyeron 2do producto">% 2do Prod. s/Promo</th>
+                <th data-bs-toggle="tooltip" data-bs-title="% 2do producto del último mismo día de semana sin promo activa por banco (fecha visible en cada celda)">% 2do Prod. s/Promo</th>
                 <th data-bs-toggle="tooltip" data-bs-title="Evaluación automática de la eficiencia del evento promocional">Diagnóstico</th>
                 <th class="d-none">Fecha</th>
             </tr>`;
@@ -424,13 +438,13 @@ const Bancarias = (() => {
                 <th data-bs-toggle="tooltip" data-bs-title="Participación de la venta con promo sobre la venta total del día">% Promo</th>
                 <th data-bs-toggle="tooltip" data-bs-title="Total de pedidos del sitio en el día de la promoción, independientemente del banco con que pagaron">Ped. Total</th>
                 <th data-bs-toggle="tooltip" data-bs-title="Pedidos que pagaron con el banco de la promo y calificaron para el beneficio ese día">Ped. c/Promo</th>
-                <th data-bs-toggle="tooltip" data-bs-title="Pedidos del mismo día que no calificaron para la promoción">Ped. s/Promo</th>
-                <th data-bs-toggle="tooltip" data-bs-title="Relación entre pedidos totales y pedidos sin promo. Indica qué tan dominante fue la promo en el día">Proporción</th>
+                <th data-bs-toggle="tooltip" data-bs-title="Pedidos totales del último mismo día de semana sin promo activa para este banco (fecha visible al pasar el cursor por el dato)">Ped. s/Promo</th>
+                <th data-bs-toggle="tooltip" data-bs-title="Relación entre pedidos con promo del día y pedidos del día de referencia sin promo">Proporción</th>
                 <th data-bs-toggle="tooltip" data-bs-title="Ticket promedio de los pedidos que usaron la promoción">Tkt Prom. c/Promo</th>
-                <th data-bs-toggle="tooltip" data-bs-title="Ticket promedio de los pedidos que NO usaron la promoción ese día">Tkt Prom. s/Promo</th>
-                <th data-bs-toggle="tooltip" data-bs-title="Variación del ticket con promo respecto al ticket sin promo. Positivo indica que la promo impulsó compras de mayor valor">Crec. Tkt</th>
+                <th data-bs-toggle="tooltip" data-bs-title="Ticket promedio del último mismo día de semana sin promo activa para este banco (fecha visible al pasar el cursor por el dato)">Tkt Prom. s/Promo</th>
+                <th data-bs-toggle="tooltip" data-bs-title="Variación del ticket con promo respecto al ticket del día de referencia sin promo">Crec. Tkt</th>
                 <th data-bs-toggle="tooltip" data-bs-title="Porcentaje de pedidos con promo que incluyeron al menos 2 productos válidos">% 2do Prod. c/Promo</th>
-                <th data-bs-toggle="tooltip" data-bs-title="Porcentaje de pedidos sin promo que incluyeron al menos 2 productos válidos">% 2do Prod. s/Promo</th>
+                <th data-bs-toggle="tooltip" data-bs-title="% 2do producto del último mismo día de semana sin promo activa para este banco (fecha visible al pasar el cursor por el dato)">% 2do Prod. s/Promo</th>
                 <th data-bs-toggle="tooltip" data-bs-title="Evaluación automática de la eficiencia de la promoción según ticket y segundo producto">Diagnóstico</th>
                 <th class="d-none">Fecha</th>
             </tr>`;
@@ -535,13 +549,13 @@ const Bancarias = (() => {
                     <td class="text-end ${clsPctPromo}">${fmtPct(pctPromo)}</td>
                     <td class="text-end">${fmtEntero(fila.PEDIDOS_TOTAL_DIA)}</td>
                     <td class="text-end">${fmtEntero(fila.PEDIDOS_CON_PROMO)}</td>
-                    <td class="text-end">${fmtEntero(fila.PEDIDOS_SIN_PROMO)}</td>
+                    <td class="text-end">${wrapConRef(fmtEntero(fila.PEDIDOS_SIN_PROMO), fila.FECHA_REF)}</td>
                     <td class="text-end ${clsProporcion}">${fmtProporcion(proporcion)}</td>
                     <td class="text-end">${fmtMoneda(fila.TKT_CON_PROMO)}</td>
-                    <td class="text-end">${fmtMoneda(fila.TKT_SIN_PROMO)}</td>
+                    <td class="text-end">${wrapConRef(fmtMoneda(fila.TKT_SIN_PROMO), fila.FECHA_REF)}</td>
                     <td class="text-end ${clsCrecTkt}">${fmtCrec(crecTkt)}</td>
                     <td class="text-end ${cls2doCon}">${fmtPct(p2doCon)}</td>
-                    <td class="text-end">${fmtPct(p2doSin)}</td>
+                    <td class="text-end">${wrapConRef(fmtPct(p2doSin), fila.FECHA_REF)}</td>
                     <td class="text-center">${diagBadge}</td>
                     <td class="d-none"></td>
                 `;
@@ -560,13 +574,13 @@ const Bancarias = (() => {
                     <td class="text-end ${clsPctPromo}">${fmtPct(pctPromo)}</td>
                     <td class="text-end">${fmtEntero(fila.PEDIDOS_TOTAL_DIA)}</td>
                     <td class="text-end">${fmtEntero(fila.PEDIDOS_CON_PROMO)}</td>
-                    <td class="text-end">${fmtEntero(fila.PEDIDOS_SIN_PROMO)}</td>
+                    <td class="text-end">${wrapConRef(fmtEntero(fila.PEDIDOS_SIN_PROMO), formatearFecha(fila.FECHA_REF))}</td>
                     <td class="text-end ${clsProporcion}">${fmtProporcion(proporcion)}</td>
                     <td class="text-end">${fmtMoneda(fila.TKT_CON_PROMO)}</td>
-                    <td class="text-end">${fmtMoneda(fila.TKT_SIN_PROMO)}</td>
+                    <td class="text-end">${wrapConRef(fmtMoneda(fila.TKT_SIN_PROMO), formatearFecha(fila.FECHA_REF))}</td>
                     <td class="text-end ${clsCrecTkt}">${fmtCrec(crecTkt)}</td>
                     <td class="text-end ${cls2doCon}">${fmtPct(p2doCon)}</td>
-                    <td class="text-end">${fmtPct(p2doSin)}</td>
+                    <td class="text-end">${wrapConRef(fmtPct(p2doSin), formatearFecha(fila.FECHA_REF))}</td>
                     <td class="text-center">${diagBadge}</td>
                     <td class="d-none text-end">${escHtml(fila.FECHA ?? '')}</td>
                 `;
@@ -595,7 +609,14 @@ const Bancarias = (() => {
             order: [[0, 'asc'], [1, 'asc']],
             columnDefs,
             dom: '<"d-flex align-items-center justify-content-between mb-2"lf>rtip',
-            drawCallback: function () { calcularKPIs(); },
+            drawCallback: function () {
+                calcularKPIs();
+                document.querySelectorAll(`#${TABLE_ID} tbody [data-bs-toggle="tooltip"]`).forEach(el => {
+                    if (!bootstrap.Tooltip.getInstance(el)) {
+                        new bootstrap.Tooltip(el, { trigger: 'hover', placement: 'top' });
+                    }
+                });
+            },
         });
 
         // Tooltips en encabezados

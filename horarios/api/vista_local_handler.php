@@ -300,7 +300,7 @@ try {
     }
 
     // Notas y Feedback
-    $filtroExtra = $idVendedor ? "AND COD_VENDED = '$idVendedor'" : "AND NRO_SUCURSAL = '$nroSucursal'";
+    $filtroExtra = $idVendedor ? "AND COD_VENDED = '$idVendedor'" : "AND (NRO_SUCURSAL = '$nroSucursal' OR NRO_SUCURSAL = 0)";
 
     $sqlN = "SELECT COD_VENDED, FECHA, NOTA FROM FP_GESTION_NOTAS_VENDEDOR WHERE FECHA BETWEEN ? AND ? $filtroExtra";
     $stmtN = sqlsrv_query($connSistemas, $sqlN, [$fechaInicio, $fechaFin]);

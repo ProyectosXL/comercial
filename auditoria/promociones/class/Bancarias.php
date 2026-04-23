@@ -40,7 +40,7 @@ class Bancarias
                     CANAL, BANCO, DESC_PROMO, PORC_REINTEGRO,
                     PEDIDOS_TOTAL_DIA, VTA_TOTAL_DIA,
                     PEDIDOS_CON_PROMO, VTA_PROMO, TKT_CON_PROMO, PORC_2DO_CON_PROMO,
-                    PEDIDOS_SIN_PROMO, TKT_SIN_PROMO, PORC_2DO_SIN_PROMO,
+                    FECHA_REF, PEDIDOS_SIN_PROMO, TKT_SIN_PROMO, PORC_2DO_SIN_PROMO,
                     PORC_VTA_PROMO, CREC_TKT, PROPORCION
                 FROM RO_T_PROMOS_BANCARIAS_VTEX
                 WHERE FECHA BETWEEN ? AND ?
@@ -84,6 +84,9 @@ class Bancarias
                 'VTA_PROMO'          => (float)  $fila['VTA_PROMO'],
                 'TKT_CON_PROMO'      => (float)  $fila['TKT_CON_PROMO'],
                 'PORC_2DO_CON_PROMO' => (float) ($fila['PORC_2DO_CON_PROMO'] ?? 0),
+                'FECHA_REF'          => ($fila['FECHA_REF'] instanceof DateTime
+                                            ? $fila['FECHA_REF']->format('Y-m-d')
+                                            : ($fila['FECHA_REF'] ?? null)),
                 'PEDIDOS_SIN_PROMO'  => (int)    $fila['PEDIDOS_SIN_PROMO'],
                 'TKT_SIN_PROMO'      => (float) ($fila['TKT_SIN_PROMO'] ?? 0),
                 'PORC_2DO_SIN_PROMO' => (float) ($fila['PORC_2DO_SIN_PROMO'] ?? 0),
