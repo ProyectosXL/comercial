@@ -53,7 +53,7 @@ class Pedido
         ";
 
         if(isset($_SESSION['entorno']) && $_SESSION['entorno'] != 'uy'){
-            $sql .= "WHERE A.COD_CLIENT LIKE '[GFM0]%'";
+            $sql .= "WHERE A.COD_CLIENT LIKE '[GFM0E]%'";
         }
 
         $rows = $this->retornarArray($sql);
@@ -67,11 +67,15 @@ class Pedido
         $sql = " 
             SELECT * FROM RO_V_EFICIENCIA_PEDIDOS 
             WHERE FECHA_PEDIDO BETWEEN  '$desde' AND '$hasta'
-            AND CANAL LIKE '%$canal%'
             AND COD_CLIENT LIKE '%$cliente%'
             AND ESTADO LIKE '%$estado%'
-             AND TIPO LIKE '%$tipo%'
+            AND TIPO LIKE '%$tipo%'
         ";
+
+        if (!empty($canal)) {
+            $canalList = implode("','", array_map('addslashes', $canal));
+            $sql .= " AND CANAL IN ('$canalList')";
+        }
 
         
         $rows = $this->retornarArray($sql);

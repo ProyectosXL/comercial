@@ -25,6 +25,18 @@ $(document).ready(function() {
  * Inicializa todos los componentes de la página
  */
 function inicializarComponentes() {
+    // Inicializar Select2 para el selector de canal
+    $('#selectCanal').select2({
+        placeholder: 'Todos los canales',
+        allowClear: true,
+        width: '100%',
+        language: {
+            noResults: function() {
+                return "No se encontraron resultados";
+            }
+        }
+    });
+
     // Inicializar Select2 para el selector de clientes
     $('#selectCliente').select2({
         placeholder: 'Seleccione un cliente',

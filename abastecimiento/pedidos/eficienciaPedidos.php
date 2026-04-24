@@ -15,7 +15,7 @@ $clientes = $pedido->traerClientes();
 
 $desde = isset($_GET['desde']) ? $_GET['desde'] : date('Y-m-d', strtotime('-10 day'));
 $hasta = isset($_GET['hasta']) ? $_GET['hasta'] : date('Y-m-d');
-$canal = isset($_GET['selectCanal']) ? $_GET['selectCanal'] : '%';
+$canal = isset($_GET['selectCanal']) ? (array)$_GET['selectCanal'] : [];
 $selectCliente = isset($_GET['selectCliente']) ? $_GET['selectCliente'] : '%';
 $estado = isset($_GET['selectEstado']) ? $_GET['selectEstado'] : '%';
 $tipo = isset($_GET['selectTipo']) ? $_GET['selectTipo'] : '%';
@@ -143,12 +143,11 @@ error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 
                             <div class="row g-3 align-items-end">
                                 <div class="col-lg-3 col-md-6">
                                     <label for="selectCanal" class="form-label">Canal</label>
-                                    <select name="selectCanal" id="selectCanal" class="form-select form-select-sm">
-                                        <option value="%" <?= ($canal == '%') ? 'selected' : '' ?>>Todos</option>
-                                        <option value="PROPIOS" <?= ($canal == 'PROPIOS') ? 'selected' : '' ?>>Propios</option>
-                                        <option value="FRANQUICIAS" <?= ($canal == 'FRANQUICIAS') ? 'selected' : '' ?>>Franquicias</option>
-                                        <option value="MAYORISTAS" <?= ($canal == 'MAYORISTAS') ? 'selected' : '' ?>>Mayoristas</option>
-                                        <option value="ECOMMERCE" <?= ($canal == 'ECOMMERCE') ? 'selected' : '' ?>>Ecommerce</option>
+                                    <select name="selectCanal[]" id="selectCanal" class="form-select form-select-sm" multiple>
+                                        <option value="PROPIOS" <?= in_array('PROPIOS', $canal) ? 'selected' : '' ?>>Propios</option>
+                                        <option value="FRANQUICIAS" <?= in_array('FRANQUICIAS', $canal) ? 'selected' : '' ?>>Franquicias</option>
+                                        <option value="MAYORISTAS" <?= in_array('MAYORISTAS', $canal) ? 'selected' : '' ?>>Mayoristas</option>
+                                        <option value="ECOMMERCE" <?= in_array('ECOMMERCE', $canal) ? 'selected' : '' ?>>Ecommerce</option>
                                     </select>
                                 </div>
                                 <div class="col-lg-3 col-md-6">
