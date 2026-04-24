@@ -53,7 +53,7 @@
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
     <div class="container-fluid">
-      <a class="navbar-brand" href="index.php"><i class="bi bi-shop-window"></i> Vista Local</a>
+      <a class="navbar-brand" href="local.php"><i class="bi bi-shop-window"></i> Vista Local</a>
 
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
         <span class="navbar-toggler-icon"></span>

@@ -153,7 +153,7 @@
                                 <a href="../../comercial/supervision/cargaGastosNew.php"><i class="bi bi-credit-card me-2"></i>Carga Gastos <span class="badge bg-warning text-dark ms-2">New Version</span></a>
                             </div>
                             <div class="sub-card p-2">
-                                <a href="../../administracion/recursosHumanos/anticipoSueldos/cargaAnticipo.php"><i class="fas fa-university me-2"></i>Solicitud Anticipo de Sueldos</a>
+                                <a href="../../recursosHumanos/anticipoSueldos/cargaAnticipo.php"><i class="fas fa-university me-2"></i>Solicitud Anticipo de Sueldos</a>
                             </div>
                         </div>
                     </div>
