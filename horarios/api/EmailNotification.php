@@ -19,12 +19,12 @@ class EmailNotification {
             $this->mail = new PHPMailer(true);
             $this->mail->isSMTP();
             // Usamos la configuración de Gmail que ya funciona en Supervision
-            $this->mail->Host = 'smtp.gmail.com';
+            $this->mail->Host = $_ENV['HOST_EMAIL_EGRESOS'] ?? 'smtp.gmail.com';
             $this->mail->SMTPAuth = true;
-            $this->mail->Username = 'notificaciones@xl.com.ar';
-            $this->mail->Password = 'yvsuiewmcztagevs'; 
-            $this->mail->SMTPSecure = 'tls';
-            $this->mail->Port = 587;
+            $this->mail->Username = $_ENV['USER_EMAIL_HORARIOS'];
+            $this->mail->Password = $_ENV['PASS_EMAIL_HORARIOS']; 
+            $this->mail->SMTPSecure = ($_ENV['PORT_EMAIL_EGRESOS'] == '465') ? 'ssl' : 'tls';
+            $this->mail->Port = $_ENV['PORT_EMAIL_EGRESOS'] ?? 587;
             $this->mail->CharSet = 'UTF-8';
             $this->mail->setFrom($this->mail->Username, 'Notificaciones Horarios XL');
         } catch (Exception $e) {

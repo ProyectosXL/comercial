@@ -15,15 +15,20 @@ class EmailNew {
 
     public function __construct() {
         try {
+            // Cargar variables de entorno
+            require_once __DIR__ . '/classEnv.php';
+            $dotenv = new DotEnv(__DIR__ . '/../../../.env');
+            $dotenv->load();
+
             $this->mail = new PHPMailer(true);
             $this->mail->isSMTP();
-            $this->mail->Host = 'smtp.gmail.com';
+            $this->mail->Host = getenv('HOST_EMAIL_EGRESOS') ?: 'smtp.gmail.com';
             $this->mail->SMTPAuth = true;
-            $this->mail->Username = 'notificaciones@xl.com.ar';
-            $this->mail->Password = 'yvsuiewmcztagevs';
-            $this->mail->SMTPSecure = 'tls';
-            $this->mail->Port = 587;
-            $this->mail->setFrom('notificaciones@xl.com.ar', 'XL Extralarge');
+            $this->mail->Username = getenv('USER_EMAIL_SUPERVISION');
+            $this->mail->Password = getenv('PASS_EMAIL_SUPERVISION');
+            $this->mail->SMTPSecure = (getenv('PORT_EMAIL_EGRESOS') == '465') ? 'ssl' : 'tls';
+            $this->mail->Port = getenv('PORT_EMAIL_EGRESOS') ?: 587;
+            $this->mail->setFrom($this->mail->Username, 'XL Extralarge');
             
         } catch (Exception $e) {
             error_log("Error al instanciar EmailNew: " . $e->getMessage());
