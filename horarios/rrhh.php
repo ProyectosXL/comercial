@@ -121,24 +121,29 @@
                                 <label class="form-label fw-bold">Sucursal</label>
                                 <select id="ind_sucursalSelector" class="form-select"></select>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">Semana</label>
-                                <input type="week" id="ind_semanaSelector" class="form-control">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Periodo (Desde - Hasta)</label>
+                                <div class="input-group">
+                                    <input type="date" id="ind_fechaDesde" class="form-control">
+                                    <input type="date" id="ind_fechaHasta" class="form-control">
+                                </div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold">Filtrar Tipo</label>
                                 <select id="ind_tipoHoraFiltro" class="form-select">
                                     <option value="todos">Todos los Tipos</option>
                                     <option value="normal">H (Normales)</option>
-                                    <option value="extra">E (Extras)</option>
+                                    <option value="extra">A (Adicionales)</option>
                                     <option value="devuelve">D (Devuelve)</option>
                                     <option value="caja">C (Caja)</option>
                                     <option value="permiso">P (Permiso)</option>
+                                    <option value="vacaciones">V (Vacaciones)</option>
+                                    <option value="ausencia">AU (Ausencia)</option>
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <button id="ind_btnFiltrar" class="btn btn-success w-100 text-white">
-                                    <i class="bi bi-graph-up-arrow"></i> Ver Indicadores
+                                    <i class="bi bi-graph-up-arrow"></i> Buscar
                                 </button>
                             </div>
                         </div>
@@ -148,7 +153,7 @@
                 <!-- KPIs -->
                 <div class="row mb-4 text-center g-2" id="kpiContainer" style="display:none;">
                     <!-- (KPIs con IDs renombraods ind_...) -->
-                    <div class="col-md-2">
+                    <div class="col">
                         <div class="card text-bg-success h-100 shadow-sm">
                             <div class="card-body p-2">
                                 <h6 class="small opacity-75">H (Normal)</h6>
@@ -156,7 +161,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col">
                         <div class="card text-bg-info h-100 shadow-sm text-white">
                             <div class="card-body p-2">
                                 <h6 class="small opacity-75">C (Caja)</h6>
@@ -164,7 +169,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col">
                         <div class="card h-100 shadow-sm text-white" style="background-color: #d63384;">
                             <div class="card-body p-2">
                                 <h6 class="small opacity-75">P (Permiso)</h6>
@@ -172,15 +177,15 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col">
                         <div class="card text-bg-primary h-100 shadow-sm">
                             <div class="card-body p-2">
-                                <h6 class="small opacity-75">E (Extras)</h6>
+                                <h6 class="small opacity-75">A (Adicional)</h6>
                                 <h3 class="fw-bold mb-0" id="ind_kpiExtra">0</h3>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col">
                         <div class="card text-bg-warning h-100 shadow-sm text-dark">
                             <div class="card-body p-2">
                                 <h6 class="small opacity-75">D (Dev)</h6>
@@ -188,7 +193,23 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col">
+                        <div class="card h-100 shadow-sm text-white" style="background-color: #6a1b9a;">
+                            <div class="card-body p-2">
+                                <h6 class="small opacity-75">V (Vacaciones)</h6>
+                                <h3 class="fw-bold mb-0" id="ind_kpiVacaciones">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card text-bg-secondary h-100 shadow-sm text-white">
+                            <div class="card-body p-2">
+                                <h6 class="small opacity-75">AU (Ausencia)</h6>
+                                <h3 class="fw-bold mb-0" id="ind_kpiAusencia">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
                         <div class="card text-bg-dark h-100 shadow-sm">
                             <div class="card-body p-2">
                                 <h6 class="small opacity-75">Total</h6>
@@ -611,7 +632,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- Scripts actualizados con prefijos -->
-    <script src="assets/js/indicadores.js"></script>
+    <script src="assets/js/indicadores.js?v=2.0"></script>
     <script src="assets/js/comparacion.js"></script>
     <script src="assets/js/importador.js"></script>
     <script src="assets/js/local.js"></script>

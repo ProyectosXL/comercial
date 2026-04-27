@@ -275,12 +275,21 @@ try {
         $agenda[$id]['sucursal_detalle'][$fecha][intval($row['HORA'])] = $suc;
     }
 
-    // Query Francos
+    // Query Francos (Filtrado por sucursal para evitar cruces de otros locales)
     $sqlF = "SELECT COD_VENDED, FECHA_FRANCO FROM FP_GESTION_FRANCOS WHERE FECHA_FRANCO BETWEEN ? AND ?";
     $paramsF = [$fechaInicio, $fechaFin];
+    
     if ($idVendedor) {
         $sqlF .= " AND COD_VENDED = ?";
         $paramsF[] = $idVendedor;
+        // Si tenemos una sucursal seleccionada, filtramos por ella para evitar francos de otros locales
+        if ($nroSucursal > 0) {
+            $sqlF .= " AND NRO_SUCURSAL = ?";
+            $paramsF[] = $nroSucursal;
+        }
+    } else {
+        $sqlF .= " AND NRO_SUCURSAL = ?";
+        $paramsF[] = $nroSucursal;
     }
 
     $stmtF = sqlsrv_query($connSistemas, $sqlF, $paramsF);
@@ -289,12 +298,18 @@ try {
             $id = trim($row['COD_VENDED']);
             $fecha = $row['FECHA_FRANCO']->format('Y-m-d');
 
-            if (isset($agenda[$id]) || ($idVendedor && $id == $idVendedor)) {
-                if (!isset($agenda[$id])) {
-                    $agenda[$id] = ['horarios' => [], 'francos' => [], 'notas' => [], 'feedback' => '', 'sucursal_detalle' => []];
-                    $vendedoresIds[$id] = true;
+            // PRIORIDAD: Solo cargamos el franco si NO tiene horarios de trabajo ese día
+            // Esto evita que francos de otros locales pisen el horario real
+            $tieneHorarioEseDia = (isset($agenda[$id]) && isset($agenda[$id]['horarios'][$fecha]) && !empty($agenda[$id]['horarios'][$fecha]));
+
+            if (! $tieneHorarioEseDia) {
+                if (isset($agenda[$id]) || ($idVendedor && $id == $idVendedor)) {
+                    if (!isset($agenda[$id])) {
+                        $agenda[$id] = ['horarios' => [], 'francos' => [], 'notas' => [], 'feedback' => '', 'sucursal_detalle' => []];
+                        $vendedoresIds[$id] = true;
+                    }
+                    $agenda[$id]['francos'][$fecha] = true;
                 }
-                $agenda[$id]['francos'][$fecha] = true;
             }
         }
     }

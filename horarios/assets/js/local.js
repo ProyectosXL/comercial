@@ -3,6 +3,7 @@ $(document).ready(function () {
     const apiVistaURL = 'api/vista_local_handler.php';
     let lastDataLoaded = null;
     let lastPrimerDia = null;
+    let sucursalesMap = {};
 
     // 1. INICIALIZAR SELECT2
     $('#vendedorSelector').select2({
@@ -14,8 +15,9 @@ $(document).ready(function () {
 
     // 2. Cargar Sucursales
     $.getJSON(`${apiDatosURL}?accion=sucursales`, function (data) {
-        $.each(data, (key, suc) => {
-            $('#sucursalSelector').append(`<option value="${suc.NRO_SUCURSAL}">${suc.DESC_SUCURSAL}</option>`);
+        $.each(data, function(key, sucursal) {
+            sucursalesMap[sucursal.NRO_SUCURSAL] = sucursal.DESC_SUCURSAL;
+            $('#sucursalSelector').append(`<option value="${sucursal.NRO_SUCURSAL}">${sucursal.DESC_SUCURSAL}</option>`);
         });
     });
 
@@ -60,7 +62,7 @@ $(document).ready(function () {
     $('#btnVerAgenda').on('click', function () {
         const sucursal = $('#sucursalSelector').val();
         const vendedorId = $('#vendedorSelector').val();
-        const semana = $('#semanaSelector').val();
+        const semana = $('#semanaSelector').attr('data-week-val') || $('#semanaSelector').val();
 
         if (!semana) {
             mostrarModalConTitulo("Advertencia", "Por favor, seleccione una semana.", "warning");
@@ -256,6 +258,13 @@ $(document).ready(function () {
                         }
                     }
                 }
+
+                // NUEVO: Sumar bloqueos externos al total de horas (tH)
+                if (lastDataLoaded.bloqueosExternos && lastDataLoaded.bloqueosExternos[id] && lastDataLoaded.bloqueosExternos[id][fecha]) {
+                    Object.values(lastDataLoaded.bloqueosExternos[id][fecha]).forEach(sucId => {
+                        if (sucId > 0) tH += 1; // Cada bloqueo externo cuenta como 1 hora
+                    });
+                }
             });
 
             const saldoFinal = saldoBase + (tP - tD);
@@ -269,7 +278,7 @@ $(document).ready(function () {
                             <div class="text-truncate" style="max-width: 160px;">
                                 <div class="fw-bold mb-0 vendedor-nombre">${nombre}</div>
                             </div>
-                            <button class="btn-feedback ${tieneFeedback ? 'tiene-feedback' : ''}" 
+                            <button class="btn-feedback ${tieneFeedback ? 'tiene-feedback' : ''} ${esFiltroUnSoloVendedor ? 'd-none' : ''}" 
                                     data-id="${id}" data-nombre="${nombre}" data-texto="${feedbackTexto}">
                                 <i class="bi bi-chat-dots-fill"></i>
                             </button>
@@ -324,8 +333,8 @@ $(document).ready(function () {
                         texto = 'Ø';
                         color = '#adb5bd';
                         extraClass = 'bloqueo-externo';
-                        const nomSuc = nombresSucursales ? (nombresSucursales[bloqueo] || bloqueo) : bloqueo;
-                        titleAttr = `title="Ocupado en Sucursal: ${nomSuc}"`;
+                        const nomSuc = sucursalesMap[bloqueo] || `Sucursal ${bloqueo}`;
+                        titleAttr = `title="Ocupado en: ${nomSuc}"`;
                     } else if (tipo) {
                         color = 'white';
                         if (tipo === 'extra') { bgColor = '#0d6efd'; texto = 'A'; }
@@ -333,6 +342,7 @@ $(document).ready(function () {
                         else if (tipo === 'permiso') { bgColor = '#d63384'; texto = 'P'; }
                         else if (tipo === 'caja') { bgColor = '#0dcaf0'; texto = 'C'; color = '#000'; }
                         else if (tipo === 'vacaciones') { bgColor = '#f3e5f5'; texto = 'V'; color = '#6a1b9a'; }
+                        else if (tipo === 'ausencia') { bgColor = '#6c757d'; texto = 'AU'; color = 'white'; }
                         else { bgColor = '#198754'; texto = 'X'; }
                         if (esMedia) texto += ' <small>½</small>';
                     }
@@ -623,8 +633,18 @@ $(document).ready(function () {
                             let v = t && t.endsWith('_media') ? 0.5 : 1;
                             if (t !== 'vacaciones') { tH += v; hDia.push(parseInt(h)); }
                         });
-                        turno = calcularTurnoTexto(hDia);
                     }
+
+                    // NUEVO: Sumar bloqueos externos al total Hs del PDF
+                    if (lastDataLoaded.bloqueosExternos && lastDataLoaded.bloqueosExternos[vid] && lastDataLoaded.bloqueosExternos[vid][fISO]) {
+                        Object.entries(lastDataLoaded.bloqueosExternos[vid][fISO]).forEach(([h, sId]) => {
+                            if (sId > 0) {
+                                tH += 1;
+                                hDia.push(parseInt(h));
+                            }
+                        });
+                    }
+                    turno = calcularTurnoTexto(hDia);
 
                     fullHtml += `<tr>
                         <td style="border: 1px solid #bbb; padding: 1px 2px; font-weight: bold; width: 90px; max-width: 90px; word-break: break-word;">${inf.nombre}</td>
@@ -632,8 +652,14 @@ $(document).ready(function () {
 
                     for (let h = 7; h <= 24; h++) {
                         const hb = (h === 24) ? 0 : h;
-                        const tipo = (!franco && dat.horarios && dat.horarios[fISO]) ? (dat.horarios[fISO][hb] || '') : null;
                         let tx = '', bg = '';
+                        
+                        // 1. Prioridad: Horarios locales
+                        const tipo = (!franco && dat.horarios && dat.horarios[fISO]) ? (dat.horarios[fISO][hb] || '') : null;
+                        
+                        // 2. Bloqueos Externos (Otras sucursales)
+                        const bloqueoExt = (lastDataLoaded.bloqueosExternos && lastDataLoaded.bloqueosExternos[vid] && lastDataLoaded.bloqueosExternos[vid][fISO]) ? lastDataLoaded.bloqueosExternos[vid][fISO][hb] : null;
+
                         if (tipo) {
                             tx = tipo.endsWith('_media') ? '½' : 'X';
                             bg = '#198754';
@@ -641,8 +667,15 @@ $(document).ready(function () {
                             else if (tipo === 'extra') { tx = 'E'; bg = '#0d6efd'; }
                             else if (tipo === 'devuelve') { tx = 'D'; bg = '#ffc107'; }
                             else if (tipo === 'permiso') { tx = 'P'; bg = '#d63384'; }
+                            else if (tipo === 'vacaciones') { tx = 'V'; bg = '#f3e5f5'; }
+                            else if (tipo === 'ausencia') { tx = 'AU'; bg = '#6c757d'; }
+                        } else if (bloqueoExt) {
+                            tx = 'Ø';
+                            bg = '#444'; // Color oscuro para bloqueos externos
                         }
-                        fullHtml += `<td style="border: 1px solid #bbb; padding: 0px; text-align: center; width: 10px; background: ${bg}; color: ${bg ? 'white' : 'transparent'}; font-weight: 700; font-size: 8px;">${tx}</td>`;
+
+                        let colorTexto = (bg && bg !== '#f3e5f5') ? 'white' : (bg === '#f3e5f5' ? '#6a1b9a' : 'transparent');
+                        fullHtml += `<td style="border: 1px solid #bbb; padding: 0px; text-align: center; width: 10px; background: ${bg}; color: ${colorTexto}; font-weight: 700; font-size: 8px;">${tx}</td>`;
                     }
 
                     fullHtml += `

@@ -233,6 +233,18 @@ body {
     background-color: #0aa2c0;
 }
 
+/* Ausencia (AU) - Gris Oscuro */
+.hora-celda.hora-ausencia {
+    background-color: #6c757d !important;
+    color: white;
+    font-weight: bold;
+}
+
+.table tbody tr:hover .hora-celda.hora-ausencia {
+    background-color: #5a6268;
+}
+
+
 /* Bloqueo Externo (Gris Oscuro Rayado) */
 .bloqueo-externo {
     background-color: #343a40 !important;
