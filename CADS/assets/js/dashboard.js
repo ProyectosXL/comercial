@@ -294,12 +294,12 @@ async function loadKPIs() {
         setKpiCard('kpi-nc-emitidas', fmt(ncEmitidas),        'completadas con NC',              'ok');
 
         if (t) {
-            setKpiTrend('kpi-pendientes',  t.unidades?.delta_pct,     true);
+            setKpiTrend('kpi-pendientes',  null);
             setKpiTrend('kpi-total',       t.devoluciones?.delta_pct, true);
             setKpiTrend('kpi-monto',       null);
-            setKpiTrend('kpi-tiempo',      null);
+            setKpiTrend('kpi-tiempo',      t.tiempo_medio?.delta_pct, true);
             setKpiTrend('kpi-recibidos',   null);
-            setKpiTrend('kpi-nc-emitidas', null);
+            setKpiTrend('kpi-nc-emitidas', t.nc_emitidas?.delta_pct,  false);
         }
     } catch (e) { console.error('[KPIs]', e); }
 }
@@ -320,21 +320,26 @@ async function loadTendencia(params) {
             data: {
                 labels: data.map(r => fmtDate(r.Fecha)),
                 datasets: [
-                    { label: 'Nuevas devoluciones', data: data.map(r => r.NuevasDevoluciones ?? 0), borderColor: PALETTE.blue,   backgroundColor: 'rgba(74,95,193,.1)',  fill: true,  tension: .4, pointRadius: 3, yAxisID: 'y' },
+                    { label: 'Cantidad de CADs',    data: data.map(r => r.NuevasDevoluciones ?? 0), borderColor: PALETTE.blue,   backgroundColor: 'rgba(74,95,193,.1)',  fill: true,  tension: .4, pointRadius: 3, yAxisID: 'y' },
+                    { label: 'Valorización CADs',   data: data.map(r => r.ValorDiario         ?? 0), borderColor: PALETTE.green,  backgroundColor: 'rgba(40,167,69,.07)',  fill: true,  tension: .4, pointRadius: 2, borderDash: [3,2], yAxisID: 'y2' },
                     { label: 'Unidades pendientes', data: data.map(r => r.UnidadesPendientes  ?? 0), borderColor: PALETTE.orange, backgroundColor: 'rgba(245,166,35,.08)', fill: false, tension: .4, pointRadius: 3, borderDash: [4,3], yAxisID: 'y' },
-                    { label: 'Valor diario ($)',    data: data.map(r => r.ValorDiario         ?? 0), borderColor: PALETTE.green,  backgroundColor: 'rgba(40,167,69,.07)',  fill: true,  tension: .4, pointRadius: 2, borderDash: [3,2], yAxisID: 'y2' },
                 ],
             },
             options: {
                 responsive: true,
                 plugins: {
                     legend: { position: 'top', labels: { boxWidth: 12 } },
-                    tooltip: { callbacks: {
-                        label: c => c.datasetIndex === 2
-                            ? ` Valor: ${fmtMoney(c.raw)}`
-                            : ` ${c.dataset.label}: ${fmt(c.raw)}`,
-                    }},
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: c => c.datasetIndex === 1
+                                ? ` Valor: ${fmtMoney(c.raw)}`
+                                : ` ${c.dataset.label}: ${fmt(c.raw)}`,
+                        },
+                    },
                 },
+                interaction: { mode: 'index', intersect: false },
                 scales: {
                     x:  { ticks: { maxTicksLimit: 12 } },
                     y:  { beginAtZero: true, ticks: { precision: 0 }, position: 'left' },
@@ -472,12 +477,9 @@ async function loadMotivos(params) {
     } catch (e) { console.error('[Motivos]', e); }
 }
 
-// ── Franquiciados — NC + tabla ranking ─────────────────────────
+// ── Franquiciados — tabla ranking ─────────────────────────
 async function loadFranquiciadosSection(params) {
-    await Promise.all([
-        loadFranquiciadosNC(params),
-        loadTablaFranquiciados(params),
-    ]);
+    await loadTablaFranquiciados(params);
 }
 
 function renderTablaFranquiciados(data) {
@@ -892,10 +894,10 @@ function renderTablaClientes(data) {
         return `<tr>
             <td><strong>#${i + 1}</strong></td>
             <td>${r.CodigoCliente        ?? '—'}</td>
-            <td>${r.UsuarioAlias         ?? '—'}</td>
+            <td>${r.RazonSocial          ?? '—'}</td>
             <td class="text-end">${fmt(r.CantidadDevoluciones ?? 0)}</td>
             <td class="text-end">${fmtMoney(r.ValorTotal ?? 0)}</td>
-            <td class="text-end text-muted">${r.ValorTotalAnioAnterior != null ? fmtMoney(r.ValorTotalAnioAnterior) : '—'}</td>
+            <td class="text-end text-muted">${r.CantidadAnioAnterior != null ? fmt(r.CantidadAnioAnterior) : '—'}</td>
             <td class="text-end">${varCell}</td>
         </tr>`;
     }).join('');

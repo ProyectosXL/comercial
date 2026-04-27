@@ -45,9 +45,57 @@ try {
     $currUnid = (float)($row['curr_unid'] ?? 0);
     $prevUnid = (float)($row['prev_unid'] ?? 0);
 
+    // NC Emitidas: CADs completados con NC en cada período
+    $rowNc = dbFetchOne(
+        "SELECT
+             SUM(CASE WHEN FechaAlta >= CAST(? AS DATE) AND FechaAlta <= CAST(? AS DATE)
+                      AND EstadoActual = 'CAD NC Emitida' THEN 1 ELSE 0 END) AS curr_nc,
+             SUM(CASE WHEN FechaAlta >= CAST(? AS DATE) AND FechaAlta <= CAST(? AS DATE)
+                      AND EstadoActual = 'CAD NC Emitida' THEN 1 ELSE 0 END) AS prev_nc
+         FROM (
+             SELECT DISTINCT IdDevolucion, EstadoActual, CAST(FechaAlta AS DATE) AS FechaAlta
+             FROM vw_UnidadesPendientes
+             WHERE FechaAlta >= CAST(? AS DATE)
+         ) sub",
+        [$fechaDesde, $fechaHasta, $prevDesde, $prevHasta, $prevDesde]
+    );
+    $currNc = (float)($rowNc['curr_nc'] ?? 0);
+    $prevNc = (float)($rowNc['prev_nc'] ?? 0);
+
+    // Tiempo Medio Recibido→NC: promedio de días para CADs completados en cada período
+    $rowTiempo = dbFetchOne(
+        "WITH Periodos AS (
+             SELECT l.IdDevolucion,
+                    MIN(CASE WHEN l.IdEstadoDevolucion = 7 THEN l.Fecha END) AS FechaRecibido,
+                    MIN(CASE WHEN l.IdEstadoDevolucion = 9 THEN l.Fecha END) AS FechaNC,
+                    p.FechaAlta
+             FROM   LogCambioEstadoDevolucion l
+             JOIN (
+                 SELECT DISTINCT IdDevolucion, CAST(FechaAlta AS DATE) AS FechaAlta
+                 FROM   vw_UnidadesPendientes
+                 WHERE  EstadoActual = 'CAD NC Emitida'
+                   AND  FechaAlta >= CAST(? AS DATE)
+             ) p ON p.IdDevolucion = l.IdDevolucion
+             GROUP BY l.IdDevolucion, p.FechaAlta
+         )
+         SELECT
+             AVG(CASE WHEN FechaAlta >= CAST(? AS DATE) AND FechaAlta <= CAST(? AS DATE)
+                       AND FechaRecibido IS NOT NULL AND FechaNC IS NOT NULL
+                      THEN CAST(DATEDIFF(minute, FechaRecibido, FechaNC) AS FLOAT) END) / 1440.0 AS curr_tiempo,
+             AVG(CASE WHEN FechaAlta >= CAST(? AS DATE) AND FechaAlta <= CAST(? AS DATE)
+                       AND FechaRecibido IS NOT NULL AND FechaNC IS NOT NULL
+                      THEN CAST(DATEDIFF(minute, FechaRecibido, FechaNC) AS FLOAT) END) / 1440.0 AS prev_tiempo
+         FROM Periodos",
+        [$prevDesde, $fechaDesde, $fechaHasta, $prevDesde, $prevHasta]
+    );
+    $currTiempo = (float)($rowTiempo['curr_tiempo'] ?? 0);
+    $prevTiempo = (float)($rowTiempo['prev_tiempo'] ?? 0);
+
     jsonResponse([
-        'devoluciones'     => ['actual' => $currDev,  'anterior' => $prevDev,  'delta_pct' => $calcDelta($currDev,  $prevDev)],
-        'unidades'         => ['actual' => $currUnid, 'anterior' => $prevUnid, 'delta_pct' => $calcDelta($currUnid, $prevUnid)],
+        'devoluciones'     => ['actual' => $currDev,    'anterior' => $prevDev,    'delta_pct' => $calcDelta($currDev,    $prevDev)],
+        'unidades'         => ['actual' => $currUnid,   'anterior' => $prevUnid,   'delta_pct' => $calcDelta($currUnid,   $prevUnid)],
+        'nc_emitidas'      => ['actual' => $currNc,     'anterior' => $prevNc,     'delta_pct' => $calcDelta($currNc,     $prevNc)],
+        'tiempo_medio'     => ['actual' => $currTiempo, 'anterior' => $prevTiempo, 'delta_pct' => $calcDelta($currTiempo, $prevTiempo)],
         'periodo'          => ['desde'  => $fechaDesde, 'hasta' => $fechaHasta],
         'periodo_anterior' => ['desde'  => $prevDesde,  'hasta' => $prevHasta],
     ]);

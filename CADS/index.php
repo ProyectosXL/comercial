@@ -177,6 +177,12 @@ $fechaActual = date('d/m/Y H:i');
 
         <!-- KPIs -->
         <div class="kpi-grid">
+            <div class="kpi-card info" id="kpi-total">
+                <div class="kpi-label"><i class="bi bi-arrow-repeat"></i> Total Devoluciones <button class="help-btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Cantidad total de solicitudes de devolución registradas en el período seleccionado, sin importar su estado actual."><i class="bi bi-question-circle"></i></button></div>
+                <div class="kpi-value loading">—</div>
+                <div class="kpi-sub">total registradas</div>
+                <div class="kpi-trend"></div>
+            </div>
             <div class="kpi-card info" id="kpi-pendientes">
                 <div class="kpi-label"><i class="bi bi-box-seam"></i> Unidades Pendientes <button class="help-btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Unidades en estados <b>Autorizado, Enviado, Recibido y Controlado</b>.<br>Excluye estados cerrados (Rechazado, Anulado, NC Emitida)."><i class="bi bi-question-circle"></i></button></div>
                 <div class="kpi-value loading">—</div>
@@ -187,18 +193,6 @@ $fechaActual = date('d/m/Y H:i');
                 <div class="kpi-label"><i class="bi bi-currency-dollar"></i> Valor Pendiente <button class="help-btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Valor <b>aproximado</b> según el precio registrado al momento de cargar el CAD.<br>No refleja ajustes de precio posteriores."><i class="bi bi-question-circle"></i></button></div>
                 <div class="kpi-value loading">—</div>
                 <div class="kpi-sub">aprox. al precio de carga</div>
-                <div class="kpi-trend"></div>
-            </div>
-            <div class="kpi-card info" id="kpi-tiempo">
-                <div class="kpi-label"><i class="bi bi-clock-history"></i> Tiempo Medio NC <button class="help-btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Tiempo promedio desde <b>Recibido</b> hasta <b>NC Emitida</b> de los CADs que completaron el flujo.<br><b>Verde</b> &lt;10 días · <b>Amarillo</b> 10-20 días · <b>Rojo</b> &gt;20 días."><i class="bi bi-question-circle"></i></button></div>
-                <div class="kpi-value loading">—</div>
-                <div class="kpi-sub">Recibido → NC Emitida</div>
-                <div class="kpi-trend"></div>
-            </div>
-            <div class="kpi-card info" id="kpi-total">
-                <div class="kpi-label"><i class="bi bi-arrow-repeat"></i> Total Devoluciones <button class="help-btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Cantidad total de solicitudes de devolución registradas en el período seleccionado, sin importar su estado actual."><i class="bi bi-question-circle"></i></button></div>
-                <div class="kpi-value loading">—</div>
-                <div class="kpi-sub">total registradas</div>
                 <div class="kpi-trend"></div>
             </div>
             <div class="kpi-card info" id="kpi-recibidos">
@@ -213,6 +207,12 @@ $fechaActual = date('d/m/Y H:i');
                 <div class="kpi-sub">completadas con NC</div>
                 <div class="kpi-trend"></div>
             </div>
+            <div class="kpi-card info" id="kpi-tiempo">
+                <div class="kpi-label"><i class="bi bi-clock-history"></i> Tiempo Medio NC <button class="help-btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Tiempo promedio desde <b>Recibido</b> hasta <b>NC Emitida</b> de los CADs que completaron el flujo.<br><b>Verde</b> &lt;10 días · <b>Amarillo</b> 10-20 días · <b>Rojo</b> &gt;20 días."><i class="bi bi-question-circle"></i></button></div>
+                <div class="kpi-value loading">—</div>
+                <div class="kpi-sub">Recibido → NC Emitida</div>
+                <div class="kpi-trend"></div>
+            </div>
         </div>
 
         <!-- Tendencia + Aging -->
@@ -221,7 +221,7 @@ $fechaActual = date('d/m/Y H:i');
                 <div class="card-title">
                     <i class="bi bi-graph-up-arrow text-primary"></i>
                     Tendencia diaria de devoluciones
-                    <button class="help-btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Evolución día a día dentro del período filtrado.<br><b>Línea azul:</b> nuevas devoluciones ingresadas.<br><b>Línea naranja:</b> unidades pendientes (eje izquierdo).<br><b>Línea verde:</b> valor estimado diario (eje derecho).<br>Permite detectar picos de actividad y tendencias."><i class="bi bi-question-circle"></i></button>
+                    <button class="help-btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Evolución día a día dentro del período filtrado.<br><b>Línea azul:</b> cantidad de CADs ingresados.<br><b>Línea verde:</b> valorización CADs diaria (eje derecho).<br><b>Línea naranja:</b> unidades pendientes (eje izquierdo).<br>Permite detectar picos de actividad y tendencias."><i class="bi bi-question-circle"></i></button>
                 </div>
                 <div class="chart-wrapper">
                     <canvas id="chart-tendencia"></canvas>
@@ -320,32 +320,6 @@ $fechaActual = date('d/m/Y H:i');
             <i class="bi bi-shop text-primary"></i> Análisis por franquiciado
         </div>
 
-        <!-- Pendiente de NC (Recibido + Controlado) -->
-        <div class="table-card">
-            <div class="table-card-header">
-                <span class="card-title mb-0">
-                    <i class="bi bi-hourglass-split text-warning"></i> Pendiente de NC
-                    <span class="card-title-hint">Recibido + Controlado · clic para ver detalle</span>
-                    <button class="help-btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title="Franquiciados con CADs en estado <b>Recibido</b> o <b>Controlado</b>, pendientes de emisión de Nota de Crédito.<br>Hacé clic en una fila para ver el detalle de cada CAD."><i class="bi bi-question-circle"></i></button>
-                </span>
-                <button class="btn-export" onclick="exportCSV('franquiciadosNC')">
-                    <i class="bi bi-download"></i> CSV
-                </button>
-            </div>
-            <table class="table-custom" id="tabla-franq-nc">
-                <thead>
-                    <tr>
-                        <th class="text-center">#</th>
-                        <th>Franquiciado</th>
-                        <th class="text-end">CADs</th>
-                        <th class="text-end">Unidades</th>
-                        <th class="text-end">Valor estimado</th>
-                    </tr>
-                </thead>
-                <tbody><tr><td colspan="5" class="no-data">Cargando…</td></tr></tbody>
-            </table>
-        </div>
-
         <!-- Ranking por valor pendiente (todos los estados activos) -->
         <div class="table-card" style="margin-top:1.5rem">
             <div class="table-card-header">
@@ -407,7 +381,7 @@ $fechaActual = date('d/m/Y H:i');
                         <th>Usuario</th>
                         <th class="text-end">Cant. Dev.</th>
                         <th class="text-end">Valor actual</th>
-                        <th class="text-end">Año anterior</th>
+                        <th class="text-end">Cant. año ant.</th>
                         <th class="text-end">Var. %</th>
                     </tr>
                 </thead>
