@@ -58,6 +58,7 @@ $(document).ready(function () {
             if (!jerarquia[item.cod_vended]) {
                 jerarquia[item.cod_vended] = {
                     nombre: item.vendedor,
+                    legajo: item.legajo,
                     totalHoras: 0,
                     totalImporte: 0,
                     sucursales: {}
@@ -69,6 +70,7 @@ $(document).ready(function () {
             if (!jerarquia[item.cod_vended].sucursales[item.sucursal_id]) {
                 jerarquia[item.cod_vended].sucursales[item.sucursal_id] = {
                     nombre: item.sucursal,
+                    nro: item.nro_sucursal,
                     totalHoras: 0,
                     totalImporte: 0,
                     dias: []
@@ -90,7 +92,7 @@ $(document).ready(function () {
                     <td colspan="2">
                         <i class="bi bi-chevron-right me-2 text-primary"></i>
                         <span class="fw-bold text-dark">${v.nombre}</span>
-                        <small class="text-muted ms-2">(Legajo: ${codVend})</small>
+                        <small class="text-muted ms-2">(Legajo: ${v.legajo})</small>
                     </td>
                     <td class="text-center"><span class="badge bg-danger fs-6">${v.totalHoras} hs</span></td>
                     <td class="text-end fw-bold text-success fs-5 px-3">${fmtC(v.totalImporte)}</td>
@@ -106,7 +108,7 @@ $(document).ready(function () {
                     <tr class="collapse ${vRowId} bg-white border-start border-primary border-4">
                         <td colspan="2" class="ps-5 cursor-pointer" data-bs-toggle="collapse" data-bs-target=".${sRowId}">
                             <i class="bi bi-arrow-return-right me-2 text-secondary"></i>
-                            <span class="fw-semibold text-secondary">${s.nombre}</span>
+                            <span class="fw-semibold text-secondary">${s.nro} - ${s.nombre}</span>
                         </td>
                         <td class="text-center"><span class="badge bg-secondary">${s.totalHoras} hs</span></td>
                         <td class="text-end fw-bold text-primary px-3">${fmtC(s.totalImporte)}</td>

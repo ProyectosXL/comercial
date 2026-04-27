@@ -14,30 +14,15 @@ $(document).ready(function() {
             $('#ind_sucursalSelector').append(`<option value="${suc.NRO_SUCURSAL}">${suc.DESC_SUCURSAL}</option>`);
         });
     });
-    
-    function getPrimerDiaDeSemana(year, week) {
-        const d = new Date(year, 0, 4);
-        const day = d.getDay() || 7; 
-        d.setDate(d.getDate() - day + 1);
-        d.setDate(d.getDate() + ((week - 1) * 7));
-        return d;
-    }
 
     // --- EVENTO FILTRAR (Prefijo ind_) ---
     $('#ind_btnFiltrar').on('click', function() {
         const sucursal = $('#ind_sucursalSelector').val();
-        const semana = $('#ind_semanaSelector').val();
+        const fechaInicio = $('#ind_fechaDesde').val();
+        const fechaFin = $('#ind_fechaHasta').val();
         const tipoFiltro = $('#ind_tipoHoraFiltro').val();
 
-        if (!semana) return alert("Seleccione una semana.");
-
-        const [year, weekNum] = semana.split('-W');
-        const primerDia = getPrimerDiaDeSemana(year, weekNum);
-        let ultimoDia = new Date(primerDia);
-        ultimoDia.setDate(primerDia.getDate() + 6);
-
-        const fechaInicio = primerDia.toISOString().split('T')[0];
-        const fechaFin = ultimoDia.toISOString().split('T')[0];
+        if (!fechaInicio || !fechaFin) return alert("Seleccione un rango de fechas (Desde - Hasta).");
 
         // Link reporte >9hs
         let urlRep = `api/reporte_exceso.php?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
@@ -56,7 +41,7 @@ $(document).ready(function() {
     function renderDashboard(data, filtroTipo, sucursalSeleccionada) {
         $('#kpiContainer, #chartsContainer').fadeIn();
 
-        let tH = 0, tC = 0, tP = 0, tE = 0, tD = 0, tTotal = 0;
+        let tH = 0, tC = 0, tP = 0, tE = 0, tD = 0, tV = 0, tAU = 0, tTotal = 0;
         let tableHTML = '';
         let dataGrafico = {}; 
         const esVistaGlobal = (sucursalSeleccionada === "");
@@ -64,36 +49,41 @@ $(document).ready(function() {
         // HEADER DE TABLA
         let thead = `<tr>`;
         if (esVistaGlobal) thead += `<th class="text-start">Sucursal</th>`;
-        thead += `<th class="text-start">Vendedor</th><th class="text-success">H</th><th class="text-info">C</th><th style="color:#d63384">P</th><th class="text-primary">E</th><th class="text-warning">D</th><th>Total</th></tr>`;
+        thead += `<th class="text-start">Legajo</th><th class="text-start">Vendedor</th><th class="text-success">H</th><th class="text-info">C</th><th style="color:#d63384">P</th><th class="text-primary">A</th><th class="text-warning">D</th><th style="color:#6a1b9a">V</th><th class="text-secondary">AU</th><th>Total</th></tr>`;
         $('#ind_tablaDetalleBody').parent().find('thead').html(thead);
 
         data.forEach(item => {
             if (filtroTipo !== 'todos' && item[filtroTipo] == 0) return;
 
             tH += item.normal; tC += item.caja; tP += item.permiso;
-            tE += item.extra; tD += item.devuelve; tTotal += item.total;
+            tE += item.extra; tD += item.devuelve; tV += item.vacaciones; tAU += item.ausencia; tTotal += item.total;
 
             tableHTML += `<tr>`;
             if (esVistaGlobal) tableHTML += `<td class="text-start small text-muted">${item.sucursal_nombre}</td>`;
-            tableHTML += `<td class="text-start small fw-bold text-truncate" style="max-width: 150px;" title="${item.nombre}">${item.nombre}</td>
+            tableHTML += `<td class="text-start small">${item.legajo_real}</td>
+                <td class="text-start small fw-bold text-truncate" style="max-width: 150px;" title="${item.nombre}">${item.nombre}</td>
                 <td class="text-success">${item.normal}</td><td class="text-info fw-bold">${item.caja}</td>
                 <td class="fw-bold" style="color:#d63384">${item.permiso}</td><td class="text-primary fw-bold">${item.extra}</td>
-                <td class="text-warning fw-bold">${item.devuelve}</td><td class="fw-bold">${item.total}</td></tr>`;
+                <td class="text-warning fw-bold">${item.devuelve}</td><td class="fw-bold" style="color:#6a1b9a">${item.vacaciones}</td>
+                <td class="text-secondary fw-bold">${item.ausencia}</td><td class="fw-bold">${item.total}</td></tr>`;
 
             let keyGrafico = esVistaGlobal ? item.sucursal_nombre : item.nombre;
-            if (!dataGrafico[keyGrafico]) dataGrafico[keyGrafico] = { h:0, c:0, p:0, e:0, d:0 };
+            if (!dataGrafico[keyGrafico]) dataGrafico[keyGrafico] = { h:0, c:0, p:0, e:0, d:0, v:0, au:0 };
             dataGrafico[keyGrafico].h += item.normal;
             dataGrafico[keyGrafico].c += item.caja;
             dataGrafico[keyGrafico].p += item.permiso;
             dataGrafico[keyGrafico].e += item.extra;
             dataGrafico[keyGrafico].d += item.devuelve;
+            dataGrafico[keyGrafico].v += item.vacaciones;
+            dataGrafico[keyGrafico].au += item.ausencia;
         });
 
         // Actualizar KPIs
         $('#ind_kpiNormal').text(tH); $('#ind_kpiCaja').text(tC); $('#ind_kpiPermiso').text(tP);
-        $('#ind_kpiExtra').text(tE); $('#ind_kpiDevuelve').text(tD); $('#ind_kpiTotal').text(tTotal);
+        $('#ind_kpiExtra').text(tE); $('#ind_kpiDevuelve').text(tD); $('#ind_kpiVacaciones').text(tV); 
+        $('#ind_kpiAusencia').text(tAU); $('#ind_kpiTotal').text(tTotal);
         
-        $('#ind_tablaDetalleBody').html(tableHTML || '<tr><td colspan="8" class="text-center py-3">No hay datos.</td></tr>');
+        $('#ind_tablaDetalleBody').html(tableHTML || '<tr><td colspan="10" class="text-center py-3">No hay datos.</td></tr>');
 
         // Botones
         if (tTotal > 0) {
@@ -108,7 +98,7 @@ $(document).ready(function() {
 
         // Gráfico
         let labels = Object.keys(dataGrafico);
-        let datasetH=[], datasetC=[], datasetP=[], datasetE=[], datasetD=[];
+        let datasetH=[], datasetC=[], datasetP=[], datasetE=[], datasetD=[], datasetV=[], datasetAU=[];
 
         // Filtro visual gráfico
         if (filtroTipo==='todos' || filtroTipo==='normal') datasetH = labels.map(k => dataGrafico[k].h);
@@ -116,6 +106,8 @@ $(document).ready(function() {
         if (filtroTipo==='todos' || filtroTipo==='permiso') datasetP = labels.map(k => dataGrafico[k].p);
         if (filtroTipo==='todos' || filtroTipo==='extra') datasetE = labels.map(k => dataGrafico[k].e);
         if (filtroTipo==='todos' || filtroTipo==='devuelve') datasetD = labels.map(k => dataGrafico[k].d);
+        if (filtroTipo==='todos' || filtroTipo==='vacaciones') datasetV = labels.map(k => dataGrafico[k].v);
+        if (filtroTipo==='todos' || filtroTipo==='ausencia') datasetAU = labels.map(k => dataGrafico[k].au);
 
         const ctx = document.getElementById('ind_graficoVendedores').getContext('2d');
         if (myChart) myChart.destroy();
@@ -131,8 +123,10 @@ myChart = new Chart(ctx, {
                     { label: 'H (normal)', data: datasetH, backgroundColor: '#198754' },
                     { label: 'C (caja)', data: datasetC, backgroundColor: '#0dcaf0' },
                     { label: 'P (permiso)', data: datasetP, backgroundColor: '#d63384' },
-                    { label: 'E (extra)', data: datasetE, backgroundColor: '#0d6efd' },
-                    { label: 'D (devuelve)', data: datasetD, backgroundColor: '#ffc107' }
+                    { label: 'A (adicional)', data: datasetE, backgroundColor: '#0d6efd' },
+                    { label: 'D (devuelve)', data: datasetD, backgroundColor: '#ffc107' },
+                    { label: 'V (vacaciones)', data: datasetV, backgroundColor: '#6a1b9a' },
+                    { label: 'AU (ausencia)', data: datasetAU, backgroundColor: '#6c757d' }
                 ]
             },
             options: {
@@ -178,15 +172,9 @@ myChart = new Chart(ctx, {
     $('#ind_btnExportarDetalle').on('click', function() {
         if ($(this).hasClass('disabled')) return;
         const sucursal = $('#ind_sucursalSelector').val();
-        const semana = $('#ind_semanaSelector').val();
+        const fechaInicio = $('#ind_fechaDesde').val();
+        const fechaFin = $('#ind_fechaHasta').val();
         const tipoFiltro = $('#ind_tipoHoraFiltro').val();
-        
-        const [year, weekNum] = semana.split('-W');
-        const primerDia = getPrimerDiaDeSemana(year, weekNum);
-        let ultimoDia = new Date(primerDia);
-        ultimoDia.setDate(primerDia.getDate() + 6);
-        const fechaInicio = primerDia.toISOString().split('T')[0];
-        const fechaFin = ultimoDia.toISOString().split('T')[0];
 
         let url = `${apiExportarURL}?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&tipo=${tipoFiltro}`;
         if (sucursal) url += `&sucursal=${sucursal}`;
@@ -197,14 +185,8 @@ myChart = new Chart(ctx, {
     $('#ind_btnExportarCajas').on('click', function() {
         if ($(this).hasClass('disabled')) return;
         const sucursal = $('#ind_sucursalSelector').val();
-        const semana = $('#ind_semanaSelector').val();
-        
-        const [year, weekNum] = semana.split('-W');
-        const primerDia = getPrimerDiaDeSemana(year, weekNum);
-        let ultimoDia = new Date(primerDia);
-        ultimoDia.setDate(primerDia.getDate() + 6);
-        const fechaInicio = primerDia.toISOString().split('T')[0];
-        const fechaFin = ultimoDia.toISOString().split('T')[0];
+        const fechaInicio = $('#ind_fechaDesde').val();
+        const fechaFin = $('#ind_fechaHasta').val();
 
         let url = `api/reporte_cajas.php?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
         if (sucursal) url += `&sucursal=${sucursal}`;

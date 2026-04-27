@@ -61,6 +61,8 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
     if ($tipo == 'caja' || $tipo == 'c') $tipo = 'caja';
     if ($tipo == 'extra' || $tipo == 'e') $tipo = 'extra';
     if ($tipo == 'devuelve' || $tipo == 'dev' || $tipo == 'd') $tipo = 'devuelve';
+    if ($tipo == 'vacaciones' || $tipo == 'v') $tipo = 'vacaciones';
+    if ($tipo == 'ausencia' || $tipo == 'au') $tipo = 'ausencia';
 
     $cantidad = intval($row['TOTAL_HORAS']);
 
@@ -73,7 +75,8 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             'sucursal_id' => $sucID,
             'sucursal_nombre' => "Sucursal $sucID", // Placeholder
             'nombre' => "($id)",
-            'normal' => 0, 'extra' => 0, 'devuelve' => 0, 'caja' => 0, 'permiso' => 0, 'total' => 0
+            'legajo_real' => $id,
+            'normal' => 0, 'extra' => 0, 'devuelve' => 0, 'caja' => 0, 'permiso' => 0, 'vacaciones' => 0, 'ausencia' => 0, 'total' => 0
         ];
         $listaIDs[$id] = true; // Usamos keys para evitar duplicados
         $listaSucursalesIDs[$sucID] = true;
@@ -96,26 +99,30 @@ if (empty($reporte)) {
 // PASO 2: NOMBRES VENDEDORES (Base Central / GVA23)
 // =========================================================
 if (!empty($listaIDs)) {
-    $connCentral = getConexionCentral();
+    $connCorp = getConexionCorp();
     $idsStr = implode("','", array_keys($listaIDs));
-    $sqlNom = "SELECT COD_VENDED, NOMBRE_VEN FROM GVA23 WHERE COD_VENDED IN ('$idsStr')";
-    $stmtNom = sqlsrv_query($connCentral, $sqlNom);
+    $sqlNom = "SELECT BLOQUE, NRO_LEGAJO, APELLIDO, NOMBRE FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ('$idsStr')";
+    $stmtNom = sqlsrv_query($connCorp, $sqlNom);
     
-    $mapaNombres = [];
+    $mapaDatos = [];
     if ($stmtNom) {
         while ($r = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
-            $nom = trim($r['NOMBRE_VEN']);
-            $nom = preg_replace('/[\s-]*[0-9]+$/', '', $nom); // Limpiar números
-            $mapaNombres[trim($r['COD_VENDED'])] = $nom;
+            $nom = trim($r['APELLIDO']) . ' ' . trim($r['NOMBRE']);
+            $nom = utf8_encode($nom);
+            $mapaDatos[trim($r['BLOQUE'])] = [
+                'nombre' => $nom,
+                'legajo' => trim($r['NRO_LEGAJO'])
+            ];
         }
         sqlsrv_free_stmt($stmtNom);
     }
-    sqlsrv_close($connCentral);
+    sqlsrv_close($connCorp);
 
-    // Asignar nombres al reporte
+    // Asignar nombres y legajos al reporte
     foreach ($reporte as $k => $v) {
-        if (isset($mapaNombres[$v['id']])) {
-            $reporte[$k]['nombre'] = $mapaNombres[$v['id']];
+        if (isset($mapaDatos[$v['id']])) {
+            $reporte[$k]['nombre'] = $mapaDatos[$v['id']]['nombre'];
+            $reporte[$k]['legajo_real'] = $mapaDatos[$v['id']]['legajo'];
         }
     }
 }

@@ -6,10 +6,14 @@ $(document).ready(function () {
     let fechasSemana = [];
     let modoPintadoHoras = 'normal';
 
+    let sucursalesMap = {};
     // Cargar Sucursales al inicio
     $.getJSON(`${apiDatosURL}?accion=sucursales`, function (data) {
         $('#sucursalSelector').append('<option value="">Seleccione una sucursal...</option>');
-        $.each(data, (key, sucursal) => $('#sucursalSelector').append(`<option value="${sucursal.NRO_SUCURSAL}">${sucursal.DESC_SUCURSAL}</option>`));
+        $.each(data, function(key, sucursal) {
+            sucursalesMap[sucursal.NRO_SUCURSAL] = sucursal.DESC_SUCURSAL;
+            $('#sucursalSelector').append(`<option value="${sucursal.NRO_SUCURSAL}">${sucursal.DESC_SUCURSAL}</option>`);
+        });
     });
 
     $('#tipoHoraSelector input').on('change', function () {
@@ -22,7 +26,7 @@ $(document).ready(function () {
     $('#cargarHorariosBtn').on('click', function () {
         console.log("--- INICIANDO CARGA ---");
         const sucursalId = $('#sucursalSelector').val();
-        const semana = $('#semanaSelector').val();
+        const semana = $('#semanaSelector').attr('data-week-val') || $('#semanaSelector').val();
 
         if (!sucursalId || !semana) {
             return alert('Por favor, seleccione una sucursal y una semana.');
@@ -264,7 +268,7 @@ $(document).ready(function () {
 
     // 1. Al tocar el botón negro "Excel QP" -> Abrimos el modal
     $('#exportarQuickPassBtn').off('click').on('click', function () {
-        const semana = $('#semanaSelector').val();
+        const semana = $('#semanaSelector').attr('data-week-val') || $('#semanaSelector').val();
 
         if (!semana) {
             mostrarModal("Por favor, seleccione una semana para exportar.", "warning");
@@ -277,7 +281,7 @@ $(document).ready(function () {
 
     // 2. Al confirmar dentro del modal -> Ejecutamos la descarga
     $('#btnConfirmarDescarga').off('click').on('click', function () {
-        const semana = $('#semanaSelector').val();
+        const semana = $('#semanaSelector').attr('data-week-val') || $('#semanaSelector').val();
         const [year, weekNum] = semana.split('-W');
         const primerDia = getPrimerDiaDeSemana(year, weekNum);
 
@@ -461,6 +465,12 @@ $(document).ready(function () {
     }
 
     function cargarDatosEnGrilla(data) {
+        // OPTIMIZACIÓN DE RENDIMIENTO: Ocultamos el contenedor principal antes de aplicar
+        // los miles de cambios en las celdas. Esto evita que el navegador recalcule el
+        // diseño (reflow/repaint) en cada ciclo del bucle, haciendo la carga casi instantánea.
+        const $contenedorGrilla = $('#tablaHorariosContainer');
+        $contenedorGrilla.hide();
+
         if (data.es_plantilla_base) {
             mostrarModal("Se cargaron los horarios de la <b>Plantilla Base</b> (Semana " + (data.tipo_semana || 'Automática') + ").<br>Recuerde guardar para confirmar.", "info");
         }
@@ -469,7 +479,7 @@ $(document).ready(function () {
         if (data.horarios) {
             data.horarios.forEach(function (h) {
                 const celda = $('#tablaHorariosContainer tr[data-vendedor-id="' + h.COD_VENDED + '"] td[data-fecha="' + h.FECHA + '"][data-hora="' + h.HORA + '"]');
-                celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja hora-vacaciones media-hora');
+                celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja hora-vacaciones hora-ausencia media-hora');
 
                 let tipoRaw = h.TIPO_HORA.toLowerCase();
                 let esMedia = tipoRaw.endsWith('_media');
@@ -485,6 +495,8 @@ $(document).ready(function () {
                     celda.addClass('hora-caja').text('C');
                 } else if (tipo === 'vacaciones') {
                     celda.addClass('hora-vacaciones').text('V');
+                } else if (tipo === 'ausencia') {
+                    celda.addClass('hora-ausencia').text('AU');
                 } else {
                     celda.addClass('marcado').text('X');
                 }
@@ -575,11 +587,12 @@ $(document).ready(function () {
                 for (const [fecha, horasOcupadas] of Object.entries(fechas)) {
                     const fila = $(`#tablaHorariosContainer tr[data-vendedor-id="${vendedorId}"]`);
                     for (const [hora, sucursalOrigen] of Object.entries(horasOcupadas)) {
+                        const nombreSucursal = sucursalesMap[sucursalOrigen] || `Sucursal ${sucursalOrigen}`;
                         const celdaHora = fila.find(`.hora-celda[data-fecha="${fecha}"][data-hora="${hora}"]`);
                         celdaHora
                             .removeClass('marcado hora-extra hora-devuelve dia-franco')
                             .addClass('bloqueo-externo')
-                            .attr('title', `Ocupado en Sucursal ${sucursalOrigen}`)
+                            .attr('title', `Ocupado en ${nombreSucursal}`)
                             .text('Ø');
                     }
                 }
@@ -640,6 +653,9 @@ $(document).ready(function () {
                 }
             }
         }
+
+        // Restaurar visibilidad (Optimización)
+        $('#tablaHorariosContainer').show();
 
         actualizarSumatorias();
         $('#btnExportarPDF').prop('disabled', false);
@@ -855,7 +871,7 @@ $(document).ready(function () {
             const fila = $(this);
 
             // 1. Contar tipos de hora (Soportando 0.5)
-            let n = 0, c = 0, p = 0, e = 0, d = 0, nExterno = 0;
+            let n = 0, c = 0, p = 0, e = 0, d = 0, au = 0, nExterno = 0;
 
             fila.find('.hora-celda').each(function () {
                 const esMedia = $(this).hasClass('media-hora');
@@ -866,6 +882,7 @@ $(document).ready(function () {
                 else if ($(this).hasClass('hora-devuelve')) d += valor;
                 else if ($(this).hasClass('hora-permiso')) p += valor;
                 else if ($(this).hasClass('hora-caja')) c += valor;
+                else if ($(this).hasClass('hora-ausencia')) au += valor;
                 else if ($(this).hasClass('marcado')) n += valor;
             });
 
@@ -875,7 +892,7 @@ $(document).ready(function () {
                 let horasDiaValor = 0;
 
                 fila.find(`.hora-celda[data-fecha="${fechaISO}"]`).each(function () {
-                    if ($(this).hasClass('marcado') || $(this).hasClass('hora-caja') || $(this).hasClass('hora-permiso') || $(this).hasClass('hora-extra') || $(this).hasClass('hora-devuelve') || $(this).hasClass('bloqueo-externo')) {
+                    if ($(this).hasClass('marcado') || $(this).hasClass('hora-caja') || $(this).hasClass('hora-permiso') || $(this).hasClass('hora-extra') || $(this).hasClass('hora-devuelve') || $(this).hasClass('bloqueo-externo') || $(this).hasClass('hora-ausencia')) {
                         const hora = $(this).data('hora');
                         const esMedia = $(this).hasClass('media-hora');
                         const valor = esMedia ? 0.5 : 1;
@@ -916,12 +933,12 @@ $(document).ready(function () {
             });
 
             // 3. Resto del cálculo
-            const totalH_Visual = n + c + p + nExterno;
+            const totalH_Visual = n + c + p + au + nExterno;
 
             // .toFixed(1).replace('.0', '') para mostrar entero si es entero
             const fmt = (num) => (num % 1 === 0 ? num : num.toFixed(1));
 
-            fila.find('.total-n').text(fmt(n + c)); // H = Normal + Caja
+            fila.find('.total-n').text(fmt(n + c + au)); // H = Normal + Caja + Ausencia
             fila.find('.total-p').text(fmt(p));     // Permiso (separado)
             fila.find('.total-e').text(fmt(e));
             fila.find('.total-d').text(fmt(d));
@@ -995,6 +1012,7 @@ $(document).ready(function () {
             if ($(this).hasClass('hora-devuelve')) textobase = 'D';
             if ($(this).hasClass('hora-permiso')) textobase = 'P';
             if ($(this).hasClass('hora-caja')) textobase = 'C';
+            if ($(this).hasClass('hora-ausencia')) textobase = 'AU';
             $(this).text(textobase);
         } else {
             $(this).addClass('media-hora');
@@ -1027,9 +1045,9 @@ $(document).ready(function () {
 
     function toggleCelda(celda) {
         if (modoPintado === 'desmarcar') {
-            celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja hora-vacaciones media-hora').text('');
+            celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja hora-vacaciones hora-ausencia media-hora').text('');
         } else {
-            celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja hora-vacaciones');
+            celda.removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja hora-vacaciones hora-ausencia');
 
             // Si ya tenía media hora, mantenemos la clase pero actualizamos el texto/color base
             const esMedia = celda.hasClass('media-hora');
@@ -1044,6 +1062,8 @@ $(document).ready(function () {
                 celda.addClass('hora-caja').text('C');
             } else if (modoPintadoHoras === 'vacaciones') {
                 celda.addClass('hora-vacaciones').text('V');
+            } else if (modoPintadoHoras === 'ausencia') {
+                celda.addClass('hora-ausencia').text('AU');
             } else {
                 celda.addClass('marcado').text('X');
             }
@@ -1063,7 +1083,7 @@ $(document).ready(function () {
 
     function execGuardarHorarios() {
         const sucursalId = $('#sucursalSelector').val();
-        const semana = $('#semanaSelector').val();
+        const semana = $('#semanaSelector').attr('data-week-val') || $('#semanaSelector').val();
         const [year, weekNum] = semana.split('-W');
         const primerDia = getPrimerDiaDeSemana(year, weekNum);
         let ultimoDia = new Date(primerDia);
@@ -1074,7 +1094,7 @@ $(document).ready(function () {
         let horarios = [], francos = [], notas = [], vendedoresEnGrilla = [];
 
         // A. Recolectar Horarios
-        $('#tablaHorariosContainer .hora-celda.marcado, #tablaHorariosContainer .hora-celda.hora-extra, #tablaHorariosContainer .hora-celda.hora-devuelve, #tablaHorariosContainer .hora-celda.hora-permiso, #tablaHorariosContainer .hora-celda.hora-caja, #tablaHorariosContainer .hora-celda.hora-vacaciones').each(function () {
+        $('#tablaHorariosContainer .hora-celda.marcado, #tablaHorariosContainer .hora-celda.hora-extra, #tablaHorariosContainer .hora-celda.hora-devuelve, #tablaHorariosContainer .hora-celda.hora-permiso, #tablaHorariosContainer .hora-celda.hora-caja, #tablaHorariosContainer .hora-celda.hora-vacaciones, #tablaHorariosContainer .hora-celda.hora-ausencia').each(function () {
             const celda = $(this);
             if (celda.hasClass('bloqueo-externo')) return;
 
@@ -1084,6 +1104,7 @@ $(document).ready(function () {
             else if (celda.hasClass('hora-permiso')) tipo = 'permiso';
             else if (celda.hasClass('hora-caja')) tipo = 'caja';
             else if (celda.hasClass('hora-vacaciones')) tipo = 'vacaciones';
+            else if (celda.hasClass('hora-ausencia')) tipo = 'ausencia';
 
             if (celda.hasClass('media-hora')) tipo += '_media';
 

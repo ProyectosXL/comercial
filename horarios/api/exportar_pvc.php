@@ -99,20 +99,23 @@ if (!empty($sucursalesIds)) {
     }
     sqlsrv_close($connLocales);
     
-    // Obtener Nombres de Vendedores (Vuelve a Central)
-    $connCentral = getConexionCentral();
+    // Obtener Nombres y Legajos Reales de Vendedores (Base Corp / RRHH)
+    $connCorp = getConexionCorp();
     $mapaVendedores = [];
     $inVend = "'" . implode("','", array_unique($vendedoresIds)) . "'";
-    $sqlV = "SELECT COD_VENDED, NOMBRE_VEN FROM GVA23 WHERE COD_VENDED IN ($inVend)";
-    $stmtVN = sqlsrv_query($connCentral, $sqlV);
+    $sqlV = "SELECT BLOQUE, NRO_LEGAJO, APELLIDO, NOMBRE FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ($inVend)";
+    $stmtVN = sqlsrv_query($connCorp, $sqlV);
     if ($stmtVN) {
         while ($rvn = sqlsrv_fetch_array($stmtVN, SQLSRV_FETCH_ASSOC)) {
-            $nom = trim($rvn['NOMBRE_VEN']);
-            $nom = preg_replace('/[\s-]*[0-9]+$/', '', $nom);
-            $mapaVendedores[trim($rvn['COD_VENDED'])] = $nom;
+            $nom = trim($rvn['APELLIDO']) . ' ' . trim($rvn['NOMBRE']);
+            $nom = utf8_encode($nom);
+            $mapaVendedores[trim($rvn['BLOQUE'])] = [
+                'nombre' => $nom,
+                'legajo' => trim($rvn['NRO_LEGAJO'])
+            ];
         }
     }
-    sqlsrv_close($connCentral);
+    sqlsrv_close($connCorp);
 }
 
 // 4. Calcular PVC por bloque y agrupar para el reporte final
@@ -142,10 +145,12 @@ foreach ($bloques as $b) {
 
     $key = $b['sucursal_id'] . "_" . $b['cod_vended'];
     if (!isset($agrupado[$key])) {
+        $vendData = $mapaVendedores[$b['cod_vended']] ?? null;
         $agrupado[$key] = [
+            'nro_sucursal' => $mapaSucursalesTango[$b['sucursal_id']] ?? 0,
             'sucursal' => $mapaSucursalesNames[$b['sucursal_id']] ?? "Sucursal " . $b['sucursal_id'],
-            'cod' => $b['cod_vended'],
-            'vendedor' => $mapaVendedores[$b['cod_vended']] ?? "Vendedor " . $b['cod_vended'],
+            'cod' => $vendData ? $vendData['legajo'] : $b['cod_vended'],
+            'vendedor' => $vendData ? $vendData['nombre'] : "Vendedor " . $b['cod_vended'],
             'horas' => 0,
             'importe' => 0
         ];
@@ -156,11 +161,12 @@ foreach ($bloques as $b) {
 
 // 5. Generar Excel
 $s = '<style bgcolor="#dc3545" color="#ffffff"><b>'; $e = '</b></style>'; 
-$header = [$s.'SUCURSAL'.$e, $s.'COD'.$e, $s.'VENDEDOR'.$e, $s.'TOTAL HORAS'.$e, $s.'IMPORTE PVC'.$e];
+$header = [$s.'NRO SUCURSAL'.$e, $s.'SUCURSAL'.$e, $s.'LEGAJO'.$e, $s.'VENDEDOR'.$e, $s.'TOTAL HORAS'.$e, $s.'IMPORTE PVC'.$e];
 $filas = [$header];
 
 foreach ($agrupado as $d) {
     $filas[] = [
+        $d['nro_sucursal'],
         $d['sucursal'],
         $d['cod'],
         $d['vendedor'],

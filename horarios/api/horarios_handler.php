@@ -163,16 +163,25 @@ function guardarDatos($usuario)
         }
 
         if (!empty($horarios)) {
-            $sqlInsertHorarios = "INSERT INTO FP_GESTION_HORARIOS (NRO_SUCURSAL, COD_VENDED, FECHA, HORA, TIPO_HORA, MODIFICADO_POR) VALUES (?, ?, ?, ?, ?, ?)";
-            foreach ($horarios as $h) {
-                $stmtInsertHorarios = sqlsrv_query($conn, $sqlInsertHorarios, [
-                    $nroSucursal,
-                    $h['codVended'] ?? '',
-                    $h['fecha'] ?? '',
-                    $h['hora'] ?? null,
-                    $h['tipo'] ?? 'normal',
-                    $usuario
-                ]);
+            $baseSql = "INSERT INTO FP_GESTION_HORARIOS (NRO_SUCURSAL, COD_VENDED, FECHA, HORA, TIPO_HORA, MODIFICADO_POR) VALUES ";
+            // Agrupar inserciones en lotes de 100 (600 parámetros, seguro para SQL Server)
+            $chunks = array_chunk($horarios, 100);
+            
+            foreach ($chunks as $chunk) {
+                $placeholders = [];
+                $params = [];
+                foreach ($chunk as $h) {
+                    $placeholders[] = "(?, ?, ?, ?, ?, ?)";
+                    $params[] = $nroSucursal;
+                    $params[] = $h['codVended'] ?? '';
+                    $params[] = $h['fecha'] ?? '';
+                    $params[] = $h['hora'] ?? null;
+                    $params[] = $h['tipo'] ?? 'normal';
+                    $params[] = $usuario;
+                }
+                $sqlInsertHorarios = $baseSql . implode(', ', $placeholders);
+                $stmtInsertHorarios = sqlsrv_query($conn, $sqlInsertHorarios, $params);
+                
                 if ($stmtInsertHorarios === false) {
                     $errors = sqlsrv_errors();
                     $msg = "";
@@ -182,7 +191,7 @@ function guardarDatos($usuario)
                         }
                     }
                     sqlsrv_rollback($conn);
-                    die(json_encode(['status' => 'error', 'message' => 'Error al insertar horarios: ' . $msg, 'data_attempted' => $h]));
+                    die(json_encode(['status' => 'error', 'message' => 'Error al insertar lote de horarios: ' . $msg]));
                 }
             }
         }
@@ -210,22 +219,22 @@ function guardarDatos($usuario)
         }
 
         if (!empty($francos)) {
-            $sqlInsertFrancos = "INSERT INTO FP_GESTION_FRANCOS (NRO_SUCURSAL, COD_VENDED, FECHA_FRANCO, MODIFICADO_POR) VALUES (?, ?, ?, ?)";
-            $insertCount = 0;
-            foreach ($francos as $f) {
-                $insertCount++;
-                $currentFrancoDebug = [
-                    'attempt' => $insertCount,
-                    'data' => $f,
-                    'result' => 'OK'
-                ];
+            $baseSql = "INSERT INTO FP_GESTION_FRANCOS (NRO_SUCURSAL, COD_VENDED, FECHA_FRANCO, MODIFICADO_POR) VALUES ";
+            $chunks = array_chunk($francos, 100);
 
-                $stmtInsertFrancos = sqlsrv_query($conn, $sqlInsertFrancos, [
-                    $nroSucursal,
-                    $f['codVended'] ?? '',
-                    $f['fechaFranco'] ?? '',
-                    $usuario
-                ]);
+            foreach ($chunks as $chunk) {
+                $placeholders = [];
+                $params = [];
+                foreach ($chunk as $f) {
+                    $placeholders[] = "(?, ?, ?, ?)";
+                    $params[] = $nroSucursal;
+                    $params[] = $f['codVended'] ?? '';
+                    $params[] = $f['fechaFranco'] ?? '';
+                    $params[] = $usuario;
+                }
+                $sqlInsertFrancos = $baseSql . implode(', ', $placeholders);
+                $stmtInsertFrancos = sqlsrv_query($conn, $sqlInsertFrancos, $params);
+                
                 if ($stmtInsertFrancos === false) {
                     $errors = sqlsrv_errors();
                     $msg = "";
@@ -235,16 +244,9 @@ function guardarDatos($usuario)
                         }
                     }
                     sqlsrv_rollback($conn);
-                    die(json_encode(['status' => 'error', 'message' => 'Error al insertar franco: ' . $msg, 'data_attempted' => $f]));
+                    die(json_encode(['status' => 'error', 'message' => 'Error al insertar lote de francos: ' . $msg]));
                 }
-                $rowsAffectedInsertFranco = sqlsrv_rows_affected($stmtInsertFrancos);
-                $currentFrancoDebug['affected_rows'] = $rowsAffectedInsertFranco;
-
-                if ($rowsAffectedInsertFranco === 0) {
-                    $currentFrancoDebug['result'] = 'WARNING_0_ROWS_AFFECTED';
-                    // No hacemos die/rollback aquí, pero lo registramos para depuración
-                }
-                $debugFrancos['inserts'][] = $currentFrancoDebug;
+                $debugFrancos['inserts'][] = ['result' => 'LOTE OK', 'affected_rows' => sqlsrv_rows_affected($stmtInsertFrancos)];
             }
         }
         $debugInfo['francos_operations'] = $debugFrancos; // Añadir toda la info de francos al debug general
@@ -265,16 +267,28 @@ function guardarDatos($usuario)
         }
 
         if (!empty($notas)) {
-            $sqlInsertNota = "INSERT INTO FP_GESTION_NOTAS_VENDEDOR (NRO_SUCURSAL, COD_VENDED, FECHA, NOTA, MODIFICADO_POR) VALUES (?, ?, ?, ?, ?)";
-            foreach ($notas as $n) {
-                if (!empty(trim($n['nota'] ?? ''))) {
-                    $stmtInsertNota = sqlsrv_query($conn, $sqlInsertNota, [
-                        $nroSucursal,
-                        $n['codVended'] ?? '',
-                        $n['fecha'] ?? '',
-                        $n['nota'] ?? '',
-                        $usuario
-                    ]);
+            $baseSql = "INSERT INTO FP_GESTION_NOTAS_VENDEDOR (NRO_SUCURSAL, COD_VENDED, FECHA, NOTA, MODIFICADO_POR) VALUES ";
+            // Filtrar notas vacías antes de crear los lotes
+            $notasValidas = array_filter($notas, function($n) {
+                return !empty(trim($n['nota'] ?? ''));
+            });
+
+            if (!empty($notasValidas)) {
+                $chunks = array_chunk($notasValidas, 100);
+                foreach ($chunks as $chunk) {
+                    $placeholders = [];
+                    $params = [];
+                    foreach ($chunk as $n) {
+                        $placeholders[] = "(?, ?, ?, ?, ?)";
+                        $params[] = $nroSucursal;
+                        $params[] = $n['codVended'] ?? '';
+                        $params[] = $n['fecha'] ?? '';
+                        $params[] = $n['nota'] ?? '';
+                        $params[] = $usuario;
+                    }
+                    $sqlInsertNota = $baseSql . implode(', ', $placeholders);
+                    $stmtInsertNota = sqlsrv_query($conn, $sqlInsertNota, $params);
+                    
                     if ($stmtInsertNota === false) {
                         $errors = sqlsrv_errors();
                         $msg = "";
@@ -284,7 +298,7 @@ function guardarDatos($usuario)
                             }
                         }
                         sqlsrv_rollback($conn);
-                        die(json_encode(['status' => 'error', 'message' => 'Error al insertar notas: ' . $msg, 'data_attempted' => $n]));
+                        die(json_encode(['status' => 'error', 'message' => 'Error al insertar lote de notas: ' . $msg]));
                     }
                 }
             }
@@ -795,7 +809,7 @@ function fetchQuickPassSolicitudes($vendedores, $fechaDesde, $fechaHasta) {
     $ch = curl_init($urlAPI);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 6); // Reducir timeout a 6s para evitar bloqueos
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 

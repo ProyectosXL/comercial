@@ -12,6 +12,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Estilos Propios -->
     <link rel="stylesheet" href="assets/css/style.css">
+    <!-- Flatpickr (Para selector de semana personalizado) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
     <style>
         .accordion-button {
             font-weight: 600;
@@ -162,7 +165,10 @@
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label fw-bold">Semana</label>
-                                <input type="week" id="semanaSelector" class="form-control form-control-lg">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="bi bi-calendar-event"></i></span>
+                                    <input type="text" id="semanaSelector" class="form-control form-control-lg bg-white" placeholder="Semana...">
+                                </div>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label fw-bold">Tipo de Hora</label>
@@ -183,6 +189,8 @@
                                     <input type="radio" class="btn-check" name="tipoHora" id="tipoVacaciones"
                                         value="vacaciones"><label class="btn btn-outline-secondary" for="tipoVacaciones"
                                         style="border-color:#6a1b9a; color:#6a1b9a;">V (VAC)</label>
+                                    <input type="radio" class="btn-check" name="tipoHora" id="tipoAusencia"
+                                        value="ausencia"><label class="btn btn-outline-secondary" for="tipoAusencia">AU (AUSENCIA)</label>
                                 </div>
                             </div>
                             <div class="col-md-2">
@@ -222,6 +230,8 @@
                         <div><strong class="text-primary">A (Adicional):</strong> Adicionales.</div>
                         <div class="vr"></div>
                         <div><strong class="text-warning text-dark">D (Devuelve):</strong> Recupero.</div>
+                        <div class="vr"></div>
+                        <div><strong class="text-secondary">AU (Ausencia):</strong> Suma a H.</div>
                     </div>
                 </div>
 
@@ -934,6 +944,39 @@
     <script src="assets/js/indicadores-integrado.js?v=1.1"></script>
     <script src="assets/js/banco-horas.js?v=1.0"></script>
 
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/weekSelect/weekSelect.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            flatpickr("#semanaSelector", {
+                locale: "es",
+                firstDayOfWeek: 1,
+                weekNumbers: true,
+                defaultDate: "today", // Abrir en la semana actual
+                plugins: [new weekSelect({})],
+                onReady: function(selectedDates, dateStr, instance) {
+                    // Al cargar, inicializamos el valor de la semana actual
+                    const date = selectedDates[0] || new Date();
+                    const year = date.getFullYear();
+                    const week = instance.config.getWeek(date);
+                    const formatted = `${year}-W${String(week).padStart(2, '0')}`;
+                    $(instance.element).attr('data-week-val', formatted);
+                },
+                onChange: function(selectedDates, dateStr, instance) {
+                    const date = selectedDates[0];
+                    if (date) {
+                        const year = date.getFullYear();
+                        const week = instance.config.getWeek(date);
+                        const formatted = `${year}-W${String(week).padStart(2, '0')}`;
+                        $(instance.element).attr('data-week-val', formatted);
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>

@@ -16,6 +16,9 @@
     href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
 
   <link rel="stylesheet" href="assets/css/style.css">
+  <!-- Flatpickr (Para selector de semana personalizado) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
   <style>
     .btn-solicitud {
         cursor: pointer;
@@ -96,7 +99,10 @@
           <!-- Selector Semana -->
           <div class="col-md-3">
             <label class="form-label text-muted small fw-bold text-uppercase">Semana</label>
-            <input type="week" id="semanaSelector" class="form-control form-control-lg border-secondary">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-secondary"><i class="bi bi-calendar-event"></i></span>
+                <input type="text" id="semanaSelector" class="form-control form-control-lg border-secondary bg-white" placeholder="Seleccione semana...">
+            </div>
           </div>
 
           <!-- Buscador Vendedor (SELECT2) -->
@@ -149,6 +155,7 @@
           <span class="badge text-white fs-6" style="background-color: #fd7e14;">D: Devolución</span>
           <span class="badge text-bg-primary fs-6">A: Horas Adicionales</span>
           <span class="badge text-white fs-6" style="background-color: #6f42c1;">F: Franco</span>
+          <span class="badge text-bg-secondary fs-6">AU: Ausencia</span>
           <span class="badge bloqueo-externo text-light fs-6">Ø: Otra Sucursal</span>
           <span class="badge bg-light text-dark border d-flex align-items-center gap-2">
             <i class="bi bi-chat-square-text-fill text-warning"></i> Nota Diaria
@@ -314,6 +321,40 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script src="assets/js/local.js"></script>
+
+  <!-- Flatpickr JS -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/weekSelect/weekSelect.js"></script>
+
+  <script>
+    $(document).ready(function() {
+        flatpickr("#semanaSelector", {
+            locale: "es",
+            firstDayOfWeek: 1,
+            weekNumbers: true,
+            defaultDate: "today", // Abrir en la semana actual
+            plugins: [new weekSelect({})],
+            onReady: function(selectedDates, dateStr, instance) {
+                // Al cargar, inicializamos el valor de la semana actual
+                const date = selectedDates[0] || new Date();
+                const year = date.getFullYear();
+                const week = instance.config.getWeek(date);
+                const formatted = `${year}-W${String(week).padStart(2, '0')}`;
+                $(instance.element).attr('data-week-val', formatted);
+            },
+            onChange: function(selectedDates, dateStr, instance) {
+                const date = selectedDates[0];
+                if (date) {
+                    const year = date.getFullYear();
+                    const week = instance.config.getWeek(date);
+                    const formatted = `${year}-W${String(week).padStart(2, '0')}`;
+                    $(instance.element).attr('data-week-val', formatted);
+                }
+            }
+        });
+    });
+  </script>
 </body>
 
 </html>

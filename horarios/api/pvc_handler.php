@@ -177,18 +177,21 @@ if ($accion === 'listar') {
     $mapaVendedores = [];
     if (!empty($todosVendedoresIds)) {
         $todosVendedoresIds = array_unique($todosVendedoresIds);
-        $connCentral = getConexionCentral();
+        $connCorp = getConexionCorp();
         $in = "'" . implode("','", $todosVendedoresIds) . "'";
-        $sqlV = "SELECT COD_VENDED, NOMBRE_VEN FROM GVA23 WHERE COD_VENDED IN ($in)";
-        $stmtV = sqlsrv_query($connCentral, $sqlV);
+        $sqlV = "SELECT BLOQUE, NRO_LEGAJO, APELLIDO, NOMBRE FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ($in)";
+        $stmtV = sqlsrv_query($connCorp, $sqlV);
         if ($stmtV) {
             while ($rv = sqlsrv_fetch_array($stmtV, SQLSRV_FETCH_ASSOC)) {
-                $nom = trim($rv['NOMBRE_VEN']);
-                $nom = preg_replace('/[\s-]*[0-9]+$/', '', $nom);
-                $mapaVendedores[trim($rv['COD_VENDED'])] = $nom;
+                $nom = trim($rv['APELLIDO']) . ' ' . trim($rv['NOMBRE']);
+                $nom = utf8_encode($nom);
+                $mapaVendedores[trim($rv['BLOQUE'])] = [
+                    'nombre' => $nom,
+                    'legajo' => trim($rv['NRO_LEGAJO'])
+                ];
             }
         }
-        sqlsrv_close($connCentral);
+        sqlsrv_close($connCorp);
     }
 
     $mapaSucursalesNames = [];
@@ -208,9 +211,15 @@ if ($accion === 'listar') {
 
     // Combinar datos finales
     foreach ($datos as &$d) {
-        $d['vendedor'] = $mapaVendedores[$d['cod_vended']] ?? "ID: " . $d['cod_vended'];
+        $vendData = $mapaVendedores[$d['cod_vended']] ?? null;
+        $d['vendedor'] = $vendData ? $vendData['nombre'] : "ID: " . $d['cod_vended'];
+        $d['legajo'] = $vendData ? $vendData['legajo'] : $d['cod_vended'];
+        
         $d['sucursal'] = $mapaSucursalesNames[$d['sucursal_id']] ?? "Sucursal " . $d['sucursal_id'];
-        $d['mejor_vendedor_nombre'] = $mapaVendedores[$d['mejor_vendedor_cod'] ?? ''] ?? "ID: " . ($d['mejor_vendedor_cod'] ?? '-');
+        $d['nro_sucursal'] = $mapaSucursalesTango[$d['sucursal_id']] ?? 0;
+        
+        $mejorVendData = $mapaVendedores[$d['mejor_vendedor_cod'] ?? ''] ?? null;
+        $d['mejor_vendedor_nombre'] = $mejorVendData ? $mejorVendData['nombre'] : "ID: " . ($d['mejor_vendedor_cod'] ?? '-');
     }
 
     echo json_encode([

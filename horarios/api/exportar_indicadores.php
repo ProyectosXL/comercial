@@ -49,6 +49,8 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
     if ($tipo == 'caja' || $tipo == 'c') $tipo = 'caja';
     if ($tipo == 'extra' || $tipo == 'e') $tipo = 'extra';
     if ($tipo == 'devuelve' || $tipo == 'dev' || $tipo == 'd') $tipo = 'devuelve';
+    if ($tipo == 'vacaciones' || $tipo == 'v') $tipo = 'vacaciones';
+    if ($tipo == 'ausencia' || $tipo == 'au') $tipo = 'ausencia';
 
     $cantidad = intval($row['TOTAL_HORAS']);
     $key = $id . '_' . $sucID;
@@ -59,7 +61,7 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             'sucursal_id' => $sucID,
             'sucursal_nombre' => "Sucursal $sucID",
             'nombre' => "($id)",
-            'normal' => 0, 'extra' => 0, 'devuelve' => 0, 'caja' => 0, 'permiso' => 0, 'total' => 0
+            'normal' => 0, 'extra' => 0, 'devuelve' => 0, 'caja' => 0, 'permiso' => 0, 'vacaciones' => 0, 'ausencia' => 0, 'total' => 0
         ];
         $listaIDs[$id] = true;
         $listaSucursalesIDs[$sucID] = true;
@@ -159,6 +161,14 @@ usort($reporte, function($a, $b) {
 // 5. GENERAR EXCEL
 $filasExcel = [];
 
+$numeroSemana = date('W', strtotime($fechaInicio));
+$strFechaInicio = date('d/m/Y', strtotime($fechaInicio));
+$strFechaFin = date('d/m/Y', strtotime($fechaFin));
+
+// Titulo Superior con Fechas
+$filasExcel[] = ['<style font-size="14"><b>Reporte de Horas - Semana ' . $numeroSemana . ' (' . $strFechaInicio . ' al ' . $strFechaFin . ')</b></style>'];
+$filasExcel[] = []; // Fila en blanco
+
 // Header Dinámico con Estilo
 $esVistaGlobal = empty($nroSucursal);
 $s = '<style bgcolor="#E9ECEF" color="#212529"><b>'; $e = '</b></style>';
@@ -170,8 +180,10 @@ $header[] = $s . 'Vendedor' . $e;
 $header[] = $s . 'H' . $e; 
 $header[] = $s . 'C' . $e; 
 $header[] = $s . 'P' . $e; 
-$header[] = $s . 'E' . $e; 
+$header[] = $s . 'A' . $e; 
 $header[] = $s . 'D' . $e;
+$header[] = $s . 'V' . $e;
+$header[] = $s . 'AU' . $e;
 $header[] = $s . 'Total' . $e;
 $filasExcel[] = $header;
 
@@ -189,6 +201,8 @@ foreach ($reporte as $item) {
     $fila[] = $item['permiso'];
     $fila[] = $item['extra'];
     $fila[] = $item['devuelve'];
+    $fila[] = $item['vacaciones'];
+    $fila[] = $item['ausencia'];
     $fila[] = $item['total'];
     
     $filasExcel[] = $fila;
