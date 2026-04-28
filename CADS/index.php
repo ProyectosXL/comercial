@@ -32,6 +32,10 @@ $fechaActual = date('d/m/Y H:i');
             <span class="notif-badge" id="notif-badge" hidden>0</span>
         </button>
         <span class="topbar-sep">|</span>
+        <button class="topbar-icon-btn" id="btn-help" title="Ayuda guiada" onclick="tourStart()" aria-label="Ayuda guiada">
+            <i class="bi bi-question-circle"></i>
+        </button>
+        <span class="topbar-sep">|</span>
         <button class="topbar-icon-btn" title="Actualizar" onclick="refreshAll()">
             <i class="bi bi-arrow-repeat" id="ico-refresh"></i>
         </button>
@@ -544,7 +548,32 @@ $fechaActual = date('d/m/Y H:i');
 
 </main>
 
-<!-- Comment placeholder removed -->
+<!-- ═══════════════ TOUR GUIADA ══════════════════════════════ -->
+<div id="tour-overlay" class="tour-overlay" hidden>
+    <div id="tour-backdrop" class="tour-backdrop"></div>
+    <div id="tour-spotlight" class="tour-spotlight"></div>
+    <div id="tour-tooltip" class="tour-tooltip" role="dialog" aria-live="polite" aria-label="Tour de ayuda guiada">
+        <div class="tour-step-badge" id="tour-step-badge">1 / 11</div>
+        <div class="tour-content">
+            <div class="tour-icon" id="tour-icon"><i class="bi bi-speedometer2"></i></div>
+            <h4 class="tour-title" id="tour-title">Bienvenido</h4>
+            <p class="tour-desc" id="tour-desc"></p>
+        </div>
+        <div class="tour-progress" id="tour-dots"></div>
+        <div class="tour-actions">
+            <button class="tour-btn-skip" onclick="tourSkip()">Saltar tour</button>
+            <div style="display:flex;gap:.5rem;">
+                <button class="tour-btn-prev" id="tour-btn-prev" onclick="tourPrev()">
+                    <i class="bi bi-arrow-left"></i> Anterior
+                </button>
+                <button class="tour-btn-next" id="tour-btn-next" onclick="tourNext()">
+                    Siguiente <i class="bi bi-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <footer class="footer">
     Control Operativo CADS &nbsp;|&nbsp; Última actualización: <span id="last-update"><?= $fechaActual ?></span>
 </footer>

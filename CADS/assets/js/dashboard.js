@@ -162,7 +162,12 @@ function closeNotifPanel() {
     document.getElementById('notif-backdrop')?.classList.remove('open');
     document.body.style.overflow = '';
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNotifPanel(); });
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        closeNotifPanel();
+        tourEnd();
+    }
+});
 
 // ── Alertas — dismiss ─────────────────────────────────────────
 const DISMISS_KEY = 'cads_dismissed_alerts';
@@ -1180,6 +1185,261 @@ function initReporte() {
     });
 
     loadReporte();
+}
+
+// ── Tour guiada ───────────────────────────────────────────────
+const TOUR_STEPS = [
+    {
+        target:   null,
+        title:    '¡Bienvenido al Panel CADS!',
+        icon:     'bi-speedometer2',
+        desc:     'Este tour interactivo te presenta las principales funciones del <strong>Control Operativo de Devoluciones</strong>. Durará menos de 2 minutos.',
+        position: 'center',
+    },
+    {
+        target:   '.filters-bar:not(.reporte-filters)',
+        title:    'Filtros globales',
+        icon:     'bi-funnel-fill',
+        desc:     'Filtrá por <strong>franquiciado</strong>, <strong>rango de fechas</strong> y <strong>estados</strong>. Todos los gráficos e indicadores se actualizan al presionar <em>Aplicar</em>.',
+        position: 'bottom',
+        action:   () => document.querySelector('.section-nav-link[href="#sec-resumen"]')?.click(),
+    },
+    {
+        target:   '#section-nav',
+        title:    'Navegación por secciones',
+        icon:     'bi-layout-tabs',
+        desc:     'Cambiá entre los módulos: <strong>Resumen</strong>, <strong>Reporte</strong>, <strong>Franquiciados</strong>, <strong>Valorización</strong> y <strong>Tiempos</strong>. Solo se carga la sección activa.',
+        position: 'bottom',
+    },
+    {
+        target:   '.kpi-grid',
+        title:    'Indicadores clave (KPIs)',
+        icon:     'bi-bar-chart-line-fill',
+        desc:     'Métricas en tiempo real. El borde de color indica el nivel de alerta: <span style="color:#28a745">■</span> OK · <span style="color:#ffc107">■</span> Atención · <span style="color:#dc3545">■</span> Crítico. La flecha inferior muestra la variación interanual.',
+        position: 'bottom',
+    },
+    {
+        target:   '#chart-tendencia',
+        title:    'Tendencia diaria',
+        icon:     'bi-graph-up-arrow',
+        desc:     'Evolución día a día del período filtrado. <strong>Azul</strong>: CADs ingresados · <strong>Verde</strong>: valorización diaria · <strong>Naranja</strong>: unidades pendientes.',
+        position: 'top',
+    },
+    {
+        target:   '#chart-aging',
+        title:    'Aging de pendientes',
+        icon:     'bi-bar-chart-steps',
+        desc:     'Agrupa los CADs pendientes por antigüedad: <strong style="color:#28a745">0-7 d</strong> normal · <strong style="color:#ffc107">8-15 d</strong> seguimiento · <strong style="color:#f5a623">16-30 d</strong> demorado · <strong style="color:#dc3545">&gt;30 d</strong> crítico.',
+        position: 'top',
+    },
+    {
+        target:   '#btn-notif',
+        title:    'Alertas operativas',
+        icon:     'bi-bell-fill',
+        desc:     'La campana muestra alertas automáticas sobre situaciones críticas. El <strong>número rojo</strong> indica alertas activas. Podés descartar cada una individualmente; se restauran automáticamente a las 24 h.',
+        position: 'bottom',
+    },
+    {
+        target:   '.section-nav-link[href="#sec-reporte"]',
+        title:    'Reporte de devoluciones',
+        icon:     'bi-list-columns-reverse',
+        desc:     'Listado detallado con cliente, artículo, motivo, importes autorizados y estado actual. Filtrá por cualquier campo y exportá a <strong>CSV</strong> con un clic.',
+        position: 'bottom',
+    },
+    {
+        target:   '.section-nav-link[href="#sec-franquiciados"]',
+        title:    'Análisis por franquiciado',
+        icon:     'bi-shop',
+        desc:     'Ranking de franquiciados ordenado por <strong>exposición financiera</strong> (valor pendiente en $). Identificá en segundos quién concentra más riesgo.',
+        position: 'bottom',
+    },
+    {
+        target:   '.section-nav-link[href="#sec-valorizacion"]',
+        title:    'Valorización',
+        icon:     'bi-currency-dollar',
+        desc:     'Top de clientes por valor de devoluciones con comparación interanual (<strong>▲ / ▼ %</strong>). Detectá qué clientes generan mayor impacto económico.',
+        position: 'bottom',
+    },
+    {
+        target:   '.section-nav-link[href="#sec-tiempos"]',
+        title:    'Medición de tiempos',
+        icon:     'bi-stopwatch',
+        desc:     'Tiempos de gestión: mínimo, promedio, máximo y outliers. Incluye el flujo completo de cada CAD desde el ingreso hasta <em>NC Emitida</em>, y las transiciones entre estados.',
+        position: 'bottom',
+    },
+    {
+        target:   null,
+        title:    '¡Tour completado!',
+        icon:     'bi-check-circle-fill',
+        desc:     'Ya conocés el panel. Hacé clic en el botón <strong><i class="bi bi-question-circle"></i></strong> de la barra superior para volver a ver este tour en cualquier momento.',
+        position: 'center',
+    },
+];
+
+let _tourStep = 0;
+
+function tourStart() {
+    _tourStep = 0;
+    const overlay = document.getElementById('tour-overlay');
+    if (overlay) overlay.removeAttribute('hidden');
+    tourRender();
+}
+
+function tourEnd() {
+    const overlay   = document.getElementById('tour-overlay');
+    const spotlight = document.getElementById('tour-spotlight');
+    const backdrop  = document.getElementById('tour-backdrop');
+    if (overlay)   overlay.setAttribute('hidden', '');
+    if (spotlight) spotlight.style.boxShadow = '';
+    if (backdrop)  backdrop.classList.remove('visible');
+}
+
+function tourSkip() { tourEnd(); }
+
+function tourNext() {
+    if (_tourStep < TOUR_STEPS.length - 1) {
+        _tourStep++;
+        tourRender();
+    } else {
+        tourEnd();
+    }
+}
+
+function tourPrev() {
+    if (_tourStep > 0) {
+        _tourStep--;
+        tourRender();
+    }
+}
+
+function tourRender() {
+    const step   = TOUR_STEPS[_tourStep];
+    const total  = TOUR_STEPS.length;
+    const isLast = _tourStep === total - 1;
+
+    // Ejecutar acción del paso (ej: navegar a sección) antes de posicionar
+    if (step.action) step.action();
+
+    // Contenido
+    const iconEl  = document.getElementById('tour-icon');
+    const titleEl = document.getElementById('tour-title');
+    const descEl  = document.getElementById('tour-desc');
+    const badgeEl = document.getElementById('tour-step-badge');
+    if (iconEl)  iconEl.innerHTML    = `<i class="bi ${step.icon}"></i>`;
+    if (titleEl) titleEl.textContent = step.title;
+    if (descEl)  descEl.innerHTML    = step.desc;
+    if (badgeEl) badgeEl.textContent = `${_tourStep + 1} / ${total}`;
+
+    // Puntos de progreso
+    const dotsEl = document.getElementById('tour-dots');
+    if (dotsEl) {
+        dotsEl.innerHTML = TOUR_STEPS.map((_, i) =>
+            `<div class="tour-dot${i === _tourStep ? ' active' : i < _tourStep ? ' done' : ''}"></div>`
+        ).join('');
+    }
+
+    // Botones
+    const nextBtn = document.getElementById('tour-btn-next');
+    const prevBtn = document.getElementById('tour-btn-prev');
+    if (nextBtn) {
+        nextBtn.innerHTML = isLast
+            ? `<i class="bi bi-check-circle"></i> Finalizar`
+            : `Siguiente <i class="bi bi-arrow-right"></i>`;
+        nextBtn.className = `tour-btn-next${isLast ? ' finish' : ''}`;
+    }
+    if (prevBtn) prevBtn.style.visibility = _tourStep === 0 ? 'hidden' : '';
+
+    // Spotlight + tooltip
+    if (step.target) {
+        const el = document.querySelector(step.target);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => _tourPositionEl(el, step.position), 380);
+            return;
+        }
+    }
+    _tourPositionCenter();
+}
+
+function _tourPositionEl(el, pos) {
+    const spotlight = document.getElementById('tour-spotlight');
+    const backdrop  = document.getElementById('tour-backdrop');
+    const tooltip   = document.getElementById('tour-tooltip');
+    if (!spotlight || !tooltip) return;
+
+    const r   = el.getBoundingClientRect();
+    const pad = 8;
+
+    // Spotlight
+    spotlight.style.display   = '';
+    spotlight.style.left      = (r.left   - pad) + 'px';
+    spotlight.style.top       = (r.top    - pad) + 'px';
+    spotlight.style.width     = (r.width  + pad * 2) + 'px';
+    spotlight.style.height    = (r.height + pad * 2) + 'px';
+    spotlight.style.boxShadow = '0 0 0 9999px rgba(10,15,40,.75)';
+
+    if (backdrop) backdrop.classList.remove('visible');
+
+    // Tooltip
+    tooltip.dataset.pos = pos ?? 'bottom';
+    tooltip.style.left  = '-9999px';
+    tooltip.style.top   = '0';
+
+    requestAnimationFrame(() => {
+        const TW  = tooltip.offsetWidth  || 360;
+        const TH  = tooltip.offsetHeight || 260;
+        const VW  = window.innerWidth;
+        const VH  = window.innerHeight;
+        const gap = 18;
+        let tx, ty;
+
+        switch (pos) {
+            case 'top':
+                tx = r.left + r.width  / 2 - TW / 2;
+                ty = r.top  - pad - gap - TH;
+                break;
+            case 'left':
+                tx = r.left  - pad - gap - TW;
+                ty = r.top   + r.height / 2 - TH / 2;
+                break;
+            case 'right':
+                tx = r.right + pad + gap;
+                ty = r.top   + r.height / 2 - TH / 2;
+                break;
+            default: // bottom
+                tx = r.left + r.width  / 2 - TW / 2;
+                ty = r.bottom + pad + gap;
+        }
+
+        // Clamp to viewport
+        tx = Math.max(12, Math.min(tx, VW - TW - 12));
+        ty = Math.max(70, Math.min(ty, VH - TH - 12));
+
+        tooltip.style.left = tx + 'px';
+        tooltip.style.top  = ty + 'px';
+    });
+}
+
+function _tourPositionCenter() {
+    const spotlight = document.getElementById('tour-spotlight');
+    const backdrop  = document.getElementById('tour-backdrop');
+    const tooltip   = document.getElementById('tour-tooltip');
+    if (!spotlight || !tooltip) return;
+
+    spotlight.style.display   = 'none';
+    spotlight.style.boxShadow = '';
+    if (backdrop) backdrop.classList.add('visible');
+
+    tooltip.dataset.pos = 'center';
+    tooltip.style.left  = '-9999px';
+    tooltip.style.top   = '0';
+
+    requestAnimationFrame(() => {
+        const TW = tooltip.offsetWidth  || 360;
+        const TH = tooltip.offsetHeight || 300;
+        tooltip.style.left = Math.max(12, window.innerWidth  / 2 - TW / 2) + 'px';
+        tooltip.style.top  = Math.max(12, window.innerHeight / 2 - TH / 2) + 'px';
+    });
 }
 
 // ── Refresh global ───────────────────────────────────────────
