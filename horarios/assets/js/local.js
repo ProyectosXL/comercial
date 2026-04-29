@@ -499,11 +499,15 @@ $(document).ready(function () {
             }
         }
 
+        const semana = $('#semanaSelector').attr('data-week-val') || $('#semanaSelector').val();
+        const [year, weekNum] = semana.split('-W');
+        const primerDia = getPrimerDiaDeSemana(year, weekNum);
+
         const payload = {
             accion: 'guardar_feedback',
             sucursal: sucursalId || 0,
             vendedor: $('#feedVendedor').val(),
-            fechaSemana: getPrimerDiaDeSemana(...$('#semanaSelector').val().split('-W')).toISOString().split('T')[0],
+            fechaSemana: primerDia.toISOString().split('T')[0],
             mensaje: $('#feedTexto').val()
         };
 

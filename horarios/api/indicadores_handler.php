@@ -98,32 +98,56 @@ if (empty($reporte)) {
 // =========================================================
 // PASO 2: NOMBRES VENDEDORES (Base Central / GVA23)
 // =========================================================
+// PASO 2: NOMBRES VENDEDORES (Dual: Central + Corp)
+// =========================================================
 if (!empty($listaIDs)) {
-    $connCorp = getConexionCorp();
     $idsStr = implode("','", array_keys($listaIDs));
-    $sqlNom = "SELECT BLOQUE, NRO_LEGAJO, APELLIDO, NOMBRE FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ('$idsStr')";
-    $stmtNom = sqlsrv_query($connCorp, $sqlNom);
     
-    $mapaDatos = [];
-    if ($stmtNom) {
-        while ($r = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
-            $nom = trim($r['APELLIDO']) . ' ' . trim($r['NOMBRE']);
-            $nom = utf8_encode($nom);
-            $mapaDatos[trim($r['BLOQUE'])] = [
-                'nombre' => $nom,
-                'legajo' => trim($r['NRO_LEGAJO'])
-            ];
-        }
-        sqlsrv_free_stmt($stmtNom);
-    }
-    sqlsrv_close($connCorp);
+    // 2.1. Primero buscamos en Central (GVA23) para tener un nombre base (especialmente para refuerzos)
+    $connCentral = getConexionCentral();
+    if ($connCentral) {
+        $sqlGva = "SELECT COD_VENDED, NOMBRE_VEN FROM GVA23 WHERE COD_VENDED IN ('$idsStr')";
+        $stmtGva = sqlsrv_query($connCentral, $sqlGva);
+        if ($stmtGva) {
+            while ($rg = sqlsrv_fetch_array($stmtGva, SQLSRV_FETCH_ASSOC)) {
+                $idVend = trim($rg['COD_VENDED']);
+                $nomBase = trim($rg['NOMBRE_VEN']);
+                $nomBase = preg_replace('/[\s-]*[0-9]+$/', '', $nomBase); // Limpiar números al final
+                if (!mb_detect_encoding($nomBase, 'UTF-8', true)) $nomBase = utf8_encode($nomBase);
 
-    // Asignar nombres y legajos al reporte
-    foreach ($reporte as $k => $v) {
-        if (isset($mapaDatos[$v['id']])) {
-            $reporte[$k]['nombre'] = $mapaDatos[$v['id']]['nombre'];
-            $reporte[$k]['legajo_real'] = $mapaDatos[$v['id']]['legajo'];
+                foreach ($reporte as $k => $v) {
+                    if ($v['id'] === $idVend) {
+                        $reporte[$k]['nombre'] = $nomBase;
+                    }
+                }
+            }
+            sqlsrv_free_stmt($stmtGva);
         }
+        sqlsrv_close($connCentral);
+    }
+
+    // 2.2. Luego buscamos en Corp (RO_LEGAJOS_PERSONAL) para nombres oficiales y legajos reales
+    $connCorp = getConexionCorp();
+    if ($connCorp) {
+        $sqlNom = "SELECT BLOQUE, NRO_LEGAJO, APELLIDO, NOMBRE FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ('$idsStr')";
+        $stmtNom = sqlsrv_query($connCorp, $sqlNom);
+        if ($stmtNom) {
+            while ($r = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
+                $idVend = trim($r['BLOQUE']);
+                $nomHrrhh = trim($r['APELLIDO']) . ' ' . trim($r['NOMBRE']);
+                if (!mb_detect_encoding($nomHrrhh, 'UTF-8', true)) $nomHrrhh = utf8_encode($nomHrrhh);
+                $legajo = trim($r['NRO_LEGAJO']);
+
+                foreach ($reporte as $k => $v) {
+                    if ($v['id'] === $idVend) {
+                        $reporte[$k]['nombre'] = $nomHrrhh;
+                        $reporte[$k]['legajo_real'] = $legajo;
+                    }
+                }
+            }
+            sqlsrv_free_stmt($stmtNom);
+        }
+        sqlsrv_close($connCorp);
     }
 }
 
