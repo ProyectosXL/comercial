@@ -586,13 +586,17 @@ $(document).ready(function () {
             for (const [vendedorId, fechas] of Object.entries(data.bloqueosExternos)) {
                 for (const [fecha, horasOcupadas] of Object.entries(fechas)) {
                     const fila = $(`#tablaHorariosContainer tr[data-vendedor-id="${vendedorId}"]`);
-                    for (const [hora, sucursalOrigen] of Object.entries(horasOcupadas)) {
-                        const nombreSucursal = sucursalesMap[sucursalOrigen] || `Sucursal ${sucursalOrigen}`;
+                    for (const [hora, infoBloqueo] of Object.entries(horasOcupadas)) {
+                        const sucursalIdBloqueo = infoBloqueo.sucursal;
+                        const tipoBloqueo = infoBloqueo.tipo;
+                        const nombreSucursal = sucursalesMap[sucursalIdBloqueo] || `Sucursal ${sucursalIdBloqueo}`;
                         const celdaHora = fila.find(`.hora-celda[data-fecha="${fecha}"][data-hora="${hora}"]`);
+                        
                         celdaHora
                             .removeClass('marcado hora-extra hora-devuelve dia-franco')
                             .addClass('bloqueo-externo')
-                            .attr('title', `Ocupado en ${nombreSucursal}`)
+                            .attr('data-tipo-externo', tipoBloqueo) // Guardamos el tipo para el cálculo
+                            .attr('title', `Ocupado en ${nombreSucursal} (${tipoBloqueo.toUpperCase()})`)
                             .text('Ø');
                     }
                 }
@@ -877,13 +881,22 @@ $(document).ready(function () {
                 const esMedia = $(this).hasClass('media-hora');
                 const valor = esMedia ? 0.5 : 1;
 
-                if ($(this).hasClass('bloqueo-externo')) nExterno += valor;
-                else if ($(this).hasClass('hora-extra')) e += valor;
+                // Priorizamos los tipos locales (P, D, A, etc) para el conteo de la grilla
+                if ($(this).hasClass('hora-extra')) e += valor;
                 else if ($(this).hasClass('hora-devuelve')) d += valor;
                 else if ($(this).hasClass('hora-permiso')) p += valor;
                 else if ($(this).hasClass('hora-caja')) c += valor;
                 else if ($(this).hasClass('hora-ausencia')) au += valor;
                 else if ($(this).hasClass('marcado')) n += valor;
+
+                // Independientemente, si es un bloqueo externo, lo sumamos para visualización
+                if ($(this).hasClass('bloqueo-externo')) {
+                    nExterno += valor;
+                    // IMPORTANTE: Si es un bloqueo de otra sucursal, sumamos sus P o D al saldo global semanal
+                    const tipoExt = $(this).attr('data-tipo-externo') || '';
+                    if (tipoExt === 'permiso' || tipoExt === 'permiso_media') p += valor;
+                    else if (tipoExt === 'devuelve' || tipoExt === 'devuelve_media') d += valor;
+                }
             });
 
             // 2. Calcular por CADA DÍA

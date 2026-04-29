@@ -325,7 +325,6 @@ function guardarDatos($usuario)
         // =========================================================
         sqlsrv_commit($conn);
 
-        /* 
         // --- NOTIFICACIÓN POR EMAIL (DESACTIVADO MOMENTÁNEAMENTE) ---
         try {
             $semanaInfo = date('d/m/Y', strtotime($fechaInicio)) . " al " . date('d/m/Y', strtotime($fechaFin));
@@ -334,7 +333,6 @@ function guardarDatos($usuario)
         } catch (Exception $eMail) {
             error_log("Error al disparar notificación de mail (Sucursal $nroSucursal): " . $eMail->getMessage());
         }
-        */
 
         echo json_encode([
             'status' => 'ok',
@@ -701,11 +699,17 @@ function cargarDatos()
         $sqlSaldo = "
             SELECT 
                 COD_VENDED,
-                SUM(CASE WHEN TIPO_HORA = 'permiso' THEN 1 ELSE 0 END) as TotalP,
-                SUM(CASE WHEN TIPO_HORA = 'devuelve' THEN 1 ELSE 0 END) as TotalD
+                SUM(CASE 
+                    WHEN TIPO_HORA = 'permiso' THEN 1.0 
+                    WHEN TIPO_HORA = 'permiso_media' THEN 0.5
+                    ELSE 0 END) as TotalP,
+                SUM(CASE 
+                    WHEN TIPO_HORA = 'devuelve' THEN 1.0 
+                    WHEN TIPO_HORA = 'devuelve_media' THEN 0.5
+                    ELSE 0 END) as TotalD
             FROM FP_GESTION_HORARIOS
             WHERE FECHA < ? 
-            AND (TIPO_HORA = 'permiso' OR TIPO_HORA = 'devuelve')
+            AND TIPO_HORA IN ('permiso', 'permiso_media', 'devuelve', 'devuelve_media')
             GROUP BY COD_VENDED
         ";
 
@@ -730,7 +734,7 @@ function cargarDatos()
         $listaVendedores = implode("','", $respuesta['vendedoresConActividad']);
 
         $sqlBloqueos = "
-            SELECT COD_VENDED, FECHA, HORA, NRO_SUCURSAL
+            SELECT COD_VENDED, FECHA, HORA, NRO_SUCURSAL, TIPO_HORA
             FROM FP_GESTION_HORARIOS 
             WHERE FECHA BETWEEN ? AND ? 
             AND NRO_SUCURSAL <> ? 
@@ -744,13 +748,18 @@ function cargarDatos()
                 $fecha = $row['FECHA']->format('Y-m-d');
                 $hora = intval($row['HORA']);
                 $sucursalOrigen = $row['NRO_SUCURSAL'];
+                $tipoHora = strtolower($row['TIPO_HORA'] ?: 'normal');
 
                 if (!isset($bloqueosExternos[$id]))
                     $bloqueosExternos[$id] = [];
                 if (!isset($bloqueosExternos[$id][$fecha]))
                     $bloqueosExternos[$id][$fecha] = [];
 
-                $bloqueosExternos[$id][$fecha][$hora] = $sucursalOrigen;
+                // Guardamos objeto con sucursal y tipo
+                $bloqueosExternos[$id][$fecha][$hora] = [
+                    'sucursal' => $sucursalOrigen,
+                    'tipo' => $tipoHora
+                ];
             }
             sqlsrv_free_stmt($stmtBloq);
         }

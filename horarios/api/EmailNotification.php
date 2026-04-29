@@ -35,41 +35,45 @@ class EmailNotification {
     /**
      * Obtiene datos (Nombre y Mail) de una sucursal
      */
-    private function getDatosSucursal($nroSucursal) {
-        $nro = intval($nroSucursal);
+    private function getDatosSucursal($idDepto) {
+        $id = intval($idDepto);
         $datos = [
-            'nombre' => "Sucursal $nro",
+            'nombre' => "Sucursal $id",
             'mail' => null
         ];
 
-        // 1. Buscamos el MAIL en DIRECCIONARIO (XL-LAKERBIS)
-        $connLoc = getConexionLocales();
-        if ($connLoc) {
-            $sql = "SELECT DESC_SUCURSAL, MAIL FROM DIRECCIONARIO WHERE NRO_SUCURSAL = ?";
-            $stmt = sqlsrv_query($connLoc, $sql, [$nro]);
-            if ($stmt && $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                $datos['mail'] = trim($row['MAIL']);
-                if (!empty(trim($row['DESC_SUCURSAL']))) {
-                    $datos['nombre'] = trim($row['DESC_SUCURSAL']);
+        // 1. Buscamos el nombre real y el código Tango en RRHH (LAKERS_CORP_SA)
+        $nroTango = null;
+        $connCorp = getConexionCorp();
+        if ($connCorp) {
+            $sqlCorp = "SELECT DESC_DEPARTAMENTO, COD_DEPARTAMENTO FROM DEPARTAMENTO WHERE ID_DEPARTAMENTO = ?";
+            $stmtCorp = sqlsrv_query($connCorp, $sqlCorp, [$id]);
+            if ($stmtCorp && $rowCorp = sqlsrv_fetch_array($stmtCorp, SQLSRV_FETCH_ASSOC)) {
+                $datos['nombre'] = trim($rowCorp['DESC_DEPARTAMENTO']);
+                $codigo = trim($rowCorp['COD_DEPARTAMENTO']);
+                // Extraer el número del código LOCxxx
+                $nroTango = intval(str_ireplace('LOC', '', $codigo));
+                
+                // Corrección para Unicenter (si aplica en este entorno)
+                if (stripos($datos['nombre'], 'UNICENTER') !== false) {
+                    $nroTango = 2;
                 }
             }
-            sqlsrv_free_stmt($stmt);
-            sqlsrv_close($connLoc);
+            if ($stmtCorp) sqlsrv_free_stmt($stmtCorp);
+            sqlsrv_close($connCorp);
         }
 
-        // 2. Si el nombre sigue siendo el genérico, buscamos el nombre real en RRHH (LAKERS_CORP_SA)
-        // Usamos el código formateado tipo LOC0XX
-        if (strpos($datos['nombre'], 'Sucursal') !== false) {
-            $connCorp = getConexionCorp();
-            if ($connCorp) {
-                $codigoBuscado = 'LOC' . str_pad($nro, 3, '0', STR_PAD_LEFT); // ej: LOC055
-                $sqlCorp = "SELECT DESC_DEPARTAMENTO FROM DEPARTAMENTO WHERE COD_DEPARTAMENTO = ? OR ID_DEPARTAMENTO = ?";
-                $stmtCorp = sqlsrv_query($connCorp, $sqlCorp, [$codigoBuscado, $nro]);
-                if ($stmtCorp && $rowCorp = sqlsrv_fetch_array($stmtCorp, SQLSRV_FETCH_ASSOC)) {
-                    $datos['nombre'] = trim($rowCorp['DESC_DEPARTAMENTO']);
+        // 2. Buscamos el MAIL en DIRECCIONARIO (XL-LAKERBIS) usando el nro de Tango real
+        if ($nroTango) {
+            $connLoc = getConexionLocales();
+            if ($connLoc) {
+                $sql = "SELECT MAIL FROM DIRECCIONARIO WHERE NRO_SUCURSAL = ?";
+                $stmt = sqlsrv_query($connLoc, $sql, [$nroTango]);
+                if ($stmt && $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+                    $datos['mail'] = trim($row['MAIL']);
                 }
-                if ($stmtCorp) sqlsrv_free_stmt($stmtCorp);
-                sqlsrv_close($connCorp);
+                sqlsrv_free_stmt($stmt);
+                sqlsrv_close($connLoc);
             }
         }
         
