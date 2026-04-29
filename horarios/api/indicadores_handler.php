@@ -129,7 +129,7 @@ if (!empty($listaIDs)) {
     // 2.2. Luego buscamos en Corp (RO_LEGAJOS_PERSONAL) para nombres oficiales y legajos reales
     $connCorp = getConexionCorp();
     if ($connCorp) {
-        $sqlNom = "SELECT BLOQUE, NRO_LEGAJO, APELLIDO, NOMBRE FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ('$idsStr')";
+        $sqlNom = "SELECT BLOQUE, NRO_LEGAJO, APELLIDO, NOMBRE FROM [XL-SUELDOS].LAKERS_CORP_SA.DBO.RO_LEGAJOS_PERSONAL_ALL WHERE BLOQUE IN ('$idsStr')";
         $stmtNom = sqlsrv_query($connCorp, $sqlNom);
         if ($stmtNom) {
             while ($r = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {

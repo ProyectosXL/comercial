@@ -30,7 +30,7 @@ $mapaLegajos = [];
 if (!empty($codigosVendedor)) {
     $connCorp = getConexionCorp();
     $ids = implode("','", array_keys($codigosVendedor));
-    $sqlLegajos = "SELECT BLOQUE, NRO_LEGAJO FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ('$ids')";
+    $sqlLegajos = "SELECT BLOQUE, NRO_LEGAJO FROM [XL-SUELDOS].LAKERS_CORP_SA.DBO.RO_LEGAJOS_PERSONAL_ALL WHERE BLOQUE IN ('$ids')";
     $stmtLegajos = sqlsrv_query($connCorp, $sqlLegajos);
     if ($stmtLegajos) {
         while ($row = sqlsrv_fetch_array($stmtLegajos, SQLSRV_FETCH_ASSOC)) {
