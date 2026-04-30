@@ -1,0 +1,526 @@
+/**
+ * costoPersonal.css — Módulo Costo de Personal
+ * Mismo sistema visual que costoOcupacion.css.
+ * Prefijo de clases: cp-
+ */
+
+:root {
+    --primary-color:    #2c3e50;
+    --secondary-color:  #34495e;
+    --accent-color:     #3498db;
+    --success-color:    #27ae60;
+    --warning-color:    #f39c12;
+    --danger-color:     #e74c3c;
+    --info-color:       #17a2b8;
+    --light-gray:       #ecf0f1;
+    --medium-gray:      #bdc3c7;
+    --dark-gray:        #7f8c8d;
+    --white:            #ffffff;
+    --border-radius:    8px;
+    --box-shadow:       0 2px 15px rgba(0,0,0,0.1);
+    --box-shadow-hover: 0 4px 25px rgba(0,0,0,0.15);
+    --transition:       all 0.3s ease;
+
+    /* Colores de categoría */
+    --cat-fijo:        #3498db;
+    --cat-variable:    #27ae60;
+    --cat-diferido:    #f39c12;
+    --cat-contingente: #95a5a6;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    color: var(--primary-color);
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+.main-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.content-wrapper {
+    background: var(--white);
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    box-shadow: var(--box-shadow);
+    overflow: hidden;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: var(--white);
+    padding: 25px 30px;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    box-shadow: var(--box-shadow);
+    margin-bottom: 0;
+}
+
+.header-content { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:20px; }
+.header-title   { display:flex; align-items:center; gap:20px; }
+
+.home-button {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 50px; height: 50px;
+    background: rgba(255,255,255,0.1); border-radius: var(--border-radius);
+    color: var(--white); text-decoration: none; transition: var(--transition); font-size: 24px;
+}
+.home-button:hover { background: rgba(255,255,255,0.2); transform: translateY(-2px); color: var(--white); text-decoration: none; }
+
+.title-info h1 { margin:0; font-size:28px; font-weight:700; display:flex; align-items:center; gap:12px; }
+.title-info .subtitle { margin:5px 0 0; font-size:14px; opacity:0.8; }
+
+/* ── Filtros ─────────────────────────────────────────────────────────────── */
+.filters-section {
+    padding: 25px 30px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.section-title { display:flex; align-items:center; gap:10px; font-size:18px; font-weight:600; color:var(--primary-color); margin-bottom:20px; }
+.section-title i { color: var(--accent-color); }
+
+.filters-form  { display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end; }
+.filter-group  { display:flex; align-items:flex-end; gap:15px; flex-wrap:wrap; }
+.filter-field  { display:flex; flex-direction:column; gap:8px; }
+.filter-label  { display:flex; align-items:center; gap:8px; font-weight:600; color:var(--primary-color); font-size:14px; margin-bottom:0; }
+.filter-label i { color: var(--accent-color); }
+
+.form-control {
+    padding: 10px 15px; border: 2px solid #e1e8ed; border-radius: var(--border-radius);
+    background: var(--white); font-size: 14px; transition: var(--transition);
+    height: calc(2.25rem + 2px);
+}
+.form-control:focus { outline:none; border-color:var(--accent-color); box-shadow:0 0 0 3px rgba(52,152,219,0.1); }
+
+.filter-button-primary {
+    padding: 12px 20px; background: var(--accent-color); color: var(--white);
+    border: none; border-radius: var(--border-radius); font-weight: 600;
+    cursor: pointer; transition: var(--transition); display:flex; align-items:center; gap:8px;
+}
+.filter-button-primary:hover { background: #2980b9; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(52,152,219,0.3); color:var(--white); text-decoration:none; }
+
+.filter-button-secondary {
+    padding: 12px 20px; background: var(--medium-gray); color: var(--white);
+    border: none; border-radius: var(--border-radius); font-weight: 600;
+    cursor: pointer; transition: var(--transition); display:flex; align-items:center; gap:8px;
+}
+.filter-button-secondary:hover { background: var(--dark-gray); transform: translateY(-2px); color:var(--white); }
+
+/* ── KPI Cards ───────────────────────────────────────────────────────────── */
+.kpis-section {
+    padding: 25px 30px; background: var(--white);
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:20px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.kpi-card {
+    display:flex; align-items:center; gap:20px; padding:20px;
+    background: var(--white); border-radius: var(--border-radius);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08); transition: var(--transition);
+    border-left: 4px solid transparent;
+}
+.kpi-card:hover { transform: translateY(-3px); box-shadow: var(--box-shadow-hover); }
+.kpi-card:nth-child(1) { border-left-color: var(--accent-color); }
+.kpi-card:nth-child(2) { border-left-color: var(--success-color); }
+.kpi-card:nth-child(3) { border-left-color: var(--info-color); }
+.kpi-card:nth-child(4) { border-left-color: var(--danger-color); }
+
+.kpi-icon { width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; color:var(--white); flex-shrink:0; }
+.kpi-icon.kpi-primary { background: linear-gradient(135deg, var(--accent-color),  #5dade2); }
+.kpi-icon.kpi-success { background: linear-gradient(135deg, var(--success-color), #2ecc71); }
+.kpi-icon.kpi-warning { background: linear-gradient(135deg, var(--warning-color), #e67e22); }
+.kpi-icon.kpi-danger  { background: linear-gradient(135deg, var(--danger-color),  #c0392b); }
+.kpi-icon.kpi-info    { background: linear-gradient(135deg, var(--info-color),    #3498db); }
+
+.kpi-info  { flex:1; }
+.kpi-label { font-size:12px; color:var(--dark-gray); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px; }
+.kpi-value { font-size:28px; font-weight:700; color:var(--primary-color); display:flex; align-items:center; gap:10px; }
+.kpi-trend { display:inline-flex; align-items:center; margin-left:5px; }
+
+/* ── Tabla ───────────────────────────────────────────────────────────────── */
+.table-section { padding:25px 30px; }
+.table-header  { display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; flex-wrap:wrap; gap:15px; }
+.table-header h2 { margin:0; font-size:22px; font-weight:600; color:var(--primary-color); display:flex; align-items:center; gap:10px; }
+.table-actions { display:flex; gap:10px; flex-wrap:wrap; }
+
+.legend-btn {
+    padding:10px 20px; background:var(--info-color); color:var(--white); border:none;
+    border-radius:var(--border-radius); font-weight:600; cursor:pointer; transition:var(--transition);
+    display:flex; align-items:center; gap:8px;
+}
+.legend-btn:hover { background:#138496; transform:translateY(-2px); }
+
+.export-btn {
+    padding:10px 20px; background:var(--success-color); color:var(--white); border:none;
+    border-radius:var(--border-radius); font-weight:600; cursor:pointer; transition:var(--transition);
+    display:flex; align-items:center; gap:8px;
+}
+.export-btn:hover { background:#229954; transform:translateY(-2px); }
+
+.table-container { background:var(--white); border-radius:var(--border-radius); overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.05); }
+
+/* cost-table — mismas reglas que costoOcupacion */
+.cost-table { width:100%!important; border-collapse:collapse; }
+.cost-table thead th { background:linear-gradient(135deg,var(--primary-color),var(--secondary-color)); color:var(--white); padding:15px 12px; font-weight:600; text-align:left; border:none; font-size:13px; white-space:nowrap; }
+.cost-table thead th.fixed-column { position:sticky; left:0; z-index:10; background:var(--primary-color); min-width:250px; width:250px; }
+.cost-table tbody tr { transition:var(--transition); border-bottom:1px solid #f1f3f4; }
+.cost-table tbody tr:hover { background:#f8f9fa; }
+.cost-table tbody td { padding:12px; vertical-align:middle; border:none; font-size:13px; }
+.cost-table tbody td.fixed-column { position:sticky; left:0; background:var(--white); z-index:5; font-weight:600; min-width:250px; width:250px; }
+.cost-table tbody tr:hover td.fixed-column { background:#f8f9fa; }
+.total-column { background:#f8f9fa; font-weight:700; }
+
+/* Filas especiales */
+.row-subtotal-cat td { font-weight:700; font-style:italic; }
+.row-subtotal-cat-fijo       td { color:var(--cat-fijo);        background:rgba(52,152,219,0.06)!important; border-top:1px solid rgba(52,152,219,0.3); }
+.row-subtotal-cat-variable   td { color:var(--cat-variable);    background:rgba(39,174,96,0.06)!important;  border-top:1px solid rgba(39,174,96,0.3); }
+.row-subtotal-cat-diferido   td { color:var(--cat-diferido);    background:rgba(243,156,18,0.06)!important; border-top:1px solid rgba(243,156,18,0.3); }
+.row-subtotal-cat-contingente td { color:var(--cat-contingente); background:rgba(149,165,166,0.06)!important; border-top:1px solid rgba(149,165,166,0.3); }
+
+.row-subtotal td    { font-weight:700; color:var(--accent-color); background:rgba(52,152,219,0.05)!important; }
+.row-subtotal       { border-top:2px solid var(--accent-color)!important; border-bottom:2px solid var(--accent-color)!important; }
+.row-metric td      { font-weight:600; color:var(--info-color); }
+.row-percentage,
+.row-porcentaje-cp  { background:#fff3e0!important; border-top:3px solid #ff9800!important; border-bottom:3px solid #ff9800!important; }
+.row-percentage td,
+.row-porcentaje-cp td { font-weight:700; color:#e65100!important; }
+.row-yoy-anterior   { background:#e3f2fd!important; border-top:2px solid #2196F3!important; }
+.row-yoy-variacion  { background:#fff9c4!important; border-top:2px solid #FFC107!important; }
+
+/* Colores de fila por categoría (concepto detail) */
+.row-cat-fijo       td.fixed-column { border-left:3px solid var(--cat-fijo); }
+.row-cat-variable   td.fixed-column { border-left:3px solid var(--cat-variable); }
+.row-cat-diferido   td.fixed-column { border-left:3px solid var(--cat-diferido); }
+.row-cat-contingente td.fixed-column { border-left:3px solid var(--cat-contingente); }
+
+/* ── Estado vacío ────────────────────────────────────────────────────────── */
+.empty-state { padding:80px 30px; text-align:center; }
+.empty-icon  { font-size:64px; color:var(--medium-gray); margin-bottom:20px; }
+.empty-state h3 { color:var(--primary-color); font-size:24px; margin-bottom:10px; }
+.empty-state p  { color:var(--dark-gray); font-size:16px; }
+
+/* ── Botón PDF (global) ──────────────────────────────────────────────────── */
+.pdf-btn {
+    display:inline-flex; align-items:center; gap:6px; padding:8px 16px;
+    font-size:14px; font-weight:600; border:none; border-radius:6px;
+    cursor:pointer; background:linear-gradient(135deg,#e74c3c,#c0392b);
+    color:#fff; transition:all 0.25s ease; box-shadow:0 2px 6px rgba(231,76,60,0.35);
+}
+.pdf-btn:hover { background:linear-gradient(135deg,#c0392b,#a93226); box-shadow:0 4px 14px rgba(231,76,60,0.55); transform:translateY(-1px); color:#fff; }
+
+/* ── KPI button card (Ver evolución) ─────────────────────────────────────── */
+.kpi-button-card { transition:all 0.3s ease; border-left-color:#27ae60!important; }
+.kpi-button-card:hover { transform:translateY(-5px) scale(1.02); box-shadow:0 8px 30px rgba(39,174,96,0.3); background:linear-gradient(135deg,#f8fff8,#e8f8e8); }
+
+/* ── Select2 fix ─────────────────────────────────────────────────────────── */
+.select2-container .select2-selection--single { height:2rem!important; }
+
+/* ── Tablas de datos: Reporte Sucursal / Reporte a Fecha / Comparar ─────── */
+#cpTablaReporteSucursal,
+#cpTablaReporteFecha,
+#cpTablaComparacion {
+    width: 100% !important;
+    table-layout: fixed;
+}
+
+#cpTablaReporteSucursal thead th,
+#cpTablaReporteFecha    thead th,
+#cpTablaComparacion     thead th {
+    vertical-align: middle !important;
+    padding: 11px 12px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+    border: none !important;
+    box-sizing: border-box;
+}
+
+#cpTablaReporteSucursal tbody td,
+#cpTablaReporteFecha    tbody td,
+#cpTablaComparacion     tbody td {
+    vertical-align: middle !important;
+    padding: 7px 10px !important;
+    border-color: #ecf0f1 !important;
+    box-sizing: border-box;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#cpTablaReporteSucursal tbody tr:hover td,
+#cpTablaReporteFecha    tbody tr:hover td,
+#cpTablaComparacion     tbody tr:hover td { background:#f5f8fa !important; }
+
+/* Columna fija sticky — MISMO ancho en thead y tbody */
+#cpTablaReporteSucursal .fixed-column,
+#cpTablaReporteFecha    .fixed-column,
+#cpTablaComparacion     .fixed-column {
+    position: sticky !important;
+    left: 0;
+    z-index: 5;
+    background: #fff;
+    font-weight: 600;
+    min-width: 280px !important;
+    width: 280px !important;
+    max-width: 280px !important;
+}
+#cpTablaReporteSucursal thead .fixed-column,
+#cpTablaReporteFecha    thead .fixed-column,
+#cpTablaComparacion     thead .fixed-column {
+    z-index: 11 !important;
+    background: #2c3e50 !important;
+}
+
+/* Columnas de meses/sucursales: ancho uniforme */
+#cpTablaReporteSucursal th:not(.fixed-column),
+#cpTablaReporteSucursal td:not(.fixed-column),
+#cpTablaReporteFecha    th:not(.fixed-column),
+#cpTablaReporteFecha    td:not(.fixed-column),
+#cpTablaComparacion     th:not(.fixed-column),
+#cpTablaComparacion     td:not(.fixed-column) {
+    min-width: 120px;
+    width: 120px;
+    white-space: nowrap;
+}
+
+/* Última columna (Total) un poco más ancha y resaltada */
+#cpTablaReporteSucursal th:last-child,
+#cpTablaReporteSucursal td:last-child {
+    min-width: 140px;
+    width: 140px;
+    background: #f8f9fa;
+}
+
+#cpTablaReporteFecha tfoot { display:none; }
+
+/* ── Productividad — badge eficiencia ───────────────────────────────────── */
+.cp-efic-azul    { background:rgba(52,152,219,0.12);  color:#3498db; padding:3px 10px; border-radius:20px; font-weight:700; font-size:11px; }
+.cp-efic-verde   { background:rgba(39,174,96,0.12);   color:#27ae60; padding:3px 10px; border-radius:20px; font-weight:700; font-size:11px; }
+.cp-efic-amarillo{ background:rgba(241,196,15,0.12);  color:#b7950b; padding:3px 10px; border-radius:20px; font-weight:700; font-size:11px; }
+.cp-efic-naranja { background:rgba(230,126,34,0.12);  color:#e67e22; padding:3px 10px; border-radius:20px; font-weight:700; font-size:11px; }
+.cp-efic-rojo    { background:rgba(231,76,60,0.12);   color:#e74c3c; padding:3px 10px; border-radius:20px; font-weight:700; font-size:11px; }
+
+/* ── SweetAlert customizations ───────────────────────────────────────────── */
+.swal-wide-popup { border-radius:15px!important; box-shadow:0 10px 40px rgba(0,0,0,0.2)!important; }
+.swal-html-no-padding .swal2-html-container { padding:0!important; margin:0!important; }
+.swal2-confirm { background:linear-gradient(135deg,#3498db,#2980b9)!important; }
+
+/* ── Banner meses sin datos ──────────────────────────────────────────────── */
+.cp-banner-warning {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%);
+    border-left: 4px solid #f39c12;
+    padding: 12px 18px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.cp-banner-warning i { color: #e67e22; font-size: 22px; flex-shrink: 0; }
+.cp-banner-content   { flex: 1; }
+.cp-banner-content small { display: block; color: #7f8c8d; margin-top: 4px; }
+
+/* ── Banner cuotas sin ajuste (info) ────────────────────────────────────── */
+.cp-banner-info {
+    background: linear-gradient(135deg, #e8f4fd 0%, #d0eaf9 100%);
+    border-left: 4px solid #3498db;
+    padding: 12px 18px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.cp-banner-icon { color: #2980b9; font-size: 22px; flex-shrink: 0; }
+
+/* ── Toggle ajuste inflación ─────────────────────────────────────────────── */
+.cp-ajuste-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    border-radius: 25px;
+    border: 2px solid #f39c12;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    color: #7f8c8d;
+    cursor: pointer;
+    transition: all 0.22s ease;
+    user-select: none;
+}
+.cp-ajuste-pill:has(input:checked),
+.cp-ajuste-pill.activa {
+    background: rgba(243,156,18,0.1);
+    color: #c67a00;
+    box-shadow: 0 2px 8px rgba(243,156,18,0.25);
+}
+.cp-ajuste-dot-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #bdc3c7;
+    flex-shrink: 0;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+.cp-ajuste-dot-indicator.activo {
+    background: #f39c12;
+    box-shadow: 0 0 5px rgba(243,156,18,0.6);
+}
+
+/* ── Celda sin datos (Reporte por Sucursal) ──────────────────────────────── */
+.cp-celda-sin-datos {
+    background: repeating-linear-gradient(
+        45deg,
+        #f5f5f5,
+        #f5f5f5 6px,
+        #ebebeb 6px,
+        #ebebeb 12px
+    ) !important;
+    color: #95a5a6 !important;
+    font-style: italic;
+    text-align: center !important;
+}
+
+/* ── Period pills (Productividad) — mismo estilo que Indicadores ─────────── */
+.productividad-cp-container .period-pills { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.productividad-cp-container .period-pill {
+    padding:7px 18px; border:2px solid #e0e0e0; background:#fff; border-radius:25px;
+    font-weight:600; color:#7f8c8d; cursor:pointer; transition:all 0.25s ease;
+    font-size:13px; display:flex; align-items:center; gap:6px; font-family:inherit;
+}
+.productividad-cp-container .period-pill:hover  { border-color:#3498db; color:#3498db; transform:translateY(-1px); }
+.productividad-cp-container .period-pill.active { background:linear-gradient(135deg,#3498db,#2980b9); border-color:#2980b9; color:#fff; }
+
+/* ── Panel consolidado de avisos ─────────────────────────────────────────── */
+.cp-avisos-panel {
+    margin: 0 0 12px 0;
+    border-radius: 10px;
+    border: 1px solid #e3e8ef;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    overflow: hidden;
+}
+
+.cp-avisos-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+}
+.cp-avisos-header:hover { background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%); }
+
+.cp-avisos-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.cp-avisos-header-icon { color: #f39c12; font-size: 16px; flex-shrink: 0; }
+
+#cpAvisosResumen {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cp-avisos-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.cp-aviso-mini-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.cp-aviso-mini-badge.badge-sinDatos   { background: #f39c12; color: #fff; }
+.cp-aviso-mini-badge.badge-ajuste     { background: #3498db; color: #fff; }
+.cp-aviso-mini-badge.badge-validacion { background: #8e44ad; color: #fff; }
+
+.cp-avisos-chevron { color: rgba(255,255,255,0.7); flex-shrink: 0; transition: transform 0.25s; }
+.cp-avisos-chevron.open { transform: rotate(180deg); }
+
+.cp-avisos-body { padding: 6px 0; }
+
+/* ── Banner: validación RRHH (purple) ────────────────────────────────────── */
+.cp-banner-validacion {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 18px;
+    background: linear-gradient(135deg, #f5eeff 0%, #ede0f8 100%);
+    border-left: 4px solid #8e44ad;
+    margin: 4px 8px;
+    border-radius: 0 6px 6px 0;
+}
+.cp-banner-validacion .cp-banner-icon { color: #7d3c98; font-size: 22px; flex-shrink: 0; }
+
+/* ── Iconos de validación en encabezados de mes ──────────────────────────── */
+.cp-validado-icon   { color: #27ae60; font-size: 12px; margin-left: 4px; vertical-align: middle; }
+.cp-pendiente-icon  { color: #e67e22; font-size: 12px; margin-left: 4px; vertical-align: middle; }
+
+/* ── Tabla de validación RRHH en el modal admin ──────────────────────────── */
+#cpTablaValidacion thead th { background: #2c3e50; color: #fff; font-size: 12px; }
+#cpTablaValidacion tbody tr:hover { background: #f8f9fa; }
+
+/* ── Botones validar / invalidar ──────────────────────────────────────────── */
+.cp-val-btn, .cp-inval-btn {
+    display:      inline-flex;
+    align-items:  center;
+    gap:          5px;
+    white-space:  nowrap;
+    padding:      4px 12px;
+    font-size:    12px;
+    font-weight:  600;
+    border-radius: 6px;
+}
+.cp-val-btn   { background: #27ae60; border-color: #219a52; color: #fff; }
+.cp-val-btn:hover   { background: #219a52; color: #fff; }
+.cp-inval-btn { background: #fff; border: 1.5px solid #e74c3c; color: #e74c3c; }
+.cp-inval-btn:hover { background: #e74c3c; color: #fff; }
+
+.cp-no-validable {
+    color:       #95a5a6;
+    font-size:   11px;
+    font-style:  italic;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width:1200px) { .main-container { padding:15px; } }
+
+@media (max-width:768px) {
+    .header { padding:20px; }
+    .header-content { flex-direction:column; text-align:center; }
+    .header-title   { flex-direction:column; gap:15px; }
+    .title-info h1  { font-size:24px; }
+    .filters-form   { flex-direction:column; align-items:stretch; }
+    .kpis-section   { grid-template-columns:1fr; padding:20px; }
+    .table-actions  { justify-content:center; flex-wrap:wrap; }
+    .table-section  { padding:20px 15px; }
+}

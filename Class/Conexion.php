@@ -21,7 +21,7 @@ if (!class_exists('Conexion')) {
         private $pass;
         private $pass_locales;
         private $character;
-        private $env;
+        public $env;
         private $prefix;
 
         function __construct()
