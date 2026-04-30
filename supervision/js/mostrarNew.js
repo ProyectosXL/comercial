@@ -2,14 +2,15 @@
 function actualizarEstadoInputs(gastos = {}) {
     let $opcionSeleccionada = $('#semanaRetail option:selected');
     let esActual = $opcionSeleccionada.data('es-actual') === 1;
+    let esAnterior = $opcionSeleccionada.data('es-anterior') === 1;
     let hayGastosCargados = Object.keys(gastos).length > 0;
 
-    // CAMBIO: Permitir edición si no hay gastos cargados, independientemente de si es semana actual
-    let puedeEditar = !hayGastosCargados;
+    // CAMBIO: Solo permitir edición si NO hay gastos cargados Y NO es una semana anterior
+    let puedeEditar = !hayGastosCargados && !esAnterior;
 
     $('.importe-input, textarea, #importeAdelanto').prop('disabled', !puedeEditar);
     
-    // LÓGICA GLOBAL: Si hay gastos cargados, ocultar TODOS los botones de carga
+    // LÓGICA GLOBAL: Si hay gastos cargados o es semana anterior, ocultar botones de carga
     $('.camara-btn, .archivo-btn').toggle(puedeEditar);
     $('#guardarTodoBtn').toggle(puedeEditar);
 
@@ -18,6 +19,8 @@ function actualizarEstadoInputs(gastos = {}) {
         mensaje = " Gastos ya cargados para esta semana. No se pueden modificar.";
     } else if (esActual) {
         mensaje = " Semana actual seleccionada. Puede cargar gastos.";
+    } else if (esAnterior) {
+        mensaje = " No se pueden cargar gastos de semanas anteriores.";
     } else {
         mensaje = " Semana seleccionada. Puede cargar gastos.";
     }

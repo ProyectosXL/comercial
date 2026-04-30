@@ -202,13 +202,14 @@ $(document).ready(function() {
             if (presupuestos[id_conc]) {
                 let presupuesto = presupuestos[id_conc];
                 
-                // Mostrar solo información del gasto actual
+                // Mostrar información básica de presupuesto
+                $card.find('.presupuesto-monto').text(formatearImporte(presupuesto.total));
+                
                 let infoHtml = `
-                    <strong>Ya gastado:</strong> ${formatearImporte(presupuesto.gastado)}
+                    <strong>Ya consumido:</strong> ${formatearImporte(presupuesto.gastado)}
                 `;
                 
-                $presupuestoInfo.find('.presupuesto-monto').html(infoHtml);
-                $presupuestoInfo.find('.presupuesto-estado').text('Información de gastos del mes');
+                $presupuestoInfo.find('.presupuesto-estado').html(infoHtml);
                 $presupuestoInfo.removeClass('exceso-presupuesto').addClass('dentro-presupuesto');
                 $presupuestoInfo.show();
                 
@@ -232,6 +233,7 @@ $(document).ready(function() {
 
     function validarContraPresupuesto(gastosParaGuardar) {
         let gastosExcedidos = [];
+        let gastosBloqueados = [];
         let gastosValidados = [];
 
         gastosParaGuardar.forEach(function(gasto) {
@@ -250,17 +252,24 @@ $(document).ready(function() {
             console.log(`  - Ya Gastado en el mes: ${presupuestoGastado}`);
             console.log(`  - Nuevo Gasto: ${totalGasto}`);
 
+            // BLOQUEO SI PRESUPUESTO ES 0
+            if (presupuestoTotal === 0) {
+                console.log(`  ❌ BLOQUEADO: No tiene presupuesto asignado`);
+                gastosBloqueados.push(gasto.concepto);
+                return;
+            }
+
             // El nuevo gasto se sumará a presupuestoGastado cuando se guarde
             let totalGastoFuturo = presupuestoGastado + totalGasto;
             console.log(`  - Total futuro sería: ${totalGastoFuturo}`);
             
-            if (presupuestoTotal > 0 && totalGastoFuturo > presupuestoTotal) {
+            if (totalGastoFuturo > presupuestoTotal) {
                 let exceso = totalGastoFuturo - presupuestoTotal;
-                console.log(`  ❌ EXCEDERÁ por: ${exceso}`);
+                console.log(`  ⚠️ EXCEDERÁ por: ${exceso}`);
                 
                 gastosExcedidos.push({
                     concepto: gasto.concepto,
-                    presupuesto: presupuestoTotal, // Solo para cálculos internos
+                    presupuesto: presupuestoTotal,
                     presupuestoGastado: presupuestoGastado,
                     gasto: totalGasto,
                     totalGastoAcumulado: totalGastoFuturo,
@@ -274,8 +283,10 @@ $(document).ready(function() {
 
         return {
             excedidos: gastosExcedidos,
+            bloqueados: gastosBloqueados,
             validados: gastosValidados,
-            todosValidados: gastosExcedidos.length === 0
+            todosValidados: gastosExcedidos.length === 0 && gastosBloqueados.length === 0,
+            tieneBloqueados: gastosBloqueados.length > 0
         };
     }
 
@@ -287,6 +298,12 @@ $(document).ready(function() {
         
         if (!seleccion) {
             Swal.fire('Error', 'Por favor, seleccione una semana', 'error');
+            return;
+        }
+
+        let esAnterior = $('#semanaRetail option:selected').data('es-anterior') === 1;
+        if (esAnterior) {
+            Swal.fire('Error', 'No se pueden cargar gastos de semanas anteriores.', 'error');
             return;
         }
         
@@ -395,6 +412,17 @@ $(document).ready(function() {
         // Continuar con la validación de presupuesto...
         let validacion = validarContraPresupuesto(gastos);
         
+        // BLOQUEO CRÍTICO SI NO TIENE PRESUPUESTO
+        if (validacion.tieneBloqueados) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Sin presupuesto asignado',
+                html: `No puede cargar gastos en las siguientes categorías porque tienen presupuesto $0:<br><br><strong>${validacion.bloqueados.join('<br>')}</strong><br><br>Por favor, comuníquese con administración.`,
+                confirmButtonText: 'Entendido'
+            });
+            return;
+        }
+
         let mensaje = `Se guardarán ${gastos.length} gasto(s).`;
 
         if (!validacion.todosValidados) {

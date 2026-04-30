@@ -107,9 +107,10 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
                                 $valor = $semana['SEMANA'] . "|" . $anio;
                                 
                                 $esActual = ($semana['SEMANA'] == $semanaActual && $anio == $anioActual);
+                                $esAnterior = ($anio < $anioActual) || ($anio == $anioActual && $semana['SEMANA'] < $semanaActual);
                                 $selected = $esActual ? 'selected' : '';
                                 
-                                echo "<option value='" . $valor . "' " . $selected . " data-es-actual='" . ($esActual ? '1' : '0') . "'>" . $semanaTexto . "</option>";
+                                echo "<option value='" . $valor . "' " . $selected . " data-es-actual='" . ($esActual ? '1' : '0') . "' data-es-anterior='" . ($esAnterior ? '1' : '0') . "'>" . $semanaTexto . "</option>";
                             }
                         } else {
                             echo "<option value=''>No hay semanas disponibles</option>";
