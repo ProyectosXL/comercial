@@ -38,13 +38,13 @@ try {
 
     // 2. Construir la cláusula WHERE
     $conds = [];
-    $conds[] = buildCondition($rubros, 'Rubro');
-    $conds[] = buildCondition($categorias, 'Categoria');
-    $conds[] = buildCondition($temporadas, 'Temporada');
-    $conds[] = buildCondition($destinos, 'Destino');
+    $conds[] = buildCondition($rubros, 'A.Rubro');
+    $conds[] = buildCondition($categorias, 'A.Categoria');
+    $conds[] = buildCondition($temporadas, 'A.Temporada');
+    $conds[] = buildCondition($destinos, 'A.Destino');
     if (!empty($globalSearch)) {
         $s = escape_val($globalSearch);
-        $conds[] = "(Articulo LIKE '%$s%' OR Descripcion LIKE '%$s%' OR Rubro LIKE '%$s%')";
+        $conds[] = "(A.Articulo LIKE '%$s%' OR A.Descripcion LIKE '%$s%' OR A.Rubro LIKE '%$s%')";
     }
     $where = implode(" AND ", $conds);
 
@@ -59,19 +59,19 @@ try {
 
     // Definir encabezados
     $headers = [
-        'Rubro', 'Categoria', 'Temporada', 'Destino', 'Liquidacion', 'Fecha Ingreso', 'Cod. Equiv.', 'Articulo', 'Descripcion', 'Color', 'Precio', 
+        'Rubro', 'Categoria', 'Categoria Padre', 'Temporada', 'Destino', 'Liquidacion', 'Fecha Ingreso', 'Cod. Equiv.', 'Articulo', 'Descripcion', 'Color', 'Precio', 
         'Stock Locales', 'Stock Central', 'Stock Fiscal', 'Stock Total', 'Stock Ecommerce', 'Stock Excluido', 'Cant. Venta', 'Venta Total',
         'Cant. Ingr. Central', 'Venta Franq.', 'Venta May.', 'Venta Ecomm.', 'Venta Propios'
     ];
     $sheet->fromArray($headers, NULL, 'A1');
-    $sheet->getStyle('A1:X1')->getFont()->setBold(true);
+    $sheet->getStyle('A1:Y1')->getFont()->setBold(true);
 
     // Llenar las filas
     $rowNum = 2;
     foreach($resultados as $row) {
         // Aseguramos el orden correcto de las columnas para la exportación
         $sheet->fromArray([
-            $row['RUBRO'], $row['CATEGORIA'], $row['TEMPORADA'], $row['DESTINO'], $row['LIQUIDACION'],
+            $row['RUBRO'], $row['CATEGORIA'], $row['CATEGORIA_PADRE'], $row['TEMPORADA'], $row['DESTINO'], $row['LIQUIDACION'],
             $row['FECHA_INGRESO_SUC'], $row['COD_EQUIVALENCIA'], $row['ARTICULO'], $row['DESCRIPCIO'], $row['COLOR'],
             $row['PRECIO'], $row['STOCK_LOCALES'], $row['STOCK_CENTRAL'], $row['STOCK_CENTRAL_FISCAL'],
             $row['STOCK_TOTAL'], $row['STOCK_RESERVA'], $row['STOCK_EXCLUIDO'], $row['CANT_VENTA'], $row['IMP_VENTA'],
@@ -79,14 +79,14 @@ try {
         ], NULL, 'A'.$rowNum);
 
         // Formatear columnas de moneda
-        $sheet->getStyle('K'.$rowNum)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_CURRENCY_USD_SIMPLE);
-        $sheet->getStyle('S'.$rowNum)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_CURRENCY_USD_SIMPLE);
+        $sheet->getStyle('L'.$rowNum)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_CURRENCY_USD_SIMPLE);
+        $sheet->getStyle('T'.$rowNum)->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_CURRENCY_USD_SIMPLE);
         
         $rowNum++;
     }
 
     // Auto-ajustar el ancho de las columnas
-    foreach (range('A', 'X') as $columnID) {
+    foreach (range('A', 'Y') as $columnID) {
         $sheet->getColumnDimension($columnID)->setAutoSize(true);
     }
 

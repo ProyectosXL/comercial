@@ -199,7 +199,12 @@ class GastoNew
             $idSupervisora = null;
             
             foreach ($supervisoras as $sup) {
-                if ($sup['NOMBRE'] === $supervisora) {
+                $nombreDB = trim(strtoupper(str_replace(['.', ' '], '', $sup['NOMBRE'])));
+                $nombreSesion = trim(strtoupper(str_replace(['.', ' '], '', $supervisora)));
+
+                if ($nombreDB === $nombreSesion || 
+                    (strlen($nombreSesion) > 3 && strpos($nombreDB, $nombreSesion) === 0) || 
+                    (strlen($nombreDB) > 3 && strpos($nombreSesion, $nombreDB) === 0)) {
                     $idSupervisora = $sup['ID'];
                     break;
                 }

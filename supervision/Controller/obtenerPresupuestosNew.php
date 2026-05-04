@@ -26,7 +26,13 @@ try {
     $idSupervisora = null;
     
     foreach ($supervisoras as $sup) {
-        if (trim(strtoupper($sup['NOMBRE'])) === trim(strtoupper($supervisora))) {
+        $nombreDB = trim(strtoupper(str_replace(['.', ' '], '', $sup['NOMBRE'])));
+        $nombreSesion = trim(strtoupper(str_replace(['.', ' '], '', $supervisora)));
+        
+        // Coincidencia exacta o si uno contiene al otro (ej: Carolina C vs Carolina Commendatore)
+        if ($nombreDB === $nombreSesion || 
+            (strlen($nombreSesion) > 3 && strpos($nombreDB, $nombreSesion) === 0) || 
+            (strlen($nombreDB) > 3 && strpos($nombreSesion, $nombreDB) === 0)) {
             $idSupervisora = $sup['ID'];
             break;
         }
@@ -39,9 +45,13 @@ try {
             // Obtener presupuestos del período correspondiente a la semana
             $presupuestos = $presupuesto->obtenerPresupuestos($periodo);
             
+            error_log("DEBUG: Período: $periodo, ID_Sup: $idSupervisora, Supervisora: $supervisora");
+            error_log("DEBUG: Presupuestos encontrados: " . count($presupuestos));
             if (isset($presupuestos[$idSupervisora])) {
+                error_log("DEBUG: Presupuesto para ID $idSupervisora: " . json_encode($presupuestos[$idSupervisora]));
                 // Obtener gastos acumulados del mes de la semana seleccionada para esta supervisora
                 $gastosAcumulados = obtenerGastosAcumuladosMes($mesDelaSemana, $anio, $supervisora);
+                error_log("DEBUG: Gastos acumulados: " . json_encode($gastosAcumulados));
                 
                 // Calcular presupuesto disponible para cada concepto
                 foreach ($presupuestos[$idSupervisora] as $idConcepto => $montoPresupuesto) {
@@ -54,10 +64,14 @@ try {
                         'disponible' => floatval($disponible)
                     ];
                 }
+            } else {
+                error_log("DEBUG: No hay presupuesto para ID $idSupervisora en período $periodo");
             }
         } catch (Exception $e) {
             error_log("Error al obtener presupuestos para período $periodo: " . $e->getMessage());
         }
+    } else {
+        error_log("DEBUG: No se encontró ID para supervisora: $supervisora");
     }
 
     echo json_encode([
@@ -102,11 +116,12 @@ function obtenerFechaDeSemana($semana, $anio) {
  * Obtiene los gastos acumulados del mes correspondiente a la semana por concepto para una supervisora
  */
 function obtenerGastosAcumuladosMes($mes, $anio, $supervisora) {
-    require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/abastecimiento/Class/Conexion.php';
+    require_once $_SERVER['DOCUMENT_ROOT'].'/comercial/Class/Conexion.php';
     $cid = new Conexion();
     $cid_central = $cid->conectar('central');
     
-    // Consulta directa por mes/año de la semana usando FECHA_MODIF
+    // Consulta para obtener gastos del mes basándonos en la fecha de modificación, 
+    // que es el estándar actual del sistema.
     $sql = "SELECT ID_CONC, SUM(ISNULL(IMPORTE, 0) + ISNULL(IMPORTE_TARJETA, 0)) as TOTAL_GASTO
             FROM RO_T_GASTOS_SUPERVISION
             WHERE SUPERVISORA = ? 

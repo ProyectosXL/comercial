@@ -244,6 +244,7 @@ if ($_SESSION['entorno'] == 'central') {
                             <tr>
                                 <th>Rubro</th>
                                 <th>Categoría</th>
+                                <th>Categoría Padre</th>
                                 <th>Temporada</th>
                                 <th>Destino</th>
                                 <th>Liquidacion</th>
@@ -396,6 +397,7 @@ if ($_SESSION['entorno'] == 'central') {
                 columns: [
                     { data: 'RUBRO', defaultContent: '' },
                     { data: 'CATEGORIA', defaultContent: '' },
+                    { data: 'CATEGORIA_PADRE', defaultContent: '' },
                     { data: 'TEMPORADA', defaultContent: '' },
                     { data: 'DESTINO', defaultContent: '' },
                     { data: 'LIQUIDACION', defaultContent: '' },

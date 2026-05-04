@@ -909,32 +909,36 @@ class Articulo
             // Esto asegura que tanto el JavaScript de la tabla como el PHP de exportación
             // reciban los datos en el formato que esperan.
             $sql = "SELECT 
-                        Rubro AS RUBRO, 
-                        Categoria AS CATEGORIA, 
-                        Temporada AS TEMPORADA, 
-                        Destino AS DESTINO, 
-                        Liquidacion AS LIQUIDACION, 
-                        CONVERT(varchar, FechaIngreso, 103) AS FECHA_INGRESO_SUC,
-                        CodEquivalencia AS COD_EQUIVALENCIA, 
-                        Articulo AS ARTICULO, 
-                        Descripcion AS DESCRIPCIO, 
-                        Color AS COLOR, 
-                        Precio AS PRECIO,
-                        StockLocales AS STOCK_LOCALES, 
-                        StockCentral AS STOCK_CENTRAL, 
-                        StockCentralFiscal AS STOCK_CENTRAL_FISCAL, 
-                        StockTotal AS STOCK_TOTAL,
-                        StockReservaEcommerce AS STOCK_RESERVA, 
-                        StockExcluido AS STOCK_EXCLUIDO, 
-                        CantVenta AS CANT_VENTA, 
-                        VentaTotal AS IMP_VENTA,
-                        CantIngresoCentral AS CANT_INGRESO_CENTRAL,
-                        VentaFranq AS VENTA_FRANQ,
-                        VentaMay AS VENTA_MAY,
-                        VentaEcomm AS VENTA_ECOMM,
-                        VentaPropios AS VENTA_PROPIOS
+                        A.Rubro AS RUBRO, 
+                        A.Categoria AS CATEGORIA, 
+                        B.CATEGORIA_PADRE AS CATEGORIA_PADRE,
+                        A.Temporada AS TEMPORADA, 
+                        A.Destino AS DESTINO, 
+                        A.Liquidacion AS LIQUIDACION, 
+                        CONVERT(varchar, A.FechaIngreso, 103) AS FECHA_INGRESO_SUC,
+                        A.CodEquivalencia AS COD_EQUIVALENCIA, 
+                        A.Articulo AS ARTICULO, 
+                        A.Descripcion AS DESCRIPCIO, 
+                        A.Color AS COLOR, 
+                        A.Precio AS PRECIO,
+                        A.StockLocales AS STOCK_LOCALES, 
+                        A.StockCentral AS STOCK_CENTRAL, 
+                        A.StockCentralFiscal AS STOCK_CENTRAL_FISCAL, 
+                        A.StockTotal AS STOCK_TOTAL,
+                        A.StockReservaEcommerce AS STOCK_RESERVA, 
+                        A.StockExcluido AS STOCK_EXCLUIDO, 
+                        A.CantVenta AS CANT_VENTA, 
+                        A.VentaTotal AS IMP_VENTA,
+                        A.CantIngresoCentral AS CANT_INGRESO_CENTRAL,
+                        A.VentaFranq AS VENTA_FRANQ,
+                        A.VentaMay AS VENTA_MAY,
+                        A.VentaEcomm AS VENTA_ECOMM,
+                        A.VentaPropios AS VENTA_PROPIOS
                     FROM 
-                        [XL-LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL
+                        [XL-LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL A
+                    LEFT JOIN
+                        [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA B
+                    ON A.Articulo COLLATE Latin1_General_BIN = B.COD_ARTICU COLLATE Latin1_General_BIN
                     WHERE 
                         $whereFilters";
 

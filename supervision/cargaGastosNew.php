@@ -97,6 +97,9 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
                         $semanasRetail = $gastos->traerSemanasRetail();
                         $semanaActual = date('W');
                         $anioActual = date('Y');
+                        $esLunesOMartes = (date('N') <= 2);
+                        $semanaPasada = date('W', strtotime('-1 week'));
+                        $anioSemanaPasada = date('Y', strtotime('-1 week'));
 
                         if (!empty($semanasRetail)) {
                             foreach ($semanasRetail as $semana) {
@@ -108,6 +111,12 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
                                 
                                 $esActual = ($semana['SEMANA'] == $semanaActual && $anio == $anioActual);
                                 $esAnterior = ($anio < $anioActual) || ($anio == $anioActual && $semana['SEMANA'] < $semanaActual);
+                                
+                                // Permitir carga de la semana anterior si es lunes o martes
+                                if ($esLunesOMartes && $semana['SEMANA'] == $semanaPasada && $anio == $anioSemanaPasada) {
+                                    $esAnterior = false;
+                                }
+
                                 $selected = $esActual ? 'selected' : '';
                                 
                                 echo "<option value='" . $valor . "' " . $selected . " data-es-actual='" . ($esActual ? '1' : '0') . "' data-es-anterior='" . ($esAnterior ? '1' : '0') . "'>" . $semanaTexto . "</option>";

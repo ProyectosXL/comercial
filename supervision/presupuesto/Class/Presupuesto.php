@@ -23,11 +23,7 @@ private function retornarArray($sqlEnviado){
 
     // --- ¡AÑADE ESTE BLOQUE! ---
     if ($stmt === false) {
-        // Detiene el script y muestra el error real de la base de datos
-        die(
-            "Error en la consulta SQL:<br><pre>" . htmlspecialchars($sql) . "</pre><br>" .
-            "Detalle del error:<br><pre>" . print_r(sqlsrv_errors(), true) . "</pre>"
-        );
+        throw new Exception("Error en la consulta SQL: " . print_r(sqlsrv_errors(), true));
     }
     // -------------------------
 

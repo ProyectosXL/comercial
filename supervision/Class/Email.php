@@ -24,8 +24,8 @@ class EmailNew {
             $this->mail->isSMTP();
             $this->mail->Host = getenv('HOST_EMAIL_EGRESOS') ?: 'smtp.gmail.com';
             $this->mail->SMTPAuth = true;
-            $this->mail->Username = getenv('USER_EMAIL_SUPERVISION');
-            $this->mail->Password = getenv('PASS_EMAIL_SUPERVISION');
+            $this->mail->Username = getenv('USER_EMAIL_PRESUPUESTOS_SUPERVISION');
+            $this->mail->Password = getenv('PASS_EMAIL_PRESUPUESTOS_SUPERVISION');
             $this->mail->SMTPSecure = (getenv('PORT_EMAIL_EGRESOS') == '465') ? 'ssl' : 'tls';
             $this->mail->Port = getenv('PORT_EMAIL_EGRESOS') ?: 587;
             $this->mail->setFrom($this->mail->Username, 'XL Extralarge');

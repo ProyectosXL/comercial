@@ -202,16 +202,10 @@ $(document).ready(function() {
             if (presupuestos[id_conc]) {
                 let presupuesto = presupuestos[id_conc];
                 
-                // Mostrar información básica de presupuesto
-                $card.find('.presupuesto-monto').text(formatearImporte(presupuesto.total));
-                
-                let infoHtml = `
-                    <strong>Ya consumido:</strong> ${formatearImporte(presupuesto.gastado)}
-                `;
-                
-                $presupuestoInfo.find('.presupuesto-estado').html(infoHtml);
-                $presupuestoInfo.removeClass('exceso-presupuesto').addClass('dentro-presupuesto');
-                $presupuestoInfo.show();
+                // No mostrar información visual de presupuesto según requerimiento
+                $presupuestoInfo.hide();
+                // $presupuestoInfo.show(); // ELIMINADO: Nunca mostrar presupuesto en esta pantalla
+
                 
                 // Guardar los datos para validación (mantener todos para los cálculos internos)
                 $card.attr('data-presupuesto-total', presupuesto.total);
@@ -412,7 +406,7 @@ $(document).ready(function() {
         // Continuar con la validación de presupuesto...
         let validacion = validarContraPresupuesto(gastos);
         
-        // BLOQUEO CRÍTICO SI NO TIENE PRESUPUESTO
+        // 2. BLOQUEO CRÍTICO SI NO TIENE PRESUPUESTO ($0)
         if (validacion.tieneBloqueados) {
             Swal.fire({
                 icon: 'error',
@@ -424,11 +418,13 @@ $(document).ready(function() {
         }
 
         let mensaje = `Se guardarán ${gastos.length} gasto(s).`;
+        let esAdvertencia = false;
 
         if (!validacion.todosValidados) {
-            mensaje += `\n\n⚠️ ATENCIÓN: Los siguientes conceptos exceden el presupuesto y serán auditados por la gerencia comercial:\n`;
+            esAdvertencia = true;
+            mensaje += `\n\n⚠️ ATENCIÓN: Los siguientes conceptos exceden el presupuesto:\n`;
             validacion.excedidos.forEach(function(item) {
-                mensaje += `• ${item.concepto}: Excede el presupuesto por ${formatearImporte(item.exceso)}\n`;
+                mensaje += `• ${item.concepto}\n`;
             });
         } else {
             mensaje += '\n\n✅ Todos los gastos están dentro del presupuesto y serán aprobados automáticamente.';
@@ -437,7 +433,7 @@ $(document).ready(function() {
         Swal.fire({
             title: 'Confirmar carga de gastos',
             text: mensaje,
-            icon: validacion.todosValidados ? 'success' : 'warning',
+            icon: esAdvertencia ? 'warning' : 'success',
             showCancelButton: true,
             confirmButtonText: 'Guardar y Procesar',
             cancelButtonText: 'Cancelar',
