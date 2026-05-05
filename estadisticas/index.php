@@ -371,6 +371,14 @@ if (!isset($_SESSION['username'])) {
                                     <a href="../horarios/local.php" class="btn btn-purple btn-card">Acceder</a>
                                 </div>
                             </div>
+                            <div class="card">
+                                <div class="card-body">
+                                    <i class="bi bi-shop-window card-icon color-info"></i>
+                                    <h5 class="card-title">Sistema Franquicias</h5>
+                                    <p class="card-subtitle">Gestión integral de franquicias</p>
+                                    <a href="../../comercial/franquicias/login.php?auto_login=1" class="btn btn-info btn-card">Acceder</a>
+                                </div>
+                            </div>
                         </div>
                     </section>
                 </div>

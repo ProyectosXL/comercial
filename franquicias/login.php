@@ -5,7 +5,25 @@ require_once 'config_sesiones_fixed.php';
 // Cargar la nueva clase de autenticación
 require_once 'class/AuthFranquicia.php';
 
-// Procesar formulario de login
+// Auto-login desde el portal si están las credenciales en sesión
+if (isset($_GET['auto_login']) && $_GET['auto_login'] == '1') {
+    $user_portal = $_SESSION['username'] ?? '';
+    $pass_portal = $_SESSION['pass_portal'] ?? '';
+    
+    if (!empty($user_portal) && !empty($pass_portal)) {
+        try {
+            $auth = new AuthFranquicia();
+            $resultado = $auth->iniciarSesion($user_portal, $pass_portal);
+            
+            if ($resultado) {
+                header('Location: index.php');
+                exit;
+            }
+        } catch (Exception $e) {
+            error_log("Error en auto-login: " . $e->getMessage());
+        }
+    }
+}
 $mensaje = '';
 $tipo_mensaje = '';
 
