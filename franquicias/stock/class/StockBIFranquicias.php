@@ -42,7 +42,7 @@ class StockBIFranquicias {
     }
 
     private function loadEnv(): array {
-        $path = realpath(__DIR__ . '/../../../.env');
+        $path = realpath(__DIR__ . '/../../../../.env');
         if (!$path || !file_exists($path)) {
             throw new Exception("Archivo .env no encontrado desde " . __DIR__);
         }
