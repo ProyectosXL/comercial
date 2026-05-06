@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"c:\\\\xampp\\\\htdocs\\\\comercial\\\\franquicias\\\\stock\" | ForEach-Object { $_.Name + \" \\(\" + \\(if\\($_.PSIsContainer\\) { \"DIR\" } else { \"FILE\" }\\) + \"\\)\" })",
+      "PowerShell(Get-ChildItem \"c:\\\\xampp\\\\htdocs\\\\comercial\\\\franquicias\\\\components\" | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem \"c:\\\\xampp\\\\htdocs\\\\comercial\\\\franquicias\\\\js\" | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem \"c:\\\\xampp\\\\htdocs\\\\comercial\\\\Class\" | ForEach-Object { $_.Name })"
+    ]
+  }
+}
