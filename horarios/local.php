@@ -272,7 +272,7 @@
               <div class="p-2 border rounded d-flex justify-content-around align-items-center flex-wrap gap-2 bg-light">
                 <small class="fw-bold text-muted">COLORES:</small>
                 <span class="badge bg-success">H (Normal)</span>
-                <span class="badge bg-primary">E (Extras)</span>
+                <span class="badge bg-primary">A (Adicional)</span>
                 <span class="badge text-white" style="background:#6f42c1;">F (Franco)</span>
                 <span class="badge bg-warning text-dark">D (Devolver)</span>
               </div>

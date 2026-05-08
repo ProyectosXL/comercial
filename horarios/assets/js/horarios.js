@@ -486,7 +486,7 @@ $(document).ready(function () {
                 let tipo = esMedia ? tipoRaw.replace('_media', '') : tipoRaw;
 
                 if (tipo === 'extra') {
-                    celda.addClass('hora-extra').text('E');
+                    celda.addClass('hora-extra').text('A');
                 } else if (tipo === 'devuelve') {
                     celda.addClass('hora-devuelve').text('D');
                 } else if (tipo === 'permiso') {

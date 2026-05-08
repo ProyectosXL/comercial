@@ -144,7 +144,7 @@ $(document).ready(function () {
 
                         if (tipoGuardado.includes('extra')) {
                             clase = 'hora-extra';
-                            texto = 'E';
+                            texto = 'A';
                         } else {
                             clase = 'marcado';
                             texto = 'X';
@@ -208,11 +208,11 @@ $(document).ready(function () {
         if ($(this).hasClass('media-hora')) {
             $(this).removeClass('media-hora');
             // Restaurar texto base
-            let txt = $(this).hasClass('hora-extra') ? 'E' : 'X';
+            let txt = $(this).hasClass('hora-extra') ? 'A' : 'X';
             $(this).html(txt);
         } else {
             $(this).addClass('media-hora');
-            let txt = $(this).hasClass('hora-extra') ? 'E' : 'X';
+            let txt = $(this).hasClass('hora-extra') ? 'A' : 'X';
             $(this).html(`${txt} <small>½</small>`);
         }
         calcularTotalesBase();
@@ -249,7 +249,7 @@ $(document).ready(function () {
             const esMedia = celda.hasClass('media-hora');
 
             if (tipoHoraSeleccionada === 'extra') {
-                celda.addClass('hora-extra').text('E');
+                celda.addClass('hora-extra').text('A');
             } else {
                 celda.addClass('marcado').text('X');
             }

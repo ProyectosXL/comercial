@@ -49,7 +49,7 @@
                         <select id="tipoHoraFiltro" class="form-select">
                             <option value="todos">Todos los Tipos</option>
                             <option value="normal">H (Normales)</option>
-                            <option value="extra">E (Extras)</option>
+                            <option value="extra">A (Adicional)</option>
                             <option value="devuelve">D (Devuelve)</option>
                             <option value="caja">C (Caja)</option>
                             <option value="permiso">P (Permiso)</option>
@@ -93,7 +93,7 @@
             <div class="col-md-2">
                 <div class="card text-bg-primary h-100 shadow-sm">
                     <div class="card-body p-2">
-                        <h6 class="small text-uppercase opacity-75">E (Extras)</h6>
+                        <h6 class="small text-uppercase opacity-75">A (Adicional)</h6>
                         <h3 class="fw-bold mb-0" id="kpiExtra">0</h3>
                     </div>
                 </div>
