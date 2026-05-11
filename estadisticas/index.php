@@ -155,30 +155,6 @@ if (!isset($_SESSION['username'])) {
                                     </div>
                                     <div class="card">
                                         <div class="card-body">
-                                            <i class="bi bi-shop card-icon color-primary"></i>
-                                            <h5 class="card-title">Sales Sucursales Argentina</h5>
-                                            <p class="card-subtitle">Dashboard de ventas sucursales ARG</p>
-                                            <a href="../../bi/tableros/salesSucursales.html" class="btn btn-primary btn-card">Ver Dashboard</a>
-                                        </div>
-                                    </div>
-                                    <div class="card">
-                                        <div class="card-body">
-                                            <i class="bi bi-shop-window card-icon color-success"></i>
-                                            <h5 class="card-title">Sales Franquicias</h5>
-                                            <p class="card-subtitle">Dashboard de ventas franquicias</p>
-                                            <a href="../../bi/tableros/salesFranquicias.html" class="btn btn-success btn-card">Ver Dashboard</a>
-                                        </div>
-                                    </div>
-                                    <div class="card">
-                                        <div class="card-body">
-                                            <i class="bi bi-globe-americas card-icon color-info"></i>
-                                            <h5 class="card-title">Sales Uruguay</h5>
-                                            <p class="card-subtitle">Dashboard de ventas Uruguay</p>
-                                            <a href="../../bi/tableros/salesSucursalesUy.html" class="btn btn-info btn-card">Ver Dashboard</a>
-                                        </div>
-                                    </div>
-                                    <div class="card">
-                                        <div class="card-body">
                                             <i class="bi bi-bullseye card-icon color-purple"></i>
                                             <h5 class="card-title">Objetivos</h5>
                                             <p class="card-subtitle">Seguimiento de metas comerciales</p>

@@ -45,19 +45,28 @@ class Pedido
         $topClause = ($vendedor === '%') ? "TOP 2000" : "";
 
         $sql = "SELECT $topClause
-                    A.COD_VENDED, A.COD_CLIENT, A.RAZON_SOCI, A.LOCALIDAD, 
-                    SUM(A.CANT_PEDIDO) AS UNID_PEDIDO, 
-                    SUM(A.CANT_PENDIENTE) AS UNID_PENDIENTE, 
-                    COUNT(A.NRO_PEDIDO) AS CANT_PEDIDOS, 
-                    SUM(A.IMP_PENDIENTE) AS IMPORTE,
-                    COALESCE(B.IMPRESO, 'NO') AS IMPRESO
-                FROM RO_PEDIDOS_PENDIENTE_MAYORISTAS A
-                LEFT JOIN SJ_PICKING_ENCABEZADO B 
-                    ON LTRIM(RTRIM(A.NRO_PEDIDO)) = LTRIM(RTRIM(B.NRO_PEDIDO)) 
-                    AND (A.TALON_PED = B.TALON_PED OR TRY_CAST(A.TALON_PED AS INT) = TRY_CAST(B.TALON_PED AS INT))
-                WHERE A.VENDEDOR LIKE '$vendedor' AND B.ESTADO = 'ABIERTO'
-                GROUP BY A.COD_VENDED, A.COD_CLIENT, A.LOCALIDAD, A.RAZON_SOCI, B.IMPRESO
-                ORDER BY A.RAZON_SOCI";
+                        A.COD_VENDED,
+                            A.COD_CLIENT,
+                            A.RAZON_SOCI,
+                            A.LOCALIDAD,
+                            SUM(A.CANT_PEDIDO)    AS UNID_PEDIDO,
+                            SUM(A.CANT_PENDIENTE) AS UNID_PENDIENTE,
+                            COUNT(A.NRO_PEDIDO)   AS CANT_PEDIDOS,
+                            SUM(A.IMP_PENDIENTE)  AS IMPORTE,
+                            COALESCE(B.IMPRESO, 'NO') AS IMPRESO
+                        FROM RO_PEDIDOS_PENDIENTE_MAYORISTAS A
+                        INNER JOIN SJ_PICKING_ENCABEZADO B 
+                            ON LTRIM(RTRIM(A.NRO_PEDIDO)) = LTRIM(RTRIM(B.NRO_PEDIDO))
+                            AND LTRIM(RTRIM(A.TALON_PED)) = LTRIM(RTRIM(B.TALON_PED))
+                            AND B.ESTADO = 'ABIERTO'                                     
+                        WHERE A.VENDEDOR = '$vendedor'                           
+                        GROUP BY 
+                            A.COD_VENDED,
+                            A.COD_CLIENT,
+                            A.RAZON_SOCI,
+                            A.LOCALIDAD,
+                            B.IMPRESO
+                        ORDER BY A.RAZON_SOCI";
 
         $rows = $this->retornarArray($sql);
         return json_encode($rows);
