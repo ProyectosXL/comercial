@@ -96,6 +96,7 @@ function getVendedores($idDepto)
     $sql = "
         SELECT 
             R.BLOQUE AS COD_VENDED, 
+            R.NRO_LEGAJO,
             R.APELLIDO, 
             R.NOMBRE,
             R.TAREA_HABITUAL
@@ -105,14 +106,12 @@ function getVendedores($idDepto)
             L.ID_DEPARTAMENTO = ? 
             AND R.HABILITADO = 'S'
         ORDER BY 
-            -- ORDEN JERÁRQUICO PERSONALIZADO
             CASE 
                 WHEN R.TAREA_HABITUAL LIKE '%ENCARGADA%' AND R.TAREA_HABITUAL NOT LIKE '%SUB%' THEN 1
                 WHEN R.TAREA_HABITUAL LIKE '%SUB%' THEN 2
                 WHEN R.TAREA_HABITUAL LIKE '%CAJERA%' THEN 3
                 ELSE 4 
             END ASC,
-            -- Luego orden alfabético por Apellido
             R.APELLIDO ASC
     ";
 
@@ -126,11 +125,17 @@ function getVendedores($idDepto)
     $vendedores = [];
     while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
         $nombreCompleto = trim($row['APELLIDO']) . ' ' . trim($row['NOMBRE']);
+        $codVended = trim($row['COD_VENDED']);
+        
+        // Fallback: Si el BLOQUE (Tango ID) está vacío, usamos el Legajo para evitar colisiones
+        if (empty($codVended)) {
+            $codVended = 'L' . trim($row['NRO_LEGAJO']);
+        }
 
         $vendedores[] = [
-            'COD_VENDED' => trim($row['COD_VENDED']),
+            'COD_VENDED' => $codVended,
             'NOMBRE_VEN' => $nombreCompleto,
-            'TAREA_HABITUAL' => utf8_encode($row['TAREA_HABITUAL']) // Importante utf8 para acentos
+            'TAREA_HABITUAL' => utf8_encode($row['TAREA_HABITUAL'])
         ];
     }
     echo json_encode($vendedores);

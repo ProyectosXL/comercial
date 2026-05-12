@@ -243,6 +243,28 @@ try {
     if (!$connSistemas)
         throw new Exception("Error conexión Sistemas");
 
+    // --- PASO Staff: Cargar lista de vendedores de la sucursal (para que aparezcan aunque no tengan horas) ---
+    if ($nroSucursal) {
+        $connCorp = getConexionCorp();
+        if ($connCorp) {
+            $sqlStaff = "SELECT R.BLOQUE, R.NRO_LEGAJO FROM LEGAJO_CLOUD L INNER JOIN RO_LEGAJOS_PERSONAL R ON L.NRO_LEGAJO = R.NRO_LEGAJO WHERE L.ID_DEPARTAMENTO = ? AND R.HABILITADO = 'S'";
+            $stmtStaff = sqlsrv_query($connCorp, $sqlStaff, [$nroSucursal]);
+            if ($stmtStaff) {
+                while ($rowStaff = sqlsrv_fetch_array($stmtStaff, SQLSRV_FETCH_ASSOC)) {
+                    $idS = trim($rowStaff['BLOQUE'] ?? '');
+                    if (empty($idS)) {
+                        $idS = 'L' . trim($rowStaff['NRO_LEGAJO']);
+                    }
+                    if (!isset($agenda[$idS])) {
+                        $agenda[$idS] = ['horarios' => [], 'francos' => [], 'notas' => [], 'feedback' => '', 'sucursal_detalle' => []];
+                        $vendedoresIds[$idS] = true;
+                    }
+                }
+            }
+            sqlsrv_close($connCorp);
+        }
+    }
+
     // Query Horarios
     $sqlH = "SELECT COD_VENDED, FECHA, HORA, TIPO_HORA, NRO_SUCURSAL FROM FP_GESTION_HORARIOS WHERE FECHA BETWEEN ? AND ?";
     $paramsH = [$fechaInicio, $fechaFin];
@@ -374,12 +396,15 @@ try {
         // 2. Complemento: Tareas Habituales, Legajos y Nombres Formateados de RRHH (Corp)
         $connCorp = getConexionCorp();
         if ($connCorp) {
-            $sqlNom = "SELECT BLOQUE as COD_VENDED, NRO_LEGAJO, APELLIDO, NOMBRE, TAREA_HABITUAL FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ('$listaIdsStr')";
+            $sqlNom = "SELECT BLOQUE as COD_VENDED, NRO_LEGAJO, APELLIDO, NOMBRE, TAREA_HABITUAL FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ('$listaIdsStr') OR 'L' + CAST(NRO_LEGAJO AS VARCHAR) IN ('$listaIdsStr')";
             $stmtNom = sqlsrv_query($connCorp, $sqlNom);
             if ($stmtNom) {
                 while ($row = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
-                    $id = trim($row['COD_VENDED']);
+                    $id = trim($row['COD_VENDED'] ?? '');
                     $legajo = trim($row['NRO_LEGAJO'] ?? '');
+                    if (empty($id)) {
+                        $id = 'L' . $legajo;
+                    }
                     $nomFormateado = trim($row['APELLIDO']) . ' ' . trim($row['NOMBRE']);
                     $tarea = trim($row['TAREA_HABITUAL'] ?? '');
 

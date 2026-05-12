@@ -29,15 +29,33 @@ sqlsrv_close($connSistemas);
 $mapaLegajos = [];
 if (!empty($codigosVendedor)) {
     $connCorp = getConexionCorp();
-    $ids = implode("','", array_keys($codigosVendedor));
-    $sqlLegajos = "SELECT BLOQUE, NRO_LEGAJO FROM [XL-SUELDOS].LAKERS_CORP_SA.DBO.RO_LEGAJOS_PERSONAL_ALL WHERE BLOQUE IN ('$ids')";
-    $stmtLegajos = sqlsrv_query($connCorp, $sqlLegajos);
-    if ($stmtLegajos) {
-        while ($row = sqlsrv_fetch_array($stmtLegajos, SQLSRV_FETCH_ASSOC)) {
-            $mapaLegajos[trim($row['BLOQUE'])] = trim($row['NRO_LEGAJO']);
+    
+    $idsNormales = [];
+    $idsLegajo = [];
+    foreach (array_keys($codigosVendedor) as $id) {
+        if (strpos($id, 'L') === 0 && is_numeric(substr($id, 1))) {
+            $idsLegajo[] = substr($id, 1);
+        } else {
+            $idsNormales[] = $id;
         }
-        sqlsrv_free_stmt($stmtLegajos);
     }
+
+    if (!empty($idsNormales)) {
+        $idsStr = implode("','", $idsNormales);
+        $sqlLegajos = "SELECT BLOQUE, NRO_LEGAJO FROM [XL-SUELDOS].LAKERS_CORP_SA.DBO.RO_LEGAJOS_PERSONAL_ALL WHERE BLOQUE IN ('$idsStr')";
+        $stmtLegajos = sqlsrv_query($connCorp, $sqlLegajos);
+        if ($stmtLegajos) {
+            while ($row = sqlsrv_fetch_array($stmtLegajos, SQLSRV_FETCH_ASSOC)) {
+                $mapaLegajos[trim($row['BLOQUE'])] = trim($row['NRO_LEGAJO']);
+            }
+        }
+    }
+
+    // Para los IDs que ya son legajos (L123), el mapeo es directo
+    foreach ($idsLegajo as $l) {
+        $mapaLegajos['L'.$l] = $l;
+    }
+
     sqlsrv_close($connCorp);
 }
 
