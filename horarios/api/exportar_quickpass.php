@@ -42,6 +42,9 @@ if (!empty($codigosVendedor)) {
 
     if (!empty($idsNormales)) {
         $idsStr = implode("','", $idsNormales);
+        
+        // 1. Intentar por BLOQUE en RRHH
+        $connCorp = getConexionCorp();
         $sqlLegajos = "SELECT BLOQUE, NRO_LEGAJO FROM [XL-SUELDOS].LAKERS_CORP_SA.DBO.RO_LEGAJOS_PERSONAL_ALL WHERE BLOQUE IN ('$idsStr')";
         $stmtLegajos = sqlsrv_query($connCorp, $sqlLegajos);
         if ($stmtLegajos) {
@@ -49,14 +52,39 @@ if (!empty($codigosVendedor)) {
                 $mapaLegajos[trim($row['BLOQUE'])] = trim($row['NRO_LEGAJO']);
             }
         }
+        sqlsrv_close($connCorp);
+
+        // 2. Fallback: Para los que no tienen BLOQUE, buscar en GVA23 (Tango) y extraer del nombre
+        $idsFaltantes = [];
+        foreach ($idsNormales as $id) {
+            if (!isset($mapaLegajos[$id])) {
+                $idsFaltantes[] = $id;
+            }
+        }
+
+        if (!empty($idsFaltantes)) {
+            $idsFStr = implode("','", $idsFaltantes);
+            $connCentral = getConexionCentral();
+            $sqlGva = "SELECT COD_VENDED, NOMBRE_VEN FROM GVA23 WHERE COD_VENDED IN ('$idsFStr')";
+            $stmtGva = sqlsrv_query($connCentral, $sqlGva);
+            if ($stmtGva) {
+                while ($row = sqlsrv_fetch_array($stmtGva, SQLSRV_FETCH_ASSOC)) {
+                    $nombre = trim($row['NOMBRE_VEN']);
+                    $cod = trim($row['COD_VENDED']);
+                    // Buscar patrón " - 1234" al final del nombre
+                    if (preg_match('/-\s*(\d+)$/', $nombre, $matches)) {
+                        $mapaLegajos[$cod] = $matches[1];
+                    }
+                }
+            }
+            sqlsrv_close($connCentral);
+        }
     }
 
     // Para los IDs que ya son legajos (L123), el mapeo es directo
     foreach ($idsLegajo as $l) {
         $mapaLegajos['L'.$l] = $l;
     }
-
-    sqlsrv_close($connCorp);
 }
 
 // 3. PROCESAR
