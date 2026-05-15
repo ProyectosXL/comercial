@@ -6,6 +6,9 @@ require_once __DIR__ . '/../config/api_helpers.php';
 // Enriquece con UsuarioAlias desde vw_TopClientes_ValorYVolumen.
 try {
     $filters = buildFilters($_GET, 'p.CodigoClienteTango', 'p.FechaAlta', 'p.EstadoActual');
+    $whereBase = "WHERE p.UnidadesPendientes > 0
+                  AND p.EstadoActual IN ('CAD Autorizado','CAD Enviado','CAD Recibido','CAD Controlado')";
+    $extra = $filters['sql'] ? str_replace('WHERE', 'AND', $filters['sql']) : '';
 
     $sql = "SELECT TOP 15
                 p.CodigoClienteTango                          AS CodigoCliente,
@@ -27,9 +30,9 @@ try {
                 GROUP BY IdDevolucion, IdDetalleDevolucion
             ) v ON v.IdDevolucion        = p.IdDevolucion
                AND v.IdDetalleDevolucion = p.IdDetalleDevolucion
-            {$filters['sql']}
+            $whereBase $extra
             GROUP BY p.CodigoClienteTango, t.UsuarioAlias
-            ORDER BY SUM(p.UnidadesPendientes) DESC";
+            ORDER BY ISNULL(SUM(v.ValorTotal), 0) DESC, SUM(p.UnidadesPendientes) DESC";
 
     $data = dbFetchAll($sql, $filters['params']);
     jsonResponse($data);
