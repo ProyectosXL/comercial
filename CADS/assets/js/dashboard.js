@@ -1060,7 +1060,7 @@ function updateFiltroActivoBadge() {
 // ── Reporte de Devoluciones ─────────────────────────────────
 function getRptFilters() {
     const p       = new URLSearchParams();
-    const cliente = document.getElementById('rpt-cliente')?.value.trim() ?? '';
+    const cliente = document.getElementById('rpt-cliente')?.value ?? '';
     const estado  = document.getElementById('rpt-estado')?.value ?? '';
     const desde   = document.getElementById('rpt-desde')?.value ?? '';
     const hasta   = document.getElementById('rpt-hasta')?.value ?? '';
@@ -1150,6 +1150,25 @@ function initReporte() {
     if (dEl && !dEl.value) dEl.value = fmtIso(desde);
     if (hEl && !hEl.value) hEl.value = fmtIso(hoy);
 
+    // Poblar select de cliente
+    apiFetch('clientes_list.php').then(data => {
+        const sel = document.getElementById('rpt-cliente');
+        if (!sel) return;
+        data.forEach(row => {
+            const opt = document.createElement('option');
+            opt.value = row.value ?? '';
+            opt.textContent = row.label ?? row.value ?? '';
+            sel.appendChild(opt);
+        });
+        if (typeof TomSelect !== 'undefined') {
+            new TomSelect(sel, {
+                placeholder: 'Todos los clientes',
+                allowEmptyOption: true,
+                maxOptions: 500,
+            });
+        }
+    }).catch(() => {});
+
     // Poblar select de estados (reutiliza estados_list.php)
     apiFetch('estados_list.php').then(data => {
         const sel = document.getElementById('rpt-estado');
@@ -1164,7 +1183,8 @@ function initReporte() {
 
     document.getElementById('rpt-btn-apply')?.addEventListener('click', loadReporte);
     document.getElementById('rpt-btn-reset')?.addEventListener('click', () => {
-        document.getElementById('rpt-cliente').value = '';
+        const cEl = document.getElementById('rpt-cliente');
+        if (cEl?.tomselect) cEl.tomselect.clear(); else if (cEl) cEl.value = '';
         document.getElementById('rpt-estado').value  = '';
         if (dEl) dEl.value = fmtIso(desde);
         if (hEl) hEl.value = fmtIso(hoy);

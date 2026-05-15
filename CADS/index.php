@@ -126,7 +126,9 @@ $fechaActual = date('d/m/Y H:i');
     <div class="filters-bar reporte-filters" id="reporte-filters-bar" style="display:none">
         <div>
             <label class="form-label" for="rpt-cliente"><i class="bi bi-person"></i> Cliente</label>
-            <input type="search" id="rpt-cliente" class="form-control" placeholder="Código o nombre…">
+            <select id="rpt-cliente" class="form-select">
+                <option value="">Todos</option>
+            </select>
         </div>
         <div>
             <label class="form-label" for="rpt-estado"><i class="bi bi-funnel"></i> Estado</label>
