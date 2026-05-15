@@ -108,13 +108,7 @@
                                 <a href="../../bi/tableros/conteos.html"><i class="bi bi-list-ol me-2"></i>Reporte Conteos</a>
                             </div>
                             <div class="sub-card p-2">
-                                <a href="../../bi/tableros/salesSucursales.html"><i class="bi bi-graph-up-arrow me-2"></i>Sales Sucursales</a>
-                            </div>
-                            <div class="sub-card p-2">
-                                <a href="../../bi/tableros/salesSucursalesUy.html"><i class="bi bi-graph-up-arrow me-2"></i>Sales Sucursales Uruguay</a>
-                            </div>
-                            <div class="sub-card p-2">
-                                <a href="../../bi/tableros/salesFranquicias.html"><i class="bi bi-graph-up-arrow me-2"></i>Sales Franquicias</a>
+                                <a href="../../bi/index.php"><i class="bi bi-graph-up-arrow me-2"></i>Sales Global</a>
                             </div>
                             <div class="sub-card p-2">
                                 <a href="../../bi/tableros/promociones.html"><i class="bi bi-tag me-2"></i>Promociones Sucursales</a>
