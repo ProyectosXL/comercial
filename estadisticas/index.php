@@ -355,6 +355,16 @@ if (!isset($_SESSION['username'])) {
                                     <a href="../../comercial/franquicias/login.php?auto_login=1" class="btn btn-info btn-card">Acceder</a>
                                 </div>
                             </div>
+                            <?php if (isset($_SESSION['username']) && trim(strtolower($_SESSION['username'])) === 'vvillarreal'): ?>
+                            <div class="card">
+                                <div class="card-body">
+                                    <i class="bi bi-cash-stack card-icon color-primary"></i>
+                                    <h5 class="card-title">Cobranzas MY</h5>
+                                    <p class="card-subtitle">Gestión y control de cobranzas mayoristas</p>
+                                    <a href="../../administracion/tesoreria/cobranzas/api/auth_controller.php?action=login_externo&user=<?php echo urlencode($_SESSION['username']); ?>" class="btn btn-primary btn-card">Acceder</a>
+                                </div>
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </section>
                 </div>
