@@ -472,11 +472,17 @@ try {
             $sqlSaldo = "
                 SELECT 
                     COD_VENDED,
-                    SUM(CASE WHEN TIPO_HORA = 'permiso' THEN 1 ELSE 0 END) as TotalP,
-                    SUM(CASE WHEN TIPO_HORA = 'devuelve' THEN 1 ELSE 0 END) as TotalD
+                    SUM(CASE 
+                        WHEN TIPO_HORA = 'permiso' THEN 1.0 
+                        WHEN TIPO_HORA = 'permiso_media' THEN 0.5
+                        ELSE 0 END) as TotalP,
+                    SUM(CASE 
+                        WHEN TIPO_HORA = 'devuelve' THEN 1.0 
+                        WHEN TIPO_HORA = 'devuelve_media' THEN 0.5
+                        ELSE 0 END) as TotalD
                 FROM FP_GESTION_HORARIOS
                 WHERE FECHA < ? 
-                AND (TIPO_HORA = 'permiso' OR TIPO_HORA = 'devuelve')
+                AND TIPO_HORA IN ('permiso', 'permiso_media', 'devuelve', 'devuelve_media')
                 AND COD_VENDED IN ('$listaIdsStr')
                 GROUP BY COD_VENDED
             ";
@@ -485,8 +491,8 @@ try {
 
             if ($stmtSaldo) {
                 while ($row = sqlsrv_fetch_array($stmtSaldo, SQLSRV_FETCH_ASSOC)) {
-                    $p = intval($row['TotalP']);
-                    $d = intval($row['TotalD']);
+                    $p = floatval($row['TotalP']);
+                    $d = floatval($row['TotalD']);
                     $saldosAnteriores[trim($row['COD_VENDED'])] = $p - $d;
                 }
                 sqlsrv_free_stmt($stmtSaldo);
@@ -523,18 +529,24 @@ try {
             $sqlSaldo = "
                 SELECT 
                     COD_VENDED,
-                    SUM(CASE WHEN TIPO_HORA = 'permiso' THEN 1 ELSE 0 END) as TotalP,
-                    SUM(CASE WHEN TIPO_HORA = 'devuelve' THEN 1 ELSE 0 END) as TotalD
+                    SUM(CASE 
+                        WHEN TIPO_HORA = 'permiso' THEN 1.0 
+                        WHEN TIPO_HORA = 'permiso_media' THEN 0.5
+                        ELSE 0 END) as TotalP,
+                    SUM(CASE 
+                        WHEN TIPO_HORA = 'devuelve' THEN 1.0 
+                        WHEN TIPO_HORA = 'devuelve_media' THEN 0.5
+                        ELSE 0 END) as TotalD
                 FROM FP_GESTION_HORARIOS
                 WHERE FECHA < ? 
-                AND (TIPO_HORA = 'permiso' OR TIPO_HORA = 'devuelve')
+                AND TIPO_HORA IN ('permiso', 'permiso_media', 'devuelve', 'devuelve_media')
                 AND COD_VENDED IN ('$listaIds')
                 GROUP BY COD_VENDED
             ";
             $stmtSaldo = sqlsrv_query($connSistemas, $sqlSaldo, [$fechaInicio]);
             if ($stmtSaldo) {
                 while ($row = sqlsrv_fetch_array($stmtSaldo, SQLSRV_FETCH_ASSOC)) {
-                    $saldosAnteriores[trim($row['COD_VENDED'])] = intval($row['TotalP']) - intval($row['TotalD']);
+                    $saldosAnteriores[trim($row['COD_VENDED'])] = floatval($row['TotalP']) - floatval($row['TotalD']);
                 }
             }
             sqlsrv_close($connSistemas);

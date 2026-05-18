@@ -21,6 +21,8 @@ if ($metodo === 'POST') {
 } elseif ($metodo === 'GET') {
     if (isset($_GET['accion']) && $_GET['accion'] === 'verificar_disponibilidad') {
         verificarDisponibilidad();
+    } elseif (isset($_GET['accion']) && $_GET['accion'] === 'obtener_saldos') {
+        obtenerSaldosPorIds();
     } else {
         cargarDatos();
     }
@@ -106,18 +108,25 @@ function guardarDatos($usuario)
         foreach (array_keys($vendedoresConDevolucion) as $legajo) {
             $sqlSaldo = "
                 SELECT 
-                    SUM(CASE WHEN TIPO_HORA = 'permiso' THEN 1 ELSE 0 END) as TotalP,
-                    SUM(CASE WHEN TIPO_HORA = 'devuelve' THEN 1 ELSE 0 END) as TotalD
+                    SUM(CASE 
+                        WHEN TIPO_HORA = 'permiso' THEN 1.0 
+                        WHEN TIPO_HORA = 'permiso_media' THEN 0.5
+                        ELSE 0 END) as TotalP,
+                    SUM(CASE 
+                        WHEN TIPO_HORA = 'devuelve' THEN 1.0 
+                        WHEN TIPO_HORA = 'devuelve_media' THEN 0.5
+                        ELSE 0 END) as TotalD
                 FROM FP_GESTION_HORARIOS
                 WHERE COD_VENDED = ? 
                 AND (FECHA < ? OR FECHA > ?)
+                AND TIPO_HORA IN ('permiso', 'permiso_media', 'devuelve', 'devuelve_media')
             ";
             $stmtSaldo = sqlsrv_query($conn, $sqlSaldo, [$legajo, $fechaInicio, $fechaFin]);
             $historialP = 0;
             $historialD = 0;
             if ($stmtSaldo && $row = sqlsrv_fetch_array($stmtSaldo, SQLSRV_FETCH_ASSOC)) {
-                $historialP = intval($row['TotalP']);
-                $historialD = intval($row['TotalD']);
+                $historialP = floatval($row['TotalP']);
+                $historialD = floatval($row['TotalD']);
             }
             if ($stmtSaldo)
                 sqlsrv_free_stmt($stmtSaldo);
@@ -399,6 +408,62 @@ function verificarDisponibilidad()
     sqlsrv_close($conn);
 
     echo json_encode($bloqueos);
+}
+
+// =========================================================
+// FUNCIÓN: SALDOS DE BANCO DE HORAS PARA UNA LISTA DE IDS
+// Usado al agregar refuerzos manualmente para traer su historial
+// =========================================================
+function obtenerSaldosPorIds()
+{
+    $ids       = $_GET['ids']        ?? '';
+    $fechaInicio = $_GET['fechaInicio'] ?? '';
+
+    if (!$ids || !$fechaInicio) {
+        echo json_encode([]);
+        return;
+    }
+
+    $listaIds = implode("','", array_map('trim', explode(',', $ids)));
+
+    $conn = getConexionSistemas();
+    if (!$conn) {
+        echo json_encode([]);
+        return;
+    }
+
+    $sqlSaldo = "
+        SELECT
+            COD_VENDED,
+            SUM(CASE
+                WHEN TIPO_HORA = 'permiso'       THEN 1.0
+                WHEN TIPO_HORA = 'permiso_media' THEN 0.5
+                ELSE 0 END) as TotalP,
+            SUM(CASE
+                WHEN TIPO_HORA = 'devuelve'       THEN 1.0
+                WHEN TIPO_HORA = 'devuelve_media' THEN 0.5
+                ELSE 0 END) as TotalD
+        FROM FP_GESTION_HORARIOS
+        WHERE FECHA < ?
+        AND TIPO_HORA IN ('permiso', 'permiso_media', 'devuelve', 'devuelve_media')
+        AND COD_VENDED IN ('$listaIds')
+        GROUP BY COD_VENDED
+    ";
+
+    $stmt = sqlsrv_query($conn, $sqlSaldo, [$fechaInicio]);
+    $saldos = [];
+
+    if ($stmt) {
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $p = floatval($row['TotalP']);
+            $d = floatval($row['TotalD']);
+            $saldos[trim($row['COD_VENDED'])] = $p - $d;
+        }
+        sqlsrv_free_stmt($stmt);
+    }
+    sqlsrv_close($conn);
+
+    echo json_encode($saldos);
 }
 
 function cargarDatos()
@@ -717,8 +782,8 @@ function cargarDatos()
 
         if ($stmtSaldo) {
             while ($row = sqlsrv_fetch_array($stmtSaldo, SQLSRV_FETCH_ASSOC)) {
-                $p = intval($row['TotalP']);
-                $d = intval($row['TotalD']);
+                $p = floatval($row['TotalP']);
+                $d = floatval($row['TotalD']);
                 $saldosAnteriores[trim($row['COD_VENDED'])] = $p - $d;
             }
             sqlsrv_free_stmt($stmtSaldo);

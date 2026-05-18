@@ -1306,7 +1306,7 @@ $(document).ready(function () {
 
             // 2. VALIDACIÓN EN VIVO: Consultar si estos refuerzos ya trabajan en otro lado
             const sucursalId = $('#sucursalSelector').val();
-            const semana = $('#semanaSelector').val();
+            const semana = $('#semanaSelector').attr('data-week-val') || $('#semanaSelector').val();
             const [year, weekNum] = semana.split('-W');
             const primerDia = getPrimerDiaDeSemana(year, weekNum);
             let ultimoDia = new Date(primerDia);
@@ -1316,7 +1316,18 @@ $(document).ready(function () {
             const fechaFin = ultimoDia.toISOString().split('T')[0];
             const idsString = listaIdsParaChequear.join(',');
 
-            // Llamada AJAX a la nueva función de PHP
+            // 3. SALDO HISTÓRICO: Traer permisos/devoluciones anteriores a esta semana
+            $.getJSON(`${apiHorariosURL}?accion=obtener_saldos&ids=${idsString}&fechaInicio=${fechaInicio}`, function (saldos) {
+                if (saldos) {
+                    for (const [vendedorId, saldo] of Object.entries(saldos)) {
+                        const fila = $(`#tablaHorariosContainer tr[data-vendedor-id="${vendedorId}"]`);
+                        fila.attr('data-saldo-inicial', saldo);
+                    }
+                    actualizarSumatorias();
+                }
+            });
+
+            // 4. BLOQUEOS EXTERNOS: Consultar si trabajan en otro local esta semana
             $.getJSON(`${apiHorariosURL}?accion=verificar_disponibilidad&ids=${idsString}&sucursal=${sucursalId}&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`, function (bloqueos) {
 
                 // Recorremos los bloqueos recibidos y pintamos la grilla
