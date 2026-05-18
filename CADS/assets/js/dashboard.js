@@ -502,9 +502,13 @@ function renderTablaFranquiciados(data) {
         const unid = r.UnidadesPendientes ?? 0;
         const pct  = Math.round((val / maxVal) * 100);
         const barColor = pct >= 80 ? 'var(--color-critico)' : pct >= 40 ? 'var(--color-atencion)' : 'var(--color-ok)';
-        return `<tr>
+        const code = (r.CodigoCliente ?? '').replace(/[^a-zA-Z0-9_-]/g, '_');
+        return `<tr class="franq-rank-row" style="cursor:pointer" onclick="toggleFranqRankingDetail('${code}',this)">
             <td class="text-center"><strong>#${i + 1}</strong></td>
-            <td>${r.Label ?? r.CodigoCliente ?? '—'}</td>
+            <td>
+                <i class="bi bi-chevron-right" id="franq-rank-chev-${code}" style="font-size:.75rem;margin-right:.3rem;transition:transform .2s"></i>
+                ${r.Label ?? r.CodigoCliente ?? '—'}
+            </td>
             <td>
                 <div class="franq-bar-wrap">
                     <div class="franq-bar" style="width:${pct}%;background:${barColor}"></div>
@@ -512,8 +516,63 @@ function renderTablaFranquiciados(data) {
                 </div>
             </td>
             <td class="text-end text-muted" style="font-size:.8rem">${fmt(unid)}</td>
+        </tr>
+        <tr id="franq-rank-detail-${code}" hidden>
+            <td colspan="4" style="padding:0;background:var(--bg-card)">
+                <div id="franq-rank-inner-${code}" style="padding:.75rem 1.5rem 1rem"></div>
+            </td>
         </tr>`;
     }).join('');
+}
+
+async function toggleFranqRankingDetail(code, row) {
+    const detailRow = document.getElementById(`franq-rank-detail-${code}`);
+    const chev      = document.getElementById(`franq-rank-chev-${code}`);
+    if (!detailRow) return;
+    if (!detailRow.hidden) {
+        detailRow.hidden = true;
+        if (chev) { chev.className = 'bi bi-chevron-right'; chev.style.transform = ''; }
+        return;
+    }
+    detailRow.hidden = false;
+    if (chev) { chev.className = 'bi bi-chevron-down'; chev.style.transform = 'rotate(0deg)'; }
+    const inner = document.getElementById(`franq-rank-inner-${code}`);
+    if (!inner || inner.dataset.loaded === '1') return;
+    inner.innerHTML = '<div class="no-data">Cargando…</div>';
+
+    // Heredar filtros globales de fecha y trasladar el código de franquiciado
+    const globalParams = getFilters();
+    const p = new URLSearchParams();
+    p.set('franquiciado', code);
+    if (globalParams.get('fecha_desde')) p.set('fecha_desde', globalParams.get('fecha_desde'));
+    if (globalParams.get('fecha_hasta')) p.set('fecha_hasta', globalParams.get('fecha_hasta'));
+    // Solo estados pendientes activos
+    ['CAD Autorizado', 'CAD Enviado', 'CAD Recibido', 'CAD Controlado'].forEach(e => p.append('estado[]', e));
+
+    const detalle = await apiFetch('franquiciados_pendientes.php', p).catch(() => null);
+    inner.dataset.loaded = '1';
+
+    if (!detalle?.length) {
+        inner.innerHTML = '<div class="no-data">Sin devoluciones pendientes.</div>';
+        return;
+    }
+
+    inner.innerHTML = `<table class="table-custom table-sm" style="margin:0">
+        <thead><tr>
+            <th>ID Dev.</th>
+            <th>Fecha Alta</th>
+            <th class="text-end">Uds. Pend.</th>
+            <th class="text-end">Valor</th>
+            <th>Estado</th>
+        </tr></thead>
+        <tbody>${detalle.map(r => `<tr>
+            <td>${r.IdDevolucion ?? '—'}</td>
+            <td>${fmtDate(r.FechaAlta)}</td>
+            <td class="text-end">${fmt(r.UnidadesPendientes ?? 0)}</td>
+            <td class="text-end">${fmtMoney(r.ValorPendiente ?? 0)}</td>
+            <td><span class="badge-estado ${(r.EstadoActual ?? '').toLowerCase().replace(/\s+/g, '-')}">${r.EstadoActual ?? '—'}</span></td>
+        </tr>`).join('')}</tbody>
+    </table>`;
 }
 
 async function loadTablaFranquiciados(params) {
