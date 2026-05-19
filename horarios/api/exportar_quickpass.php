@@ -71,8 +71,10 @@ if (!empty($codigosVendedor)) {
                 while ($row = sqlsrv_fetch_array($stmtGva, SQLSRV_FETCH_ASSOC)) {
                     $nombre = trim($row['NOMBRE_VEN']);
                     $cod = trim($row['COD_VENDED']);
-                    // Buscar patrón " - 1234" al final del nombre
-                    if (preg_match('/-\s*(\d+)$/', $nombre, $matches)) {
+                    // Buscar patrón de legajo al final del nombre (soportando formatos "99-03" -> 99 y " - 1234" -> 1234)
+                    if (preg_match('/\s+(\d+)-\d+$/', $nombre, $matches)) {
+                        $mapaLegajos[$cod] = $matches[1];
+                    } elseif (preg_match('/-\s*(\d+)$/', $nombre, $matches)) {
                         $mapaLegajos[$cod] = $matches[1];
                     }
                 }
