@@ -3,6 +3,7 @@ $(document).ready(function () {
     const apiVistaURL = 'api/vista_local_handler.php';
     let lastDataLoaded = null;
     let lastPrimerDia = null;
+    let lastNDias = 7;
     let sucursalesMap = {};
 
     // 1. INICIALIZAR SELECT2
@@ -18,6 +19,14 @@ $(document).ready(function () {
         $.each(data, function(key, sucursal) {
             sucursalesMap[sucursal.NRO_SUCURSAL] = sucursal.DESC_SUCURSAL;
             $('#sucursalSelector').append(`<option value="${sucursal.NRO_SUCURSAL}">${sucursal.DESC_SUCURSAL}</option>`);
+        });
+
+        // Inicializar Select2 para Sucursales (multi-select)
+        $('#sucursalSelector').select2({
+            theme: 'bootstrap-5',
+            placeholder: "Seleccione una o más sucursales...",
+            allowClear: true,
+            width: '100%'
         });
     });
 
@@ -40,12 +49,32 @@ $(document).ready(function () {
 
     // Limpiar selecciones cruzadas
     $('#vendedorSelector').on('select2:select', function (e) {
-        $('#sucursalSelector').val('');
+        $('#sucursalSelector').val(null).trigger('change');
     });
 
     $('#sucursalSelector').on('change', function () {
-        if ($(this).val()) {
+        const val = $(this).val();
+        if (val && val.length > 0) {
             $('#vendedorSelector').val(null).trigger('change');
+        }
+    });
+
+    // --- TOGGLE SEMANA / DÍA ---
+    let modoVistaEsDia = false;
+    $('#btnTogglePeriodo').on('click', function () {
+        modoVistaEsDia = !modoVistaEsDia;
+        if (modoVistaEsDia) {
+            $('#semanaContainer').addClass('d-none');
+            $('#diaContainer').removeClass('d-none');
+            $('#iconoPeriodoIcon').removeClass('bi-calendar-week').addClass('bi-calendar-day');
+            $('#labelPeriodo').text('DÍA');
+            $(this).attr('title', 'Volver a vista Semana').addClass('btn-warning').removeClass('btn-outline-secondary');
+        } else {
+            $('#diaContainer').addClass('d-none');
+            $('#semanaContainer').removeClass('d-none');
+            $('#iconoPeriodoIcon').removeClass('bi-calendar-day').addClass('bi-calendar-week');
+            $('#labelPeriodo').text('SEMANA');
+            $(this).attr('title', 'Cambiar entre vista Semana y Día').removeClass('btn-warning').addClass('btn-outline-secondary');
         }
     });
 
@@ -60,26 +89,41 @@ $(document).ready(function () {
 
     // 4. VER AGENDA
     $('#btnVerAgenda').on('click', function () {
-        const sucursal = $('#sucursalSelector').val();
+        const sucursalesSeleccionadas = $('#sucursalSelector').val() || [];
         const vendedorId = $('#vendedorSelector').val();
-        const semana = $('#semanaSelector').attr('data-week-val') || $('#semanaSelector').val();
 
-        if (!semana) {
-            mostrarModalConTitulo("Advertencia", "Por favor, seleccione una semana.", "warning");
-            return;
+        // Detectar modo: semana o día
+        let primerDia, fechaInicio, fechaFin, nDias;
+        if (modoVistaEsDia) {
+            const diaVal = $('#diaSelector').val();
+            if (!diaVal) {
+                mostrarModalConTitulo("Advertencia", "Por favor, seleccione un día.", "warning");
+                return;
+            }
+            const [dy, dm, dd] = diaVal.split('-').map(Number);
+            primerDia = new Date(dy, dm - 1, dd);
+            fechaInicio = diaVal;
+            fechaFin = diaVal;
+            nDias = 1;
+        } else {
+            const semana = $('#semanaSelector').attr('data-week-val') || $('#semanaSelector').val();
+            if (!semana) {
+                mostrarModalConTitulo("Advertencia", "Por favor, seleccione una semana.", "warning");
+                return;
+            }
+            const [year, weekNum] = semana.split('-W');
+            primerDia = getPrimerDiaDeSemana(year, weekNum);
+            let ultimoDia = new Date(primerDia);
+            ultimoDia.setDate(primerDia.getDate() + 6);
+            fechaInicio = primerDia.toISOString().split('T')[0];
+            fechaFin = ultimoDia.toISOString().split('T')[0];
+            nDias = 7;
         }
 
-        if (!sucursal && !vendedorId) {
-            mostrarModalConTitulo("Advertencia", "Seleccione una Sucursal O busque un Vendedor.", "warning");
+        if (sucursalesSeleccionadas.length === 0 && !vendedorId) {
+            mostrarModalConTitulo("Advertencia", "Seleccione una o más Sucursales O busque un Vendedor.", "warning");
             return;
         }
-
-        const [year, weekNum] = semana.split('-W');
-        const primerDia = getPrimerDiaDeSemana(year, weekNum);
-        let ultimoDia = new Date(primerDia);
-        ultimoDia.setDate(primerDia.getDate() + 6);
-        const fechaInicio = primerDia.toISOString().split('T')[0];
-        const fechaFin = ultimoDia.toISOString().split('T')[0];
 
         $('#tablaVistaLocal').html(`
             <div class="text-center py-5">
@@ -88,20 +132,47 @@ $(document).ready(function () {
             </div>
         `);
 
-        let url = `${apiVistaURL}?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+        let fetchPromise;
         if (vendedorId) {
-            url += `&vendedor=${vendedorId}`;
+            const url = `${apiVistaURL}?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&vendedor=${vendedorId}`;
+            fetchPromise = $.getJSON(url).then(data => [{
+                sucursalId: '',
+                sucursalNombre: 'Búsqueda por Vendedor',
+                data: data
+            }]);
         } else {
-            url += `&sucursal=${sucursal}`;
+            const promises = sucursalesSeleccionadas.map(sucId => {
+                const url = `${apiVistaURL}?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&sucursal=${sucId}`;
+                return $.getJSON(url).then(data => ({
+                    sucursalId: sucId,
+                    sucursalNombre: sucursalesMap[sucId] || `Sucursal ${sucId}`,
+                    data: data
+                }));
+            });
+            fetchPromise = Promise.all(promises);
         }
 
-        $.getJSON(url, function (data) {
-            lastDataLoaded = data;
+        fetchPromise.then(function (resultados) {
+            const tieneDatos = resultados.some(res => {
+                const agenda = res.data?.agenda;
+                return agenda && Object.keys(agenda).length > 0;
+            });
+
+            if (!tieneDatos) {
+                $('#tablaVistaLocal').html('<div class="alert alert-info text-center m-4">No hay horarios cargados para esta selección.</div>');
+                $('#btnExportarPDF').prop('disabled', true);
+                lastDataLoaded = null;
+                return;
+            }
+
+            lastDataLoaded = resultados;
             lastPrimerDia = primerDia;
-            renderTablaVistaLocal(data, primerDia);
-        }).fail(function (jqXHR, textStatus, errorThrown) {
-            console.error('Error al cargar datos:', textStatus, errorThrown);
+            lastNDias = nDias;
+            renderTodasLasTablas(resultados, primerDia, nDias);
+        }).catch(function (error) {
+            console.error('Error al cargar datos:', error);
             mostrarModalConTitulo("Error", "No se pudieron cargar los datos. Intente nuevamente.", "error");
+            $('#tablaVistaLocal').html('<div class="alert alert-danger text-center m-4">Error al cargar horarios.</div>');
         });
     });
 
@@ -124,47 +195,99 @@ $(document).ready(function () {
     }
 
     // --- FUNCIÓN DE RENDERIZADO MEJORADA (RÉPLICA DE GESTIÓN) ---
-    function renderTablaVistaLocal(data, primerDia) {
+    function renderTodasLasTablas(resultados, primerDia, nDias = 7) {
         const container = $('#tablaVistaLocal');
         container.empty();
+        container.removeClass('table-responsive border').css({
+            'overflow-x': 'visible',
+            'border': 'none',
+            'background': 'transparent'
+        });
 
+        $('#btnExportarPDF').prop('disabled', false);
+
+        window.solicitudesCache = Object.assign({}, ...resultados.map(r => r.data.solicitudes || {}));
+
+        const esFiltroUnSoloVendedor = $('#vendedorSelector').val() !== null && $('#vendedorSelector').val() !== '';
+
+        resultados.forEach((res, index) => {
+            const sucursalNombre = res.sucursalNombre;
+            const data = res.data;
+            const agenda = data.agenda;
+
+            if (!agenda || Object.keys(agenda).length === 0) {
+                return;
+            }
+
+            const headerHtml = `
+                <div class="d-flex justify-content-between align-items-center mb-3 ${index > 0 ? 'mt-5' : 'mt-2'} px-3 py-2 bg-light rounded border-start border-dark border-4 shadow-sm">
+                    <h5 class="mb-0 text-dark fw-bold text-uppercase"><i class="bi bi-grid-3x3-gap-fill me-2"></i> Grilla Horario - ${sucursalNombre}</h5>
+                </div>
+            `;
+
+            const tablaHtml = obtenerHtmlTabla(data, primerDia, sucursalNombre, esFiltroUnSoloVendedor, nDias);
+
+            const tableContainer = $('<div class="table-container bg-white rounded shadow-sm"></div>');
+            tableContainer.html(tablaHtml);
+
+            container.append(headerHtml);
+            container.append(tableContainer);
+        });
+
+        setTimeout(() => {
+            $('.table-container').each(function() {
+                const tableEl = $(this);
+                const firstRow = tableEl.find('thead tr').eq(0);
+                if (firstRow.length) {
+                    const h1 = firstRow.outerHeight();
+                    const secondRow = tableEl.find('thead tr').eq(1);
+                    secondRow.find('th').css('top', h1 + 'px');
+                    secondRow.find('.sticky-left-0, .sticky-left-1').css('top', h1 + 'px');
+                }
+            });
+        }, 100);
+    }
+
+    function obtenerHtmlTabla(data, primerDia, sucursalNombre, esFiltroUnSoloVendedor, nDias = 7) {
         const agenda = data.agenda;
         const nombres = data.nombres;
         const nombresSucursales = data.nombresSucursales || {};
         const promociones = data.promociones || {};
         const saldosAnteriores = data.saldosAnteriores || {};
 
-        const esFiltroUnSoloVendedor = $('#vendedorSelector').val() !== null && $('#vendedorSelector').val() !== '';
-
-        if (!agenda || Object.keys(agenda).length === 0) {
-            container.html('<div class="alert alert-info text-center m-4">No hay horarios cargados para esta selección.</div>');
-            $('#btnExportarPDF').prop('disabled', true);
-            return;
-        }
-
-        $('#btnExportarPDF').prop('disabled', false);
-
         let fechasSemana = [];
         const diasSemanaNombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        const obtenerPrioridadCargo = (id) => {
+            const info = nombres[id] || nombres[parseInt(id)] || {};
+            const tarea = info.tarea ? info.tarea.trim().toUpperCase() : '';
+            if (tarea === 'ENCARGADA') return 1;
+            if (tarea === 'SUB ENCARGADA') return 2;
+            if (tarea === 'VENDEDORA') return 3;
+            if (tarea === 'VENDEDOR') return 4;
+            return 5;
+        };
+
         const vendedoresOrdenados = Object.keys(agenda).sort((a, b) => {
+            const priorA = obtenerPrioridadCargo(a);
+            const priorB = obtenerPrioridadCargo(b);
+            if (priorA !== priorB) {
+                return priorA - priorB;
+            }
             const nomA = (nombres[a]?.nombre || a).toLowerCase();
             const nomB = (nombres[b]?.nombre || b).toLowerCase();
             return nomA.localeCompare(nomB);
         });
 
-        // Inicializar sumatorias para el footer (7 días, 25 rangos para soportar index 24)
-        let sumasHoras = Array.from({ length: 7 }, () => Array(25).fill(0));
+        let sumasHoras = Array.from({ length: nDias }, () => Array(25).fill(0));
 
-        // --- 1. CONSTRUCCIÓN DEL HEADER ---
         let html = '<table class="table table-bordered table-sm mb-0 table-horarios">';
         html += '<thead>';
 
-        // FILA 1: Días
         html += '<tr class="align-middle sticky-top-0">';
         html += '<th class="sticky-left-0 bg-white col-vendedor">Vendedor</th>';
         html += '<th class="sticky-left-1 bg-white col-totales">Total Hs</th>';
 
-        for (let i = 0; i < 7; i++) {
+        for (let i = 0; i < nDias; i++) {
             let fechaActual = new Date(primerDia);
             fechaActual.setDate(primerDia.getDate() + i);
             const fechaISO = fechaActual.toISOString().split('T')[0];
@@ -172,6 +295,8 @@ $(document).ready(function () {
 
             const diaNum = String(fechaActual.getDate()).padStart(2, '0');
             const mesNum = String(fechaActual.getMonth() + 1).padStart(2, '0');
+
+            const dayIndex = (fechaActual.getDay() + 6) % 7;
 
             let sucursalTexto = '';
             if (esFiltroUnSoloVendedor && vendedoresOrdenados.length > 0) {
@@ -198,19 +323,17 @@ $(document).ready(function () {
                 }
             }
 
-            // Colspan a 21 (18 horas + F + T + Note)
             html += `<th colspan="21" class="dia-header text-center fw-bold bg-light" style="min-width: 500px;">
-                        <div>${diasSemanaNombres[i]} ${diaNum}/${mesNum}</div>
+                        <div>${diasSemanaNombres[dayIndex]} ${diaNum}/${mesNum}</div>
                         ${sucursalTexto}
                     </th>`;
         }
         html += '</tr>';
 
-        // FILA 2: Horas
         html += '<tr class="align-middle sticky-top-1">';
         html += '<th class="sticky-left-0 bg-white col-vendedor"></th>';
         html += '<th class="sticky-left-1 bg-white col-totales"></th>';
-        for (let d = 0; d < 7; d++) {
+        for (let d = 0; d < nDias; d++) {
             for (let h = 7; h <= 24; h++) {
                 const label = (h === 24) ? '00' : h;
                 html += `<th class="sticky-top-1 text-center" style="width: 30px; min-width: 30px;">${label}</th>`;
@@ -221,7 +344,6 @@ $(document).ready(function () {
         }
         html += '</tr></thead>';
 
-        // --- 2. BODY ---
         html += '<tbody>';
         vendedoresOrdenados.forEach(id => {
             const datos = agenda[id] || {};
@@ -232,7 +354,6 @@ $(document).ready(function () {
 
             let tH = 0, tE = 0, tD = 0, tP = 0, tC = 0;
 
-            // Pre-calcular sumatorias para el vendedor
             fechasSemana.forEach((fecha, diaIndex) => {
                 const esFranco = datos.francos && datos.francos[fecha];
                 if (!esFranco && datos.horarios && datos.horarios[fecha]) {
@@ -259,10 +380,9 @@ $(document).ready(function () {
                     }
                 }
 
-                // NUEVO: Sumar bloqueos externos al total de horas (tH)
-                if (lastDataLoaded.bloqueosExternos && lastDataLoaded.bloqueosExternos[id] && lastDataLoaded.bloqueosExternos[id][fecha]) {
-                    Object.values(lastDataLoaded.bloqueosExternos[id][fecha]).forEach(sucId => {
-                        if (sucId > 0) tH += 1; // Cada bloqueo externo cuenta como 1 hora
+                if (data.bloqueosExternos && data.bloqueosExternos[id] && data.bloqueosExternos[id][fecha]) {
+                    Object.values(data.bloqueosExternos[id][fecha]).forEach(sucId => {
+                        if (sucId > 0) tH += 1;
                     });
                 }
             });
@@ -270,7 +390,6 @@ $(document).ready(function () {
             const saldoFinal = saldoBase + (tP - tD);
             html += '<tr>';
 
-            // Celda Vendedor
             const feedbackTexto = datos.feedback || '';
             const tieneFeedback = feedbackTexto.trim() !== '';
             html += `<td class="sticky-left-0 bg-white text-start p-2 col-vendedor">
@@ -285,7 +404,6 @@ $(document).ready(function () {
                         </div>
                      </td>`;
 
-            // Celda Totales
             let colorSaldo = 'bg-light text-secondary';
             if (saldoFinal > 0) colorSaldo = 'bg-danger text-white';
             else if (saldoFinal < 0) colorSaldo = 'bg-success text-white';
@@ -303,7 +421,6 @@ $(document).ready(function () {
                         </div>
                      </td>`;
 
-            // Celdas de días
             fechasSemana.forEach((fecha, diaIndex) => {
                 const esFranco = datos.francos && datos.francos[fecha];
                 const nota = datos.notas && datos.notas[fecha];
@@ -393,11 +510,11 @@ $(document).ready(function () {
             html += '</tr>';
         });
 
-        // FILA 1: TOTAL HS - MOVIDA AL CUERPO PARA MANTENER ORDEN Y EVITAR DUPLICADOS EN PDF
+        // FILA 1: TOTAL HS
         html += '<tr class="total-por-hora-row">';
         html += '<td class="sticky-left-0 bg-light fw-bold text-start p-2 col-vendedor">Total Hs</td>';
         html += '<td class="sticky-left-1 bg-light col-totales"></td>';
-        for (let d = 0; d < 7; d++) {
+        for (let d = 0; d < nDias; d++) {
             for (let h = 7; h <= 24; h++) {
                 const suma = sumasHoras[d][h] || 0;
                 const fmtSuma = (suma % 1 === 0 ? suma : suma.toFixed(1));
@@ -408,7 +525,7 @@ $(document).ready(function () {
         }
         html += '</tr>';
 
-        // FILA 3: PROMOCIONES (BANCARIAS) - MOVIDA AL CUERPO PARA EVITAR DUPLICADOS EN PDF
+        // FILA 3: PROMOCIONES (BANCARIAS)
         html += '<tr>';
         html += '<td class="sticky-left-0 bg-light text-end fw-bold p-2 align-middle col-vendedor" style="font-size: 0.8rem;">PROMOCIONES</td>';
         html += '<td class="sticky-left-1 bg-light col-totales"></td>';
@@ -424,7 +541,7 @@ $(document).ready(function () {
         });
         html += '</tr>';
 
-        // FILA 4: PROMOCIONES INTERNAS - MOVIDA AL CUERPO PARA EVITAR DUPLICADOS EN PDF
+        // FILA 4: PROMOCIONES INTERNAS
         html += '<tr>';
         html += '<td class="sticky-left-0 bg-light text-end fw-bold p-2 align-middle col-vendedor" style="font-size: 0.8rem;">PROMOCIONES INTERNAS</td>';
         html += '<td class="sticky-left-1 bg-light col-totales"></td>';
@@ -441,10 +558,8 @@ $(document).ready(function () {
         html += '</tr>';
 
         html += '</tbody>';
-
-        // --- 3. FOOTER VACIO (Para mantener estructura) ---
         html += '<tfoot></tfoot></table>';
-        container.html(html);
+        return html;
 
         // Almacenar solicitudes para acceso rápido
         window.solicitudesCache = data.solicitudes || {};
@@ -479,21 +594,37 @@ $(document).ready(function () {
 
         // Intentar resolver la sucursal si es 0 (cuando buscan por vendedor)
         let sucursalId = $('#sucursalSelector').val();
+        if (Array.isArray(sucursalId)) {
+            if (sucursalId.length === 1) {
+                sucursalId = sucursalId[0];
+            } else {
+                sucursalId = null;
+            }
+        }
         if (!sucursalId || sucursalId == 0) {
-            // Si no hay sucursal seleccionada, intentamos sacarla de los datos cargados del vendedor
+            // Si no hay sucursal seleccionada o hay múltiples, intentamos sacarla de los datos cargados del vendedor
             const vId = $('#feedVendedor').val();
-            if (lastDataLoaded && lastDataLoaded.agenda && lastDataLoaded.agenda[vId]) {
-                const det = lastDataLoaded.agenda[vId].sucursal_detalle;
-                if (det) {
-                    // Buscamos la primera sucursal válida que aparezca en su agenda de la semana
-                    for (let f in det) {
-                        for (let h in det[f]) {
-                            if (det[f][h] > 0) {
-                                sucursalId = det[f][h];
-                                break;
+            if (lastDataLoaded && Array.isArray(lastDataLoaded)) {
+                for (const res of lastDataLoaded) {
+                    if (res.data && res.data.agenda && res.data.agenda[vId]) {
+                        const det = res.data.agenda[vId].sucursal_detalle;
+                        if (det) {
+                            // Buscamos la primera sucursal válida que aparezca en su agenda de la semana
+                            for (let f in det) {
+                                for (let h in det[f]) {
+                                    if (det[f][h] > 0) {
+                                        sucursalId = det[f][h];
+                                        break;
+                                    }
+                                }
+                                if (sucursalId > 0) break;
                             }
                         }
                         if (sucursalId > 0) break;
+                        if (res.sucursalId > 0) {
+                            sucursalId = res.sucursalId;
+                            break;
+                        }
                     }
                 }
             }
@@ -570,128 +701,160 @@ $(document).ready(function () {
         btn.prop('disabled', true);
 
         try {
-            const sucursalNombre = $('#sucursalSelector option:selected').text() || 'Sucursal';
             const primerDia = lastPrimerDia;
-            const ultimoDia = new Date(primerDia);
-            ultimoDia.setDate(primerDia.getDate() + 6);
-            const rangoFechas = `${primerDia.toISOString().split('T')[0]} al ${ultimoDia.toISOString().split('T')[0]}`;
+            let rangoFechas;
+            if (lastNDias === 1) {
+                const dd = String(primerDia.getDate()).padStart(2, '0');
+                const mm = String(primerDia.getMonth() + 1).padStart(2, '0');
+                const aaaa = primerDia.getFullYear();
+                rangoFechas = `Día ${dd}/${mm}/${aaaa}`;
+            } else {
+                const ultimoDia = new Date(primerDia);
+                ultimoDia.setDate(primerDia.getDate() + 6);
+                rangoFechas = `Semana ${primerDia.toISOString().split('T')[0]} al ${ultimoDia.toISOString().split('T')[0]}`;
+            }
 
             const diasNombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-            const agenda = lastDataLoaded.agenda;
-            const nombres = lastDataLoaded.nombres;
-            const promos = lastDataLoaded.promociones || {};
-            const promosInt = lastDataLoaded.promociones_internas || {};
-
-            const vIds = Object.keys(agenda).sort((a, b) => {
-                const nA = (nombres[a]?.nombre || a).toLowerCase();
-                const nB = (nombres[b]?.nombre || b).toLowerCase();
-                return nA.localeCompare(nB);
-            });
 
             // Generar TODO el HTML de la semana como un solo bloque ultra compacto
             let fullHtml = `
                 <div style="font-family: Arial, Helvetica, sans-serif; background: white; padding: 8px;">
-                    <div style="font-size: 13px; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
-                        ${sucursalNombre} &mdash; Semana ${rangoFechas}
-                    </div>
             `;
 
-            for (let d = 0; d < 7; d++) {
-                let fAct = new Date(primerDia);
-                fAct.setDate(primerDia.getDate() + d);
-                const fISO = fAct.toISOString().split('T')[0];
-                const dd = String(fAct.getDate()).padStart(2, '0');
-                const mm = String(fAct.getMonth() + 1).padStart(2, '0');
+            lastDataLoaded.forEach((resultado, index) => {
+                const sucursalNombre = resultado.sucursalNombre || 'Sucursal';
+                const agenda = resultado.data.agenda || {};
+                const nombres = resultado.data.nombres || {};
+                const promos = resultado.data.promociones || {};
+                const promosInt = resultado.data.promociones_internas || {};
+                const bloqueosExternos = resultado.data.bloqueosExternos || {};
 
-                fullHtml += `
-                    <div style="margin-bottom: 4px;">
-                        <div style="background: #2c3e50; color: white; padding: 2px 6px; font-weight: bold; font-size: 10px;">
-                            ${diasNombres[d]} ${dd}/${mm}
-                        </div>
-                        <table style="width: 100%; border-collapse: collapse; font-size: 9px; line-height: 1.15;">
-                            <thead>
-                                <tr style="background: #eaedf0;">
-                                    <th style="border: 1px solid #aaa; padding: 1px 2px; text-align: left; width: 90px; max-width: 90px;">Vendedor</th>
-                                    <th style="border: 1px solid #aaa; padding: 1px 2px; text-align: center; width: 22px;">Leg</th>
-                                    ${Array.from({length: 18}, (_, i) => {
-                                        const h = i + 7;
-                                        const lb = (h === 24) ? '00' : h;
-                                        return `<th style="border: 1px solid #aaa; padding: 0px; text-align: center; width: 10px; font-size: 8px;">${lb}</th>`;
-                                    }).join('')}
-                                    <th style="border: 1px solid #aaa; padding: 1px; text-align: center; width: 12px;">F</th>
-                                    <th style="border: 1px solid #aaa; padding: 1px; text-align: center; width: 22px;">T</th>
-                                    <th style="border: 1px solid #aaa; padding: 1px; text-align: center; width: 14px;">Hs</th>
-                                    <th style="border: 1px solid #aaa; padding: 1px 2px; text-align: left; width: 70px; max-width: 70px;">Promos banco</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
+                const obtenerPrioridadCargo = (id) => {
+                    const info = nombres[id] || nombres[parseInt(id)] || {};
+                    const tarea = info.tarea ? info.tarea.trim().toUpperCase() : '';
+                    if (tarea === 'ENCARGADA') return 1;
+                    if (tarea === 'SUB ENCARGADA') return 2;
+                    if (tarea === 'VENDEDORA') return 3;
+                    if (tarea === 'VENDEDOR') return 4;
+                    return 5;
+                };
 
-                vIds.forEach(vid => {
-                    const inf = nombres[vid] || nombres[parseInt(vid)] || { nombre: vid, legajo: vid };
-                    const dat = agenda[vid] || {};
-                    const franco = dat.francos && dat.francos[fISO];
-                    let tH = 0, turno = '-', hDia = [];
-                    if (!franco && dat.horarios && dat.horarios[fISO]) {
-                        Object.entries(dat.horarios[fISO]).forEach(([h, t]) => {
-                            let v = t && t.endsWith('_media') ? 0.5 : 1;
-                            if (t !== 'vacaciones') { tH += v; hDia.push(parseInt(h)); }
-                        });
+                const vIds = Object.keys(agenda).sort((a, b) => {
+                    const priorA = obtenerPrioridadCargo(a);
+                    const priorB = obtenerPrioridadCargo(b);
+                    if (priorA !== priorB) {
+                        return priorA - priorB;
                     }
-
-                    // NUEVO: Sumar bloqueos externos al total Hs del PDF
-                    if (lastDataLoaded.bloqueosExternos && lastDataLoaded.bloqueosExternos[vid] && lastDataLoaded.bloqueosExternos[vid][fISO]) {
-                        Object.entries(lastDataLoaded.bloqueosExternos[vid][fISO]).forEach(([h, sId]) => {
-                            if (sId > 0) {
-                                tH += 1;
-                                hDia.push(parseInt(h));
-                            }
-                        });
-                    }
-                    turno = calcularTurnoTexto(hDia);
-
-                    fullHtml += `<tr>
-                        <td style="border: 1px solid #bbb; padding: 1px 2px; font-weight: bold; width: 90px; max-width: 90px; word-break: break-word;">${inf.nombre}</td>
-                        <td style="border: 1px solid #bbb; padding: 1px; text-align: center; color: #555;">${inf.legajo || vid}</td>`;
-
-                    for (let h = 7; h <= 24; h++) {
-                        const hb = (h === 24) ? 0 : h;
-                        let tx = '', bg = '';
-                        
-                        // 1. Prioridad: Horarios locales
-                        const tipo = (!franco && dat.horarios && dat.horarios[fISO]) ? (dat.horarios[fISO][hb] || '') : null;
-                        
-                        // 2. Bloqueos Externos (Otras sucursales)
-                        const bloqueoExt = (lastDataLoaded.bloqueosExternos && lastDataLoaded.bloqueosExternos[vid] && lastDataLoaded.bloqueosExternos[vid][fISO]) ? lastDataLoaded.bloqueosExternos[vid][fISO][hb] : null;
-
-                        if (tipo) {
-                            tx = tipo.endsWith('_media') ? '½' : 'X';
-                            bg = '#198754';
-                            if (tipo === 'caja') { tx = 'C'; bg = '#0dcaf0'; }
-                            else if (tipo === 'extra') { tx = 'E'; bg = '#0d6efd'; }
-                            else if (tipo === 'devuelve') { tx = 'D'; bg = '#ffc107'; }
-                            else if (tipo === 'permiso') { tx = 'P'; bg = '#d63384'; }
-                            else if (tipo === 'vacaciones') { tx = 'V'; bg = '#f3e5f5'; }
-                            else if (tipo === 'ausencia') { tx = 'AU'; bg = '#6c757d'; }
-                        } else if (bloqueoExt) {
-                            tx = 'Ø';
-                            bg = '#444'; // Color oscuro para bloqueos externos
-                        }
-
-                        let colorTexto = (bg && bg !== '#f3e5f5') ? 'white' : (bg === '#f3e5f5' ? '#6a1b9a' : 'transparent');
-                        fullHtml += `<td style="border: 1px solid #bbb; padding: 0px; text-align: center; width: 10px; background: ${bg}; color: ${colorTexto}; font-weight: 700; font-size: 8px;">${tx}</td>`;
-                    }
-
-                    fullHtml += `
-                        <td style="border: 1px solid #bbb; padding: 1px; text-align: center; background: ${franco ? '#6c757d' : ''}; color: white; font-weight: bold;">${franco ? 'F' : ''}</td>
-                        <td style="border: 1px solid #bbb; padding: 1px; text-align: center; font-weight: bold;">${turno}</td>
-                        <td style="border: 1px solid #bbb; padding: 1px; text-align: center; font-weight: bold;">${tH > 0 ? (tH % 1 === 0 ? tH : tH.toFixed(1)) : '0'}</td>
-                        <td style="border: 1px solid #bbb; padding: 1px 2px; font-size: 7px; color: #333; width: 70px; max-width: 70px; word-break: break-word;">${(promos[fISO] || []).join(', ')}</td>
-                    </tr>`;
+                    const nA = (nombres[a]?.nombre || a).toLowerCase();
+                    const nB = (nombres[b]?.nombre || b).toLowerCase();
+                    return nA.localeCompare(nB);
                 });
 
-                fullHtml += `</tbody></table></div>`;
-            }
+                fullHtml += `
+                    <div style="font-size: 14px; font-weight: bold; color: #2c3e50; margin-top: ${index > 0 ? '20px' : '0'}; margin-bottom: 6px; border-bottom: 2px solid #2c3e50; padding-bottom: 3px;">
+                        Grilla Horario - ${sucursalNombre.toUpperCase()} &mdash; ${rangoFechas}
+                    </div>
+                `;
+
+                for (let d = 0; d < lastNDias; d++) {
+                    let fAct = new Date(primerDia);
+                    fAct.setDate(primerDia.getDate() + d);
+                    const fISO = fAct.toISOString().split('T')[0];
+                    const dd = String(fAct.getDate()).padStart(2, '0');
+                    const mm = String(fAct.getMonth() + 1).padStart(2, '0');
+
+                    const dayIndex = (fAct.getDay() + 6) % 7;
+
+                    fullHtml += `
+                        <div style="margin-bottom: 4px;">
+                            <div style="background: #2c3e50; color: white; padding: 2px 6px; font-weight: bold; font-size: 10px;">
+                                ${diasNombres[dayIndex]} ${dd}/${mm}
+                            </div>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 9px; line-height: 1.15;">
+                                <thead>
+                                    <tr style="background: #eaedf0;">
+                                        <th style="border: 1px solid #aaa; padding: 1px 2px; text-align: left; width: 90px; max-width: 90px;">Vendedor</th>
+                                        <th style="border: 1px solid #aaa; padding: 1px 2px; text-align: center; width: 22px;">Leg</th>
+                                        ${Array.from({length: 18}, (_, i) => {
+                                            const h = i + 7;
+                                            const lb = (h === 24) ? '00' : h;
+                                            return `<th style="border: 1px solid #aaa; padding: 0px; text-align: center; width: 10px; font-size: 8px;">${lb}</th>`;
+                                        }).join('')}
+                                        <th style="border: 1px solid #aaa; padding: 1px; text-align: center; width: 12px;">F</th>
+                                        <th style="border: 1px solid #aaa; padding: 1px; text-align: center; width: 22px;">T</th>
+                                        <th style="border: 1px solid #aaa; padding: 1px; text-align: center; width: 14px;">Hs</th>
+                                        <th style="border: 1px solid #aaa; padding: 1px 2px; text-align: left; width: 70px; max-width: 70px;">Promos banco</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                    vIds.forEach(vid => {
+                        const inf = nombres[vid] || nombres[parseInt(vid)] || { nombre: vid, legajo: vid };
+                        const dat = agenda[vid] || {};
+                        const franco = dat.francos && dat.francos[fISO];
+                        let tH = 0, turno = '-', hDia = [];
+                        if (!franco && dat.horarios && dat.horarios[fISO]) {
+                            Object.entries(dat.horarios[fISO]).forEach(([h, t]) => {
+                                let v = t && t.endsWith('_media') ? 0.5 : 1;
+                                if (t !== 'vacaciones') { tH += v; hDia.push(parseInt(h)); }
+                            });
+                        }
+
+                        // NUEVO: Sumar bloqueos externos al total Hs del PDF
+                        if (bloqueosExternos && bloqueosExternos[vid] && bloqueosExternos[vid][fISO]) {
+                            Object.entries(bloqueosExternos[vid][fISO]).forEach(([h, sId]) => {
+                                if (sId > 0) {
+                                    tH += 1;
+                                    hDia.push(parseInt(h));
+                                }
+                            });
+                        }
+                        turno = calcularTurnoTexto(hDia);
+
+                        fullHtml += `<tr>
+                            <td style="border: 1px solid #bbb; padding: 1px 2px; font-weight: bold; width: 90px; max-width: 90px; word-break: break-word;">${inf.nombre}</td>
+                            <td style="border: 1px solid #bbb; padding: 1px; text-align: center; color: #555;">${inf.legajo || vid}</td>`;
+
+                        for (let h = 7; h <= 24; h++) {
+                            const hb = (h === 24) ? 0 : h;
+                            let tx = '', bg = '';
+                            
+                            // 1. Prioridad: Horarios locales
+                            const tipo = (!franco && dat.horarios && dat.horarios[fISO]) ? (dat.horarios[fISO][hb] || '') : null;
+                            
+                            // 2. Bloqueos Externos (Otras sucursales)
+                            const bloqueoExt = (bloqueosExternos && bloqueosExternos[vid] && bloqueosExternos[vid][fISO]) ? bloqueosExternos[vid][fISO][hb] : null;
+
+                            if (tipo) {
+                                tx = tipo.endsWith('_media') ? '½' : 'X';
+                                bg = '#198754';
+                                if (tipo === 'caja') { tx = 'C'; bg = '#0dcaf0'; }
+                                else if (tipo === 'extra') { tx = 'E'; bg = '#0d6efd'; }
+                                else if (tipo === 'devuelve') { tx = 'D'; bg = '#ffc107'; }
+                                else if (tipo === 'permiso') { tx = 'P'; bg = '#d63384'; }
+                                else if (tipo === 'vacaciones') { tx = 'V'; bg = '#f3e5f5'; }
+                                else if (tipo === 'ausencia') { tx = 'AU'; bg = '#6c757d'; }
+                            } else if (bloqueoExt) {
+                                tx = 'Ø';
+                                bg = '#444'; // Color oscuro para bloqueos externos
+                            }
+
+                            let colorTexto = (bg && bg !== '#f3e5f5') ? 'white' : (bg === '#f3e5f5' ? '#6a1b9a' : 'transparent');
+                            fullHtml += `<td style="border: 1px solid #bbb; padding: 0px; text-align: center; width: 10px; background: ${bg}; color: ${colorTexto}; font-weight: 700; font-size: 8px;">${tx}</td>`;
+                        }
+
+                        fullHtml += `
+                            <td style="border: 1px solid #bbb; padding: 1px; text-align: center; background: ${franco ? '#6c757d' : ''}; color: white; font-weight: bold;">${franco ? 'F' : ''}</td>
+                            <td style="border: 1px solid #bbb; padding: 1px; text-align: center; font-weight: bold;">${turno}</td>
+                            <td style="border: 1px solid #bbb; padding: 1px; text-align: center; font-weight: bold;">${tH > 0 ? (tH % 1 === 0 ? tH : tH.toFixed(1)) : '0'}</td>
+                            <td style="border: 1px solid #bbb; padding: 1px 2px; font-size: 7px; color: #333; width: 70px; max-width: 70px; word-break: break-word;">${(promos[fISO] || []).join(', ')}</td>
+                        </tr>`;
+                    });
+
+                    fullHtml += `</tbody></table></div>`;
+                }
+            });
 
             fullHtml += `</div>`;
 
@@ -733,8 +896,11 @@ $(document).ready(function () {
             const offsetX = m + (usableW - imgW) / 2;
             pdf.addImage(imgData, 'JPEG', offsetX, m, imgW, imgH);
 
-            const semanaVal = $('#semanaSelector').val() || 'Semana';
-            pdf.save(`Horarios_${sucursalNombre}_${semanaVal}.pdf`);
+            const sucursalesNombres = lastDataLoaded.map(r => r.sucursalNombre.replace(/\s+/g, '_')).join('_');
+            const semanaVal = lastNDias === 1
+                ? lastPrimerDia.toISOString().split('T')[0]
+                : ($('#semanaSelector').val() || 'Semana');
+            pdf.save(`Horarios_${sucursalesNombres.length > 50 ? 'Multiples' : sucursalesNombres}_${semanaVal}.pdf`);
 
         } catch (err) {
             console.error('Error al generar PDF:', err);

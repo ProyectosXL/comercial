@@ -91,17 +91,26 @@
           <!-- Selector Sucursal -->
           <div class="col-md-4">
             <label class="form-label text-muted small fw-bold text-uppercase">Sucursal</label>
-            <select id="sucursalSelector" class="form-select form-select-lg fw-bold border-secondary">
-              <option value="">-- Seleccionar --</option>
+            <select id="sucursalSelector" class="form-select form-select-lg fw-bold border-secondary" multiple="multiple">
             </select>
           </div>
 
-          <!-- Selector Semana -->
+          <!-- Selector Semana / Día (toggle) -->
           <div class="col-md-3">
-            <label class="form-label text-muted small fw-bold text-uppercase">Semana</label>
-            <div class="input-group">
-                <span class="input-group-text bg-white border-secondary"><i class="bi bi-calendar-event"></i></span>
-                <input type="text" id="semanaSelector" class="form-control form-control-lg border-secondary bg-white" placeholder="Seleccione semana...">
+            <label id="labelPeriodo" class="form-label text-muted small fw-bold text-uppercase mb-2">SEMANA</label>
+            <div class="input-group" id="grupoPeriodo">
+              <span class="input-group-text bg-white border-secondary">
+                <i class="bi bi-calendar-week" id="iconoPeriodoIcon"></i>
+              </span>
+              <div id="semanaContainer" class="flex-grow-1">
+                <input type="text" id="semanaSelector" class="form-control border-secondary bg-white" placeholder="Seleccione semana...">
+              </div>
+              <div id="diaContainer" class="flex-grow-1 d-none">
+                <input type="text" id="diaSelector" class="form-control border-secondary bg-white" placeholder="Seleccione día...">
+              </div>
+              <button class="btn btn-outline-secondary" type="button" id="btnTogglePeriodo" title="Cambiar entre vista Semana y Día">
+                <i class="bi bi-arrow-left-right"></i>
+              </button>
             </div>
           </div>
 
@@ -120,7 +129,7 @@
           </div>
         </div>
         <div class="mt-2 text-muted small fst-italic">
-          * Seleccione una Sucursal <b>O</b> busque un Vendedor específico.
+          * Seleccione una Sucursal <b>O</b> busque un Vendedor. Use <i class="bi bi-arrow-left-right"></i> para alternar entre vista <b>Semana</b> y <b>Día</b>.
         </div>
       </div>
     </div>
@@ -329,6 +338,25 @@
 
   <script>
     $(document).ready(function() {
+        function formatWeekDisplay(date, instance) {
+            if (!date) return "";
+            const year = date.getFullYear();
+            const week = instance.config.getWeek(date);
+            
+            // Calcular Lunes y Domingo de esa semana
+            const start = new Date(date);
+            const day = start.getDay() || 7;
+            start.setDate(start.getDate() - day + 1);
+            
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            
+            const startStr = `${String(start.getDate()).padStart(2, '0')}/${String(start.getMonth() + 1).padStart(2, '0')}`;
+            const endStr = `${String(end.getDate()).padStart(2, '0')}/${String(end.getMonth() + 1).padStart(2, '0')}`;
+            
+            return `Semana ${week} (${startStr} al ${endStr})`;
+        }
+
         flatpickr("#semanaSelector", {
             locale: "es",
             firstDayOfWeek: 1,
@@ -342,6 +370,10 @@
                 const week = instance.config.getWeek(date);
                 const formatted = `${year}-W${String(week).padStart(2, '0')}`;
                 $(instance.element).attr('data-week-val', formatted);
+                
+                setTimeout(() => {
+                    instance.input.value = formatWeekDisplay(date, instance);
+                }, 0);
             },
             onChange: function(selectedDates, dateStr, instance) {
                 const date = selectedDates[0];
@@ -350,8 +382,19 @@
                     const week = instance.config.getWeek(date);
                     const formatted = `${year}-W${String(week).padStart(2, '0')}`;
                     $(instance.element).attr('data-week-val', formatted);
+                    
+                    setTimeout(() => {
+                        instance.input.value = formatWeekDisplay(date, instance);
+                    }, 0);
                 }
             }
+        });
+
+        flatpickr("#diaSelector", {
+            locale: "es",
+            firstDayOfWeek: 1,
+            defaultDate: "today",
+            dateFormat: "Y-m-d"
         });
     });
   </script>

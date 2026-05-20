@@ -107,10 +107,11 @@ function getVendedores($idDepto)
             AND R.HABILITADO = 'S'
         ORDER BY 
             CASE 
-                WHEN R.TAREA_HABITUAL LIKE '%ENCARGADA%' AND R.TAREA_HABITUAL NOT LIKE '%SUB%' THEN 1
-                WHEN R.TAREA_HABITUAL LIKE '%SUB%' THEN 2
-                WHEN R.TAREA_HABITUAL LIKE '%CAJERA%' THEN 3
-                ELSE 4 
+                WHEN UPPER(RTRIM(LTRIM(R.TAREA_HABITUAL))) = 'ENCARGADA' THEN 1
+                WHEN UPPER(RTRIM(LTRIM(R.TAREA_HABITUAL))) = 'SUB ENCARGADA' THEN 2
+                WHEN UPPER(RTRIM(LTRIM(R.TAREA_HABITUAL))) = 'VENDEDORA' THEN 3
+                WHEN UPPER(RTRIM(LTRIM(R.TAREA_HABITUAL))) = 'VENDEDOR' THEN 4
+                ELSE 5 
             END ASC,
             R.APELLIDO ASC
     ";
