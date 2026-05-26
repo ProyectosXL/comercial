@@ -18,7 +18,6 @@ class EmailNotification {
         try {
             $this->mail = new PHPMailer(true);
             $this->mail->isSMTP();
-            // Usamos la configuración de Gmail que ya funciona en Supervision
             $this->mail->Host = $_ENV['HOST_EMAIL_EGRESOS'] ?? 'smtp.gmail.com';
             $this->mail->SMTPAuth = true;
             $this->mail->Username = $_ENV['USER_EMAIL_HORARIOS'];
@@ -87,22 +86,46 @@ class EmailNotification {
         $nombre = $codVendedor; // Fallback al código por defecto
         
         try {
-            $conn = getConexionCorp(); // Usamos la conexión a RRHH
-            if (!$conn) return $nombre;
-
-            // Buscamos en LAKERS_CORP_SA (la base ya viene definida en la conexión)
-            $sql = "SELECT TOP 1 (TRIM(NOMBRE) + ' ' + TRIM(APELLIDO)) as NOMBRE_COMPLETO 
-                    FROM RO_LEGAJOS_PERSONAL 
-                    WHERE BLOQUE = ? OR NRO_LEGAJO = ?";
-            
-            $stmt = sqlsrv_query($conn, $sql, [trim($codVendedor), trim($codVendedor)]);
-            
-            if ($stmt && $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-                $nombre = trim($row['NOMBRE_COMPLETO']);
+            // 1. Intentamos obtener el nombre desde GVA23 (Tango Central - Siempre tiene a todos)
+            $connCentral = getConexionCentral();
+            if ($connCentral) {
+                $sqlGva = "SELECT TOP 1 NOMBRE_VEN FROM GVA23 WHERE COD_VENDED = ?";
+                $stmtGva = sqlsrv_query($connCentral, $sqlGva, [trim($codVendedor)]);
+                if ($stmtGva && $row = sqlsrv_fetch_array($stmtGva, SQLSRV_FETCH_ASSOC)) {
+                    $nom = trim($row['NOMBRE_VEN']);
+                    if (!mb_detect_encoding($nom, 'UTF-8', true)) {
+                        $nom = utf8_encode($nom);
+                    }
+                    // Limpieza opcional de números al final del nombre en Tango
+                    $nom = preg_replace('/[\s-]*[0-9]+$/', '', $nom);
+                    $nombre = $nom;
+                }
+                if ($stmtGva) sqlsrv_free_stmt($stmtGva);
+                sqlsrv_close($connCentral);
             }
-            
-            if ($stmt) sqlsrv_free_stmt($stmt);
-            sqlsrv_close($conn);
+
+            // 2. Complemento/Fallback: Intentar obtener el nombre de RRHH (Corp)
+            if ($nombre === $codVendedor) {
+                $connCorp = getConexionCorp();
+                if ($connCorp) {
+                    $sqlCorp = "SELECT TOP 1 APELLIDO, NOMBRE 
+                                FROM RO_LEGAJOS_PERSONAL 
+                                WHERE BLOQUE = ? OR 'L' + CAST(NRO_LEGAJO AS VARCHAR) = ? OR NRO_LEGAJO = ?";
+                    
+                    $stmtCorp = sqlsrv_query($connCorp, $sqlCorp, [trim($codVendedor), trim($codVendedor), trim($codVendedor)]);
+                    if ($stmtCorp && $row = sqlsrv_fetch_array($stmtCorp, SQLSRV_FETCH_ASSOC)) {
+                        $nomFormateado = trim($row['APELLIDO']) . ' ' . trim($row['NOMBRE']);
+                        if (!mb_detect_encoding($nomFormateado, 'UTF-8', true)) {
+                            $nomFormateado = utf8_encode($nomFormateado);
+                        }
+                        if (!empty(trim($nomFormateado))) {
+                            $nombre = $nomFormateado;
+                        }
+                    }
+                    if ($stmtCorp) sqlsrv_free_stmt($stmtCorp);
+                    sqlsrv_close($connCorp);
+                }
+            }
         } catch (Exception $e) {
             error_log("No se pudo obtener nombre del vendedor $codVendedor: " . $e->getMessage());
         }

@@ -646,29 +646,45 @@ $(document).ready(function () {
         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span> Enviando...');
         btnCancel.prop('disabled', true);
 
-        $.ajax({
-            url: apiVistaURL,
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(payload),
-            success: function (res) {
-                if (res.status === 'ok') {
-                    mostrarModalConTitulo("Éxito", "Feedback guardado y notificado correctamente.", "success");
-                    $('#btnVerAgenda').trigger('click');
-                    bootstrap.Modal.getInstance(document.getElementById('modalFeedback')).hide();
-                } else {
-                    mostrarModalConTitulo("Error", "Error al guardar: " + (res.message || 'Error desconocido'), "error");
+        const maxIntentos = 4;
+        const retraso = 2000;
+
+        function realizarEnvio(intento) {
+            $.ajax({
+                url: apiVistaURL,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                success: function (res) {
+                    if (res.status === 'ok') {
+                        mostrarModalConTitulo("Éxito", "Feedback guardado y notificado correctamente.", "success");
+                        $('#btnVerAgenda').trigger('click');
+                        bootstrap.Modal.getInstance(document.getElementById('modalFeedback')).hide();
+                        // Restauramos el botón
+                        btn.prop('disabled', false).html(originalText);
+                        btnCancel.prop('disabled', false);
+                    } else {
+                        mostrarModalConTitulo("Error", "Error al guardar: " + (res.message || 'Error desconocido'), "error");
+                        btn.prop('disabled', false).html(originalText);
+                        btnCancel.prop('disabled', false);
+                    }
+                },
+                error: function() {
+                    if (intento < maxIntentos) {
+                        console.warn(`Intento ${intento} fallido. Reintentando en ${retraso}ms...`);
+                        setTimeout(function() {
+                            realizarEnvio(intento + 1);
+                        }, retraso);
+                    } else {
+                        mostrarModalConTitulo("Error", "No se pudo conectar con el servidor para enviar el feedback.", "error");
+                        btn.prop('disabled', false).html(originalText);
+                        btnCancel.prop('disabled', false);
+                    }
                 }
-            },
-            error: function() {
-                mostrarModalConTitulo("Error", "No se pudo conectar con el servidor para enviar el feedback.", "error");
-            },
-            complete: function() {
-                // Restauramos el botón
-                btn.prop('disabled', false).html(originalText);
-                btnCancel.prop('disabled', false);
-            }
-        });
+            });
+        }
+
+        realizarEnvio(1);
     });
 
     $(document).on('click', '.btn-nota-local.tiene-nota', function () {
