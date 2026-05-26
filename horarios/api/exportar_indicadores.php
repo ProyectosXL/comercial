@@ -206,9 +206,27 @@ $header[] = $s . 'Total' . $e;
 $filasExcel[] = $header;
 
 // Filas de datos
+$sumNormal = 0;
+$sumCaja = 0;
+$sumPermiso = 0;
+$sumExtra = 0;
+$sumDevuelve = 0;
+$sumVacaciones = 0;
+$sumAusencia = 0;
+$sumTotal = 0;
+
 foreach ($reporte as $item) {
     // Aplicar filtro de tipo
     if ($tipoFiltro !== 'todos' && $item[$tipoFiltro] == 0) continue;
+
+    $sumNormal += $item['normal'];
+    $sumCaja += $item['caja'];
+    $sumPermiso += $item['permiso'];
+    $sumExtra += $item['extra'];
+    $sumDevuelve += $item['devuelve'];
+    $sumVacaciones += $item['vacaciones'];
+    $sumAusencia += $item['ausencia'];
+    $sumTotal += $item['total'];
 
     $fila = [];
     if ($esVistaGlobal) $fila[] = $item['sucursal_nombre'];
@@ -225,6 +243,29 @@ foreach ($reporte as $item) {
     
     $filasExcel[] = $fila;
 }
+
+// Fila de TOTALES al final
+$sBold = '<style bgcolor="#F8F9FA" color="#212529"><b>';
+$eBold = '</b></style>';
+
+$filaTotal = [];
+if ($esVistaGlobal) {
+    $filaTotal[] = $sBold . 'TOTALES' . $eBold;
+    $filaTotal[] = ''; // Legajo
+} else {
+    $filaTotal[] = $sBold . 'TOTALES' . $eBold;
+}
+$filaTotal[] = ''; // Vendedor
+$filaTotal[] = $sBold . $sumNormal . $eBold;
+$filaTotal[] = $sBold . $sumCaja . $eBold;
+$filaTotal[] = $sBold . $sumPermiso . $eBold;
+$filaTotal[] = $sBold . $sumExtra . $eBold;
+$filaTotal[] = $sBold . $sumDevuelve . $eBold;
+$filaTotal[] = $sBold . $sumVacaciones . $eBold;
+$filaTotal[] = $sBold . $sumAusencia . $eBold;
+$filaTotal[] = $sBold . $sumTotal . $eBold;
+
+$filasExcel[] = $filaTotal;
 
 // 6. DESCARGAR
 $xlsx = SimpleXLSXGen::fromArray($filasExcel);

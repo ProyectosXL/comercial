@@ -364,25 +364,29 @@
                                             <option value="">-- Todas las Sucursales --</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label fw-bold">Semana</label>
-                                        <input type="week" id="indicadoresSemanaSelector" class="form-control"
-                                            value="2026-W06">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold">Periodo (Desde - Hasta)</label>
+                                        <div class="input-group">
+                                            <input type="date" id="indicadoresFechaDesde" class="form-control">
+                                            <input type="date" id="indicadoresFechaHasta" class="form-control">
+                                        </div>
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label fw-bold">Filtrar Tipo</label>
                                         <select id="indicadoresTipoHoraFiltro" class="form-select">
                                             <option value="todos">Todos los Tipos</option>
                                             <option value="normal">H (Normales)</option>
-                                            <option value="extra">A (Adicional)</option>
+                                            <option value="extra">A (Adicionales)</option>
                                             <option value="devuelve">D (Devuelve)</option>
                                             <option value="caja">C (Caja)</option>
                                             <option value="permiso">P (Permiso)</option>
+                                            <option value="vacaciones">V (Vacaciones)</option>
+                                            <option value="ausencia">AU (Ausencia)</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-3">
-                                        <button id="indicadoresBtnFiltrar" class="btn btn-success w-100">
-                                            <i class="bi bi-graph-up-arrow"></i> Ver Indicadores
+                                    <div class="col-md-2">
+                                        <button id="indicadoresBtnFiltrar" class="btn btn-success w-100 text-white">
+                                            <i class="bi bi-graph-up-arrow"></i> Buscar
                                         </button>
                                     </div>
                                 </div>
@@ -390,7 +394,7 @@
                                 <!-- KPIs Totales -->
                                 <div class="row mb-4 text-center g-2" id="indicadoresKpiContainer"
                                     style="display:none;">
-                                    <div class="col-md-2">
+                                    <div class="col">
                                         <div class="card text-bg-success h-100 shadow-sm">
                                             <div class="card-body p-2">
                                                 <h6 class="small text-uppercase opacity-75">H (Normal)</h6>
@@ -398,7 +402,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-2">
+                                    <div class="col">
                                         <div class="card text-bg-info h-100 shadow-sm text-white">
                                             <div class="card-body p-2">
                                                 <h6 class="small text-uppercase opacity-75">C (Caja)</h6>
@@ -406,7 +410,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-2">
+                                    <div class="col">
                                         <div class="card h-100 shadow-sm text-white" style="background-color: #d63384;">
                                             <div class="card-body p-2">
                                                 <h6 class="small text-uppercase opacity-75">P (Permiso)</h6>
@@ -414,7 +418,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-2">
+                                    <div class="col">
                                         <div class="card text-bg-primary h-100 shadow-sm">
                                             <div class="card-body p-2">
                                                 <h6 class="small text-uppercase opacity-75">A (Adicional)</h6>
@@ -422,7 +426,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-2">
+                                    <div class="col">
                                         <div class="card text-bg-warning h-100 shadow-sm text-dark">
                                             <div class="card-body p-2">
                                                 <h6 class="small text-uppercase opacity-75">D (Dev)</h6>
@@ -430,7 +434,23 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-2">
+                                    <div class="col">
+                                        <div class="card h-100 shadow-sm text-white" style="background-color: #6a1b9a;">
+                                            <div class="card-body p-2">
+                                                <h6 class="small text-uppercase opacity-75">V (Vacaciones)</h6>
+                                                <h3 class="fw-bold mb-0" id="indicadoresKpiVacaciones">0</h3>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="card text-bg-secondary h-100 shadow-sm text-white">
+                                            <div class="card-body p-2">
+                                                <h6 class="small text-uppercase opacity-75">AU (Ausencia)</h6>
+                                                <h3 class="fw-bold mb-0" id="indicadoresKpiAusencia">0</h3>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col">
                                         <div class="card text-bg-dark h-100 shadow-sm">
                                             <div class="card-body p-2">
                                                 <h6 class="small text-uppercase opacity-75">Total</h6>
@@ -463,7 +483,7 @@
                                                 <h5 class="mb-0">Detalle Numérico</h5>
                                                 <div>
                                                     <button id="indicadoresBtnExportarDetalle"
-                                                        class="btn btn-sm btn-outline-success me-2">
+                                                        class="btn btn-sm btn-outline-success me-2 disabled">
                                                         <i class="bi bi-file-earmark-excel"></i> Exportar Detalle
                                                     </button>
                                                 </div>
@@ -471,18 +491,7 @@
                                             <div class="card-body p-0">
                                                 <div class="table-responsive" style="max-height: 450px;">
                                                     <table class="table table-striped table-hover mb-0 text-center">
-                                                        <thead class="table-light sticky-top">
-                                                            <tr>
-                                                                <th>Sucursal</th>
-                                                                <th>Vendedor</th>
-                                                                <th>H</th>
-                                                                <th>C</th>
-                                                                <th>P</th>
-                                                                <th>A</th>
-                                                                <th>D</th>
-                                                                <th>Total</th>
-                                                            </tr>
-                                                        </thead>
+                                                        <thead class="table-light sticky-top"></thead>
                                                         <tbody id="indicadoresTablaDetalleBody"></tbody>
                                                     </table>
                                                 </div>
