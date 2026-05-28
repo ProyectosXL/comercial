@@ -44,34 +44,102 @@ if (empty($resumenExcesos)) {
     exit;
 }
 
-// 3. Buscar Nombres y Legajos Reales (RRHH)
-$connCorp = getConexionCorp();
-$ids = implode("','", array_keys($resumenExcesos));
-$sqlNom = "SELECT BLOQUE, NRO_LEGAJO, APELLIDO, NOMBRE FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ('$ids')";
-$stmtNom = sqlsrv_query($connCorp, $sqlNom);
+// 3. Buscar Nombres y Legajos Reales (Dual: GVA23 + RRHH)
+function obtenerNombreYLegajoExceso($codVendedor, $connCentral, $connCorp) {
+    $codVendedor = trim($codVendedor);
+    $nombre = $codVendedor;
+    $legajo = $codVendedor;
+    $extractedLegajo = '';
 
-$datosPersona = [];
-if ($stmtNom) {
-    while ($r = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
-        $nom = trim($r['APELLIDO']) . ' ' . trim($r['NOMBRE']);
-        $datosPersona[trim($r['BLOQUE'])] = [
-            'nombre' => utf8_encode($nom),
-            'legajo' => trim($r['NRO_LEGAJO'])
-        ];
+    // 1. Intentar en GVA23 (Tango)
+    if ($connCentral) {
+        $sqlGva = "SELECT TOP 1 NOMBRE_VEN FROM GVA23 WHERE COD_VENDED = ?";
+        $stmtGva = sqlsrv_query($connCentral, $sqlGva, [$codVendedor]);
+        if ($stmtGva && $row = sqlsrv_fetch_array($stmtGva, SQLSRV_FETCH_ASSOC)) {
+            $gvaName = trim($row['NOMBRE_VEN']);
+            if (!mb_detect_encoding($gvaName, 'UTF-8', true)) {
+                $gvaName = utf8_encode($gvaName);
+            }
+            // Guardamos el legajo extraído del nombre en GVA (ej: "PEDRAZA LUDMILA - 2172")
+            if (preg_match('/-\s*([0-9]+)$/', $gvaName, $matches)) {
+                $extractedLegajo = $matches[1];
+            }
+            $nom = preg_replace('/[\s-]*[0-9]+$/', '', $gvaName);
+            $nombre = $nom;
+        }
+        if ($stmtGva) sqlsrv_free_stmt($stmtGva);
     }
+
+    if (!empty($extractedLegajo)) {
+        $legajo = $extractedLegajo;
+    }
+
+    // 2. Intentar en RRHH (RO_LEGAJOS_PERSONAL)
+    if ($connCorp) {
+        $numVendedor = $codVendedor;
+        if (strpos($codVendedor, 'L') === 0 && is_numeric(substr($codVendedor, 1))) {
+            $numVendedor = substr($codVendedor, 1);
+        }
+
+        $searchLegajo = is_numeric($extractedLegajo) ? intval($extractedLegajo) : (is_numeric($numVendedor) ? intval($numVendedor) : -1);
+
+        $sqlCorp = "SELECT TOP 1 NRO_LEGAJO, APELLIDO, NOMBRE, BLOQUE
+                    FROM RO_LEGAJOS_PERSONAL
+                    WHERE NRO_LEGAJO = ? 
+                       OR BLOQUE = ? 
+                       OR 'L' + CAST(NRO_LEGAJO AS VARCHAR) = ? 
+                       OR NRO_LEGAJO = ?
+                    ORDER BY 
+                        CASE 
+                            WHEN NRO_LEGAJO = ? THEN 1 
+                            WHEN BLOQUE = ? THEN 2 
+                            WHEN 'L' + CAST(NRO_LEGAJO AS VARCHAR) = ? THEN 3 
+                            WHEN NRO_LEGAJO = ? THEN 4 
+                            ELSE 5 
+                        END ASC";
+
+        $params = [
+            $searchLegajo, $codVendedor, $codVendedor, is_numeric($numVendedor) ? intval($numVendedor) : -1,
+            $searchLegajo, $codVendedor, $codVendedor, is_numeric($numVendedor) ? intval($numVendedor) : -1
+        ];
+        $stmtCorp = sqlsrv_query($connCorp, $sqlCorp, $params);
+        if ($stmtCorp && $row = sqlsrv_fetch_array($stmtCorp, SQLSRV_FETCH_ASSOC)) {
+            $nomFormateado = trim($row['APELLIDO']) . ' ' . trim($row['NOMBRE']);
+            if (!mb_detect_encoding($nomFormateado, 'UTF-8', true)) {
+                $nomFormateado = utf8_encode($nomFormateado);
+            }
+            if (!empty(trim($nomFormateado))) {
+                $nombre = $nomFormateado;
+            }
+            $legajo = trim($row['NRO_LEGAJO']);
+        }
+        if ($stmtCorp) sqlsrv_free_stmt($stmtCorp);
+    }
+
+    if (strpos($legajo, 'L') === 0 && is_numeric(substr($legajo, 1))) {
+        $legajo = substr($legajo, 1);
+    }
+
+    return ['nombre' => $nombre, 'legajo' => $legajo];
 }
-sqlsrv_close($connCorp);
+
+$connCentral = getConexionCentral();
+$connCorp    = getConexionCorp();
 
 // 4. Generar Excel Final
 $s = '<style bgcolor="#dc3545" color="#FFFFFF"><b>'; $e = '</b></style>'; // Rojo Alerta
 $filas = [[$s.'Legajo'.$e, $s.'Nombre Vendedor'.$e, $s.'Días con >9hs'.$e]];
 
 foreach ($resumenExcesos as $cod => $cant) {
-    $legajo = $datosPersona[$cod]['legajo'] ?? $cod;
-    $nombre = $datosPersona[$cod]['nombre'] ?? "Vendedor $cod";
-    
+    $info   = obtenerNombreYLegajoExceso($cod, $connCentral, $connCorp);
+    $legajo = $info['legajo'];
+    $nombre = $info['nombre'];
+
     $filas[] = [$legajo, $nombre, $cant];
 }
+
+if ($connCentral) sqlsrv_close($connCentral);
+if ($connCorp)    sqlsrv_close($connCorp);
 
 $xlsx = SimpleXLSXGen::fromArray($filas);
 $xlsx->downloadAs('Reporte_Exceso_Semanal.xlsx');

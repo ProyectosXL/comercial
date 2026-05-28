@@ -97,6 +97,9 @@ foreach ($horarios as $h) {
         continue;
     $codVendedor = trim($h['COD_VENDED']);
     $legajoReal = $mapaLegajos[$codVendedor] ?? $codVendedor;
+    if (!is_numeric($legajoReal)) {
+        continue;
+    }
     $fecha = $h['FECHA']->format('Y-m-d');
     $hora = intval($h['HORA']);
     if (!isset($datos[$legajoReal]))

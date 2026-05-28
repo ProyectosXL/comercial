@@ -85,7 +85,9 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
     if (isset($reporte[$key][$tipo])) {
         $reporte[$key][$tipo] += $cantidad;
     }
-    $reporte[$key]['total'] += $cantidad;
+    if ($tipo !== 'devuelve') {
+        $reporte[$key]['total'] += $cantidad;
+    }
 }
 sqlsrv_free_stmt($stmt);
 sqlsrv_close($connSistemas);
@@ -96,59 +98,100 @@ if (empty($reporte)) {
 }
 
 // =========================================================
-// PASO 2: NOMBRES VENDEDORES (Base Central / GVA23)
+// PASO 2: NOMBRES Y LEGAJOS VENDEDORES (Dual: GVA23 + RRHH)
 // =========================================================
-// PASO 2: NOMBRES VENDEDORES (Dual: Central + Corp)
-// =========================================================
-if (!empty($listaIDs)) {
-    $idsStr = implode("','", array_keys($listaIDs));
-    
-    // 2.1. Primero buscamos en Central (GVA23) para tener un nombre base (especialmente para refuerzos)
-    $connCentral = getConexionCentral();
+function obtenerNombreYLegajoInd($codVendedor, $connCentral, $connCorp) {
+    $codVendedor = trim($codVendedor);
+    $nombre = $codVendedor;
+    $legajo = $codVendedor;
+    $extractedLegajo = '';
+
+    // 1. Intentar en GVA23
     if ($connCentral) {
-        $sqlGva = "SELECT COD_VENDED, NOMBRE_VEN FROM GVA23 WHERE COD_VENDED IN ('$idsStr')";
-        $stmtGva = sqlsrv_query($connCentral, $sqlGva);
-        if ($stmtGva) {
-            while ($rg = sqlsrv_fetch_array($stmtGva, SQLSRV_FETCH_ASSOC)) {
-                $idVend = trim($rg['COD_VENDED']);
-                $nomBase = trim($rg['NOMBRE_VEN']);
-                $nomBase = preg_replace('/[\s-]*[0-9]+$/', '', $nomBase); // Limpiar números al final
-                if (!mb_detect_encoding($nomBase, 'UTF-8', true)) $nomBase = utf8_encode($nomBase);
-
-                foreach ($reporte as $k => $v) {
-                    if ($v['id'] === $idVend) {
-                        $reporte[$k]['nombre'] = $nomBase;
-                    }
-                }
+        $sqlGva = "SELECT TOP 1 NOMBRE_VEN FROM GVA23 WHERE COD_VENDED = ?";
+        $stmtGva = sqlsrv_query($connCentral, $sqlGva, [$codVendedor]);
+        if ($stmtGva && $row = sqlsrv_fetch_array($stmtGva, SQLSRV_FETCH_ASSOC)) {
+            $gvaName = trim($row['NOMBRE_VEN']);
+            if (!mb_detect_encoding($gvaName, 'UTF-8', true)) $gvaName = utf8_encode($gvaName);
+            if (preg_match('/-\s*([0-9]+)$/', $gvaName, $matches)) {
+                $extractedLegajo = $matches[1];
             }
-            sqlsrv_free_stmt($stmtGva);
+            $nom = preg_replace('/[\s-]*[0-9]+$/', '', $gvaName);
+            $nombre = $nom;
         }
-        sqlsrv_close($connCentral);
+        if ($stmtGva) sqlsrv_free_stmt($stmtGva);
     }
 
-    // 2.2. Luego buscamos en Corp (RO_LEGAJOS_PERSONAL) para nombres oficiales y legajos reales
-    $connCorp = getConexionCorp();
+    if (!empty($extractedLegajo)) {
+        $legajo = $extractedLegajo;
+    }
+
+    // 2. Intentar en RRHH (RO_LEGAJOS_PERSONAL)
     if ($connCorp) {
-        $sqlNom = "SELECT BLOQUE, NRO_LEGAJO, APELLIDO, NOMBRE FROM [XL-SUELDOS].LAKERS_CORP_SA.DBO.RO_LEGAJOS_PERSONAL_ALL WHERE BLOQUE IN ('$idsStr')";
-        $stmtNom = sqlsrv_query($connCorp, $sqlNom);
-        if ($stmtNom) {
-            while ($r = sqlsrv_fetch_array($stmtNom, SQLSRV_FETCH_ASSOC)) {
-                $idVend = trim($r['BLOQUE']);
-                $nomHrrhh = trim($r['APELLIDO']) . ' ' . trim($r['NOMBRE']);
-                if (!mb_detect_encoding($nomHrrhh, 'UTF-8', true)) $nomHrrhh = utf8_encode($nomHrrhh);
-                $legajo = trim($r['NRO_LEGAJO']);
-
-                foreach ($reporte as $k => $v) {
-                    if ($v['id'] === $idVend) {
-                        $reporte[$k]['nombre'] = $nomHrrhh;
-                        $reporte[$k]['legajo_real'] = $legajo;
-                    }
-                }
-            }
-            sqlsrv_free_stmt($stmtNom);
+        $numVendedor = $codVendedor;
+        if (strpos($codVendedor, 'L') === 0 && is_numeric(substr($codVendedor, 1))) {
+            $numVendedor = substr($codVendedor, 1);
         }
-        sqlsrv_close($connCorp);
+
+        $searchLegajo = is_numeric($extractedLegajo) ? intval($extractedLegajo) : (is_numeric($numVendedor) ? intval($numVendedor) : -1);
+
+        $sqlCorp = "SELECT TOP 1 NRO_LEGAJO, APELLIDO, NOMBRE, BLOQUE
+                    FROM RO_LEGAJOS_PERSONAL
+                    WHERE NRO_LEGAJO = ? 
+                       OR BLOQUE = ? 
+                       OR 'L' + CAST(NRO_LEGAJO AS VARCHAR) = ? 
+                       OR NRO_LEGAJO = ?
+                    ORDER BY 
+                        CASE 
+                            WHEN NRO_LEGAJO = ? THEN 1 
+                            WHEN BLOQUE = ? THEN 2 
+                            WHEN 'L' + CAST(NRO_LEGAJO AS VARCHAR) = ? THEN 3 
+                            WHEN NRO_LEGAJO = ? THEN 4 
+                            ELSE 5 
+                        END ASC";
+
+        $params = [
+            $searchLegajo, $codVendedor, $codVendedor, is_numeric($numVendedor) ? intval($numVendedor) : -1,
+            $searchLegajo, $codVendedor, $codVendedor, is_numeric($numVendedor) ? intval($numVendedor) : -1
+        ];
+
+        $stmtCorp = sqlsrv_query($connCorp, $sqlCorp, $params);
+        if ($stmtCorp && $row = sqlsrv_fetch_array($stmtCorp, SQLSRV_FETCH_ASSOC)) {
+            $nomFormateado = trim($row['APELLIDO']) . ' ' . trim($row['NOMBRE']);
+            if (!mb_detect_encoding($nomFormateado, 'UTF-8', true)) $nomFormateado = utf8_encode($nomFormateado);
+            if (!empty(trim($nomFormateado))) {
+                $nombre = $nomFormateado;
+            }
+            $legajo = trim($row['NRO_LEGAJO']);
+        }
+        if ($stmtCorp) sqlsrv_free_stmt($stmtCorp);
     }
+
+    if (strpos($legajo, 'L') === 0 && is_numeric(substr($legajo, 1))) {
+        $legajo = substr($legajo, 1);
+    }
+
+    return ['nombre' => $nombre, 'legajo' => $legajo];
+}
+
+if (!empty($listaIDs)) {
+    $connCentral = getConexionCentral();
+    $connCorp    = getConexionCorp();
+    
+    foreach (array_keys($listaIDs) as $idVend) {
+        $idVendStr = strval($idVend); // PHP convierte keys numéricas a int; forzar string
+        $vData = obtenerNombreYLegajoInd($idVendStr, $connCentral, $connCorp);
+        
+        foreach ($reporte as $k => $v) {
+            if ($v['id'] === $idVendStr) {
+                $reporte[$k]['nombre'] = $vData['nombre'];
+                $reporte[$k]['legajo_real'] = $vData['legajo'];
+            }
+        }
+    }
+    
+    if ($connCentral) sqlsrv_close($connCentral);
+    if ($connCorp) sqlsrv_close($connCorp);
 }
 
 // =========================================================

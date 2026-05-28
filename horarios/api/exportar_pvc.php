@@ -100,22 +100,94 @@ if (!empty($sucursalesIds)) {
     sqlsrv_close($connLocales);
     
     // Obtener Nombres y Legajos Reales de Vendedores (Base Corp / RRHH)
-    $connCorp = getConexionCorp();
-    $mapaVendedores = [];
-    $inVend = "'" . implode("','", array_unique($vendedoresIds)) . "'";
-    $sqlV = "SELECT BLOQUE, NRO_LEGAJO, APELLIDO, NOMBRE FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IN ($inVend)";
-    $stmtVN = sqlsrv_query($connCorp, $sqlV);
-    if ($stmtVN) {
-        while ($rvn = sqlsrv_fetch_array($stmtVN, SQLSRV_FETCH_ASSOC)) {
-            $nom = trim($rvn['APELLIDO']) . ' ' . trim($rvn['NOMBRE']);
-            $nom = utf8_encode($nom);
-            $mapaVendedores[trim($rvn['BLOQUE'])] = [
-                'nombre' => $nom,
-                'legajo' => trim($rvn['NRO_LEGAJO'])
-            ];
+    function obtenerNombreYLegajo($codVendedor, $connCentral, $connCorp) {
+        $codVendedor = trim($codVendedor);
+        $nombre = $codVendedor;
+        $legajo = $codVendedor;
+        $extractedLegajo = '';
+
+        // 1. Intentar en GVA23
+        if ($connCentral) {
+            $sqlGva = "SELECT TOP 1 NOMBRE_VEN FROM GVA23 WHERE COD_VENDED = ?";
+            $stmtGva = sqlsrv_query($connCentral, $sqlGva, [$codVendedor]);
+            if ($stmtGva && $row = sqlsrv_fetch_array($stmtGva, SQLSRV_FETCH_ASSOC)) {
+                $gvaName = trim($row['NOMBRE_VEN']);
+                if (!mb_detect_encoding($gvaName, 'UTF-8', true)) {
+                    $gvaName = utf8_encode($gvaName);
+                }
+                // Guardamos el legajo extraído del nombre en GVA (ej: "PEDRAZA LUDMILA - 2172")
+                if (preg_match('/-\s*([0-9]+)$/', $gvaName, $matches)) {
+                    $extractedLegajo = $matches[1];
+                }
+                $nom = preg_replace('/[\s-]*[0-9]+$/', '', $gvaName);
+                $nombre = $nom;
+            }
+            if ($stmtGva) sqlsrv_free_stmt($stmtGva);
         }
+
+        if (!empty($extractedLegajo)) {
+            $legajo = $extractedLegajo;
+        }
+
+        // 2. Intentar en RRHH (RO_LEGAJOS_PERSONAL)
+        if ($connCorp) {
+            $numVendedor = $codVendedor;
+            if (strpos($codVendedor, 'L') === 0 && is_numeric(substr($codVendedor, 1))) {
+                $numVendedor = substr($codVendedor, 1);
+            }
+            
+            $searchLegajo = is_numeric($extractedLegajo) ? intval($extractedLegajo) : (is_numeric($numVendedor) ? intval($numVendedor) : -1);
+
+            $sqlCorp = "SELECT TOP 1 NRO_LEGAJO, APELLIDO, NOMBRE, BLOQUE
+                        FROM RO_LEGAJOS_PERSONAL 
+                        WHERE NRO_LEGAJO = ? 
+                           OR BLOQUE = ? 
+                           OR 'L' + CAST(NRO_LEGAJO AS VARCHAR) = ? 
+                           OR NRO_LEGAJO = ?
+                        ORDER BY 
+                            CASE 
+                                WHEN NRO_LEGAJO = ? THEN 1 
+                                WHEN BLOQUE = ? THEN 2 
+                                WHEN 'L' + CAST(NRO_LEGAJO AS VARCHAR) = ? THEN 3 
+                                WHEN NRO_LEGAJO = ? THEN 4 
+                                ELSE 5 
+                            END ASC";
+            
+            $params = [
+                $searchLegajo, $codVendedor, $codVendedor, is_numeric($numVendedor) ? intval($numVendedor) : -1,
+                $searchLegajo, $codVendedor, $codVendedor, is_numeric($numVendedor) ? intval($numVendedor) : -1
+            ];
+            $stmtCorp = sqlsrv_query($connCorp, $sqlCorp, $params);
+            if ($stmtCorp && $row = sqlsrv_fetch_array($stmtCorp, SQLSRV_FETCH_ASSOC)) {
+                $nomFormateado = trim($row['APELLIDO']) . ' ' . trim($row['NOMBRE']);
+                if (!mb_detect_encoding($nomFormateado, 'UTF-8', true)) {
+                    $nomFormateado = utf8_encode($nomFormateado);
+                }
+                if (!empty(trim($nomFormateado))) {
+                    $nombre = $nomFormateado;
+                }
+                $legajo = trim($row['NRO_LEGAJO']);
+            }
+            if ($stmtCorp) sqlsrv_free_stmt($stmtCorp);
+        }
+
+        if (strpos($legajo, 'L') === 0 && is_numeric(substr($legajo, 1))) {
+            $legajo = substr($legajo, 1);
+        }
+
+        return ['nombre' => $nombre, 'legajo' => $legajo];
     }
-    sqlsrv_close($connCorp);
+
+    $mapaVendedores = [];
+    if (!empty($vendedoresIds)) {
+        $connCentral = getConexionCentral();
+        $connCorp = getConexionCorp();
+        foreach (array_unique($vendedoresIds) as $idVend) {
+            $mapaVendedores[$idVend] = obtenerNombreYLegajo($idVend, $connCentral, $connCorp);
+        }
+        if ($connCentral) sqlsrv_close($connCentral);
+        if ($connCorp) sqlsrv_close($connCorp);
+    }
 }
 
 // 4. Calcular PVC por bloque y agrupar para el reporte final

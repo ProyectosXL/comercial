@@ -82,7 +82,7 @@
                     <i class="bi bi-bar-chart-line-fill text-success"></i> Indicadores
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
+            <li class="nav-item" role="presentation" style="display:none;">
                 <button class="nav-link fw-bold" id="tab-asistencia" data-bs-toggle="tab"
                     data-bs-target="#panel-asistencia" type="button" role="tab">
                     <i class="bi bi-person-check-fill text-primary"></i> Asistencia - Gestión vs QuickPass
@@ -104,6 +104,12 @@
                 <button class="nav-link fw-bold" id="tab-pvc" data-bs-toggle="tab"
                     data-bs-target="#panel-pvc" type="button" role="tab">
                     <i class="bi bi-currency-dollar text-danger"></i> PVC
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="tab-distribucion" data-bs-toggle="tab"
+                    data-bs-target="#panel-distribucion" type="button" role="tab">
+                    <i class="bi bi-pie-chart-fill text-info"></i> Distribución Horas Por Local
                 </button>
             </li>
         </ul>
@@ -485,6 +491,58 @@
                 </div>
             </div>
 
+            <!-- === PANEL 6: DISTRIBUCIÓN HORAS POR LOCAL === -->
+            <div class="tab-pane fade" id="panel-distribucion" role="tabpanel">
+                <!-- Filtros -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Periodo (Desde - Hasta)</label>
+                                <div class="input-group">
+                                    <input type="date" id="dist_fechaDesde" class="form-control">
+                                    <input type="date" id="dist_fechaHasta" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <button id="dist_btnFiltrar" class="btn btn-success w-100 text-white">
+                                    <i class="bi bi-search"></i> Buscar
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <button id="dist_btnExportar" class="btn btn-outline-success w-100 disabled" disabled>
+                                    <i class="bi bi-file-earmark-excel"></i> Exportar Excel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resultados -->
+                <div class="card shadow-sm" id="dist_resultContainer" style="display:none;">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-pie-chart-fill me-2 text-info"></i> Distribución de Horas por Sucursal</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 550px;">
+                            <table class="table table-striped table-hover mb-0 text-center">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>Legajo</th>
+                                        <th class="text-start">Nombre</th>
+                                        <th>Sucursal</th>
+                                        <th>Cód. Auxiliar</th>
+                                        <th>Horas</th>
+                                        <th>%</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dist_tablaBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div> <!-- Fin Tab Content -->
 
     </div>
@@ -637,6 +695,7 @@
     <script src="assets/js/importador.js"></script>
     <script src="assets/js/local.js"></script>
     <script src="assets/js/pvc.js"></script>
+    <script src="assets/js/distribucion_horas.js"></script>
 
 </body>
 
