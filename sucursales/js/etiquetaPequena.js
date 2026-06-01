@@ -198,6 +198,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const precioSinIva = formatCurrency(producto.PRECIO_S_IVA);
             const precioFinal = formatCurrency(producto.PRECIO_FINAL, 0);
             
+            const precioSinIvaHtml = (typeof USR_USHUAIA !== 'undefined' && USR_USHUAIA)
+                ? `<div class="price-without-tax">
+                    <span class="amount">$${precioSinIva}</span>
+                    <span class="text">Precio sin Impuestos<br> Nacionales</span>
+                </div>`
+                : '';
+
             // Añadir contenido a la etiqueta
             smallTag.innerHTML = `
                 <div class="small-tag-header no-print">
@@ -207,10 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                 </div>
                 <div class="final-price">$${precioFinal}</div>
-                <div class="price-without-tax">
-                    <span class="amount">$${precioSinIva}</span>
-                    <span class="text">Precio sin Impuestos<br> Nacionales</span>
-                </div>
+                ${precioSinIvaHtml}
             `;
             
             // Añadir la etiqueta al contenedor

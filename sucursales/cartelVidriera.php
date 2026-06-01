@@ -1,4 +1,12 @@
 
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+$usuario = $_SESSION['usuario'] ?? $_GET['usuario'] ?? $_GET['user'] ?? $_GET['usr'] ?? '';
+$usuario = strtolower(trim($usuario));
+$esUshuaia = ($usuario === 'xlushuaia');
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -11,7 +19,9 @@
      <link rel="stylesheet" href="css/cartelVidriera.css">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
+    <script>
+        const USR_USHUAIA = <?php echo $esUshuaia ? 'true' : 'false'; ?>;
+    </script>
 </head>
 <body>
     <div class="container">
