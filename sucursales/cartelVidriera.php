@@ -3,9 +3,26 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-$usuario = $_SESSION['usuario'] ?? $_GET['usuario'] ?? $_GET['user'] ?? $_GET['usr'] ?? '';
-$usuario = strtolower(trim($usuario));
-$esUshuaia = ($usuario === 'xlushuaia');
+
+function buscarUshuaiaRecursivo($elemento) {
+    if (is_array($elemento) || is_object($elemento)) {
+        foreach ($elemento as $key => $valor) {
+            if (buscarUshuaiaRecursivo($key) || buscarUshuaiaRecursivo($valor)) {
+                return true;
+            }
+        }
+    } else if (is_string($elemento)) {
+        $normalizado = strtolower(trim($elemento));
+        if ($normalizado === 'xlushuaia' || $normalizado === 'ushuaia') {
+            return true;
+        }
+    }
+    return false;
+}
+
+$esUshuaia = buscarUshuaiaRecursivo($_SESSION) || 
+             buscarUshuaiaRecursivo($_GET) || 
+             buscarUshuaiaRecursivo($_POST);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -21,6 +38,7 @@ $esUshuaia = ($usuario === 'xlushuaia');
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script>
         const USR_USHUAIA = <?php echo $esUshuaia ? 'true' : 'false'; ?>;
+        console.log("USR_USHUAIA:", USR_USHUAIA);
     </script>
 </head>
 <body>
@@ -96,8 +114,8 @@ $esUshuaia = ($usuario === 'xlushuaia');
         </div>
     </div>
     
-    <script src="js/cartelVidriera.js"></script>
-    <script src="js/etiquetaPequena.js"></script>
+    <script src="js/cartelVidriera.js?v=<?php echo time(); ?>"></script>
+    <script src="js/etiquetaPequena.js?v=<?php echo time(); ?>"></script>
     <script src="js/tabs.js"></script>
 </body>
 </html>

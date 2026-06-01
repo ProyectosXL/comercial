@@ -178,8 +178,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     const precioFinal = formatCurrency(producto.PRECIO_FINAL, 0);
                     
                     const precioSinIvaHtml = (typeof USR_USHUAIA !== 'undefined' && USR_USHUAIA) 
-                        ? `<div class="price-without-tax">Precio sin Impuestos Nacionales $${precioSinIva}</div>` 
-                        : '';
+                        ? '' 
+                        : `<div class="price-without-tax">Precio sin Impuestos Nacionales $${precioSinIva}</div>`;
                     
                     // Crear el elemento del producto
                     const productoDiv = document.createElement('div');

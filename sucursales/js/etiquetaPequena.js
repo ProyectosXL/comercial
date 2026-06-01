@@ -199,11 +199,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const precioFinal = formatCurrency(producto.PRECIO_FINAL, 0);
             
             const precioSinIvaHtml = (typeof USR_USHUAIA !== 'undefined' && USR_USHUAIA)
-                ? `<div class="price-without-tax">
+                ? ''
+                : `<div class="price-without-tax">
                     <span class="amount">$${precioSinIva}</span>
                     <span class="text">Precio sin Impuestos<br> Nacionales</span>
-                </div>`
-                : '';
+                </div>`;
 
             // Añadir contenido a la etiqueta
             smallTag.innerHTML = `
