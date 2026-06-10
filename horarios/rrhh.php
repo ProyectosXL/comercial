@@ -82,6 +82,12 @@
                     <i class="bi bi-bar-chart-line-fill text-success"></i> Indicadores
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="tab-indicadores-desglose" data-bs-toggle="tab"
+                    data-bs-target="#panel-indicadores-desglose" type="button" role="tab">
+                    <i class="bi bi-calendar3 text-success"></i> Indicadores (desgloce)
+                </button>
+            </li>
             <li class="nav-item" role="presentation" style="display:none;">
                 <button class="nav-link fw-bold" id="tab-asistencia" data-bs-toggle="tab"
                     data-bs-target="#panel-asistencia" type="button" role="tab">
@@ -260,6 +266,77 @@
                                     </table>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- === PANEL: INDICADORES (DESGLOSE) === -->
+            <div class="tab-pane fade" id="panel-indicadores-desglose" role="tabpanel">
+                <!-- Filtros Indicadores Desglose -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Sucursales (Multiples)</label>
+                                <select id="ind_desg_sucursalSelector" class="form-select" multiple="multiple" style="width: 100%;"></select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Periodo (Desde - Hasta)</label>
+                                <div class="input-group">
+                                    <input type="date" id="ind_desg_fechaDesde" class="form-control">
+                                    <input type="date" id="ind_desg_fechaHasta" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-bold">Buscar Persona</label>
+                                <input type="text" id="ind_desg_buscarPersona" class="form-control" placeholder="Nombre o legajo...">
+                            </div>
+                            <div class="col-md-3">
+                                <button id="ind_desg_btnFiltrar" class="btn btn-success w-100 text-white">
+                                    <i class="bi bi-search"></i> Buscar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla Desglose -->
+                <div class="card shadow-sm mb-4" id="ind_desg_tablaContainer" style="display:none;">
+                    <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <h5 class="mb-0 fw-bold">Desglose de Horas por Persona y Día</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="text" id="ind_desg_buscadorTabla" class="form-control form-control-sm" placeholder="Buscar en la tabla..." style="width: 200px;">
+                            <button id="ind_desg_btnExportar" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 550px;">
+                            <table class="table table-striped table-hover mb-0 text-center">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th class="text-start">Sucursal</th>
+                                        <th class="text-start">Legajo</th>
+                                        <th class="text-start">Vendedor</th>
+                                        <th>Fecha (Día)</th>
+                                        <th class="text-success">H</th>
+                                        <th class="text-info">C</th>
+                                        <th style="color:#d63384">P</th>
+                                        <th class="text-primary">A</th>
+                                        <th class="text-warning">D</th>
+                                        <th style="color:#6a1b9a">V</th>
+                                        <th class="text-secondary">AU</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ind_desg_tablaDetalleBody">
+                                    <tr>
+                                        <td colspan="12" class="text-center py-3 text-muted">Seleccione filtros y haga clic en Buscar.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -691,6 +768,7 @@
 
     <!-- Scripts actualizados con prefijos -->
     <script src="assets/js/indicadores.js?v=2.0"></script>
+    <script src="assets/js/indicadores_desglose.js"></script>
     <script src="assets/js/comparacion.js"></script>
     <script src="assets/js/importador.js"></script>
     <script src="assets/js/local.js"></script>

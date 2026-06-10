@@ -126,6 +126,46 @@ function obtenerNombreYLegajoDist($codVendedor, $connCentral, $connCorp) {
                 $nombre = $nomFormateado;
             }
             $legajo = trim($row['NRO_LEGAJO']);
+        } else {
+            // FALLBACK POR APROXIMACIÓN DE NOMBRE
+            $cleanName = trim($nombre);
+            if (!empty($cleanName) && $cleanName !== $codVendedor) {
+                $parts = explode(' ', $cleanName);
+                if (count($parts) >= 2) {
+                    $p1 = $parts[0];
+                    $p2 = $parts[count($parts) - 1];
+                    $p2_alt = str_replace('RR', 'R', $p2);
+                    if ($p2_alt === $p2) {
+                        $p2_alt = str_replace('R', 'RR', $p2);
+                    }
+                    $sqlLike = "SELECT TOP 1 NRO_LEGAJO, APELLIDO, NOMBRE 
+                                FROM RO_LEGAJOS_PERSONAL_ALL 
+                                WHERE (
+                                    (APELLIDO LIKE ? OR APELLIDO LIKE ? OR APELLIDO LIKE ?) 
+                                    AND (NOMBRE LIKE ? OR NOMBRE LIKE ?)
+                                ) OR (
+                                    (APELLIDO LIKE ? OR APELLIDO LIKE ? OR APELLIDO LIKE ?) 
+                                    AND (NOMBRE LIKE ? OR NOMBRE LIKE ?)
+                                )";
+                    $p1_wild = '%' . $p1 . '%';
+                    $p2_wild = '%' . $p2 . '%';
+                    $p2_alt_wild = '%' . $p2_alt . '%';
+                    $paramsLike = [
+                        $p2_wild, $p2_alt_wild, $p1_wild, $p1_wild, $p2_wild,
+                        $p1_wild, $p2_wild, $p2_alt_wild, $p2_wild, $p1_wild
+                    ];
+                    $stmtLike = sqlsrv_query($connCorp, $sqlLike, $paramsLike);
+                    if ($stmtLike && $rowLike = sqlsrv_fetch_array($stmtLike, SQLSRV_FETCH_ASSOC)) {
+                        $nomFormateado = trim($rowLike['APELLIDO']) . ' ' . trim($rowLike['NOMBRE']);
+                        if (!mb_detect_encoding($nomFormateado, 'UTF-8', true)) $nomFormateado = utf8_encode($nomFormateado);
+                        if (!empty(trim($nomFormateado))) {
+                            $nombre = $nomFormateado;
+                        }
+                        $legajo = trim($rowLike['NRO_LEGAJO']);
+                    }
+                    if ($stmtLike) sqlsrv_free_stmt($stmtLike);
+                }
+            }
         }
         if ($stmtCorp) sqlsrv_free_stmt($stmtCorp);
     }
@@ -188,18 +228,49 @@ if ($connCentral) sqlsrv_close($connCentral);
 if ($connCorp) sqlsrv_close($connCorp);
 
 // =========================================================
-// PASO 4: CONSTRUIR RESULTADO
+// PASO 4: CONSTRUIR RESULTADO AGRUPADO POR LEGAJO REAL
 // =========================================================
-$resultado = [];
+$horasPorLegajoSuc = [];
+$totalPorLegajo    = [];
+$nombrePorLegajo   = [];
 
 foreach ($horasPorVendSuc as $codVend => $sucursales) {
-    $totalVend = $totalPorVend[$codVend];
-    $vendData  = $mapaVendedores[$codVend] ?? null;
-    $legajo    = $vendData ? $vendData['legajo'] : $codVend;
-    $nombre    = $vendData ? $vendData['nombre'] : "($codVend)";
+    $vendData = $mapaVendedores[$codVend] ?? null;
+    $legajo   = $vendData ? $vendData['legajo'] : $codVend;
+    $nombre   = $vendData ? $vendData['nombre'] : "($codVend)";
+
+    $nombrePorLegajo[$legajo] = $nombre;
 
     foreach ($sucursales as $sucID => $horas) {
-        $porcentaje = $totalVend > 0 ? round(($horas / $totalVend) * 100, 1) : 0;
+        if (!isset($horasPorLegajoSuc[$legajo])) {
+            $horasPorLegajoSuc[$legajo] = [];
+        }
+        $horasPorLegajoSuc[$legajo][$sucID] = ($horasPorLegajoSuc[$legajo][$sucID] ?? 0) + $horas;
+        $totalPorLegajo[$legajo] = ($totalPorLegajo[$legajo] ?? 0) + $horas;
+    }
+}
+
+$resultado = [];
+foreach ($horasPorLegajoSuc as $legajo => $sucursales) {
+    $totalVend = $totalPorLegajo[$legajo];
+    $nombre    = $nombrePorLegajo[$legajo];
+    $numSucs   = count($sucursales);
+    $i         = 0;
+    $runningSum = 0;
+
+    foreach ($sucursales as $sucID => $horas) {
+        $i++;
+        if ($totalVend > 0) {
+            if ($i < $numSucs) {
+                $porcentaje = round(($horas / $totalVend) * 100, 1);
+                $runningSum += $porcentaje;
+            } else {
+                $porcentaje = round(100.0 - $runningSum, 1);
+            }
+        } else {
+            $porcentaje = 0;
+        }
+
         $tangoSucNo = $mapaSucursalesTango[$sucID] ?? $sucID;
         $resultado[] = [
             'legajo'       => $legajo,

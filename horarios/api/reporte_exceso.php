@@ -13,11 +13,12 @@ if (!$fechaInicio) die("Faltan fechas");
 
 $conn = getConexionSistemas();
 
-// 1. Consulta Base: Contamos horas por día y persona
+// 1. Consulta Base: Contamos horas por día y persona (excluyendo Vacaciones 'V')
 $sql = "
     SELECT COD_VENDED, FECHA, COUNT(*) as HORAS_DIA
     FROM FP_GESTION_HORARIOS 
     WHERE FECHA BETWEEN ? AND ?
+      AND LOWER(TIPO_HORA) NOT IN ('vacaciones', 'v')
 ";
 if ($nroSucursal) $sql .= " AND NRO_SUCURSAL = $nroSucursal";
 
@@ -112,6 +113,46 @@ function obtenerNombreYLegajoExceso($codVendedor, $connCentral, $connCorp) {
                 $nombre = $nomFormateado;
             }
             $legajo = trim($row['NRO_LEGAJO']);
+        } else {
+            // FALLBACK POR APROXIMACIÓN DE NOMBRE
+            $cleanName = trim($nombre);
+            if (!empty($cleanName) && $cleanName !== $codVendedor) {
+                $parts = explode(' ', $cleanName);
+                if (count($parts) >= 2) {
+                    $p1 = $parts[0];
+                    $p2 = $parts[count($parts) - 1];
+                    $p2_alt = str_replace('RR', 'R', $p2);
+                    if ($p2_alt === $p2) {
+                        $p2_alt = str_replace('R', 'RR', $p2);
+                    }
+                    $sqlLike = "SELECT TOP 1 NRO_LEGAJO, APELLIDO, NOMBRE 
+                                FROM RO_LEGAJOS_PERSONAL_ALL 
+                                WHERE (
+                                    (APELLIDO LIKE ? OR APELLIDO LIKE ? OR APELLIDO LIKE ?) 
+                                    AND (NOMBRE LIKE ? OR NOMBRE LIKE ?)
+                                ) OR (
+                                    (APELLIDO LIKE ? OR APELLIDO LIKE ? OR APELLIDO LIKE ?) 
+                                    AND (NOMBRE LIKE ? OR NOMBRE LIKE ?)
+                                )";
+                    $p1_wild = '%' . $p1 . '%';
+                    $p2_wild = '%' . $p2 . '%';
+                    $p2_alt_wild = '%' . $p2_alt . '%';
+                    $paramsLike = [
+                        $p2_wild, $p2_alt_wild, $p1_wild, $p1_wild, $p2_wild,
+                        $p1_wild, $p2_wild, $p2_alt_wild, $p2_wild, $p1_wild
+                    ];
+                    $stmtLike = sqlsrv_query($connCorp, $sqlLike, $paramsLike);
+                    if ($stmtLike && $rowLike = sqlsrv_fetch_array($stmtLike, SQLSRV_FETCH_ASSOC)) {
+                        $nomFormateado = trim($rowLike['APELLIDO']) . ' ' . trim($rowLike['NOMBRE']);
+                        if (!mb_detect_encoding($nomFormateado, 'UTF-8', true)) $nomFormateado = utf8_encode($nomFormateado);
+                        if (!empty(trim($nomFormateado))) {
+                            $nombre = $nomFormateado;
+                        }
+                        $legajo = trim($rowLike['NRO_LEGAJO']);
+                    }
+                    if ($stmtLike) sqlsrv_free_stmt($stmtLike);
+                }
+            }
         }
         if ($stmtCorp) sqlsrv_free_stmt($stmtCorp);
     }

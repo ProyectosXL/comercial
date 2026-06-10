@@ -1,0 +1,6 @@
+[2026-06-02 14:58:08] Error al enviar email a lucas.navarro@xl.com.ar: SMTP Error: data not accepted.SMTP server error: DATA END command failed Detail: Mail server temporarily rejected message. For more information, go to
+ https://support.google.com/a/answer/3221692 00721157ae682-7ea2358876csm2480837b3.24 - gsmtp
+ SMTP code: 451 Additional SMTP info: 4.3.0 
+[2026-06-02 14:58:11] Error al enviar email a pedidos@xl.com.ar: SMTP Error: data not accepted.SMTP server error: DATA END command failed Detail: Mail server temporarily rejected message. For more information, go to
+ https://support.google.com/a/answer/3221692 00721157ae682-7ea2358876csm2480837b3.24 - gsmtp
+ SMTP code: 451 Additional SMTP info: 4.3.0 
