@@ -24,7 +24,7 @@ class StockModel {
     public function getSucursales() {
         $sql = "SELECT NRO_SUCURSAL ID_SUCURSAL, COD_CLIENT, DESC_SUCURSAL
                 FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS
-                WHERE HABILITADO = 1 ORDER BY NRO_SUCURSAL";
+                WHERE HABILITADO = 1 AND (EMPRESA_FERRETERIA = 0 OR EMPRESA_FERRETERIA IS NULL) ORDER BY NRO_SUCURSAL";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
