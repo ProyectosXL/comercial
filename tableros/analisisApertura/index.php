@@ -103,6 +103,21 @@ $locales     = $sucursalObj->traerLocales(true);
         <!-- ── AVISO RANGO AJUSTADO ────────────────────────────────── -->
         <div id="aaAvisoAjuste" class="aa-aviso-ajuste"></div>
 
+        <!-- ── PANEL DE AVISOS ─────────────────────────────────────────────── -->
+        <div id="aaAvisosPanel" class="aa-avisos-panel" style="display:none;">
+            <div class="aa-avisos-header" id="aaAvisosHeader">
+                <div class="aa-avisos-header-left">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                    <span id="aaAvisosCount">0 avisos activos</span>
+                </div>
+                <div class="aa-avisos-header-right">
+                    <span id="aaAvisosBadges" class="aa-avisos-badges"></span>
+                    <i class="bi bi-chevron-down aa-avisos-chevron"></i>
+                </div>
+            </div>
+            <div class="aa-avisos-body" id="aaAvisosBody"></div>
+        </div>
+
         <!-- ── KPIs ───────────────────────────────────────────────── -->
         <div class="row aa-kpi-row">
             <div class="col-6 col-md-3 mb-3">
@@ -254,6 +269,26 @@ $locales     = $sucursalObj->traerLocales(true);
                     <i class="bi bi-clock-history" style="color:#3498db;margin-right:6px;"></i>
                     <strong id="aaIndicadorDiaLabel">Optimización horaria del lunes:</strong>
                     <span id="aaIndicadorLunesTexto"></span>
+                </div>
+
+                <!-- ── EVOLUCIÓN MENSUAL POR DÍA ───────────────────────────── -->
+                <div class="aa-evolucion-card" id="aaEvolucionCard">
+                    <div class="aa-evolucion-title" id="aaEvolucionTitle">
+                        <i class="bi bi-graph-up" style="color:#3498db;"></i>
+                        Evolución mensual del % de costo de personal — Domingo
+                    </div>
+                    <div class="aa-chart-wrap" style="height:300px;position:relative;">
+                        <canvas id="aaChartEvolucion"></canvas>
+                        <div id="aaChartEvolucionEmpty" class="aa-empty" style="display:none;"></div>
+                    </div>
+                    <div class="aa-evolucion-leyenda">
+                        <div class="aa-leyenda-item">
+                            <span class="aa-leyenda-line solida"></span> % costo del día (color = semáforo)
+                        </div>
+                        <div class="aa-leyenda-item">
+                            <span class="aa-leyenda-line dashed"></span> % promedio de la sucursal del mes
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Nota fija -->

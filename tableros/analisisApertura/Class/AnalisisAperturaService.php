@@ -496,7 +496,304 @@ class AnalisisAperturaService
         ];
     }
 
+    // ─── Ventas por día de la semana, apertura mensual ───────────────────────
+
+    public function getDiaSemanaPorMes(int $nroSucurs, string $desde, string $hasta): array
+    {
+        $sql = "
+                ;WITH base AS (
+                SELECT
+                    FORMAT(FECHA,'yyyy-MM') AS PERIODO,
+                    FECHA,
+                    ((DATEPART(WEEKDAY, FECHA) + @@DATEFIRST + 5) % 7) + 1 AS DOW,
+                    IMP_TOTAL_TICKET,
+                    CASE WHEN IMP_TOTAL_TICKET > 0 THEN 1 ELSE 0 END AS ES_VENTA
+                FROM BI_SALES_TOTAL_TICKETS WITH (NOLOCK)
+                WHERE NRO_SUCURS = ? AND FECHA >= ? AND FECHA <= ?
+                )
+                SELECT
+                    PERIODO,
+                    DOW,
+                    COUNT(DISTINCT FECHA)                                                          AS DIAS_ABIERTOS,
+                    CAST(SUM(IMP_TOTAL_TICKET) AS DECIMAL(18,2))                                   AS VENTA_NETA,
+                    SUM(ES_VENTA)                                                                   AS TICKETS,
+                    CAST(SUM(IMP_TOTAL_TICKET)*1.0/NULLIF(COUNT(DISTINCT FECHA),0) AS DECIMAL(18,2)) AS VENTA_PROM_DIA_ABIERTO
+                FROM base
+                GROUP BY PERIODO, DOW
+                ORDER BY PERIODO, DOW
+                ";
+        $params = [$nroSucurs, $desde, $hasta];
+        $stmt   = sqlsrv_prepare($this->connPower, $sql, $params);
+        if ($stmt === false) {
+            throw new Exception('Error preparando query día de semana por mes: ' . $this->_lastError());
+        }
+        if (!sqlsrv_execute($stmt)) {
+            throw new Exception('Error ejecutando query día de semana por mes: ' . $this->_lastError());
+        }
+
+        $rows = [];
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $rows[] = [
+                'PERIODO'                => $row['PERIODO'],
+                'DOW'                    => (int)$row['DOW'],
+                'DIAS_ABIERTOS'          => (int)$row['DIAS_ABIERTOS'],
+                'VENTA_NETA'             => (float)$row['VENTA_NETA'],
+                'TICKETS'                => (int)$row['TICKETS'],
+                'VENTA_PROM_DIA_ABIERTO' => (float)$row['VENTA_PROM_DIA_ABIERTO'],
+            ];
+        }
+        sqlsrv_free_stmt($stmt);
+        return $rows;
+    }
+
+    // ─── Dotación real por día, apertura mensual ──────────────────────────────
+
+    public function getDotacionHorariosPorMes(int $nroSucurs, string $desde, string $hasta): array
+    {
+        $sql = "
+                ;WITH base AS (
+                SELECT
+                    FORMAT(A.FECHA,'yyyy-MM') AS PERIODO,
+                    A.FECHA,
+                    ((DATEPART(WEEKDAY, A.FECHA) + @@DATEFIRST + 5) % 7) + 1 AS DOW,
+                    A.COD_VENDED,
+                    COUNT(A.HORA) AS HORAS_EMPLEADO
+                FROM sistemas.DBO.FP_GESTION_HORARIOS A
+                LEFT JOIN [XL-TANGO].LAKER_SA.DBO.RO_T_CENTRO_DE_COSTOS B
+                    ON A.NRO_SUCURSAL = B.ID_DEPARTAMENTO
+                WHERE A.TIPO_HORA != 'devuelve'
+                  AND B.NUM_SUCURSAL = ?
+                  AND A.FECHA >= ? AND A.FECHA <= ?
+                GROUP BY FORMAT(A.FECHA,'yyyy-MM'), A.FECHA, A.COD_VENDED,
+                         ((DATEPART(WEEKDAY, A.FECHA) + @@DATEFIRST + 5) % 7) + 1
+                ),
+                per_day AS (
+                SELECT
+                    PERIODO, FECHA, DOW,
+                    COUNT(DISTINCT COD_VENDED) AS PERSONAS,
+                    SUM(HORAS_EMPLEADO)        AS HORAS_TOTAL
+                FROM base
+                GROUP BY PERIODO, FECHA, DOW
+                )
+                SELECT
+                    PERIODO,
+                    DOW,
+                    COUNT(FECHA)                                           AS DIAS_CON_DATOS,
+                    CAST(ROUND(AVG(CAST(PERSONAS AS FLOAT)), 0) AS INT)     AS PROM_PERSONAS,
+                    CAST(AVG(CAST(HORAS_TOTAL AS FLOAT)) AS DECIMAL(10,1)) AS PROM_HORAS_TOTAL
+                FROM per_day
+                GROUP BY PERIODO, DOW
+                ORDER BY PERIODO, DOW
+                ";
+        $params = [$nroSucurs, $desde, $hasta];
+        $stmt   = sqlsrv_prepare($this->connPower, $sql, $params);
+        if ($stmt === false) {
+            error_log('[analisisApertura] getDotacionHorariosPorMes prepare error suc=' . $nroSucurs . ': ' . $this->_lastError());
+            return [];
+        }
+        if (!sqlsrv_execute($stmt)) {
+            error_log('[analisisApertura] getDotacionHorariosPorMes execute error suc=' . $nroSucurs . ': ' . $this->_lastError());
+            sqlsrv_free_stmt($stmt);
+            return [];
+        }
+
+        $rows = [];
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $rows[] = [
+                'PERIODO'         => $row['PERIODO'],
+                'DOW'             => (int)$row['DOW'],
+                'DIAS_CON_DATOS'  => (int)$row['DIAS_CON_DATOS'],
+                'PROM_PERSONAS'   => (int)$row['PROM_PERSONAS'],
+                'PROM_HORAS_TOTAL' => (float)$row['PROM_HORAS_TOTAL'],
+            ];
+        }
+        sqlsrv_free_stmt($stmt);
+        return $rows;
+    }
+
+    // ─── Evolución mensual: ensamblador (PHP puro) ────────────────────────────
+
+    public function procesarEvolucionMensual(
+        array $costoPersonal,
+        array $diaSemanaPorMes,
+        array $dotacionPorMes,
+        string $desde,
+        string $hasta
+    ): array {
+        // a) Lista de meses esperados en el período (inclusive)
+        $meses  = [];
+        $cursor = new DateTime(substr($desde, 0, 7) . '-01');
+        $fin    = new DateTime(substr($hasta, 0, 7) . '-01');
+        while ($cursor <= $fin) {
+            $meses[] = $cursor->format('Y-m');
+            $cursor->modify('+1 month');
+        }
+
+        // b) Indexar datasets
+        $costoPorMes = [];
+        foreach ($costoPersonal as $c) {
+            $costoPorMes[$c['PERIODO']] = (float)$c['COSTO_MENSUAL'];
+        }
+
+        $ventaPorMesDow = [];
+        $ventaTotalMes  = [];
+        foreach ($diaSemanaPorMes as $r) {
+            $p   = $r['PERIODO'];
+            $dow = (int)$r['DOW'];
+            if (!isset($ventaPorMesDow[$p])) $ventaPorMesDow[$p] = [];
+            $ventaPorMesDow[$p][$dow] = [
+                'VENTA_NETA'             => (float)$r['VENTA_NETA'],
+                'VENTA_PROM_DIA_ABIERTO' => (float)$r['VENTA_PROM_DIA_ABIERTO'],
+            ];
+            if (!isset($ventaTotalMes[$p])) $ventaTotalMes[$p] = 0.0;
+            $ventaTotalMes[$p] += (float)$r['VENTA_NETA'];
+        }
+
+        $dotPorMesDow = [];
+        foreach ($dotacionPorMes as $r) {
+            $p   = $r['PERIODO'];
+            $dow = (int)$r['DOW'];
+            if (!isset($dotPorMesDow[$p])) $dotPorMesDow[$p] = [];
+            $dotPorMesDow[$p][$dow] = [
+                'PROM_PERSONAS'    => (int)$r['PROM_PERSONAS'],
+                'PROM_HORAS_TOTAL' => (float)$r['PROM_HORAS_TOTAL'],
+            ];
+        }
+
+        // c) Pre-computar métricas por mes (replicando calcularKPIs)
+        $semanasMes = 365.25 / 12.0 / 7.0;
+        $metasMes   = [];
+
+        foreach ($meses as $periodo) {
+            $costoMensual = $costoPorMes[$periodo] ?? 0.0;
+
+            $horasPersonaSemanaMes = 0.0;
+            if (isset($dotPorMesDow[$periodo])) {
+                foreach ($dotPorMesDow[$periodo] as $d) {
+                    $horasPersonaSemanaMes += $d['PROM_HORAS_TOTAL'];
+                }
+            }
+            $horasPersonaMes = $horasPersonaSemanaMes * $semanasMes;
+            $costoPorHoraMes = ($costoMensual > 0 && $horasPersonaMes > 0)
+                ? $costoMensual / $horasPersonaMes : 0.0;
+
+            $vtm           = $ventaTotalMes[$periodo] ?? 0.0;
+            $pctGeneralMes = ($costoMensual > 0 && $vtm > 0)
+                ? round($costoMensual / $vtm * 100, 2) : null;
+
+            $metasMes[$periodo] = [
+                'costoPorHoraMes' => $costoPorHoraMes,
+                'pctGeneralMes'   => $pctGeneralMes,
+            ];
+        }
+
+        // d) Por DOW (1..7) × mes → punto de evolución
+        $evolucionMensual = [];
+        for ($dow = 1; $dow <= 7; $dow++) {
+            $evolucionMensual[$dow] = [];
+            foreach ($meses as $periodo) {
+                $meta            = $metasMes[$periodo];
+                $costoPorHoraMes = $meta['costoPorHoraMes'];
+
+                $venta_prom_dia = $ventaPorMesDow[$periodo][$dow]['VENTA_PROM_DIA_ABIERTO'] ?? 0.0;
+                $personas       = $dotPorMesDow[$periodo][$dow]['PROM_PERSONAS'] ?? null;
+                $horas          = $dotPorMesDow[$periodo][$dow]['PROM_HORAS_TOTAL'] ?? null;
+
+                $costo_apertura = ($costoPorHoraMes > 0 && $horas !== null && $horas > 0)
+                    ? round($costoPorHoraMes * $horas, 2) : 0.0;
+
+                $pct_dia = ($venta_prom_dia > 0 && $costo_apertura > 0)
+                    ? round($costo_apertura / $venta_prom_dia * 100, 2) : null;
+
+                if ($pct_dia !== null) {
+                    [$sem, $semLabel] = $this->_clasificarSemaforo($pct_dia);
+                } else {
+                    $sem      = 'sin_datos';
+                    $semLabel = 'Sin datos';
+                }
+
+                $completo = isset($costoPorMes[$periodo]) && ($ventaTotalMes[$periodo] ?? 0.0) > 0;
+
+                $evolucionMensual[$dow][] = [
+                    'periodo'        => $periodo,
+                    'venta_prom_dia' => round($venta_prom_dia, 2),
+                    'costo_apertura' => $costo_apertura,
+                    'personas'       => $personas,
+                    'horas'          => $horas,
+                    'pct_dia'        => $pct_dia,
+                    'pct_general'    => $meta['pctGeneralMes'],
+                    'semaforo'       => $sem,
+                    'semaforo_label' => $semLabel,
+                    'completo'       => $completo,
+                ];
+            }
+        }
+
+        // e) Avisos de período incompleto
+        $mesesConCosto = array_keys($costoPorMes);
+        $mesesConVenta = [];
+        foreach ($meses as $periodo) {
+            if (($ventaTotalMes[$periodo] ?? 0.0) > 0) {
+                $mesesConVenta[] = $periodo;
+            }
+        }
+
+        $faltaCosto  = array_values(array_diff($meses, $mesesConCosto));
+        $faltaVenta  = array_values(array_diff($meses, $mesesConVenta));
+
+        $disponibles = 0;
+        foreach ($meses as $periodo) {
+            if (isset($costoPorMes[$periodo]) && ($ventaTotalMes[$periodo] ?? 0.0) > 0) {
+                $disponibles++;
+            }
+        }
+
+        $total  = count($meses);
+        $avisos = [];
+
+        if ($disponibles < $total) {
+            $detalle = "Se calculó con {$disponibles} de {$total} meses disponibles.";
+            if (!empty($faltaVenta)) {
+                $n        = count($faltaVenta);
+                $detalle .= ' ' . $this->_formatoListaMeses($faltaVenta)
+                          . ($n === 1 ? ' no tiene ventas cargadas.' : ' no tienen ventas cargadas.');
+            }
+            if (!empty($faltaCosto)) {
+                $n        = count($faltaCosto);
+                $detalle .= ' ' . $this->_formatoListaMeses($faltaCosto)
+                          . ($n === 1 ? ' no tiene costos cargados.' : ' no tienen costos cargados.');
+            }
+            $avisos[] = [
+                'tipo'   => 'periodo_incompleto',
+                'nivel'  => 'warning',
+                'titulo' => 'Período incompleto',
+                'detalle' => $detalle,
+            ];
+        }
+
+        return [
+            'evolucion_mensual' => $evolucionMensual,
+            'avisos'            => $avisos,
+        ];
+    }
+
     // ─── Helper ───────────────────────────────────────────────────────────────
+
+    private function _formatoListaMeses(array $periodos): string
+    {
+        $nombres = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        $labels  = [];
+        foreach ($periodos as $p) {
+            [$y, $m] = explode('-', $p);
+            $labels[] = $nombres[(int)$m] . ' ' . $y;
+        }
+        if (count($labels) === 1) {
+            return $labels[0];
+        }
+        $last = array_pop($labels);
+        return implode(', ', $labels) . ' y ' . $last;
+    }
 
     private function _lastError(): string
     {

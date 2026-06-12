@@ -8,11 +8,23 @@ const AnalisisApertura = (() => {
     let _data             = null;
     let _chartDia         = null;
     let _chartFranjas     = null;
+    let _chartEvolucion   = null;
     let _currentFranjaDow = 7; // default domingo
 
     const DIAS_LABELS  = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
     const DIAS_NOMBRES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const UMBRAL_FRANJA = 1.5; // fallback cuando no hay horario real
+
+    const MESES_ABBR = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+    const SEM_COLORS = {
+        azul:     '#3498db',
+        verde:    '#27ae60',
+        amarillo: '#f39c12',
+        naranja:  '#e67e22',
+        rojo:     '#e74c3c',
+        sin_datos:'#bdc3c7',
+    };
 
     const SEM_MAP = {
         azul:     { cssClass: 'azul',     icon: 'bi-stars' },
@@ -35,6 +47,13 @@ const AnalisisApertura = (() => {
     function fmtPct(v, d) {
         d = (d === undefined) ? 1 : d;
         return (parseFloat(v) || 0).toFixed(d) + '%';
+    }
+
+    function _mesLabel(periodo) {
+        const parts = periodo.split('-');
+        const mes   = parseInt(parts[1], 10);
+        const yy    = parts[0].slice(2);
+        return MESES_ABBR[mes - 1] + ' ' + yy;
     }
 
     // ── Calculo de rango desde pills ──────────────────────────────────────────
@@ -138,10 +157,47 @@ const AnalisisApertura = (() => {
         });
     }
 
+    // ── Panel de avisos ───────────────────────────────────────────────────────
+
+    function _renderAvisos(avisos) {
+        if (!avisos || avisos.length === 0) {
+            $('#aaAvisosPanel').hide();
+            return;
+        }
+
+        const n = avisos.length;
+        $('#aaAvisosCount').text(n + (n === 1 ? ' aviso activo' : ' avisos activos'));
+
+        const $badges = $('#aaAvisosBadges').empty();
+        avisos.forEach(function (a) {
+            $badges.append('<span class="aa-aviso-badge">' + a.titulo + '</span>');
+        });
+
+        const $body = $('#aaAvisosBody').empty();
+        avisos.forEach(function (a) {
+            $body.append(
+                '<div class="aa-aviso-item">' +
+                    '<div class="aa-aviso-item-title">' +
+                        '<i class="bi bi-exclamation-triangle-fill"></i>' +
+                        a.titulo +
+                    '</div>' +
+                    '<div class="aa-aviso-item-detail">' + a.detalle + '</div>' +
+                '</div>'
+            );
+        });
+
+        $('#aaAvisosPanel').removeClass('open').show();
+
+        $('#aaAvisosHeader').off('click.avisos').on('click.avisos', function () {
+            $('#aaAvisosPanel').toggleClass('open');
+        });
+    }
+
     // ── Render principal ──────────────────────────────────────────────────────
 
     function _renderTodo(data) {
         _renderAvisoAjuste(data);
+        _renderAvisos(data.avisos);
         _renderKPIs(data.kpis);
         _renderChartDiaSemana(data.dia_semana);
         _currentFranjaDow = 7;
@@ -526,6 +582,107 @@ const AnalisisApertura = (() => {
         }
 
         _renderIndicadorFranja(_currentFranjaDow);
+        _renderChartEvolucion(_currentFranjaDow);
+    }
+
+    // ── Gráfico evolución mensual por día ─────────────────────────────────────
+
+    function _renderChartEvolucion(dow) {
+        const rows = (_data && _data.evolucion_mensual && _data.evolucion_mensual[dow])
+            ? _data.evolucion_mensual[dow] : [];
+
+        const diaNombre = DIAS_NOMBRES[dow - 1] || '';
+        $('#aaEvolucionTitle').html(
+            '<i class="bi bi-graph-up" style="color:#3498db;"></i> ' +
+            'Evolución mensual del % de costo de personal — ' + diaNombre
+        );
+
+        if (_chartEvolucion) { _chartEvolucion.destroy(); _chartEvolucion = null; }
+
+        const todosNulos = rows.length === 0 || rows.every(function (r) { return r.pct_dia === null; });
+
+        if (todosNulos) {
+            $('#aaChartEvolucion').hide();
+            $('#aaChartEvolucionEmpty')
+                .text('Sin datos de costo/venta para graficar la evolución del ' + diaNombre.toLowerCase() + '.')
+                .show();
+            return;
+        }
+
+        $('#aaChartEvolucionEmpty').hide();
+        $('#aaChartEvolucion').show();
+
+        const ctx = document.getElementById('aaChartEvolucion');
+        if (!ctx) return;
+
+        const labels      = rows.map(function (r) { return _mesLabel(r.periodo); });
+        const dataDia     = rows.map(function (r) { return r.pct_dia; });
+        const dataGen     = rows.map(function (r) { return r.pct_general; });
+        const pointColors = rows.map(function (r) { return SEM_COLORS[r.semaforo] || SEM_COLORS.sin_datos; });
+
+        _chartEvolucion = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '% costo del día',
+                        data: dataDia,
+                        borderColor: '#3498db',
+                        pointBackgroundColor: pointColors,
+                        pointBorderColor: pointColors,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        tension: 0.25,
+                        spanGaps: false,
+                        fill: false,
+                    },
+                    {
+                        label: '% promedio mes',
+                        data: dataGen,
+                        borderColor: '#95a5a6',
+                        borderDash: [6, 4],
+                        pointRadius: 0,
+                        tension: 0.25,
+                        fill: false,
+                        spanGaps: false,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function (items) { return items[0].label; },
+                            afterBody: function (items) {
+                                const r = rows[items[0].dataIndex];
+                                return [
+                                    '% día: ' + (r.pct_dia != null ? fmtPct(r.pct_dia, 2) : 'Sin datos'),
+                                    '% promedio mes: ' + (r.pct_general != null ? fmtPct(r.pct_general, 2) : 'Sin datos'),
+                                    'Costo apertura: ' + fmtPesos(r.costo_apertura),
+                                    'Venta prom. día: ' + fmtPesos(r.venta_prom_dia),
+                                    'Personas prom.: ' + (r.personas != null ? r.personas : '—'),
+                                    'Hs totales prom.: ' + (r.horas != null ? r.horas.toFixed(1) : '—'),
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: { callback: function (v) { return fmtPct(v, 0); }, font: { size: 11 } },
+                        grid: { color: 'rgba(0,0,0,0.06)' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
+                    }
+                }
+            }
+        });
     }
 
     // ── Indicador optimización horaria por día ────────────────────────────────

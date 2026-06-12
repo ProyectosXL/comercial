@@ -56,21 +56,27 @@ try {
     $dotacion      = $service->getDotacionHorarios($nroSucurs, $fechaDesde, $fechaHasta);
     $kpis          = $service->calcularKPIs($diaSemana, $costoPersonal, $promDiasMes, $nroSucurs, $dotacion);
 
+    $diaSemanaPorMes = $service->getDiaSemanaPorMes($nroSucurs, $fechaDesde, $fechaHasta);
+    $dotacionPorMes  = $service->getDotacionHorariosPorMes($nroSucurs, $fechaDesde, $fechaHasta);
+    $evolucion       = $service->procesarEvolucionMensual($costoPersonal, $diaSemanaPorMes, $dotacionPorMes, $fechaDesde, $fechaHasta);
+
     echo json_encode([
         'success' => true,
         'data'    => [
-            'dia_semana'     => $diaSemana,
-            'franjas_por_dia' => $franjasPorDia,
-            'costo_personal' => [
+            'dia_semana'        => $diaSemana,
+            'franjas_por_dia'   => $franjasPorDia,
+            'costo_personal'    => [
                 'meses'                 => $costoPersonal,
                 'costo_mensual_prom'    => $kpis['costo_mensual_prom'],
                 'costo_diario_estimado' => $kpis['costo_diario_estimado'],
                 'prom_dias_mes'         => $kpis['prom_dias_mes'],
             ],
-            'kpis'           => $kpis,
-            'fecha_desde'    => $fechaDesde,
-            'fecha_hasta'    => $fechaHasta,
-            'rango_ajustado' => $rangoAjustado,
+            'kpis'              => $kpis,
+            'fecha_desde'       => $fechaDesde,
+            'fecha_hasta'       => $fechaHasta,
+            'rango_ajustado'    => $rangoAjustado,
+            'evolucion_mensual' => $evolucion['evolucion_mensual'],
+            'avisos'            => $evolucion['avisos'],
         ],
     ]);
 

@@ -428,6 +428,145 @@ body {
     font-size: 14px;
 }
 
+/* ── Panel de avisos ─────────────────────────────────────────────── */
+.aa-avisos-panel {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    border-radius: var(--border-radius);
+    margin-bottom: 16px;
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+}
+
+.aa-avisos-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 18px;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.aa-avisos-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.aa-avisos-header-left .bi-exclamation-circle-fill {
+    color: var(--warning-color);
+}
+
+.aa-avisos-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.aa-avisos-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.aa-aviso-badge {
+    background: var(--warning-color);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 14px;
+}
+
+.aa-avisos-chevron {
+    transition: transform .25s ease;
+}
+
+.aa-avisos-panel.open .aa-avisos-chevron {
+    transform: rotate(180deg);
+}
+
+.aa-avisos-body {
+    display: none;
+    padding: 12px 16px;
+    background: #f5f6fa;
+}
+
+.aa-avisos-panel.open .aa-avisos-body {
+    display: block;
+}
+
+.aa-aviso-item {
+    background: #fff3cd;
+    border-left: 4px solid var(--warning-color);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+}
+
+.aa-aviso-item:last-child {
+    margin-bottom: 0;
+}
+
+.aa-aviso-item-title {
+    font-weight: 700;
+    color: #856404;
+    font-size: 14px;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.aa-aviso-item-detail {
+    color: #9a7d0a;
+    font-size: 13px;
+}
+
+/* ── Evolución mensual ───────────────────────────────────────────── */
+.aa-evolucion-card {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--light-gray);
+}
+
+.aa-evolucion-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.aa-evolucion-leyenda {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--dark-gray);
+}
+
+.aa-leyenda-line {
+    display: inline-block;
+    width: 22px;
+    height: 0;
+    border-top: 3px solid;
+    vertical-align: middle;
+}
+
+.aa-leyenda-line.solida {
+    border-color: var(--accent-color);
+}
+
+.aa-leyenda-line.dashed {
+    border-top-style: dashed;
+    border-color: #95a5a6;
+}
+
 /* ── Select2 dentro del header ────────────────────────────────────── */
 .select2-container--default .select2-selection--single {
     border-color: #ced4da;

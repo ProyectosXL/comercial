@@ -707,10 +707,10 @@ $(document).ready(function () {
         new bootstrap.Modal(document.getElementById('modalMensaje')).show();
     }
 
-    // --- EXPORTAR MATRIZ A PDF (TODO EN UNA PÁGINA) ---
+    // --- EXPORTAR MATRIZ A PDF (DOS PÁGINAS: Lun-Jue / Vie-Dom) ---
     $('#btnExportarPDF').on('click', async function () {
         if (!lastDataLoaded) return;
-        
+
         const btn = $(this);
         const originalText = btn.html();
         btn.html('<span class="spinner-border spinner-border-sm me-2"></span> Generando PDF...');
@@ -732,191 +732,233 @@ $(document).ready(function () {
 
             const diasNombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-            // Generar TODO el HTML de la semana como un solo bloque ultra compacto
-            let fullHtml = `
-                <div style="font-family: Arial, Helvetica, sans-serif; background: white; padding: 8px;">
-            `;
+            // ─── CALIBRACIÓN: renderizamos al ancho exacto del A4 landscape útil ───
+            // A4 landscape = 297mm × 210mm  →  a 96dpi ≈ 1122 × 794px
+            // Con 8mm de margen: área útil ≈ 1062 × 734px
+            const CANVAS_W = 1062;  // px — ancho del contenedor de render
+            const SCALE    = 2;     // html2canvas scale (alta calidad de impresión)
+            const F_TITLE  = '11px';
+            const F_DIA    = '9px';
+            const F_HEADER = '8px';
+            const F_CELL   = '8px';
+            const F_PROMO  = '7px';
+            const ROW_H    = '15px';
+            // ─────────────────────────────────────────────────────────────────────────
 
-            lastDataLoaded.forEach((resultado, index) => {
-                const sucursalNombre = resultado.sucursalNombre || 'Sucursal';
-                const agenda = resultado.data.agenda || {};
-                const nombres = resultado.data.nombres || {};
-                const promos = resultado.data.promociones || {};
-                const promosInt = resultado.data.promociones_internas || {};
-                const bloqueosExternos = resultado.data.bloqueosExternos || {};
+            // Función que genera el bloque HTML para un rango de días
+            function generarHtmlPagina(desdeDia, hastaDia) {
+                let html = `<div style="font-family: Arial, Helvetica, sans-serif; background: white; padding: 8px; width: ${CANVAS_W}px; box-sizing: border-box;">`;
 
-                const obtenerPrioridadCargo = (id) => {
-                    const info = nombres[id] || nombres[parseInt(id)] || {};
-                    const tarea = info.tarea ? info.tarea.trim().toUpperCase() : '';
-                    if (tarea === 'ENCARGADA') return 1;
-                    if (tarea === 'SUB ENCARGADA') return 2;
-                    if (tarea === 'VENDEDORA') return 3;
-                    if (tarea === 'VENDEDOR') return 4;
-                    return 5;
-                };
+                lastDataLoaded.forEach((resultado, index) => {
+                    const sucursalNombre = resultado.sucursalNombre || 'Sucursal';
+                    const agenda         = resultado.data.agenda || {};
+                    const nombres        = resultado.data.nombres || {};
+                    const promos         = resultado.data.promociones || {};
+                    const promosInt      = resultado.data.promociones_internas || {};
+                    const bloqueosExt    = resultado.data.bloqueosExternos || {};
 
-                const vIds = Object.keys(agenda).sort((a, b) => {
-                    const priorA = obtenerPrioridadCargo(a);
-                    const priorB = obtenerPrioridadCargo(b);
-                    if (priorA !== priorB) {
-                        return priorA - priorB;
-                    }
-                    const nA = (nombres[a]?.nombre || a).toLowerCase();
-                    const nB = (nombres[b]?.nombre || b).toLowerCase();
-                    return nA.localeCompare(nB);
-                });
+                    const prioridad = (id) => {
+                        const info = nombres[id] || nombres[parseInt(id)] || {};
+                        const tarea = info.tarea ? info.tarea.trim().toUpperCase() : '';
+                        if (tarea === 'ENCARGADA') return 1;
+                        if (tarea === 'SUB ENCARGADA') return 2;
+                        if (tarea === 'VENDEDORA') return 3;
+                        if (tarea === 'VENDEDOR') return 4;
+                        return 5;
+                    };
 
-                fullHtml += `
-                    <div style="font-size: 14px; font-weight: bold; color: #2c3e50; margin-top: ${index > 0 ? '20px' : '0'}; margin-bottom: 6px; border-bottom: 2px solid #2c3e50; padding-bottom: 3px;">
-                        Grilla Horario - ${sucursalNombre.toUpperCase()} &mdash; ${rangoFechas}
-                    </div>
-                `;
-
-                for (let d = 0; d < lastNDias; d++) {
-                    let fAct = new Date(primerDia);
-                    fAct.setDate(primerDia.getDate() + d);
-                    const fISO = fAct.toISOString().split('T')[0];
-                    const dd = String(fAct.getDate()).padStart(2, '0');
-                    const mm = String(fAct.getMonth() + 1).padStart(2, '0');
-
-                    const dayIndex = (fAct.getDay() + 6) % 7;
-
-                    fullHtml += `
-                        <div style="margin-bottom: 4px;">
-                            <div style="background: #2c3e50; color: white; padding: 2px 6px; font-weight: bold; font-size: 10px;">
-                                ${diasNombres[dayIndex]} ${dd}/${mm}
-                            </div>
-                            <table style="width: 100%; border-collapse: collapse; font-size: 9px; line-height: 1.15;">
-                                <thead>
-                                    <tr style="background: #eaedf0;">
-                                        <th style="border: 1px solid #aaa; padding: 1px 2px; text-align: left; width: 90px; max-width: 90px;">Vendedor</th>
-                                        <th style="border: 1px solid #aaa; padding: 1px 2px; text-align: center; width: 22px;">Leg</th>
-                                        ${Array.from({length: 18}, (_, i) => {
-                                            const h = i + 7;
-                                            const lb = (h === 24) ? '00' : h;
-                                            return `<th style="border: 1px solid #aaa; padding: 0px; text-align: center; width: 10px; font-size: 8px;">${lb}</th>`;
-                                        }).join('')}
-                                        <th style="border: 1px solid #aaa; padding: 1px; text-align: center; width: 12px;">F</th>
-                                        <th style="border: 1px solid #aaa; padding: 1px; text-align: center; width: 22px;">T</th>
-                                        <th style="border: 1px solid #aaa; padding: 1px; text-align: center; width: 14px;">Hs</th>
-                                        <th style="border: 1px solid #aaa; padding: 1px 2px; text-align: left; width: 70px; max-width: 70px;">Promos banco</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                    `;
-
-                    vIds.forEach(vid => {
-                        const inf = nombres[vid] || nombres[parseInt(vid)] || { nombre: vid, legajo: vid };
-                        const dat = agenda[vid] || {};
-                        const franco = dat.francos && dat.francos[fISO];
-                        let tH = 0, turno = '-', hDia = [];
-                        if (!franco && dat.horarios && dat.horarios[fISO]) {
-                            Object.entries(dat.horarios[fISO]).forEach(([h, t]) => {
-                                let v = t && t.endsWith('_media') ? 0.5 : 1;
-                                if (t !== 'vacaciones') { tH += v; hDia.push(parseInt(h)); }
-                            });
-                        }
-
-                        // NUEVO: Sumar bloqueos externos al total Hs del PDF
-                        if (bloqueosExternos && bloqueosExternos[vid] && bloqueosExternos[vid][fISO]) {
-                            Object.entries(bloqueosExternos[vid][fISO]).forEach(([h, sId]) => {
-                                if (sId > 0) {
-                                    tH += 1;
-                                    hDia.push(parseInt(h));
-                                }
-                            });
-                        }
-                        turno = calcularTurnoTexto(hDia);
-
-                        fullHtml += `<tr>
-                            <td style="border: 1px solid #bbb; padding: 1px 2px; font-weight: bold; width: 90px; max-width: 90px; word-break: break-word;">${inf.nombre}</td>
-                            <td style="border: 1px solid #bbb; padding: 1px; text-align: center; color: #555;">${inf.legajo || vid}</td>`;
-
-                        for (let h = 7; h <= 24; h++) {
-                            const hb = (h === 24) ? 0 : h;
-                            let tx = '', bg = '';
-                            
-                            // 1. Prioridad: Horarios locales
-                            const tipo = (!franco && dat.horarios && dat.horarios[fISO]) ? (dat.horarios[fISO][hb] || '') : null;
-                            
-                            // 2. Bloqueos Externos (Otras sucursales)
-                            const bloqueoExt = (bloqueosExternos && bloqueosExternos[vid] && bloqueosExternos[vid][fISO]) ? bloqueosExternos[vid][fISO][hb] : null;
-
-                            if (tipo) {
-                                tx = tipo.endsWith('_media') ? '½' : 'X';
-                                bg = '#198754';
-                                if (tipo === 'caja') { tx = 'C'; bg = '#0dcaf0'; }
-                                else if (tipo === 'extra') { tx = 'E'; bg = '#0d6efd'; }
-                                else if (tipo === 'devuelve') { tx = 'D'; bg = '#ffc107'; }
-                                else if (tipo === 'permiso') { tx = 'P'; bg = '#d63384'; }
-                                else if (tipo === 'vacaciones') { tx = 'V'; bg = '#f3e5f5'; }
-                                else if (tipo === 'ausencia') { tx = 'AU'; bg = '#6c757d'; }
-                            } else if (bloqueoExt) {
-                                tx = 'Ø';
-                                bg = '#444'; // Color oscuro para bloqueos externos
-                            }
-
-                            let colorTexto = (bg && bg !== '#f3e5f5') ? 'white' : (bg === '#f3e5f5' ? '#6a1b9a' : 'transparent');
-                            fullHtml += `<td style="border: 1px solid #bbb; padding: 0px; text-align: center; width: 10px; background: ${bg}; color: ${colorTexto}; font-weight: 700; font-size: 8px;">${tx}</td>`;
-                        }
-
-                        fullHtml += `
-                            <td style="border: 1px solid #bbb; padding: 1px; text-align: center; background: ${franco ? '#6c757d' : ''}; color: white; font-weight: bold;">${franco ? 'F' : ''}</td>
-                            <td style="border: 1px solid #bbb; padding: 1px; text-align: center; font-weight: bold;">${turno}</td>
-                            <td style="border: 1px solid #bbb; padding: 1px; text-align: center; font-weight: bold;">${tH > 0 ? (tH % 1 === 0 ? tH : tH.toFixed(1)) : '0'}</td>
-                            <td style="border: 1px solid #bbb; padding: 1px 2px; font-size: 7px; color: #333; width: 70px; max-width: 70px; word-break: break-word;">${(promos[fISO] || []).join(', ')}</td>
-                        </tr>`;
+                    const vIds = Object.keys(agenda).sort((a, b) => {
+                        const d = prioridad(a) - prioridad(b);
+                        if (d !== 0) return d;
+                        return (nombres[a]?.nombre || a).toLowerCase().localeCompare((nombres[b]?.nombre || b).toLowerCase());
                     });
 
-                    fullHtml += `</tbody></table></div>`;
-                }
-            });
+                    // Título de sucursal
+                    html += `<div style="font-size:${F_TITLE}; font-weight:bold; color:#1a252f;
+                        margin-top:${index > 0 ? '10px' : '0'}; margin-bottom:4px;
+                        border-bottom:2px solid #2c3e50; padding-bottom:2px;">
+                        Grilla Horario — ${sucursalNombre.toUpperCase()} &nbsp;|&nbsp; ${rangoFechas}
+                    </div>`;
 
-            fullHtml += `</div>`;
+                    for (let d = desdeDia; d <= hastaDia && d < lastNDias; d++) {
+                        const fAct   = new Date(primerDia);
+                        fAct.setDate(primerDia.getDate() + d);
+                        const fISO   = fAct.toISOString().split('T')[0];
+                        const ddStr  = String(fAct.getDate()).padStart(2, '0');
+                        const mmStr  = String(fAct.getMonth() + 1).padStart(2, '0');
+                        const dayIdx = (fAct.getDay() + 6) % 7;
+                        const NCOLS  = 18; // horas 7..24
 
-            // Renderizar en un contenedor temporal fuera de pantalla
-            const tempDiv = $('<div style="width: 1100px; position: absolute; left: -9999px; background: white;"></div>');
-            tempDiv.html(fullHtml);
-            $('body').append(tempDiv);
+                        // Ancho calculado de las columnas de horas:
+                        // total útil = CANVAS_W - 16px padding
+                        // nombre: 140px fijo, F: 16px, Hs: 22px
+                        // horas: resto / NCOLS
+                        const util    = CANVAS_W - 16;
+                        const fixedW  = 140 + 16 + 22;
+                        const horaW   = Math.floor((util - fixedW) / NCOLS);
 
-            // Esperar un frame para que el navegador renderice
-            await new Promise(r => setTimeout(r, 300));
+                        html += `
+                        <div style="margin-bottom:4px;">
+                            <div style="background:#2c3e50; color:white; padding:2px 6px;
+                                font-size:${F_DIA}; font-weight:bold; line-height:16px;">
+                                ${diasNombres[dayIdx]} ${ddStr}/${mmStr}
+                            </div>
+                            <table style="width:100%; border-collapse:collapse; font-size:${F_CELL};
+                                table-layout:fixed; line-height:1;">
+                                <colgroup>
+                                    <col style="width:140px;">
+                                    ${Array.from({length: NCOLS}, () => `<col style="width:${horaW}px;">`).join('')}
+                                    <col style="width:16px;">
+                                    <col style="width:22px;">
+                                </colgroup>
+                                <thead>
+                                    <tr style="background:#eaedf0; height:14px;">
+                                        <th style="border:1px solid #bbb; padding:1px 3px; text-align:left;
+                                            font-size:${F_HEADER}; overflow:hidden; white-space:nowrap;">Vendedor</th>
+                                        ${Array.from({length: NCOLS}, (_, i) => {
+                                            const h  = i + 7;
+                                            const lb = (h === 24) ? '00' : h;
+                                            return `<th style="border:1px solid #bbb; padding:0; text-align:center;
+                                                font-size:${F_HEADER};">${lb}</th>`;
+                                        }).join('')}
+                                        <th style="border:1px solid #bbb; padding:0; text-align:center; font-size:${F_HEADER};">F</th>
+                                        <th style="border:1px solid #bbb; padding:0; text-align:center; font-size:${F_HEADER};">Hs</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
 
-            const canvas = await html2canvas(tempDiv[0], {
-                scale: 2.5,
-                useCORS: true,
-                backgroundColor: '#ffffff'
-            });
-            tempDiv.remove();
+                        vIds.forEach(vid => {
+                            const inf   = nombres[vid] || nombres[parseInt(vid)] || { nombre: String(vid) };
+                            const dat   = agenda[vid] || {};
+                            const franco = dat.francos && dat.francos[fISO];
+                            let tH = 0;
 
-            const imgData = canvas.toDataURL('image/jpeg', 0.92);
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfW = pdf.internal.pageSize.getWidth();
-            const pdfH = pdf.internal.pageSize.getHeight();
-            const m = 5;
-            const usableW = pdfW - (m * 2);
-            const usableH = pdfH - (m * 2);
-            
-            // Escalar para que entre exacto en una página
-            let imgW = usableW;
-            let imgH = (canvas.height * imgW) / canvas.width;
-            
-            // Si la altura excede la página, re-escalar por altura
-            if (imgH > usableH) {
-                imgH = usableH;
-                imgW = (canvas.width * imgH) / canvas.height;
+                            if (!franco && dat.horarios && dat.horarios[fISO]) {
+                                Object.entries(dat.horarios[fISO]).forEach(([, t]) => {
+                                    if (t && t !== 'vacaciones') tH += t.endsWith('_media') ? 0.5 : 1;
+                                });
+                            }
+                            if (bloqueosExt[vid] && bloqueosExt[vid][fISO]) {
+                                Object.values(bloqueosExt[vid][fISO]).forEach(s => { if (s > 0) tH += 1; });
+                            }
+
+                            const nombre = inf.nombre.length > 24 ? inf.nombre.substring(0, 23) + '…' : inf.nombre;
+
+                            html += `<tr style="height:${ROW_H};">
+                                <td style="border:1px solid #ddd; padding:1px 3px; font-weight:600;
+                                    overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${nombre}</td>`;
+
+                            for (let h = 7; h <= 24; h++) {
+                                const hb        = (h === 24) ? 0 : h;
+                                let tx = '', bg = '';
+                                const tipo      = (!franco && dat.horarios && dat.horarios[fISO]) ? (dat.horarios[fISO][hb] || '') : null;
+                                const bloqueo   = (bloqueosExt[vid] && bloqueosExt[vid][fISO]) ? bloqueosExt[vid][fISO][hb] : null;
+
+                                if (tipo) {
+                                    const base = tipo.replace('_media', '');
+                                    tx = tipo.endsWith('_media') ? '½' : 'X';  bg = '#198754';
+                                    if (base === 'caja')      { tx = 'C'; bg = '#0dcaf0'; }
+                                    else if (base === 'extra')    { tx = 'A'; bg = '#0d6efd'; }
+                                    else if (base === 'devuelve') { tx = 'D'; bg = '#ffc107'; }
+                                    else if (base === 'permiso')  { tx = 'P'; bg = '#d63384'; }
+                                    else if (base === 'vacaciones'){ tx = 'V'; bg = '#f3e5f5'; }
+                                    else if (base === 'ausencia') { tx = 'AU'; bg = '#6c757d'; }
+                                } else if (bloqueo > 0) {
+                                    tx = 'Ø'; bg = '#343a40';
+                                }
+
+                                const col = (bg && bg !== '#f3e5f5') ? 'white' : (bg === '#f3e5f5' ? '#6a1b9a' : '');
+                                html += `<td style="border:1px solid #ddd; padding:0; text-align:center;
+                                    background:${bg}; color:${col}; font-weight:700;">${tx}</td>`;
+                            }
+
+                            const fBg = franco ? '#6f42c1' : '';
+                            html += `
+                                <td style="border:1px solid #ddd; padding:0; text-align:center;
+                                    background:${fBg}; color:white; font-weight:bold;">${franco ? 'F' : ''}</td>
+                                <td style="border:1px solid #ddd; padding:0; text-align:center; font-weight:bold;">
+                                    ${tH > 0 ? (tH % 1 === 0 ? tH : tH.toFixed(1)) : '-'}</td>
+                            </tr>`;
+                        });
+
+                        // Fila de promociones (pie de día)
+                        const allPromos = [...(promos[fISO] || []), ...(promosInt[fISO] || [])];
+                        if (allPromos.length > 0) {
+                            html += `<tr style="background:#eef2ff;">
+                                <td style="border:1px solid #ddd; padding:1px 4px; font-size:${F_PROMO};
+                                    font-weight:bold; color:#1a237e; white-space:nowrap;">Promos:</td>
+                                <td colspan="${NCOLS + 2}" style="border:1px solid #ddd; padding:1px 4px;
+                                    font-size:${F_PROMO}; color:#333;">${allPromos.join(' | ')}</td>
+                            </tr>`;
+                        }
+
+                        html += `</tbody></table></div>`;
+                    }
+                });
+
+                html += `</div>`;
+                return html;
             }
 
-            // Centrar horizontalmente
-            const offsetX = m + (usableW - imgW) / 2;
-            pdf.addImage(imgData, 'JPEG', offsetX, m, imgW, imgH);
+            // ─── Grupos de días ───────────────────────────────────────────────
+            let gruposDias;
+            if (lastNDias <= 1) {
+                gruposDias = [[0, 0]];
+            } else {
+                gruposDias = [[0, 3], [4, 6]]; // Lun–Jue | Vie–Dom
+            }
 
-            const sucursalesNombres = lastDataLoaded.map(r => r.sucursalNombre.replace(/\s+/g, '_')).join('_');
-            const semanaVal = lastNDias === 1
+            // ─── Generar PDF ──────────────────────────────────────────────────
+            const { jsPDF } = window.jspdf;
+            const pdf    = new jsPDF('l', 'mm', 'a4');   // landscape A4
+            const pdfW   = pdf.internal.pageSize.getWidth();   // 297 mm
+            const pdfH   = pdf.internal.pageSize.getHeight();  // 210 mm
+            const mMM    = 8;                                  // margen 8 mm
+            const usableW = pdfW - mMM * 2;
+            const usableH = pdfH - mMM * 2;
+
+            for (let gi = 0; gi < gruposDias.length; gi++) {
+                const [dDesde, dHasta] = gruposDias[gi];
+                if (dDesde >= lastNDias) continue;
+
+                const htmlPagina = generarHtmlPagina(dDesde, dHasta);
+
+                // Div del mismo ancho que el área de render calibrada
+                const tempDiv = $(`<div style="width:${CANVAS_W}px; position:absolute; left:-9999px; top:0; background:white;"></div>`);
+                tempDiv.html(htmlPagina);
+                $('body').append(tempDiv);
+
+                await new Promise(r => setTimeout(r, 250));
+
+                const canvas = await html2canvas(tempDiv[0], {
+                    scale: SCALE,
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    width: CANVAS_W,
+                    windowWidth: CANVAS_W
+                });
+                tempDiv.remove();
+
+                const imgData = canvas.toDataURL('image/jpeg', 0.93);
+                if (gi > 0) pdf.addPage();
+
+                // El canvas tiene CANVAS_W*SCALE px de ancho → mapeamos a usableW mm
+                let imgW = usableW;
+                let imgH = (canvas.height / canvas.width) * imgW;
+                if (imgH > usableH) {
+                    imgH = usableH;
+                    imgW = (canvas.width / canvas.height) * imgH;
+                }
+
+                const offsetX = mMM + (usableW - imgW) / 2;
+                pdf.addImage(imgData, 'JPEG', offsetX, mMM, imgW, imgH);
+            }
+
+            const sucNombres = lastDataLoaded.map(r => r.sucursalNombre.replace(/\s+/g, '_')).join('_');
+            const semanaVal  = lastNDias === 1
                 ? lastPrimerDia.toISOString().split('T')[0]
                 : ($('#semanaSelector').val() || 'Semana');
-            pdf.save(`Horarios_${sucursalesNombres.length > 50 ? 'Multiples' : sucursalesNombres}_${semanaVal}.pdf`);
+            pdf.save(`Horarios_${sucNombres.length > 50 ? 'Multiples' : sucNombres}_${semanaVal}.pdf`);
 
         } catch (err) {
             console.error('Error al generar PDF:', err);
