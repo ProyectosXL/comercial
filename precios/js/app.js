@@ -6,6 +6,10 @@ let databasePrices = {};
 
 $(document).ready(function() {
     initEvents();
+    // Stop propagation on the L95 export checkbox to prevent sorting the column when clicked
+    $(document).on('click', '#exportL95', function(e) {
+        e.stopPropagation();
+    });
 });
 
 function initEvents() {
@@ -227,11 +231,15 @@ function calculateRow(code, desc, currentP20, newP20, iva, limitPrice) {
         row.LISTA_30 = newP20 * (1 - 0.5455);
         // L70: 20% de descuento sobre lista 30
         row.LISTA_70 = row.LISTA_30 * (1 - 0.20);
+        // L95: Replicar L20
+        row.LISTA_95 = newP20;
     } else {
         // URY Logic: Only L20 and L45
         // L45 has 75% discount over L20
         row.LISTA_20 = newP20;
         row.LISTA_45 = newP20 * (1 - 0.75);
+        // L95: Replicar L20
+        row.LISTA_95 = newP20;
     }
 
     return row;
@@ -249,7 +257,7 @@ function renderTable() {
                 const isInvalid = currentEnv === 'ARG' && data < row.COSTO_LIMITE;
                 const errorClass = isInvalid ? 'is-invalid border-danger text-danger' : '';
                 const title = isInvalid ? `Aviso: El precio ($${data.toFixed(2)}) es menor al costo limite ($${row.COSTO_LIMITE.toFixed(2)})` : '';
-                return `<input type="number" step="0.01" class="form-control form-control-sm price-input ${errorClass}" title="${title}" value="${data.toFixed(2)}" data-code="${row.COD_ARTICU}">`;
+                return `<input type="number" step="0.01" class="form-control form-control-sm price-input ${errorClass}" style="min-width: 110px;" title="${title}" value="${data.toFixed(2)}" data-code="${row.COD_ARTICU}">`;
             }
         }
     ];
@@ -258,11 +266,13 @@ function renderTable() {
         columns.push(
             { title: "L10 (MAY S/I)", data: "LISTA_10", render: formatCurrency },
             { title: "L30 (FRA S/I)", data: "LISTA_30", render: formatCurrency },
-            { title: "L70 (TOP S/I)", data: "LISTA_70", render: formatCurrency }
+            { title: "L70 (TOP S/I)", data: "LISTA_70", render: formatCurrency },
+            { title: 'L95 (C/IVA INCL) <br><input type="checkbox" id="exportL95" checked style="cursor: pointer;" title="Exportar L95">', data: "LISTA_95", render: formatCurrency }
         );
     } else {
         columns.push(
-            { title: "L45 (FRA S/I)", data: "LISTA_45", render: formatCurrency }
+            { title: "L45 (FRA S/I)", data: "LISTA_45", render: formatCurrency },
+            { title: 'L95 (C/IVA INCL) <br><input type="checkbox" id="exportL95" checked style="cursor: pointer;" title="Exportar L95">', data: "LISTA_95", render: formatCurrency }
         );
     }
 
@@ -274,7 +284,7 @@ function renderTable() {
     mainDataTable = $('#pricesTable').DataTable({
         data: importedData,
         columns: columns,
-        responsive: true,
+        responsive: false,
         language: { url: '//cdn.datatables.net/plug-ins/1.10.21/i18n/Spanish.json' },
         pageLength: 25,
         dom: '<"d-flex justify-content-between align-items-center mb-3"lf>rtip',
@@ -385,15 +395,21 @@ function executeExport() {
     // Row 3+: Data Rows
     importedData.forEach(item => {
         if (currentEnv === 'ARG') {
-            // ARG Exports: L10, L20, L30, L70
+            // ARG Exports: L10, L20, L30, L70, L95 (conditional)
             exportData.push([item.COD_ARTICU, item.DESCRIPCIO, item.DESCRIP_01 || '', item.SINONIMO || '', 10, '$ MAYORISTA - S/IVA', 'Corriente', 'C/U', item.LISTA_10.toFixed(2), '0.00']);
             exportData.push([item.COD_ARTICU, item.DESCRIPCIO, item.DESCRIP_01 || '', item.SINONIMO || '', 20, '$ CF - C/IVA INCL', 'Corriente', 'C/U', item.LISTA_20.toFixed(2), '0.00']);
             exportData.push([item.COD_ARTICU, item.DESCRIPCIO, item.DESCRIP_01 || '', item.SINONIMO || '', 30, '$ FRANQUICIA - S/IVA', 'Corriente', 'C/U', item.LISTA_30.toFixed(2), '0.00']);
             exportData.push([item.COD_ARTICU, item.DESCRIPCIO, item.DESCRIP_01 || '', item.SINONIMO || '', 70, '$ FRANQTOP - S/IVA', 'Corriente', 'C/U', item.LISTA_70.toFixed(2), '0.00']);
+            if ($('#exportL95').is(':checked')) {
+                exportData.push([item.COD_ARTICU, item.DESCRIPCIO, item.DESCRIP_01 || '', item.SINONIMO || '', 95, 'ECOMMERCE', 'Corriente', 'C/U', item.LISTA_95.toFixed(2), '0.00']);
+            }
         } else {
-            // URY Exports: L20, L45
+            // URY Exports: L20, L45, L95 (conditional)
             exportData.push([item.COD_ARTICU, item.DESCRIPCIO, item.DESCRIP_01 || '', item.SINONIMO || '', 20, '$ CF - C/IVA INCL', 'Corriente', 'C/U', item.LISTA_20.toFixed(2), '0.00']);
             exportData.push([item.COD_ARTICU, item.DESCRIPCIO, item.DESCRIP_01 || '', item.SINONIMO || '', 45, '$ FRANQUICIA - S/IVA', 'Corriente', 'C/U', item.LISTA_45.toFixed(2), '0.00']);
+            if ($('#exportL95').is(':checked')) {
+                exportData.push([item.COD_ARTICU, item.DESCRIPCIO, item.DESCRIP_01 || '', item.SINONIMO || '', 95, 'ECOMMERCE', 'Corriente', 'C/U', item.LISTA_95.toFixed(2), '0.00']);
+            }
         }
     });
 

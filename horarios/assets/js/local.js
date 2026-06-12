@@ -589,42 +589,30 @@ $(document).ready(function () {
 
     $('#btnGuardarFeed').on('click', function () {
         const btn = $(this);
-        const btnCancel = btn.siblings('.btn-secondary'); // El botón de cancelar
+        const btnCancel = btn.siblings('.btn-secondary');
         const originalText = btn.html();
 
-        // Intentar resolver la sucursal si es 0 (cuando buscan por vendedor)
+        // Resolver sucursal
         let sucursalId = $('#sucursalSelector').val();
         if (Array.isArray(sucursalId)) {
-            if (sucursalId.length === 1) {
-                sucursalId = sucursalId[0];
-            } else {
-                sucursalId = null;
-            }
+            sucursalId = sucursalId.length === 1 ? sucursalId[0] : null;
         }
         if (!sucursalId || sucursalId == 0) {
-            // Si no hay sucursal seleccionada o hay múltiples, intentamos sacarla de los datos cargados del vendedor
             const vId = $('#feedVendedor').val();
             if (lastDataLoaded && Array.isArray(lastDataLoaded)) {
                 for (const res of lastDataLoaded) {
                     if (res.data && res.data.agenda && res.data.agenda[vId]) {
                         const det = res.data.agenda[vId].sucursal_detalle;
                         if (det) {
-                            // Buscamos la primera sucursal válida que aparezca en su agenda de la semana
                             for (let f in det) {
                                 for (let h in det[f]) {
-                                    if (det[f][h] > 0) {
-                                        sucursalId = det[f][h];
-                                        break;
-                                    }
+                                    if (det[f][h] > 0) { sucursalId = det[f][h]; break; }
                                 }
                                 if (sucursalId > 0) break;
                             }
                         }
                         if (sucursalId > 0) break;
-                        if (res.sucursalId > 0) {
-                            sucursalId = res.sucursalId;
-                            break;
-                        }
+                        if (res.sucursalId > 0) { sucursalId = res.sucursalId; break; }
                     }
                 }
             }
@@ -642,50 +630,90 @@ $(document).ready(function () {
             mensaje: $('#feedTexto').val()
         };
 
-        // Estado de CARGANDO
-        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span> Enviando...');
-        btnCancel.prop('disabled', true);
+        // Cerrar el modal de feedback
+        bootstrap.Modal.getInstance(document.getElementById('modalFeedback')).hide();
+        btn.prop('disabled', false).html(originalText);
+        btnCancel.prop('disabled', false);
 
-        const maxIntentos = 4;
-        const retraso = 2000;
+        // Mostrar modal bloqueante de envío
+        mostrarModalEnviando(1);
 
-        function realizarEnvio(intento) {
+        let intento = 0;
+        function realizarEnvio() {
+            intento++;
+            const retraso = Math.min(2000 * Math.pow(2, intento - 1), 30000);
+            actualizarModalEnviando(intento);
             $.ajax({
                 url: apiVistaURL,
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(payload),
+                timeout: 15000,
                 success: function (res) {
                     if (res.status === 'ok') {
-                        mostrarModalConTitulo("Éxito", "Feedback guardado y notificado correctamente.", "success");
+                        cerrarModalEnviando();
                         $('#btnVerAgenda').trigger('click');
-                        bootstrap.Modal.getInstance(document.getElementById('modalFeedback')).hide();
-                        // Restauramos el botón
-                        btn.prop('disabled', false).html(originalText);
-                        btnCancel.prop('disabled', false);
                     } else {
-                        mostrarModalConTitulo("Error", "Error al guardar: " + (res.message || 'Error desconocido'), "error");
-                        btn.prop('disabled', false).html(originalText);
-                        btnCancel.prop('disabled', false);
+                        console.warn('Feedback: respuesta inesperada, reintentando...', res);
+                        setTimeout(realizarEnvio, retraso);
                     }
                 },
-                error: function() {
-                    if (intento < maxIntentos) {
-                        console.warn(`Intento ${intento} fallido. Reintentando en ${retraso}ms...`);
-                        setTimeout(function() {
-                            realizarEnvio(intento + 1);
-                        }, retraso);
-                    } else {
-                        mostrarModalConTitulo("Error", "No se pudo conectar con el servidor para enviar el feedback.", "error");
-                        btn.prop('disabled', false).html(originalText);
-                        btnCancel.prop('disabled', false);
-                    }
+                error: function () {
+                    console.warn(`Feedback: intento ${intento} fallido. Reintentando en ${retraso / 1000}s...`);
+                    setTimeout(realizarEnvio, retraso);
                 }
             });
         }
-
-        realizarEnvio(1);
+        realizarEnvio();
     });
+
+    // ── Modal bloqueante de envío (sin botón de cerrar, backdrop estático) ──
+    function mostrarModalEnviando(intento) {
+        if (document.getElementById('modalEnviandoFeedback')) return;
+        const el = document.createElement('div');
+        el.id = 'modalEnviandoFeedback';
+        el.innerHTML = `
+            <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;
+                display:flex;align-items:center;justify-content:center;">
+                <div id="enviandoCard" style="background:white;border-radius:12px;padding:32px 40px;text-align:center;
+                    box-shadow:0 8px 32px rgba(0,0,0,0.3);min-width:320px;max-width:420px;">
+                    <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;" role="status"></div>
+                    <h5 class="mb-1 fw-bold text-dark">Guardando feedback</h5>
+                    <p id="enviandoSubtexto" class="text-muted mb-0" style="font-size:0.9rem;">
+                        Conectando con el servidor...
+                    </p>
+                </div>
+            </div>`;
+        document.body.appendChild(el);
+    }
+
+    function actualizarModalEnviando(intento) {
+        const sub = document.getElementById('enviandoSubtexto');
+        if (!sub) return;
+        if (intento === 1) {
+            sub.textContent = 'Enviando...';
+        } else {
+            sub.innerHTML = `<span class="text-warning fw-semibold">Sin conexión.</span> Reintentando automáticamente... (intento ${intento})`;
+        }
+    }
+
+    function cerrarModalEnviando() {
+        const el  = document.getElementById('modalEnviandoFeedback');
+        const card = document.getElementById('enviandoCard');
+        if (!el) return;
+        // Reemplazar contenido de la tarjeta blanca con el mensaje de éxito
+        if (card) {
+            card.innerHTML = `
+                <div style="color:#198754; font-size:3.5rem; margin-bottom:8px; line-height:1;">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <h5 style="margin:0 0 6px; font-weight:700; color:#1a1a1a;">¡Feedback guardado!</h5>
+                <p style="margin:0; font-size:0.9rem; color:#666;">El mensaje fue enviado correctamente.</p>`;
+        }
+        setTimeout(() => { el.remove(); }, 2200);
+    }
+
+
 
     $(document).on('click', '.btn-nota-local.tiene-nota', function () {
         mostrarModalConTitulo(`Nota para ${$(this).data('nombre')} (${$(this).data('fecha')})`, $(this).data('nota'), 'warning');

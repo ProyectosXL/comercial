@@ -252,6 +252,7 @@ require_once('../Class/Conexion.php');
                                     <li><b>L10</b>: 50% dto sobre L20</li>
                                     <li><b>L30</b>: 54.55% dto sobre L20</li>
                                     <li><b>L70</b>: 20% dto sobre L30</li>
+                                    <li><b>L95</b>: ECOMMERCE (réplica de L20)</li>
                                 </ul>
                             </div>
                             <div class="col-md-6">
@@ -259,6 +260,7 @@ require_once('../Class/Conexion.php');
                                 <ul class="small pl-3 text-muted" style="list-style: none;">
                                     <li><b>L20</b>: Precio Venta</li>
                                     <li><b>L45</b>: 75% dto sobre L20</li>
+                                    <li><b>L95</b>: ECOMMERCE (réplica de L20)</li>
                                 </ul>
                             </div>
                         </div>
