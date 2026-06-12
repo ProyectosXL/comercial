@@ -41,7 +41,7 @@ $locales     = $sucursalObj->traerLocales(true);
                 </a>
                 <div class="title-info">
                     <h1><i class="bi bi-calendar2-week-fill"></i> Análisis de Conveniencia de Apertura</h1>
-                    <p class="subtitle">Evaluación de apertura dominical y optimización horaria del lunes</p>
+                    <p class="subtitle">Evaluación de apertura dominical y optimización horaria por día</p>
                 </div>
             </div>
         </div>
@@ -156,18 +156,30 @@ $locales     = $sucursalObj->traerLocales(true);
             </div>
         </div>
 
-        <!-- ── GRÁFICO FRANJAS LUNES ───────────────────────────────── -->
+        <!-- ── GRÁFICO FRANJAS POR DÍA ────────────────────────────── -->
         <div class="aa-card">
-            <div class="aa-card-header">
-                <h2 class="aa-card-title">
-                    <i class="bi bi-bar-chart-steps" style="color:#3498db;"></i>
-                    Distribución de ventas del lunes por franja horaria
-                </h2>
-                <span style="font-size:12px;color:#7f8c8d;">Franjas de 2 horas — color más oscuro indica mayor venta</span>
+            <div class="aa-card-header" style="flex-wrap:wrap;gap:8px;align-items:flex-start;">
+                <div>
+                    <h2 class="aa-card-title" id="aaFranjasCardTitle">
+                        <i class="bi bi-bar-chart-steps" style="color:#3498db;"></i>
+                        Distribución de ventas del lunes por franja horaria
+                    </h2>
+                    <span style="font-size:12px;color:#7f8c8d;">Franjas de 2 horas — color más oscuro indica mayor venta</span>
+                </div>
+                <div class="btn-group btn-group-sm" id="aaFranjasDiaPills" role="group" aria-label="Día de la semana" style="flex-shrink:0;">
+                    <button type="button" class="btn btn-outline-secondary aa-dia-pill" data-dow="1">Lun</button>
+                    <button type="button" class="btn btn-outline-secondary aa-dia-pill" data-dow="2">Mar</button>
+                    <button type="button" class="btn btn-outline-secondary aa-dia-pill" data-dow="3">Mie</button>
+                    <button type="button" class="btn btn-outline-secondary aa-dia-pill" data-dow="4">Jue</button>
+                    <button type="button" class="btn btn-outline-secondary aa-dia-pill" data-dow="5">Vie</button>
+                    <button type="button" class="btn btn-outline-secondary aa-dia-pill" data-dow="6">Sab</button>
+                    <button type="button" class="btn btn-outline-secondary aa-dia-pill active" data-dow="7">Dom</button>
+                </div>
             </div>
             <div class="aa-card-body">
-                <div class="aa-chart-wrap" style="height:420px;">
+                <div class="aa-chart-wrap" style="height:420px;position:relative;">
                     <canvas id="aaChartFranjas"></canvas>
+                    <div id="aaChartFranjasEmpty" class="aa-empty" style="display:none;"></div>
                 </div>
                 <div class="aa-franjas-leyenda">
                     <div class="aa-leyenda-item">
@@ -186,11 +198,11 @@ $locales     = $sucursalObj->traerLocales(true);
             </div>
         </div>
 
-        <!-- ── RECOMENDACIÓN / CONVENIENCIA DOMINICAL ─────────────── -->
+        <!-- ── RECOMENDACIÓN / CONVENIENCIA DE APERTURA ──────────────── -->
         <div class="aa-breakeven">
             <div class="aa-breakeven-header">
                 <i class="bi bi-calculator-fill"></i>
-                Recomendación / Análisis de conveniencia dominical
+                Recomendación / Análisis de conveniencia de apertura
             </div>
             <div class="aa-breakeven-body">
 
@@ -199,9 +211,17 @@ $locales     = $sucursalObj->traerLocales(true);
                     <!-- Columna: costo calculado -->
                     <div>
                         <div class="aa-dato-grupo">
-                            <div class="aa-dato-label">Costo de apertura dominical</div>
+                            <div class="aa-dato-label" id="aaCostoAperturaLabel">Costo de apertura dominical</div>
                             <div class="aa-dato-value" id="aaCostoAperturaVal">—</div>
                             <small class="aa-dato-ref" id="aaCostoAperturaRef">Calculando...</small>
+                        </div>
+                        <div class="aa-dato-grupo" style="margin-top:10px;">
+                            <div class="aa-dato-label">Personas prom.</div>
+                            <div class="aa-dato-value" id="aaDotacionPersonas">—</div>
+                        </div>
+                        <div class="aa-dato-grupo" style="margin-top:6px;">
+                            <div class="aa-dato-label">Hs totales prom.</div>
+                            <div class="aa-dato-value" id="aaDotacionHoras">—</div>
                         </div>
                     </div>
 
@@ -209,7 +229,7 @@ $locales     = $sucursalObj->traerLocales(true);
                     <div>
                         <div class="aa-resultado-panel">
                             <div class="aa-resultado-row">
-                                <span class="aa-resultado-label">Venta prom. domingo</span>
+                                <span class="aa-resultado-label" id="aaVentaPromDomLabel">Venta prom. domingo</span>
                                 <span class="aa-resultado-value" id="aaVentaPromDomRes">—</span>
                             </div>
                             <div class="aa-resultado-row">
@@ -229,10 +249,10 @@ $locales     = $sucursalObj->traerLocales(true);
 
                 </div>
 
-                <!-- Indicador de optimización horaria del lunes -->
+                <!-- Indicador de optimización horaria por día -->
                 <div id="aaIndicadorLunes" class="aa-indicador-lunes" style="display:none;">
                     <i class="bi bi-clock-history" style="color:#3498db;margin-right:6px;"></i>
-                    <strong>Optimización horaria del lunes:</strong>
+                    <strong id="aaIndicadorDiaLabel">Optimización horaria del lunes:</strong>
                     <span id="aaIndicadorLunesTexto"></span>
                 </div>
 

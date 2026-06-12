@@ -49,17 +49,18 @@ try {
         $rangoAjustado = true;
     }
 
-    $diaSemana    = $service->getDiaSemana($nroSucurs, $fechaDesde, $fechaHasta);
-    $franjasLunes = $service->getFranjasLunes($nroSucurs, $fechaDesde, $fechaHasta);
+    $diaSemana     = $service->getDiaSemana($nroSucurs, $fechaDesde, $fechaHasta);
+    $franjasPorDia = $service->getFranjasPorDia($nroSucurs, $fechaDesde, $fechaHasta);
     $costoPersonal = $service->getCostoPersonal($nroSucurs, $fechaDesde, $fechaHasta);
-    $promDiasMes  = $service->getPromedioDiasMes($nroSucurs, $fechaDesde, $fechaHasta);
-    $kpis         = $service->calcularKPIs($diaSemana, $costoPersonal, $promDiasMes, $nroSucurs);
+    $promDiasMes   = $service->getPromedioDiasMes($nroSucurs, $fechaDesde, $fechaHasta);
+    $dotacion      = $service->getDotacionHorarios($nroSucurs, $fechaDesde, $fechaHasta);
+    $kpis          = $service->calcularKPIs($diaSemana, $costoPersonal, $promDiasMes, $nroSucurs, $dotacion);
 
     echo json_encode([
         'success' => true,
         'data'    => [
             'dia_semana'     => $diaSemana,
-            'franjas_lunes'  => $franjasLunes,
+            'franjas_por_dia' => $franjasPorDia,
             'costo_personal' => [
                 'meses'                 => $costoPersonal,
                 'costo_mensual_prom'    => $kpis['costo_mensual_prom'],

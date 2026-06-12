@@ -676,8 +676,7 @@ class Articulo
         try {
             $sql = "SELECT DISTINCT(RUBRO) RUBRO 
                     FROM SOF_RUBROS_TANGO 
-                    WHERE RUBRO NOT LIKE '%OUTLET%' 
-                    AND RUBRO NOT IN ('_KITS','PACKAGING')
+                    WHERE RUBRO NOT IN ('_KITS','PACKAGING')
                     ORDER BY RUBRO";
 
             error_log("SQL rubros equivalencias: " . $sql);
