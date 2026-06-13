@@ -164,31 +164,62 @@ $locales     = $sucursalObj->traerLocales(true);
                 <div class="aa-chart-wrap">
                     <canvas id="aaChartDia"></canvas>
                 </div>
-                <div style="margin-top:10px;font-size:12px;color:#7f8c8d;display:flex;gap:20px;">
-                    <span><span style="display:inline-block;width:12px;height:12px;background:#3498db;border-radius:2px;margin-right:4px;"></span>Lun–Sab</span>
-                    <span><span style="display:inline-block;width:12px;height:12px;background:#8e44ad;border-radius:2px;margin-right:4px;"></span>Domingo</span>
+                <div style="margin-top:10px;font-size:12px;color:#7f8c8d;display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+                    <span><span style="display:inline-block;width:48px;height:12px;background:linear-gradient(to right,hsl(207,60%,70%),hsl(207,72%,26%));border-radius:2px;margin-right:6px;vertical-align:middle;"></span>Menor → mayor participación</span>
+                    <span><span style="display:inline-block;width:12px;height:12px;background:#8e44ad;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Tick domingo</span>
                 </div>
             </div>
         </div>
 
-        <!-- ── GRÁFICO FRANJAS POR DÍA ────────────────────────────── -->
+        <!-- ── GRÁFICO DISTRIBUCIÓN DE VENTAS ──────────────────────── -->
         <div class="aa-card">
-            <div class="aa-card-header" style="flex-wrap:wrap;gap:8px;align-items:flex-start;">
-                <div>
+            <div class="aa-card-header" style="flex-direction:column;align-items:flex-start;gap:8px;">
+                <div style="display:flex;justify-content:space-between;width:100%;align-items:center;flex-wrap:wrap;gap:8px;">
                     <h2 class="aa-card-title" id="aaFranjasCardTitle">
                         <i class="bi bi-bar-chart-steps" style="color:#3498db;"></i>
-                        Distribución de ventas del lunes por franja horaria
+                        Distribución de ventas del domingo por franja
                     </h2>
-                    <span style="font-size:12px;color:#7f8c8d;">Franjas de 2 horas — color más oscuro indica mayor venta</span>
+                    <span style="font-size:12px;color:#7f8c8d;">Promedio por día abierto — color más oscuro indica mayor venta</span>
                 </div>
-                <div class="btn-group btn-group-sm" id="aaFranjasDiaPills" role="group" aria-label="Día de la semana" style="flex-shrink:0;">
-                    <button type="button" class="btn btn-outline-secondary aa-dia-pill" data-dow="1">Lun</button>
-                    <button type="button" class="btn btn-outline-secondary aa-dia-pill" data-dow="2">Mar</button>
-                    <button type="button" class="btn btn-outline-secondary aa-dia-pill" data-dow="3">Mie</button>
-                    <button type="button" class="btn btn-outline-secondary aa-dia-pill" data-dow="4">Jue</button>
-                    <button type="button" class="btn btn-outline-secondary aa-dia-pill" data-dow="5">Vie</button>
-                    <button type="button" class="btn btn-outline-secondary aa-dia-pill" data-dow="6">Sab</button>
-                    <button type="button" class="btn btn-outline-secondary aa-dia-pill active" data-dow="7">Dom</button>
+                <div class="aa-distri-toolbar">
+                    <div class="aa-distri-group">
+                        <span class="aa-distri-label">Días</span>
+                        <div class="btn-group btn-group-sm" id="aaDistriDias" role="group">
+                            <button type="button" class="btn btn-outline-secondary aa-distri-dia" data-dow="1">Lun</button>
+                            <button type="button" class="btn btn-outline-secondary aa-distri-dia" data-dow="2">Mar</button>
+                            <button type="button" class="btn btn-outline-secondary aa-distri-dia" data-dow="3">Mie</button>
+                            <button type="button" class="btn btn-outline-secondary aa-distri-dia" data-dow="4">Jue</button>
+                            <button type="button" class="btn btn-outline-secondary aa-distri-dia" data-dow="5">Vie</button>
+                            <button type="button" class="btn btn-outline-secondary aa-distri-dia" data-dow="6">Sab</button>
+                            <button type="button" class="btn btn-outline-secondary aa-distri-dia active" data-dow="7">Dom</button>
+                        </div>
+                    </div>
+                    <div class="aa-distri-group">
+                        <span class="aa-distri-label">Franja</span>
+                        <div class="btn-group btn-group-sm" id="aaDistriGran" role="group">
+                            <button type="button" class="btn btn-outline-secondary aa-distri-gran" data-gran="30">30 min</button>
+                            <button type="button" class="btn btn-outline-secondary aa-distri-gran" data-gran="60">1 h</button>
+                            <button type="button" class="btn btn-outline-secondary aa-distri-gran active" data-gran="120">2 h</button>
+                        </div>
+                    </div>
+                    <div class="aa-distri-group">
+                        <span class="aa-distri-label">Vista</span>
+                        <div class="btn-group btn-group-sm" id="aaDistriVista" role="group">
+                            <button type="button" class="btn btn-outline-secondary aa-distri-vista active" data-vista="franja">Por franja</button>
+                            <button type="button" class="btn btn-outline-secondary aa-distri-vista" data-vista="dia">Por día</button>
+                        </div>
+                    </div>
+                    <div class="aa-distri-group">
+                        <span class="aa-distri-label">Mostrar franjas</span>
+                        <div class="aa-distri-window">
+                            <select id="aaDistriDesde" class="form-control form-control-sm"></select>
+                            <span class="aa-distri-sep">a</span>
+                            <select id="aaDistriHasta" class="form-control form-control-sm"></select>
+                            <button type="button" class="btn btn-outline-secondary btn-sm aa-distri-preset" data-preset="2">Primeras 2 hs</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm aa-distri-preset" data-preset="4">Primeras 4 hs</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm aa-distri-preset" data-preset="0">Todo</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="aa-card-body">
@@ -216,8 +247,19 @@ $locales     = $sucursalObj->traerLocales(true);
         <!-- ── RECOMENDACIÓN / CONVENIENCIA DE APERTURA ──────────────── -->
         <div class="aa-breakeven">
             <div class="aa-breakeven-header">
-                <i class="bi bi-calculator-fill"></i>
-                Recomendación / Análisis de conveniencia de apertura
+                <div style="display:flex;align-items:center;gap:8px;flex:1;">
+                    <i class="bi bi-calculator-fill"></i>
+                    Recomendación / Análisis de conveniencia de apertura
+                </div>
+                <div class="btn-group btn-group-sm" id="aaRecoDiaPills" role="group">
+                    <button type="button" class="btn btn-outline-light aa-reco-dia-pill" data-dow="1">Lun</button>
+                    <button type="button" class="btn btn-outline-light aa-reco-dia-pill" data-dow="2">Mar</button>
+                    <button type="button" class="btn btn-outline-light aa-reco-dia-pill" data-dow="3">Mie</button>
+                    <button type="button" class="btn btn-outline-light aa-reco-dia-pill" data-dow="4">Jue</button>
+                    <button type="button" class="btn btn-outline-light aa-reco-dia-pill" data-dow="5">Vie</button>
+                    <button type="button" class="btn btn-outline-light aa-reco-dia-pill" data-dow="6">Sab</button>
+                    <button type="button" class="btn btn-outline-light aa-reco-dia-pill active" data-dow="7">Dom</button>
+                </div>
             </div>
             <div class="aa-breakeven-body">
 
@@ -262,6 +304,18 @@ $locales     = $sucursalObj->traerLocales(true);
                         </div>
                     </div>
 
+                </div>
+
+                <!-- Criterios de evaluación del semáforo -->
+                <div id="aaCriterios">
+                    <p class="aa-criterios-aclaracion">El % es el costo de personal del día sobre la venta promedio de ese día. <strong>A menor %, mejor</strong>: indica que la apertura se sostiene con menos peso de personal. Objetivo: ≤ 15%.</p>
+                    <div class="aa-criterios-chips">
+                        <div class="aa-criterio-chip aa-criterio-azul"><span class="aa-criterio-dot"></span><span class="aa-criterio-label">Excelente</span><span class="aa-criterio-rango">≤ 15%</span></div>
+                        <div class="aa-criterio-chip aa-criterio-verde"><span class="aa-criterio-dot"></span><span class="aa-criterio-label">Eficiente</span><span class="aa-criterio-rango">15–18%</span></div>
+                        <div class="aa-criterio-chip aa-criterio-amarillo"><span class="aa-criterio-dot"></span><span class="aa-criterio-label">Aceptable</span><span class="aa-criterio-rango">18–20%</span></div>
+                        <div class="aa-criterio-chip aa-criterio-naranja"><span class="aa-criterio-dot"></span><span class="aa-criterio-label">Riesgo</span><span class="aa-criterio-rango">20–22%</span></div>
+                        <div class="aa-criterio-chip aa-criterio-rojo"><span class="aa-criterio-dot"></span><span class="aa-criterio-label">Crítico</span><span class="aa-criterio-rango">&gt; 22%</span></div>
+                    </div>
                 </div>
 
                 <!-- Indicador de optimización horaria por día -->

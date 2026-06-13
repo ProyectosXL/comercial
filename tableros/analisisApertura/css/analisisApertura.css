@@ -567,6 +567,127 @@ body {
     border-color: #95a5a6;
 }
 
+/* ── Toolbar Distribución ─────────────────────────────────────────── */
+.aa-distri-toolbar {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-top: 10px;
+}
+
+.aa-distri-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.aa-distri-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--dark-gray);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.aa-distri-window {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.aa-distri-sep {
+    font-size: 12px;
+    color: var(--dark-gray);
+}
+
+.aa-distri-window .form-control-sm {
+    width: 120px;
+}
+
+.aa-distri-dia.active,
+.aa-distri-gran.active,
+.aa-distri-vista.active {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: #fff;
+}
+.aa-distri-dia.active:hover,
+.aa-distri-gran.active:hover,
+.aa-distri-vista.active:hover {
+    background: #2980b9;
+    border-color: #2980b9;
+    color: #fff;
+}
+
+/* ── Pills Recomendación (sobre fondo oscuro) ─────────────────────── */
+.aa-breakeven-header {
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.aa-reco-dia-pill.active {
+    background: rgba(255,255,255,0.9);
+    color: var(--primary-color);
+    border-color: rgba(255,255,255,0.9);
+}
+
+/* ── Criterios semáforo ───────────────────────────────────────────── */
+#aaCriterios {
+    margin: 0 0 16px;
+    padding: 14px 16px;
+    background: var(--light-gray);
+    border-radius: var(--border-radius);
+}
+
+.aa-criterios-aclaracion {
+    font-size: 12px;
+    color: var(--dark-gray);
+    margin-bottom: 10px;
+}
+
+.aa-criterios-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.aa-criterio-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1.5px solid;
+}
+
+.aa-criterio-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.aa-criterio-rango {
+    font-weight: 400;
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+.aa-criterio-azul     { background: rgba(52,152,219,0.1);  border-color: #3498db; color: #1a6fa8; }
+.aa-criterio-azul     .aa-criterio-dot { background: #3498db; }
+.aa-criterio-verde    { background: rgba(39,174,96,0.1);   border-color: #27ae60; color: #1e8449; }
+.aa-criterio-verde    .aa-criterio-dot { background: #27ae60; }
+.aa-criterio-amarillo { background: rgba(243,156,18,0.1);  border-color: #f39c12; color: #b7770d; }
+.aa-criterio-amarillo .aa-criterio-dot { background: #f39c12; }
+.aa-criterio-naranja  { background: rgba(230,126,34,0.1);  border-color: #e67e22; color: #a04000; }
+.aa-criterio-naranja  .aa-criterio-dot { background: #e67e22; }
+.aa-criterio-rojo     { background: rgba(231,76,60,0.1);   border-color: #e74c3c; color: #922b21; }
+.aa-criterio-rojo     .aa-criterio-dot { background: #e74c3c; }
+
 /* ── Select2 dentro del header ────────────────────────────────────── */
 .select2-container--default .select2-selection--single {
     border-color: #ced4da;

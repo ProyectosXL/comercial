@@ -143,6 +143,54 @@ class AnalisisAperturaService
         return $result;
     }
 
+    // ─── Ventas granulares por día+slot de 30 min ─────────────────────────────
+
+    public function getFranjasGranular(int $nroSucurs, string $desde, string $hasta): array
+    {
+        $sql = "
+                ;WITH base AS (
+                SELECT
+                    ((DATEPART(WEEKDAY, FECHA) + @@DATEFIRST + 5) % 7) + 1 AS DOW,
+                    ( ( CAST(LEFT(RIGHT('000000'+HORA_EMIS,6),2) AS INT) * 60
+                      + CAST(SUBSTRING(RIGHT('000000'+HORA_EMIS,6),3,2) AS INT) ) / 30 ) * 30 AS SLOT_INI,
+                    IMP_TOTAL_TICKET,
+                    CASE WHEN IMP_TOTAL_TICKET > 0 THEN 1 ELSE 0 END AS ES_VENTA
+                FROM BI_SALES_TOTAL_TICKETS WITH (NOLOCK)
+                WHERE NRO_SUCURS = ?
+                  AND FECHA >= ? AND FECHA <= ?
+                  AND HORA_EMIS IS NOT NULL AND HORA_EMIS <> ''
+                )
+                SELECT
+                  DOW,
+                  SLOT_INI,
+                  CAST(SUM(IMP_TOTAL_TICKET) AS DECIMAL(18,2)) AS VENTA,
+                  SUM(ES_VENTA)                                AS TICKETS
+                FROM base
+                GROUP BY DOW, SLOT_INI
+                ORDER BY DOW, SLOT_INI
+                ";
+        $params = [$nroSucurs, $desde, $hasta];
+        $stmt   = sqlsrv_prepare($this->connPower, $sql, $params);
+        if ($stmt === false) {
+            throw new Exception('Error preparando query franjas granular: ' . $this->_lastError());
+        }
+        if (!sqlsrv_execute($stmt)) {
+            throw new Exception('Error ejecutando query franjas granular: ' . $this->_lastError());
+        }
+
+        $rows = [];
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $rows[] = [
+                'DOW'      => (int)$row['DOW'],
+                'SLOT_INI' => (int)$row['SLOT_INI'],
+                'VENTA'    => (float)$row['VENTA'],
+                'TICKETS'  => (int)$row['TICKETS'],
+            ];
+        }
+        sqlsrv_free_stmt($stmt);
+        return $rows;
+    }
+
     // ─── Costo de personal mensual ────────────────────────────────────────────
 
     public function getCostoPersonal(int $nroSucurs, string $desde, string $hasta): array

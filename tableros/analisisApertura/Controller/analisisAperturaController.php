@@ -53,8 +53,9 @@ try {
     $franjasPorDia = $service->getFranjasPorDia($nroSucurs, $fechaDesde, $fechaHasta);
     $costoPersonal = $service->getCostoPersonal($nroSucurs, $fechaDesde, $fechaHasta);
     $promDiasMes   = $service->getPromedioDiasMes($nroSucurs, $fechaDesde, $fechaHasta);
-    $dotacion      = $service->getDotacionHorarios($nroSucurs, $fechaDesde, $fechaHasta);
-    $kpis          = $service->calcularKPIs($diaSemana, $costoPersonal, $promDiasMes, $nroSucurs, $dotacion);
+    $dotacion        = $service->getDotacionHorarios($nroSucurs, $fechaDesde, $fechaHasta);
+    $franjasGranular = $service->getFranjasGranular($nroSucurs, $fechaDesde, $fechaHasta);
+    $kpis            = $service->calcularKPIs($diaSemana, $costoPersonal, $promDiasMes, $nroSucurs, $dotacion);
 
     $diaSemanaPorMes = $service->getDiaSemanaPorMes($nroSucurs, $fechaDesde, $fechaHasta);
     $dotacionPorMes  = $service->getDotacionHorariosPorMes($nroSucurs, $fechaDesde, $fechaHasta);
@@ -65,6 +66,7 @@ try {
         'data'    => [
             'dia_semana'        => $diaSemana,
             'franjas_por_dia'   => $franjasPorDia,
+            'franjas_granular'  => $franjasGranular,
             'costo_personal'    => [
                 'meses'                 => $costoPersonal,
                 'costo_mensual_prom'    => $kpis['costo_mensual_prom'],
