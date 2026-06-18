@@ -1,14 +1,248 @@
+/* ── Spinner ── */
 .loading {
     position: fixed;
-    left: 0px;
-    top: 0px;
+    left: 0;
+    top: 0;
     width: 100%;
     height: 100%;
     z-index: 9999;
-    background: url('images/g0R9.gif') 50% 50% no-repeat rgb(0, 0, 0);
+    background: url('images/g0R9.gif') 50% 50% no-repeat rgb(0,0,0);
     opacity: .8;
-  }
-  th {
-    position: sticky;
-    top: 0;
-  }
+}
+
+/* ── Layout ── */
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
+.alert.alert-secondary {
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    height: 100%;
+}
+
+.page-wrapper {
+    height: 100%;
+    padding: 0 !important;
+}
+
+.wrapper--w880 {
+    max-width: 100% !important;
+    width: 100%;
+    height: 100%;
+}
+
+.card-1 {
+    height: 100%;
+}
+
+/* ── Tarjeta principal ── */
+.card-1 {
+    border: none !important;
+    border-radius: 10px !important;
+    box-shadow: 0 6px 28px rgba(0,0,0,0.28);
+    overflow: hidden;
+}
+
+/* ── Card Header ── */
+.md-header {
+    background: linear-gradient(135deg, #1a1e21 0%, #343a40 70%, #212529 100%);
+    border-bottom: 3px solid #0d6efd;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.md-header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.md-header-title .bi {
+    font-size: 1.3rem;
+    color: #4dabf7;
+}
+
+.md-header-toggle {
+    display: flex;
+    align-items: center;
+}
+
+/* ── Barra de filtros ── */
+.filter-bar {
+    background: #f1f3f5;
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.85rem 1.5rem;
+}
+
+.filter-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6c757d;
+    margin-bottom: 3px;
+}
+
+.filter-select {
+    min-width: 130px;
+    border-radius: 5px !important;
+    border-color: #ced4da;
+    font-size: 0.83rem;
+}
+
+/* ── Botones ── */
+.md-btn {
+    border-radius: 5px !important;
+    font-size: 0.82rem !important;
+    font-weight: 500;
+    padding: 5px 14px !important;
+    letter-spacing: 0.02em;
+    transition: opacity 0.15s, transform 0.1s;
+}
+
+.md-btn:hover {
+    opacity: 0.88;
+    transform: translateY(-1px);
+}
+
+.md-btn:active {
+    transform: translateY(0);
+}
+
+/* ── Tabla ── */
+
+/* Header fijo generado por DataTables scrollY */
+.dataTables_scrollHead {
+    background: #343a40;
+    border-radius: 0;
+}
+
+.dataTables_scrollHead thead th {
+    border-bottom: 2px solid #0d6efd !important;
+    background: #343a40;
+    color: #fff;
+}
+
+.dataTables_scrollBody {
+    border-left: none !important;
+    width: 100% !important;
+}
+
+.dataTables_scrollHeadInner,
+.dataTables_scrollHeadInner table,
+.dataTables_scrollBody table {
+    width: 100% !important;
+}
+
+/* Íconos de orden */
+#tableMaestro thead .sorting::after,
+#tableMaestro thead .sorting_asc::after,
+#tableMaestro thead .sorting_desc::after {
+    opacity: 0.7;
+}
+
+#tableMaestro thead th {
+    font-size: 0.71rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    font-weight: 600;
+    white-space: nowrap;
+    padding: 10px 8px;
+}
+
+#tableMaestro tbody td {
+    vertical-align: middle;
+    font-size: 0.84rem;
+    padding: 5px 8px;
+}
+
+#tableMaestro tbody tr {
+    transition: background 0.12s;
+}
+
+#tableMaestro tbody tr:hover > td {
+    background-color: rgba(13, 110, 253, 0.06) !important;
+}
+
+/* ── Select2 dentro de la tabla ── */
+.destino .select2-container {
+    width: 100% !important;
+    min-width: 150px;
+}
+
+.select2-container--default .select2-selection--single {
+    height: 30px;
+    border-radius: 4px !important;
+    border-color: #ced4da;
+    background-color: #fff;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 28px;
+    font-size: 0.81rem;
+    color: #212529;
+    padding-left: 8px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 28px;
+}
+
+.select2-dropdown {
+    border-color: #ced4da;
+    border-radius: 6px !important;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    font-size: 0.82rem;
+    z-index: 99999;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #0d6efd;
+}
+
+.select2-search--dropdown .select2-search__field {
+    border-radius: 4px !important;
+    border-color: #ced4da;
+    padding: 4px 8px;
+    font-size: 0.82rem;
+}
+
+/* ── DataTables controles ── */
+.dataTables_wrapper .dataTables_filter input {
+    border-radius: 5px;
+    border: 1px solid #ced4da;
+    padding: 4px 9px;
+    font-size: 0.82rem;
+    margin-left: 6px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    border-radius: 5px !important;
+    font-size: 0.82rem;
+    padding: 3px 8px !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #fff !important;
+    border-radius: 5px !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: #e9ecef !important;
+    border-color: #dee2e6 !important;
+    color: #212529 !important;
+}

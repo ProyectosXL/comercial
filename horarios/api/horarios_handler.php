@@ -664,6 +664,27 @@ function cargarDatos()
     }
     $respuesta['francos'] = $francos;
 
+    // A.5. Incluir todos los vendedores estables de la sucursal actual para chequearles bloqueos externos aunque no tengan carga aún
+    $connCorp = getConexionCorp();
+    $sqlVendedoresEstables = "
+        SELECT DISTINCT R.BLOQUE AS COD_VENDED, R.NRO_LEGAJO
+        FROM LEGAJO_CLOUD L
+        INNER JOIN RO_LEGAJOS_PERSONAL R ON L.NRO_LEGAJO = R.NRO_LEGAJO
+        WHERE L.ID_DEPARTAMENTO = ? AND R.HABILITADO = 'S'
+    ";
+    $stmtEstables = sqlsrv_query($connCorp, $sqlVendedoresEstables, [$nroSucursal]);
+    if ($stmtEstables) {
+        while ($rowEstable = sqlsrv_fetch_array($stmtEstables, SQLSRV_FETCH_ASSOC)) {
+            $codVendedEstable = trim($rowEstable['COD_VENDED']);
+            if (empty($codVendedEstable)) {
+                $codVendedEstable = 'L' . trim($rowEstable['NRO_LEGAJO']);
+            }
+            $vendedoresConActividad[$codVendedEstable] = true;
+        }
+        sqlsrv_free_stmt($stmtEstables);
+    }
+    sqlsrv_close($connCorp);
+
     // C. Notas y Feedback
     $sqlNotas = "SELECT COD_VENDED, FECHA, NOTA FROM FP_GESTION_NOTAS_VENDEDOR WHERE NRO_SUCURSAL = ? AND FECHA BETWEEN ? AND ?";
     $stmtNotas = sqlsrv_query($connSistemas, $sqlNotas, [$nroSucursal, $fechaInicio, $fechaFin]);

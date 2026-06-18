@@ -42,6 +42,7 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
             require_once $_SERVER['DOCUMENT_ROOT'] .'/comercial/assets/css/css.php';
             ?>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
 
    
 
@@ -74,88 +75,74 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
         <div class="alert alert-secondary">
             <div class="page-wrapper bg-secondary p-b-100 pt-2 font-robo">
 
-                <div class="wrapper wrapper--w880"><div style="color:white;text-align:center  "><h6 style="margin-left:1rem">Maestro de destinos</h6></div>
                 <div id="boxLoading" class="boxLoading"></div>
                     <div class="card card-1">
-                        <div  style="margin-left: 3px;margin-right: 3px;margin-top: 3px;margin-bottom: 3px;" id="tablaPedidosContainer" >
+                        <div id="tablaPedidosContainer">
                             <div id="periodo" hidden></div>
-                            <div class="row" style="margin-left:50px; margin-top:30px">
-                            <div class="col-11">
 
-                                <h3><strong><i class="bi bi-pencil-square" style="margin-right:20px;font-size:40px"></i>Administrar maestro de destinos </strong></h3>
+                            <!-- Header de la tarjeta -->
+                            <div class="md-header">
+                                <div class="md-header-title">
+                                    <i class="bi bi-grid-3x3-gap-fill"></i>
+                                    <span>Maestro de Destinos</span>
+                                </div>
+                                <div class="md-header-toggle">
+                                    <input type="checkbox" checked data-toggle="toggle" data-on="<?= $dataOnValue ?>" data-off="<?= $dataOffValue ?>" class="custom-toggle" style="color:black; font-size: 0;" onchange="cambiarEntorno(this)" id="checkEntorno">
+                                </div>
                             </div>
-                            <div class="col-1">
-                                <!-- <input type="checkbox" checked data-toggle="toggle" data-on="ARG" data-off="UY" class="custom-toggle" style="color:black; font-size: 0;" onchange="cambiarEntorno(this)" id="checkEntorno" <?= $_SESSION['CHECKED']  ?>> -->
-                                <input type="checkbox" checked data-toggle="toggle" data-on="<?= $dataOnValue ?>" data-off="<?= $dataOffValue ?>" class="custom-toggle" style="color:black; font-size: 0;" onchange="cambiarEntorno(this)" id="checkEntorno" >
-                            </div>
-                            </div>
-                          
-                            <div class="form-row mb-3 contenedor">
-                             
-                                    <div class="col-6 mt-2">
-                                        <div class="row">
-<div class="col-4">
-    <label for="inputCity">Rubro</label>
-    <select id="inputRubro" class="form-control form-control-sm" name="rubro">
-        <!-- ESTA ES LA LÍNEA CLAVE -->
-        <option value="" selected>-- Todos los Rubros --</option>
-        
-        <?php
-            foreach($todosLosRubros as $rubro => $key){
-        ?>
-            <option value="<?= $key['RUBRO'] ?>" <?= (isset($_GET['rubro']) && ($key['RUBRO'] == $_GET['rubro'])) ? 'selected' : '' ?>><?= $key['RUBRO'] ?></option>
-        <?php
-        }
-        ?>
-    </select>
-</div>
-                                            <div class="col-3">
-                                                <label for="inputState2">Temporada</label>
-                                                <select id="inputTemp" class="form-control form-control-sm" name="temporada">
-                                                    <option selected disabled></option>
-                                                    <?php
-                                                    foreach($todasLasTemporadas as $temporada => $key){
-                                                    ?>
-                                                        <option value="<?= $key['TEMPORADA'] ?>"><?= $key['TEMPORADA'] ?></option>
-                                                    <?php   
-                                                    }
-                                                    ?>
-                                                </select>
-                                            </div>
-                                            <div class="col-5">
-                                                <div class="row">
-                                                    <div class="col">
-                                                    <label for="inputState2">Novedades</label>
-                                                    <select id="inputNovedades" class="form-control form-control-sm"  name="temporada">
-                                                        <option selected value=''></option>
-                                                        <option value="1">SI</option>
-                                                    </select>
-                                                    </div>
-                                                    <div class="col mt-4">
-                                                        <button class="btn btn-primary" style="width:100px" onclick="filtrar()">filtrar <i class="fa fa-filter"></i></button>
 
-                                                    </div>
-                                                </div>
-                                                
-                                            </div>
-                                        <div class="col-1">
-                                            
-                                            </div>
+                            <!-- Barra de filtros -->
+                            <div class="filter-bar">
+                                <div class="row align-items-end">
+                                    <div class="col-3">
+                                        <label class="filter-label">Rubro</label>
+                                        <select id="inputRubro" class="form-control form-control-sm filter-select" name="rubro">
+                                            <option value="" selected>— Todos —</option>
+                                            <?php foreach($todosLosRubros as $rubro => $key): ?>
+                                                <option value="<?= $key['RUBRO'] ?>" <?= (isset($_GET['rubro']) && ($key['RUBRO'] == $_GET['rubro'])) ? 'selected' : '' ?>><?= $key['RUBRO'] ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-2">
+                                        <label class="filter-label">Temporada</label>
+                                        <select id="inputTemp" class="form-control form-control-sm filter-select" name="temporada">
+                                            <option selected disabled></option>
+                                            <?php foreach($todasLasTemporadas as $temporada => $key): ?>
+                                                <option value="<?= $key['TEMPORADA'] ?>"><?= $key['TEMPORADA'] ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-2">
+                                        <label class="filter-label">Novedades</label>
+                                        <select id="inputNovedades" class="form-control form-control-sm filter-select" name="novedades">
+                                            <option selected value=''>—</option>
+                                            <option value="1">SI</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button class="btn btn-primary md-btn" onclick="filtrar()">
+                                            <i class="fa fa-filter"></i> Filtrar
+                                        </button>
+                                    </div>
+                                    <div class="col-auto ml-auto">
+                                        <div class="btn-group" role="group">
+                                            <button class="btn md-btn" style="background-color:#009688;color:white" onclick="mostrarModalImport()">
+                                                <i class="bi bi-box-arrow-up"></i> Importar
+                                            </button>
+                                            <button class="btn md-btn" style="background-color:#4caf50;color:white" id="btnExport">
+                                                <i class="bi bi-box-arrow-down"></i> Exportar
+                                            </button>
                                         </div>
-                                    </div> 
-                                    <div class="col-6 mt-2">
-                                        <div class="row ml-5">
-                                            <div class="btn-group mt-4" role="group" aria-label="Importar y Exportar">
-                                                <button class="btn btn-primary" style="width:120px;background-color:#009688" onclick="mostrarModalImport()">Importar <i class="bi bi-box-arrow-up"></i></button>
-                                                <button class="btn btn-primary" style="width:120px;background-color:#4caf50" id="btnExport">Exportar <i class="bi bi-box-arrow-down"></i></button>
-                                            </div>
-                                            <div class="btn-group mt-4 ml-4" role="group" aria-label="Importar y Exportar">
-                                                <button class="btn btn-primary" style="width:170px" onclick="mostrarModalTemp()">Temporadas <i class="bi bi-calendar3" style="color:white"></i></button>
-                                                <button class="btn btn-danger" style="width:170px" onclick="liquidar()">Fin liquidacion <i class="bi bi-clock"></i></button>
-                                            </div>
+                                        <div class="btn-group ml-2" role="group">
+                                            <button class="btn btn-primary md-btn" onclick="mostrarModalTemp()">
+                                                <i class="bi bi-calendar3"></i> Temporadas
+                                            </button>
+                                            <button class="btn btn-danger md-btn" onclick="liquidar()">
+                                                <i class="bi bi-clock"></i> Fin liquidación
+                                            </button>
                                         </div>
                                     </div>
-                
+                                </div>
                             </div>
                         </div>
                         <table class="table table-striped table-bordered table-sm table-hover dataTable no-footer" id="tableMaestro" >
@@ -187,6 +174,7 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
         <?php  require_once $_SERVER['DOCUMENT_ROOT'] .'/comercial/assets/js/js.php'; ?>
         <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
         <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     
     </body>
 
@@ -252,16 +240,11 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
             let allLiquidacion = document.querySelectorAll(".liquidacion")
             
             allDestino.forEach(element => {
-                
-                
                 element.innerHTML = element.querySelector("select").value
-                
             });
 
             allLiquidacion.forEach(element => {
-
                 element.innerHTML = element.querySelector("select").value
-
             });
 
             $("#tableMaestro").table2excel({
@@ -274,28 +257,11 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
 
             allDestino.forEach(element => {
 
-                let continuoSelected = ""
-                let discontinuoSelected = ""    
-                let discontinuoVSelected = ""    
-                let discontinuoISelected = ""    
+                const val = element.textContent.trim();
+                const opts = ["CONTINUO","DISCONTINUO","DISCONTINUO VERANO","DISCONTINUO INVIERNO","GUARDAR","GUARDAR VERANO","GUARDAR INVIERNO"];
+                const optionsHtml = opts.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('');
 
-                if(element.textContent == "CONTINUO"){
-                    continuoSelected = "selected"
-                }else if(element.textContent == "DISCONTINUO"){ 
-                    discontinuoSelected = "selected"
-                }else if(element.textContent == "DISCONTINUO VERANO"){
-                    discontinuoVSelected = "selected"
-                }else{
-
-                    discontinuoISelected = "selected"
-                }
-
-                element.innerHTML = `<select class="form-control form-control-sm" style="width:100%;text-align:center" onchange="cambiarDestino(this)" >
-                                        </option><option value="CONTINUO" ${continuoSelected}>CONTINUO</option>
-                                        <option value="DISCONTINUO" ${discontinuoSelected}>DISCONTINUO</option>
-                                        <option value="DISCONTINUO VERANO" ${discontinuoVSelected}>DISCONTINUO VERANO</option>
-                                        <option value="DISCONTINUO INVIERNO" ${discontinuoISelected}>DISCONTINUO INVIERNO</option>
-                                    </select>`
+                element.innerHTML = `<select class="form-control form-control-sm" style="width:100%;text-align:center" onchange="cambiarDestino(this)">${optionsHtml}</select>`;
 
             });
 

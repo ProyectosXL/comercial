@@ -1,3 +1,11 @@
+$(document).ready(function () {
+    $('#inputRubro, #inputTemp, #inputNovedades').select2({
+        dropdownParent: $('body'),
+        width: '100%',
+        minimumResultsForSearch: 0
+    });
+});
+
 const mostrarSpinner = () => {
     let spinner = document.querySelector('.boxLoading')
       spinner.classList.add('loading')
@@ -65,7 +73,7 @@ const filtrar = () => {
             selectDestino.setAttribute("name", "destino");
 
             // Iterar sobre las opciones posibles (por ejemplo, "continuo" y "discontinuo")
-            ["CONTINUO", "DISCONTINUO","DISCONTINUO VERANO","DISCONTINUO INVIERNO","GUARDAR"].forEach(function (optionValue) {
+            ["CONTINUO", "DISCONTINUO","DISCONTINUO VERANO","DISCONTINUO INVIERNO","GUARDAR","GUARDAR VERANO","GUARDAR INVIERNO"].forEach(function (optionValue) {
                 var option = document.createElement("option");
                 option.value = optionValue;
                 option.textContent = optionValue;
@@ -179,33 +187,38 @@ const filtrar = () => {
         "bLengthChange": true,
         "lengthMenu": [ [100], [100] ],
         "language": {
-                    "lengthMenu": "mostrar _MENU_ registros",
-                    "info":           "Mostrando registros del _START_ al _END_ de un total de  _TOTAL_ registros",
-                    "paginate": {
-                        "next":       "Siguiente",
-                        "previous":   "Anterior"
-                    },
-
+            "lengthMenu": "mostrar _MENU_ registros",
+            "info": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+            "paginate": {
+                "next": "Siguiente",
+                "previous": "Anterior"
+            },
+            "sSearch": "Busqueda rapida:",
+            "sSearchPlaceholder": "Sobre cualquier campo"
         },
-    
-        
         "bInfo": false,
-        "aaSorting": false,
+        "order": [],
+        "autoWidth": false,
+        "scrollY": "calc(100vh - 280px)",
+        "scrollCollapse": true,
         'columnDefs': [
             {
-                "targets": "_all", 
-                "className": "text-center",
-                "sortable": false,
-        
+                "targets": "_all",
+                "className": "text-center"
             },
+            {
+                // DESTINO (select), LIQUIDACION (select), EXCLUIR (checkbox)
+                "targets": [3, 6, 8],
+                "orderable": false
+            }
         ],
-        "oLanguage": {
-    
-            "sSearch": "Busqueda rapida:",
-            "sSearchPlaceholder" : "Sobre cualquier campo"
-            
-    
-        },
+    });
+
+    $('.destino select').select2({
+        dropdownParent: $('body'),
+        width: '100%',
+        minimumResultsForSearch: 0,
+        placeholder: '-- Seleccionar --'
     });
 
   }

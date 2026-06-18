@@ -66,7 +66,8 @@
                 if (x == 0) {
                     return 1;
                 }
-                if (element[1] != 'CONTINUO' && element[1] != 'DISCONTINUO' && element[1] != 'DISCONTINUO VERANO' && element[1] != 'DISCONTINUO INVIERNO' && element[1] != 'GUARDAR') {
+                const destinosValidos = ['CONTINUO','DISCONTINUO','DISCONTINUO VERANO','DISCONTINUO INVIERNO','GUARDAR','GUARDAR VERANO','GUARDAR INVIERNO'];
+                if (!destinosValidos.includes(element[1])) {
                     arrayDeError.push(element[0]);
                 }
 
