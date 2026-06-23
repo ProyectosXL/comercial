@@ -266,6 +266,8 @@ $hoy = date("Y-m-d");
       <th style="width:28%;">Descripcion</th>
 	    <th>Cantidad</th>
       <th style="width:25%;">Rubro</th>
+      <th>Categoría Padre</th>
+      <th>Categoría</th>
       <th>Temporada</th>
       <th>Destino</th>
       <th>Precio</th>
@@ -296,6 +298,8 @@ $hoy = date("Y-m-d");
       <td onClick="sweet(this)"></td>
       <td onClick="sweet(this)"></td>
       <td onClick="sweet(this)"></td>
+      <td onClick="sweet(this)"></td>
+      <td onClick="sweet(this)"></td>
     </tr>
 
     <?php
@@ -309,6 +313,8 @@ $hoy = date("Y-m-d");
 		<td>
 			<h5>  <a id="cantidad"> <?= number_format($sum , 0, '', '.') ?> </a> </h5>
 		</td>
+    <td></td>
+    <td></td>
     <td></td>
     <td></td>
     <td></td>

@@ -143,7 +143,7 @@ if (!isset($_SESSION['username'])) {
                                 </h2>
                                 <div class="stats-grid">
                                     <div class="card card-sales-global">
-                                        <span class="badge-nuevo">NUEVO</span>
+                                        <span class="badge-nuevo">Web</span>
                                         <div class="card-body align-items-center text-center">
                                             <i class="bi bi-diagram-3-fill card-icon color-purple mx-auto"></i>
                                             <h5 class="card-title">Sales Global</h5>
@@ -170,11 +170,12 @@ if (!isset($_SESSION['username'])) {
                                         </div>
                                     </div>
                                     <div class="card">
+                                        <span class="badge-nuevo">Web</span>
                                         <div class="card-body">
                                             <i class="bi bi-tag card-icon color-danger"></i>
-                                            <h5 class="card-title">Promociones Argentina</h5>
-                                            <p class="card-subtitle">Gestión de ofertas y descuentos ARG</p>
-                                            <a href="../../bi/tableros/promociones.html" class="btn btn-danger btn-card">Ver Dashboard</a>
+                                            <h5 class="card-title">Promociones Sucursales</h5>
+                                            <p class="card-subtitle">Gestión de ofertas y descuentos</p>
+                                            <a href="../../bi/promociones/index.php" class="btn btn-danger btn-card">Ver Dashboard</a>
                                         </div>
                                     </div>
                                     <div class="card">

@@ -111,6 +111,16 @@ const buscar = () =>{
         tdRubro.innerHTML = venta.RUBRO;
         tr.appendChild(tdRubro);
 
+        let tdCategoriaPadre = document.createElement("td");
+        tdCategoriaPadre.setAttribute("onClick", "sweet(this)");
+        tdCategoriaPadre.innerHTML = venta.CATEGORIA_PADRE;
+        tr.appendChild(tdCategoriaPadre);
+
+        let tdCategoria = document.createElement("td");
+        tdCategoria.setAttribute("onClick", "sweet(this)");
+        tdCategoria.innerHTML = venta.CATEGORIA;
+        tr.appendChild(tdCategoria);
+
         let tdTemporada = document.createElement("td");
         tdTemporada.setAttribute("onClick", "sweet(this)");
         tdTemporada.innerHTML = venta.TEMPORADA;

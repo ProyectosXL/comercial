@@ -60,7 +60,8 @@ class GastoNew
                     foreach ($validacion['excedidos'] as $excedido) {
                         if ($this->conceptoCorresponde($gasto['concepto'], $excedido['concepto'])) {
                             $conceptoExcedido = true;
-                            $observacionesAut = "Excede presupuesto - Requiere auditoría gerencia comercial (Total: $" . number_format($totalGastoConcepto, 2) . " vs Presupuesto: $" . number_format($excedido['presupuesto'], 2) . ")";
+                            $totalAcumulado = isset($excedido['totalGastoAcumulado']) ? $excedido['totalGastoAcumulado'] : $totalGastoConcepto;
+                            $observacionesAut = "Excede presupuesto - Requiere auditoría gerencia comercial (Total Acumulado: $" . number_format($totalAcumulado, 2) . " vs Presupuesto: $" . number_format($excedido['presupuesto'], 2) . ")";
                             break;
                         }
                     }
