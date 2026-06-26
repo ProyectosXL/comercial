@@ -87,10 +87,15 @@ const filtrar = () => {
             });
 
             selectDestino.style.textAlign = "center";
+            selectDestino.setAttribute("data-prev", v["DESTINO"] || "");
             selectDestino.setAttribute("onchange", "cambiarDestino(this)")
             destinoCell.appendChild(selectDestino);
             row.appendChild(destinoCell);
-  
+
+            var destinoAntCell = document.createElement("td");
+            destinoAntCell.textContent = v["DESTINO_ANT"] || "";
+            row.appendChild(destinoAntCell);
+
             var temporadaCell = document.createElement("td");
             temporadaCell.textContent = v["TEMPORADA"];
             row.appendChild(temporadaCell);
@@ -208,7 +213,7 @@ const filtrar = () => {
             },
             {
                 // DESTINO (select), LIQUIDACION (select), EXCLUIR (checkbox)
-                "targets": [3, 6, 8],
+                "targets": [3, 7, 9],
                 "orderable": false
             }
         ],
@@ -268,8 +273,8 @@ const cambiarEntorno = (t) =>{
 
         table.forEach((tr) => {
 
-          if(tr.querySelectorAll("td")[6].querySelector("select").value == "SI"){
-            
+          if(tr.querySelectorAll("td")[7].querySelector("select").value == "SI"){
+
             liquidacionSiString += "'" + tr.querySelectorAll("td")[0].textContent + "',"
 
           }else{
@@ -307,6 +312,7 @@ const cambiarEntorno = (t) =>{
   const cambiarDestino = (t) => {
 
     let codArticu = t.parentElement.parentElement.querySelectorAll("td")[0].textContent
+    let destinoAnt = t.getAttribute("data-prev") || ""
     let destino = t.value
     $.ajax ({
       url: "../Controller/maestroDestinosController.php?accion=cambiarDestino",
@@ -316,19 +322,19 @@ const cambiarEntorno = (t) =>{
         destino: destino
       },
       success: function (response) {
-     
+
         var fechaHoy = new Date();
-
         var año = fechaHoy.getFullYear();
-        var mes = ('0' + (fechaHoy.getMonth() + 1)).slice(-2); 
-        var dia = ('0' + fechaHoy.getDate()).slice(-2); 
-
-    
+        var mes = ('0' + (fechaHoy.getMonth() + 1)).slice(-2);
+        var dia = ('0' + fechaHoy.getDate()).slice(-2);
         var fechaFormateada = año + '-' + mes + '-' + dia;
-        t.parentElement.parentElement.querySelectorAll("td")[7].innerHTML = fechaFormateada
 
+        let tds = t.parentElement.parentElement.querySelectorAll("td");
+        tds[4].textContent = destinoAnt;
+        tds[8].innerHTML = fechaFormateada;
+        t.setAttribute("data-prev", destino);
       }
-    
+
     })
   }
 
@@ -345,16 +351,13 @@ const cambiarEntorno = (t) =>{
         },
         success: function (response) {
           var fechaHoy = new Date();
-
           var año = fechaHoy.getFullYear();
-          var mes = ('0' + (fechaHoy.getMonth() + 1)).slice(-2); 
-          var dia = ('0' + fechaHoy.getDate()).slice(-2); 
-  
-      
+          var mes = ('0' + (fechaHoy.getMonth() + 1)).slice(-2);
+          var dia = ('0' + fechaHoy.getDate()).slice(-2);
           var fechaFormateada = año + '-' + mes + '-' + dia;
-          t.parentElement.parentElement.querySelectorAll("td")[7].innerHTML = fechaFormateada
+          t.parentElement.parentElement.querySelectorAll("td")[8].innerHTML = fechaFormateada
         }
-      
+
       })
 
   }
@@ -365,43 +368,45 @@ const cambiarEntorno = (t) =>{
   }
 
   const resetearImport = () => {
-
     document.querySelector("#modalCA").innerHTML = `
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content" id="modalDoc">
-            <div class="modal-header">
-                <h4 class="modal-title" id="exampleModalLabel"><span id="titleModal"><i class="bi bi-file-earmark-excel" aria-hidden="true" style="font-size: 25px;"></i>Importar archivo excel </h4></span>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button> 
-            </div>
-            <div class="modal-body" id="modalImportBody">
-                <div class="mb-3">
-                        <div class="input-group" style="margin-bottom:10px">
-                                <input type="text" class="form-control" id="nombreInput" placeholder="Selecciona un archivo" readonly>
-                                <label class="input-group-text" id="Examinar" for="formFile" style="width: 50%; background-color: #044f8e; color: white; cursor: pointer;">
-                                    <i class="bi bi-folder2-open" style="margin-right:5px;margin-left:30%"></i> Examinar
-                                    <input class="form-control" type="file" id="formFile" style="position: absolute; clip: rect(0, 0, 0, 0); width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; border: 0;" onchange="displayFileName(this)">
-                                </label>
-
-                        </div>
-                        <a href="#" onclick="descargarPlantillaExcel(); return false;" style="margin-top:20px;color:green">
-                        <i class="bi bi-file-earmark-excel"></i> Descargar plantilla excel
-                        </a>
+            <div class="modal-header" style="background:#044f8e; color:white; padding:14px 20px;">
+                <div>
+                    <h5 class="modal-title mb-0" id="titleModal">
+                        <i class="bi bi-file-earmark-excel"></i> Importar archivo Excel
+                    </h5>
+                    <small id="modal-subtitle" style="opacity:.75; font-size:.8rem;"></small>
                 </div>
-
-
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="color:white;opacity:1;font-size:1.4rem;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
-                
-            <div class="modal-footer">
-                
-                <button type="button" class="btn btn-success" data-dismiss="modal">Aceptar</button>
+            <div class="modal-body" id="modalImportBody" style="padding:24px;">
+                <div id="upload-area"
+                     style="border:2px dashed #b8d0ed; border-radius:10px; padding:52px 24px; text-align:center; background:#f0f6ff; cursor:pointer; transition:border-color .2s, background .2s;"
+                     onclick="document.getElementById('formFile').click()"
+                     onmouseover="this.style.borderColor='#044f8e';this.style.background='#e4eef9';"
+                     onmouseout="this.style.borderColor='#b8d0ed';this.style.background='#f0f6ff';">
+                    <i class="bi bi-cloud-arrow-up" style="font-size:3.2rem; color:#044f8e;"></i>
+                    <p style="margin-top:14px; font-size:1rem; color:#333; font-weight:500; margin-bottom:4px;">
+                        Haga clic para seleccionar un archivo
+                    </p>
+                    <p style="font-size:.82rem; color:#999; margin-bottom:0;">Formatos aceptados: .xlsx, .xls</p>
+                    <input type="file" id="formFile" style="display:none;" accept=".xlsx,.xls" onchange="displayFileName(this)">
+                </div>
+                <div style="text-align:center; margin-top:14px;">
+                    <a href="#" onclick="descargarPlantillaExcel(); return false;" style="color:#198754; font-size:.87rem;">
+                        <i class="bi bi-file-earmark-excel"></i> Descargar plantilla Excel
+                    </a>
+                </div>
+            </div>
+            <div class="modal-footer" style="background:#f8f9fa; border-top:1px solid #dee2e6;">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
-    `
-
-            
+    `;
   }
   const mostrarModalTemp = () =>{
     $("#modalTemporadas").modal("toggle")

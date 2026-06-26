@@ -84,12 +84,11 @@ class Destino
     public function cambiarDestino($codArticuString, $destino)
     {
 
-        $sql = " UPDATE MAESTRO_DESTINOS SET DESTINO = '$destino' , FECHA_MOD = GETDATE() WHERE COD_ARTICU = '$codArticuString'";
+        $sql = " UPDATE MAESTRO_DESTINOS SET DESTINO_ANT = DESTINO, DESTINO = '$destino', FECHA_MOD = GETDATE() WHERE COD_ARTICU = '$codArticuString'";
 
         $stmt = sqlsrv_query($this->cid_central, $sql);
 
         return true;
-        ;
 
     }
 
@@ -289,7 +288,7 @@ class Destino
             return true;
         // Iniciar transacción para velocidad y seguridad
         sqlsrv_begin_transaction($this->cid_central);
-        $sql = "UPDATE MAESTRO_DESTINOS SET DESCRIPCION = ?, DESTINO = ?, LIQUIDACION = ?, FECHA_MOD = GETDATE() WHERE COD_ARTICU = ?";
+        $sql = "UPDATE MAESTRO_DESTINOS SET DESCRIPCION = ?, DESTINO_ANT = DESTINO, DESTINO = ?, LIQUIDACION = ?, FECHA_MOD = GETDATE() WHERE COD_ARTICU = ?";
 
         foreach ($articulos as $art) {
             $params = [$art[1], $art[2], $art[3], $art[0]];

@@ -152,7 +152,7 @@ function getRefuerzos()
     $conn = getConexionCentral();
     $sql = "
         SELECT 
-            GVA23.COD_VENDED,
+            LTRIM(RTRIM(GVA23.COD_VENDED)) AS COD_VENDED,
             GVA23.NOMBRE_VEN,
             MAX(ISNULL(LEGAJOS.TAREA_HABITUAL, 'Sin Tarea')) AS TAREA_HABITUAL
         FROM GVA23
@@ -167,6 +167,8 @@ function getRefuerzos()
     $refuerzos = [];
     if ($stmt) {
         while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $row['COD_VENDED'] = trim($row['COD_VENDED']);
+            $row['NOMBRE_VEN'] = trim($row['NOMBRE_VEN']);
             $refuerzos[] = $row;
         }
     }
@@ -192,7 +194,7 @@ function getVendedoresPorLista()
     $placeholders = implode(',', array_fill(0, count($lista), '?'));
 
     $sql = "
-        SELECT GVA23.COD_VENDED, GVA23.NOMBRE_VEN,
+        SELECT LTRIM(RTRIM(GVA23.COD_VENDED)) AS COD_VENDED, GVA23.NOMBRE_VEN,
             MAX(ISNULL(LEGAJOS.TAREA_HABITUAL, 'Sin Tarea')) AS TAREA_HABITUAL
         FROM GVA23
         LEFT JOIN RO_T_LEGAJOS_PERSONAL AS LEGAJOS 
@@ -205,6 +207,8 @@ function getVendedoresPorLista()
     $vendedores = [];
     if ($stmt) {
         while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $row['COD_VENDED'] = trim($row['COD_VENDED']);
+            $row['NOMBRE_VEN'] = trim($row['NOMBRE_VEN']);
             $vendedores[] = $row;
         }
     }
