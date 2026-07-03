@@ -583,9 +583,36 @@ $(document).ready(function () {
     $(document).on('click', '.btn-feedback', function () {
         $('#feedVendedor').val($(this).data('id'));
         $('#feedNombre').text($(this).data('nombre'));
-        $('#feedTexto').val($(this).data('texto') || '');
+        const texto = $(this).data('texto') || '';
+        $('#feedTexto').val(texto);
+        
+        // Actualizar contador al abrir
+        updateCharCount(texto.length);
+        
         new bootstrap.Modal(document.getElementById('modalFeedback')).show();
     });
+
+    // Control de caracteres en el textarea de feedback
+    $(document).on('input', '#feedTexto', function () {
+        updateCharCount($(this).val().length);
+    });
+
+    function updateCharCount(len) {
+        const max = 222;
+        const charCountEl = $('#charCount');
+        const warningEl = $('#charLimitWarning');
+        
+        if (charCountEl.length) {
+            charCountEl.text(`${len} / ${max}`);
+        }
+        if (warningEl.length) {
+            if (len >= max) {
+                warningEl.show();
+            } else {
+                warningEl.hide();
+            }
+        }
+    }
 
     $('#btnGuardarFeed').on('click', function () {
         const btn = $(this);
@@ -639,6 +666,8 @@ $(document).ready(function () {
         mostrarModalEnviando(1);
 
         let intento = 0;
+        const maxIntentos = 3;
+
         function realizarEnvio() {
             intento++;
             const retraso = Math.min(2000 * Math.pow(2, intento - 1), 30000);
@@ -654,13 +683,35 @@ $(document).ready(function () {
                         cerrarModalEnviando();
                         $('#btnVerAgenda').trigger('click');
                     } else {
-                        console.warn('Feedback: respuesta inesperada, reintentando...', res);
-                        setTimeout(realizarEnvio, retraso);
+                        console.warn('Feedback: respuesta inesperada del servidor:', res);
+                        mostrarErrorEnvio(res.error || 'El servidor rechazó la solicitud.');
                     }
                 },
-                error: function () {
-                    console.warn(`Feedback: intento ${intento} fallido. Reintentando en ${retraso / 1000}s...`);
-                    setTimeout(realizarEnvio, retraso);
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.warn(`Feedback: intento ${intento} fallido. Status: ${jqXHR.status}, Text: ${textStatus}`);
+                    
+                    // Si el error es un error HTTP del servidor (>= 400), no reintentar
+                    if (jqXHR.status >= 400) {
+                        let errorMsg = 'Error del servidor.';
+                        try {
+                            if (jqXHR.responseJSON && jqXHR.responseJSON.error) {
+                                errorMsg = jqXHR.responseJSON.error;
+                            } else if (jqXHR.responseText) {
+                                const parsed = JSON.parse(jqXHR.responseText);
+                                if (parsed && parsed.error) errorMsg = parsed.error;
+                            }
+                        } catch(e) {}
+                        mostrarErrorEnvio(errorMsg);
+                        return;
+                    }
+
+                    // Si es un error de timeout / conexión
+                    if (intento < maxIntentos) {
+                        console.warn(`Reintentando en ${retraso / 1000}s...`);
+                        setTimeout(realizarEnvio, retraso);
+                    } else {
+                        mostrarErrorEnvio('No se pudo establecer conexión con el servidor tras varios intentos.');
+                    }
                 }
             });
         }
@@ -711,6 +762,32 @@ $(document).ready(function () {
                 <p style="margin:0; font-size:0.9rem; color:#666;">El mensaje fue enviado correctamente.</p>`;
         }
         setTimeout(() => { el.remove(); }, 2200);
+    }
+
+    function mostrarErrorEnvio(mensaje) {
+        const el = document.getElementById('modalEnviandoFeedback');
+        const card = document.getElementById('enviandoCard');
+        if (!el) return;
+        
+        if (card) {
+            card.innerHTML = `
+                <div style="color:#dc3545; font-size:3.5rem; margin-bottom:8px; line-height:1;">
+                    <i class="bi bi-x-circle-fill"></i>
+                </div>
+                <h5 style="margin:0 0 6px; font-weight:700; color:#1a1a1a;">No se pudo guardar</h5>
+                <p style="margin:0 0 16px; font-size:0.9rem; color:#666; word-break:break-word;">${mensaje}</p>
+                <button type="button" class="btn btn-primary btn-sm px-4 fw-semibold" id="btnCerrarErrorEnviando" style="border-radius:6px;">
+                    Cerrar y corregir
+                </button>`;
+            
+            $('#btnCerrarErrorEnviando').on('click', function() {
+                el.remove();
+                const modalEl = document.getElementById('modalFeedback');
+                if (modalEl) {
+                    new bootstrap.Modal(modalEl).show();
+                }
+            });
+        }
     }
 
 

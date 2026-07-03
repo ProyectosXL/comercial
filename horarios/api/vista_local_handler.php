@@ -49,24 +49,41 @@ try {
             sqlsrv_query($conn, $sqlDel, [$suc, $vend, $fecha]);
 
             if (!empty(trim($msg))) {
-                // Convertir a la codificación de SQL Server si es necesario
-                $msgSQL = mb_convert_encoding($msg, 'CP1252', 'UTF-8');
                 $sqlIns = "INSERT INTO FP_GESTION_FEEDBACK (NRO_SUCURSAL, COD_VENDED, FECHA_SEMANA, MENSAJE) VALUES (?, ?, ?, ?)";
-                $res = sqlsrv_query($conn, $sqlIns, [$suc, $vend, $fecha, $msgSQL]);
-                if (!$res)
-                    throw new Exception("Error al guardar feedback.");
-                
-                // --- NOTIFICACIÓN POR EMAIL (NUEVO) ---
+                $res = sqlsrv_query($conn, $sqlIns, [$suc, $vend, $fecha, $msg]);
+                if (!$res) {
+                    $errors = print_r(sqlsrv_errors(), true);
+                    sqlsrv_close($conn);
+                    throw new Exception("Error al guardar feedback: " . $errors);
+                }
+            }
+            sqlsrv_close($conn);
+
+            // Responder inmediatamente al cliente si FPM está disponible
+            ignore_user_abort(true);
+            if (function_exists('fastcgi_finish_request')) {
+                echo json_encode(['status' => 'ok']);
+                // Limpiar buffers
+                if (ob_get_level() > 0) {
+                    @ob_end_flush();
+                }
+                @flush();
+                fastcgi_finish_request();
+            }
+
+            // Enviar mail de notificación en segundo plano (o síncrono si no hay fastcgi_finish_request)
+            if (!empty(trim($msg))) {
                 try {
                     $notifier = new EmailNotification();
-                    // Usamos una descripción amigable para la semana si podemos, o pasamos la fecha
                     $notifier->notificarFeedbackGenerado($suc, $vend, $fecha);
                 } catch (Exception $eMail) {
                     error_log("Error al disparar notificación de feedback (Sucursal $suc): " . $eMail->getMessage());
                 }
             }
-            sqlsrv_close($conn);
-            echo json_encode(['status' => 'ok']);
+
+            if (!function_exists('fastcgi_finish_request')) {
+                echo json_encode(['status' => 'ok']);
+            }
             exit;
         }
     }

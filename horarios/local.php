@@ -191,8 +191,14 @@
         <div class="modal-body">
           <input type="hidden" id="feedVendedor">
           <p class="mb-2">Comentarios sobre <b><span id="feedNombre"></span></b> para esta semana:</p>
-          <textarea id="feedTexto" class="form-control" rows="5"
+          <textarea id="feedTexto" class="form-control" rows="5" maxlength="222"
             placeholder="Ej: Solicita cambio de franco, llega tarde el martes..."></textarea>
+          <div class="d-flex justify-content-between align-items-center mt-1">
+            <span id="charLimitWarning" class="text-danger small" style="display: none; font-size: 0.8rem;">
+              <i class="bi bi-exclamation-circle-fill"></i> Límite de 222 caracteres alcanzado
+            </span>
+            <span id="charCount" class="text-muted small ms-auto" style="font-size: 0.8rem;">0 / 222</span>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
