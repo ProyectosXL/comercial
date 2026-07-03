@@ -569,10 +569,13 @@ const AnalisisApertura = (() => {
                         tooltip: {
                             callbacks: {
                                 title: function (items) { return 'Franja ' + items[0].label; },
+                                label: function (context) {
+                                    return context.dataset.label + ': ' + fmtPesos(context.parsed.x);
+                                },
                                 afterBody: function (items) {
                                     const b = bars[items[0].dataIndex];
                                     return [
-                                        'Tickets: ' + (b.tickets || 0).toLocaleString('es-AR'),
+                                        'Promedio de tickets: ' + Math.round(b.diasAb > 0 ? b.tickets / b.diasAb : 0).toLocaleString('es-AR'),
                                         'Ticket prom: ' + fmtPesos(b.tickets > 0 ? b.ventaTot / b.tickets : 0),
                                         'Participación: ' + fmtPct(b.part, 1),
                                         'Venta prom./día abierto: ' + fmtPesos(b.prom),
@@ -671,10 +674,13 @@ const AnalisisApertura = (() => {
                         tooltip: {
                             callbacks: {
                                 title: function (items) { return items[0].label; },
+                                label: function (context) {
+                                    return context.dataset.label + ': ' + fmtPesos(context.parsed.x);
+                                },
                                 afterBody: function (items) {
                                     const b = visibles[items[0].dataIndex];
                                     return [
-                                        'Tickets: ' + (b.tickets || 0).toLocaleString('es-AR'),
+                                        'Promedio de tickets: ' + Math.round(b.diasAb > 0 ? b.tickets / b.diasAb : 0).toLocaleString('es-AR'),
                                         'Ticket prom: ' + fmtPesos(b.tickets > 0 ? b.ventaVent / b.tickets : 0),
                                         'Participación: ' + fmtPct(b.part, 1),
                                         'Venta prom./día abierto: ' + fmtPesos(b.prom),

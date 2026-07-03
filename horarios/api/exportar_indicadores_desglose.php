@@ -57,9 +57,16 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
     $fechaObj = $row['FECHA'];
     $fechaStr = $fechaObj instanceof DateTime ? $fechaObj->format('Y-m-d') : strval($fechaObj);
     
-    // Normalizar tipo
-    $tipo = strtolower(trim($row['TIPO_HORA']));
-    if ($tipo == 'norm' || $tipo == 'normal' || $tipo == 'x' || $tipo == 'normal_media') $tipo = 'normal';
+    // Normalizar tipo y detectar si es media hora
+    $tipoOriginal = strtolower(trim($row['TIPO_HORA']));
+    $tipo = $tipoOriginal;
+    
+    $esMedia = (strpos($tipoOriginal, '_media') !== false);
+    if ($esMedia) {
+        $tipo = str_replace('_media', '', $tipo);
+    }
+    
+    if ($tipo == 'norm' || $tipo == 'normal' || $tipo == 'x') $tipo = 'normal';
     if ($tipo == 'perm' || $tipo == 'permiso' || $tipo == 'p') $tipo = 'permiso';
     if ($tipo == 'caja' || $tipo == 'c') $tipo = 'caja';
     if ($tipo == 'extra' || $tipo == 'e') $tipo = 'extra';
@@ -68,6 +75,7 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
     if ($tipo == 'ausencia' || $tipo == 'au') $tipo = 'ausencia';
 
     $cantidad = intval($row['TOTAL_HORAS']);
+    $horas = $esMedia ? ($cantidad * 0.5) : ($cantidad * 1.0);
     $key = $id . '_' . $sucID . '_' . $fechaStr;
 
     if (!isset($reporte[$key])) {
@@ -84,9 +92,9 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
         $listaSucursalesIDs[$sucID] = true;
     }
 
-    if (isset($reporte[$key][$tipo])) $reporte[$key][$tipo] += $cantidad;
+    if (isset($reporte[$key][$tipo])) $reporte[$key][$tipo] += $horas;
     if ($tipo !== 'devuelve') {
-        $reporte[$key]['total'] += $cantidad;
+        $reporte[$key]['total'] += $horas;
     }
 }
 sqlsrv_free_stmt($stmt);

@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function addClickListener(element, callback) {
+        if (!element) return;
         ['click', 'touchstart'].forEach(eventType => {
             element.addEventListener(eventType, function(e) {
                 e.preventDefault();
@@ -73,32 +74,38 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    addClickListener(sortImporteBtn, function() {
+    if (sucursalesGrid) {
+        addClickListener(sortImporteBtn, function() {
+            initializeSucursalesData();
+            sortCards('importe');
+        });
+
+        addClickListener(sortTicketsBtn, function() {
+            initializeSucursalesData();
+            sortCards('tickets');
+        });
+
+        addClickListener(sortTicketPromedioBtn, function() {
+            initializeSucursalesData();
+            sortCards('ticketPromedio');
+        });
+
+        if (quickSearchInput) {
+            quickSearchInput.addEventListener('input', function() {
+                filterCards(this.value);
+                clearSearchButton.style.display = this.value ? 'inline' : 'none';
+            });
+        }
+
+        if (clearSearchButton) {
+            clearSearchButton.addEventListener('click', function() {
+                quickSearchInput.value = '';
+                filterCards('');
+                this.style.display = 'none';
+            });
+            clearSearchButton.style.display = 'none';
+        }
+
         initializeSucursalesData();
-        sortCards('importe');
-    });
-
-    addClickListener(sortTicketsBtn, function() {
-        initializeSucursalesData();
-        sortCards('tickets');
-    });
-
-    addClickListener(sortTicketPromedioBtn, function() {
-        initializeSucursalesData();
-        sortCards('ticketPromedio');
-    });
-
-    quickSearchInput.addEventListener('input', function() {
-        filterCards(this.value);
-        clearSearchButton.style.display = this.value ? 'inline' : 'none';
-    });
-
-    clearSearchButton.addEventListener('click', function() {
-        quickSearchInput.value = '';
-        filterCards('');
-        this.style.display = 'none';
-    });
-
-    initializeSucursalesData();
-    clearSearchButton.style.display = 'none';
+    }
 });

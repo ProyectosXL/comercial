@@ -15,7 +15,7 @@ $locales     = $sucursalObj->traerLocales(true);
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Análisis de Conveniencia de Apertura</title>
+    <title>Análisis de Facturación por Hora</title>
 
     <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
@@ -40,7 +40,7 @@ $locales     = $sucursalObj->traerLocales(true);
                     <i class="bi bi-house-fill"></i>
                 </a>
                 <div class="title-info">
-                    <h1><i class="bi bi-calendar2-week-fill"></i> Análisis de Conveniencia de Apertura</h1>
+                    <h1><i class="bi bi-calendar2-week-fill"></i> Análisis de Facturación por Hora</h1>
                     <p class="subtitle">Evaluación de apertura dominical y optimización horaria por día</p>
                 </div>
             </div>

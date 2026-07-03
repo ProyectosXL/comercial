@@ -47,6 +47,7 @@ const buscar = () => {
                 response.body.forEach(function (v) {
 
                 var row = document.createElement("tr");
+                row.dataset.nroGuia = v["NRO_GUIA"];
 
                 var fechaGuiaCell = document.createElement("td");
                 // fechaGuiaCell.textContent = v["FECHA_GUIA"];
@@ -234,79 +235,108 @@ const buscar = () => {
 
 const guardar = () => {
 
-    let allTr = document.querySelectorAll('#tableBody tr');
+    const allTr = Array.from(document.querySelectorAll('#tablaGuias tbody tr'));
+
     let error = false;
     let arrayFilas = [];
     let token = localStorage.getItem('token');
 
-    allTr.forEach(element => {
+    allTr.forEach(function (row) {
 
-        if(element.childNodes[6].querySelector("input").value == '' && element.childNodes[7].querySelector("input").value == '' &&
-            element.childNodes[8].querySelector("select").value == ''){
-            return; 
+        if (row.children.length !== 11) {
+            return;
         }
 
-        if( element.childNodes[6].querySelector("input").value == '' || element.childNodes[7].querySelector("input").value == '' ||
-            element.childNodes[8].querySelector("select").value == ''
-        ){
+        const fechaContactoInput = row.children[6].querySelector('input');
+        const contactoInput = row.children[7].querySelector('input');
+        const medioContactoSelect = row.children[8].querySelector('select');
+        const fechaRetiroInput = row.children[9].querySelector('input');
+        const observacionesInput = row.children[10].querySelector('input');
 
+        if (!fechaContactoInput || !contactoInput || !medioContactoSelect) {
+            return;
+        }
+
+        const fechaContacto = fechaContactoInput.value.trim();
+        const contacto = contactoInput.value.trim();
+        const medioContacto = medioContactoSelect.value.trim();
+        const fechaRetiro = fechaRetiroInput ? fechaRetiroInput.value.trim() : '';
+        const observaciones = observacionesInput ? observacionesInput.value.trim() : '';
+
+        const tieneContacto = fechaContacto || contacto || medioContacto;
+        const tieneOtros = fechaRetiro || observaciones;
+
+        if (!tieneContacto && !tieneOtros) {
+            return;
+        }
+
+        if (tieneContacto && (!fechaContacto || !contacto || !medioContacto)) {
             error = true;
-
+            return;
         }
-        let fechaDeRetiro = (element.children[9].children[0].value != "") ? element.children[9].children[0].value : null
 
         arrayFilas.push({
-            nroGuia : element.children[1].textContent,
-            fechaContacto: element.children[6].children[0].value,
-            contacto: element.children[7].children[0].value,
-            medioContacto: element.children[8].children[0].value,
-            fechaRetiro: fechaDeRetiro,
-            observaciones: element.children[10].children[0].value
-
+            nroGuia: row.dataset.nroGuia || row.children[1].textContent.trim(),
+            fechaContacto: fechaContacto || null,
+            contacto: contacto || null,
+            medioContacto: medioContacto || null,
+            fechaRetiro: fechaRetiro || null,
+            observaciones: observaciones || null
         });
     });
-   
-    if(error){
-        
+
+    if (error) {
         Swal.fire({
             icon: 'error',
             title: 'Error!',
-            text: 'Debe completar los campos contacto, medio y fecha de retiro!',
-        })
-        return 1
-
-    }else{
-        Swal.fire({
-            icon: 'warning',
-            title: 'Desea guardar los cambios?',
-            showDenyButton: true,
-            confirmButtonText: 'Guardar',
-            denyButtonText: 'Cancelar',
-            }).then((result) => {
-            /\ *Read more about isConfirmed, isDenied below */
-            if (result.isConfirmed) {
-              
-                $.ajax({
-
-                    url: 'https://app.xl.com.ar/api/despacho/update-guias',
-                    type: 'POST',
-                    contentType: "application/json",
-                    dataType: "json",
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    data: JSON.stringify({data: arrayFilas}),
-                    success: function (response) {
-                        Swal.fire('Guardado!', '', 'success')
-                    }
-                });
-            } else if (result.isDenied) {
-            Swal.fire('Los cambios no fueron guardados', '', 'info')
-            }
-            })
-
+            text: 'Debe completar los campos fecha de contacto, contacto y medio en las filas editadas.',
+        });
+        return;
     }
+
+    if (arrayFilas.length === 0) {
+        Swal.fire({
+            icon: 'info',
+            title: 'Sin cambios',
+            text: 'No hay guías con datos para guardar.',
+        });
+        return;
+    }
+
+    Swal.fire({
+        icon: 'warning',
+        title: 'Desea guardar los cambios?',
+        showDenyButton: true,
+        confirmButtonText: 'Guardar',
+        denyButtonText: 'Cancelar',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: 'https://app.xl.com.ar/api/despacho/update-guias',
+                type: 'POST',
+                contentType: "application/json",
+                dataType: "json",
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({ data: arrayFilas }),
+                success: function () {
+                    Swal.fire('Guardado!', '', 'success');
+                    buscar();
+                },
+                error: function (xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al guardar',
+                        text: xhr.responseJSON?.message || 'No se pudieron guardar los cambios.',
+                    });
+                }
+            });
+        } else if (result.isDenied) {
+            Swal.fire('Los cambios no fueron guardados', '', 'info');
+        }
+    });
 
 }
 

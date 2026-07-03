@@ -854,10 +854,7 @@ function cargarDatos()
     // =================================================================================
     // PASO 5: SOLICITUDES QUICKPASS (Permisos/Novedades)
     // =================================================================================
-    $solicitudes = [];
-    if (!empty($respuesta['vendedoresConActividad'])) {
-        $solicitudes = fetchQuickPassSolicitudes($respuesta['vendedoresConActividad'], $fechaInicio, $fechaFin);
-    }
+    $solicitudes = fetchQuickPassSolicitudes($fechaInicio, $fechaFin);
     $respuesta['solicitudes'] = $solicitudes;
 
     sqlsrv_close($connSistemas);
@@ -868,9 +865,7 @@ function cargarDatos()
 /**
  * FETCH QUICKPASS SOLICITUDES
  */
-function fetchQuickPassSolicitudes($vendedores, $fechaDesde, $fechaHasta) {
-    if (empty($vendedores)) return [];
-    
+function fetchQuickPassSolicitudes($fechaDesde, $fechaHasta) {
     // 1. Obtener Mapa Global de Legajos (COD_VENDED -> NRO_LEGAJO)
     $connCorp = getConexionCorp();
     $sqlLegajos = "SELECT BLOQUE, NRO_LEGAJO FROM RO_LEGAJOS_PERSONAL WHERE BLOQUE IS NOT NULL";
@@ -910,9 +905,13 @@ function fetchQuickPassSolicitudes($vendedores, $fechaDesde, $fechaHasta) {
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr = curl_error($ch);
     curl_close($ch);
 
-    if ($httpCode !== 200 || !$response) return [];
+    if ($httpCode !== 200 || !$response) {
+        file_put_contents(__DIR__ . '/quickpass_err.log', date('Y-m-d H:i:s') . " - HTTP: $httpCode | Error: $curlErr | Response: $response\n", FILE_APPEND);
+        return [];
+    }
 
     $apiData = json_decode($response, true);
     if (!is_array($apiData)) return [];

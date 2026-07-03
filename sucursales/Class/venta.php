@@ -56,6 +56,38 @@ class Venta
         while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             $rows[] = $v;
         }
+
+        // Excluir comprobantes de $0 de la cantidad de tickets
+        $desde_previo = date('Y-m-d', strtotime($desde . ' -1 year'));
+        $hasta_previo = date('Y-m-d', strtotime($hasta . ' -1 year'));
+        $sql_zeros = "
+            SELECT 
+                CASE WHEN A.COD_VENDED IN ('500', '501') AND A.NRO_SUCURS = 72 THEN 1 ELSE B.NRO_SUCURSAL END AS NUM,
+                SUM(CASE WHEN A.FECHA_EMIS BETWEEN ? AND ? THEN 1 ELSE 0 END) AS ZEROS,
+                SUM(CASE WHEN A.FECHA_EMIS BETWEEN ? AND ? THEN 1 ELSE 0 END) AS ZEROS_PREVIO
+            FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].[CTA02] A
+            INNER JOIN [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].[SUCURSALES_LAKERS] B ON A.NRO_SUCURS = B.NRO_SUCURSAL
+            WHERE ((A.FECHA_EMIS BETWEEN ? AND ?) OR (A.FECHA_EMIS BETWEEN ? AND ?))
+              AND A.ESTADO != 'ANU' AND A.NRO_SUCURS != 1
+              AND A.T_COMP NOT LIKE 'NC%' AND A.IMPORTE = 0
+            GROUP BY CASE WHEN A.COD_VENDED IN ('500', '501') AND A.NRO_SUCURS = 72 THEN 1 ELSE B.NRO_SUCURSAL END
+        ";
+        $params_zeros = array($desde, $hasta, $desde_previo, $hasta_previo, $desde, $hasta, $desde_previo, $hasta_previo);
+        $stmt_zeros = sqlsrv_query($this->cid_central, $sql_zeros, $params_zeros);
+        if ($stmt_zeros !== false) {
+            $zeros_map = array();
+            while ($z = sqlsrv_fetch_array($stmt_zeros, SQLSRV_FETCH_ASSOC)) {
+                $zeros_map[$z['NUM']] = $z;
+            }
+            foreach ($rows as &$row) {
+                $num = $row['NUM'];
+                if (isset($zeros_map[$num])) {
+                    $row['CANT_COMP'] -= $zeros_map[$num]['ZEROS'];
+                    $row['CANT_COMP_PREVIO'] -= $zeros_map[$num]['ZEROS_PREVIO'];
+                }
+            }
+        }
+
         return $rows;
     }
 
@@ -98,6 +130,38 @@ class Venta
         while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             $rows[] = $v;
         }
+
+        // Excluir comprobantes de $0 de la cantidad de tickets
+        $desde_previo = date('Y-m-d', strtotime($desde . ' -1 year'));
+        $hasta_previo = date('Y-m-d', strtotime($hasta . ' -1 year'));
+        $sql_zeros = "
+            SELECT 
+                ISNULL(C.NRO_SUC_MADRE, C.NRO_SUCURSAL) AS NUM,
+                SUM(CASE WHEN A.FECHA_EMIS BETWEEN ? AND ? THEN 1 ELSE 0 END) AS ZEROS,
+                SUM(CASE WHEN A.FECHA_EMIS BETWEEN ? AND ? THEN 1 ELSE 0 END) AS ZEROS_PREVIO
+            FROM [XL-LAKERBIS].[FRANQUICIAS_LAKERS].[dbo].[CTA02] A
+            LEFT JOIN [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].[SUCURSALES_LAKERS] C ON A.NRO_SUCURS = C.NRO_SUCURSAL
+            WHERE ((A.FECHA_EMIS BETWEEN ? AND ?) OR (A.FECHA_EMIS BETWEEN ? AND ?))
+              AND A.ESTADO != 'ANU' AND A.NRO_SUCURS != 1 AND A.COD_VENDED != 'ECOMM'
+              AND A.T_COMP NOT LIKE 'NC%' AND A.IMPORTE = 0
+            GROUP BY ISNULL(C.NRO_SUC_MADRE, C.NRO_SUCURSAL)
+        ";
+        $params_zeros = array($desde, $hasta, $desde_previo, $hasta_previo, $desde, $hasta, $desde_previo, $hasta_previo);
+        $stmt_zeros = sqlsrv_query($this->cid_central, $sql_zeros, $params_zeros);
+        if ($stmt_zeros !== false) {
+            $zeros_map = array();
+            while ($z = sqlsrv_fetch_array($stmt_zeros, SQLSRV_FETCH_ASSOC)) {
+                $zeros_map[$z['NUM']] = $z;
+            }
+            foreach ($rows as &$row) {
+                $num = $row['NUM'];
+                if (isset($zeros_map[$num])) {
+                    $row['CANT_COMP'] -= $zeros_map[$num]['ZEROS'];
+                    $row['CANT_COMP_PREVIO'] -= $zeros_map[$num]['ZEROS_PREVIO'];
+                }
+            }
+        }
+
         return $rows;
     }
 
@@ -140,6 +204,38 @@ class Venta
         while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             $rows[] = $v;
         }
+
+        // Excluir comprobantes de $0 de la cantidad de tickets
+        $desde_previo = date('Y-m-d', strtotime($desde . ' -1 year'));
+        $hasta_previo = date('Y-m-d', strtotime($hasta . ' -1 year'));
+        $sql_zeros = "
+            SELECT 
+                B.NRO_SUCURSAL AS NUM,
+                SUM(CASE WHEN A.FECHA_EMIS BETWEEN ? AND ? THEN 1 ELSE 0 END) AS ZEROS,
+                SUM(CASE WHEN A.FECHA_EMIS BETWEEN ? AND ? THEN 1 ELSE 0 END) AS ZEROS_PREVIO
+            FROM [XL-LAKERBIS].[SUCURSALES_URUGUAY].[dbo].[CTA02] A
+            INNER JOIN [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].[SUCURSALES_LAKERS] B ON A.NRO_SUCURS = B.NRO_SUCURSAL
+            WHERE ((A.FECHA_EMIS BETWEEN ? AND ?) OR (A.FECHA_EMIS BETWEEN ? AND ?))
+              AND A.ESTADO != 'ANU' AND A.NRO_SUCURS != 1
+              AND A.T_COMP NOT LIKE 'NC%' AND A.IMPORTE = 0
+            GROUP BY B.NRO_SUCURSAL
+        ";
+        $params_zeros = array($desde, $hasta, $desde_previo, $hasta_previo, $desde, $hasta, $desde_previo, $hasta_previo);
+        $stmt_zeros = sqlsrv_query($this->cid_central, $sql_zeros, $params_zeros);
+        if ($stmt_zeros !== false) {
+            $zeros_map = array();
+            while ($z = sqlsrv_fetch_array($stmt_zeros, SQLSRV_FETCH_ASSOC)) {
+                $zeros_map[$z['NUM']] = $z;
+            }
+            foreach ($rows as &$row) {
+                $num = $row['NUM'];
+                if (isset($zeros_map[$num])) {
+                    $row['CANT_COMP'] -= $zeros_map[$num]['ZEROS'];
+                    $row['CANT_COMP_PREVIO'] -= $zeros_map[$num]['ZEROS_PREVIO'];
+                }
+            }
+        }
+
         return $rows;
     }
 
@@ -182,6 +278,59 @@ class Venta
         while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             $rows[] = $v;
         }
+
+        // Excluir comprobantes de $0 de la cantidad de tickets
+        $desde_previo = date('Y-m-d', strtotime($desde . ' -1 year'));
+        $hasta_previo = date('Y-m-d', strtotime($hasta . ' -1 year'));
+        $sql_zeros = "
+            SELECT 
+                CASE WHEN A.COD_VENDED IN ('500', '501') AND A.NRO_SUCURS = 72 THEN 1 ELSE B.NRO_SUCURSAL END AS NUM,
+                SUM(CASE WHEN A.FECHA_EMIS BETWEEN ? AND ? THEN 1 ELSE 0 END) AS ZEROS,
+                SUM(CASE WHEN A.FECHA_EMIS BETWEEN ? AND ? THEN 1 ELSE 0 END) AS ZEROS_PREVIO
+            FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].[CTA02] A
+            INNER JOIN [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].[SUCURSALES_LAKERS] B ON A.NRO_SUCURS = B.NRO_SUCURSAL
+            WHERE ((A.FECHA_EMIS BETWEEN ? AND ?) OR (A.FECHA_EMIS BETWEEN ? AND ?))
+              AND A.ESTADO != 'ANU' AND A.NRO_SUCURS != 1
+              AND A.T_COMP NOT LIKE 'NC%' AND A.IMPORTE = 0
+            GROUP BY CASE WHEN A.COD_VENDED IN ('500', '501') AND A.NRO_SUCURS = 72 THEN 1 ELSE B.NRO_SUCURSAL END
+
+            UNION ALL
+
+            SELECT 
+                ISNULL(C.NRO_SUC_MADRE, C.NRO_SUCURSAL) AS NUM,
+                SUM(CASE WHEN A.FECHA_EMIS BETWEEN ? AND ? THEN 1 ELSE 0 END) AS ZEROS,
+                SUM(CASE WHEN A.FECHA_EMIS BETWEEN ? AND ? THEN 1 ELSE 0 END) AS ZEROS_PREVIO
+            FROM [XL-LAKERBIS].[FRANQUICIAS_LAKERS].[dbo].[CTA02] A
+            LEFT JOIN [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].[SUCURSALES_LAKERS] C ON A.NRO_SUCURS = C.NRO_SUCURSAL
+            WHERE ((A.FECHA_EMIS BETWEEN ? AND ?) OR (A.FECHA_EMIS BETWEEN ? AND ?))
+              AND A.ESTADO != 'ANU' AND A.NRO_SUCURS != 1 AND A.COD_VENDED != 'ECOMM'
+              AND A.T_COMP NOT LIKE 'NC%' AND A.IMPORTE = 0
+            GROUP BY ISNULL(C.NRO_SUC_MADRE, C.NRO_SUCURSAL)
+        ";
+        $params_zeros = array(
+            $desde, $hasta, $desde_previo, $hasta_previo, $desde, $hasta, $desde_previo, $hasta_previo,
+            $desde, $hasta, $desde_previo, $hasta_previo, $desde, $hasta, $desde_previo, $hasta_previo
+        );
+        $stmt_zeros = sqlsrv_query($this->cid_central, $sql_zeros, $params_zeros);
+        if ($stmt_zeros !== false) {
+            $zeros_map = array();
+            while ($z = sqlsrv_fetch_array($stmt_zeros, SQLSRV_FETCH_ASSOC)) {
+                $num = $z['NUM'];
+                if (!isset($zeros_map[$num])) {
+                    $zeros_map[$num] = array('ZEROS' => 0, 'ZEROS_PREVIO' => 0);
+                }
+                $zeros_map[$num]['ZEROS'] += $z['ZEROS'];
+                $zeros_map[$num]['ZEROS_PREVIO'] += $z['ZEROS_PREVIO'];
+            }
+            foreach ($rows as &$row) {
+                $num = $row['NUM'];
+                if (isset($zeros_map[$num])) {
+                    $row['CANT_COMP'] -= $zeros_map[$num]['ZEROS'];
+                    $row['CANT_COMP_PREVIO'] -= $zeros_map[$num]['ZEROS_PREVIO'];
+                }
+            }
+        }
+
         return $rows;
     }
     
