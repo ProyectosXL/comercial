@@ -59,9 +59,25 @@ class Articulo
         return null;
     }
 
-    public function obtenerSugerenciasInhabilitacion($pais)
+    public function obtenerSugerenciasInhabilitacion($pais, $rubros = null)
     {
-        $sql = "SELECT COD_ARTICU, DESCRIPCIO, FECHA_ALTA FROM RO_V_INHABILITAR_ARTICULOS";
+        $sql = "SELECT COD_ARTICU, DESCRIPCIO, FECHA_ALTA, RUBRO FROM RO_V_INHABILITAR_ARTICULOS WHERE 1=1";
+        if ($rubros !== null && is_array($rubros) && count($rubros) > 0) {
+            $escapedRubros = [];
+            foreach ($rubros as $rubro) {
+                $escaped = strval($rubro);
+                $escaped = str_replace("'", "''", $escaped);
+                $escapedRubros[] = "'$escaped'";
+            }
+            $sql .= " AND RUBRO IN (" . implode(",", $escapedRubros) . ")";
+        }
+        $sql .= " OPTION (HASH JOIN, MERGE JOIN)";
+        return $this->retornarArray($sql, $pais);
+    }
+
+    public function obtenerRubros($pais)
+    {
+        $sql = "SELECT DISTINCT RUBRO FROM LAKER_SA.dbo.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA WHERE RUBRO IS NOT NULL AND RUBRO <> '' ORDER BY RUBRO";
         return $this->retornarArray($sql, $pais);
     }
 

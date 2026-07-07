@@ -14,6 +14,10 @@ switch ($action) {
         obtenerSugerencias($articuloHandler, $pais);
         break;
 
+    case 'obtener_rubros':
+        obtenerRubrosAction($articuloHandler, $pais);
+        break;
+
     case 'validar_lote':
         validarLote($articuloHandler, $pais);
         break;
@@ -158,9 +162,35 @@ function inhabilitarLote($handler, $pais) {
     ]);
 }
 
+function obtenerRubrosAction($handler, $pais) {
+    try {
+        $rubros = $handler->obtenerRubros($pais);
+        if ($rubros === false) {
+            echo json_encode(['success' => false, 'message' => 'Error al obtener rubros de la base de datos']);
+            return;
+        }
+        echo json_encode([
+            'success' => true,
+            'rubros' => $rubros
+        ]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+    }
+}
+
 function obtenerSugerencias($handler, $pais) {
     try {
-        $sugerencias = $handler->obtenerSugerenciasInhabilitacion($pais);
+        $rubros = isset($_POST['rubros']) ? $_POST['rubros'] : null;
+        if ($rubros !== null && !is_array($rubros)) {
+            $decoded = json_decode($rubros, true);
+            if (is_array($decoded)) {
+                $rubros = $decoded;
+            } else {
+                $rubros = array_filter(array_map('trim', explode(',', $rubros)));
+            }
+        }
+
+        $sugerencias = $handler->obtenerSugerenciasInhabilitacion($pais, $rubros);
         if ($sugerencias === false) {
             echo json_encode(['success' => false, 'message' => 'Error al obtener sugerencias de la base de datos']);
             return;

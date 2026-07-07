@@ -26,22 +26,38 @@ $(document).ready(function() {
         
         // Manejar visibilidad/estado de sugerencias según el país
         actualizarVisibilidadSugerencias();
+        cargarRubros();
 
         toastr.info(`Base de datos cambiada a: ${paisSeleccionado === 'AR' ? 'Argentina (LAKER_SA)' : 'Uruguay (TASKY_SA)'}`);
     });
 
-    // Inicializar estado de sugerencias
+    // Select/deselect all rubros
+    $('#btn-select-all-rubros').on('click', function() {
+        $('#select-rubros option').prop('selected', true);
+    });
+
+    $('#btn-deselect-all-rubros').on('click', function() {
+        $('#select-rubros option').prop('selected', false);
+    });
+
+    // Inicializar estado de sugerencias y rubros
     actualizarVisibilidadSugerencias();
+    cargarRubros();
 
     // ===== SUGERENCIAS DE INHABILITACIÓN =====
     $('#btn-cargar-sugerencias').on('click', function() {
         mostrarLoader('Cargando sugerencias desde la base de datos...');
 
+        const rubrosSeleccionados = $('#select-rubros').val();
+
         $.ajax({
             url: 'Controller/ArticuloController.php?action=obtener_sugerencias',
             type: 'POST',
             dataType: 'json',
-            data: { pais: paisSeleccionado },
+            data: { 
+                pais: paisSeleccionado,
+                rubros: rubrosSeleccionados 
+            },
             success: function(response) {
                 ocultarLoader();
                 if (response.success) {
@@ -75,6 +91,7 @@ $(document).ready(function() {
                 return {
                     'COD_ARTICU': s.COD_ARTICU,
                     'DESCRIPCIO': s.DESCRIPCIO,
+                    'RUBRO': s.RUBRO || '---',
                     'FECHA_ALTA': fechaAlta
                 };
             });
@@ -300,6 +317,7 @@ function renderizarTablaSugerencias(sugerencias) {
         tbody.append(`<tr>
             <td><strong>${s.COD_ARTICU}</strong></td>
             <td>${s.DESCRIPCIO || '---'}</td>
+            <td><span class="badge bg-light text-dark border">${s.RUBRO || '---'}</span></td>
             <td>${fechaAlta}</td>
         </tr>`);
     });
@@ -656,4 +674,31 @@ function mostrarLoader(mensaje) {
 // Ocultar Loader
 function ocultarLoader() {
     $('#loading-overlay').css('display', 'none');
+}
+
+// Cargar Rubros para el selector
+function cargarRubros() {
+    mostrarLoader('Cargando lista de rubros...');
+    $.ajax({
+        url: 'Controller/ArticuloController.php?action=obtener_rubros',
+        type: 'POST',
+        dataType: 'json',
+        data: { pais: paisSeleccionado },
+        success: function(response) {
+            ocultarLoader();
+            if (response.success) {
+                const select = $('#select-rubros');
+                select.empty();
+                response.rubros.forEach(r => {
+                    select.append(`<option value="${r.RUBRO}">${r.RUBRO}</option>`);
+                });
+            } else {
+                toastr.error(response.message || 'Error al obtener la lista de rubros.');
+            }
+        },
+        error: function() {
+            ocultarLoader();
+            toastr.error('Error de red al obtener rubros.');
+        }
+    });
 }

@@ -158,21 +158,41 @@
                                 <span class="fw-bold">Paso 1: Obtener Sugerencias de Inhabilitación</span>
                             </div>
                             <div class="card-body">
-                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
-                                    <p class="text-secondary small mb-0">
-                                        Consulte los artículos sugeridos para inhabilitar según la vista del sistema <code>RO_V_INHABILITAR_ARTICULOS</code>.
-                                    </p>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div id="card-contador-sugerencias" class="card shadow-sm border px-3 py-1 bg-white rounded text-center d-none" style="min-width: 140px;">
-                                            <div class="small text-muted" style="font-size: 0.75rem;">Sugerencias cargadas</div>
-                                            <div class="fw-bold fs-5 text-primary" id="contador-sugerencias-num">0</div>
+                                <div class="row align-items-end g-3 mb-4 border-bottom pb-4">
+                                    <div class="col-md-8 col-lg-6">
+                                        <label for="select-rubros" class="form-label form-label-modern fw-bold">
+                                            <i class="bi bi-funnel-fill text-primary"></i> 1. Seleccione Rubro(s):
+                                        </label>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            <select id="select-rubros" class="form-select form-control-modern" multiple style="height: 120px;">
+                                                <!-- Cargado dinámicamente -->
+                                            </select>
+                                            <div class="d-flex flex-column gap-2">
+                                                <button type="button" id="btn-select-all-rubros" class="btn btn-sm btn-outline-secondary py-2 px-3 text-nowrap">
+                                                    <i class="bi bi-check-all"></i> Todos
+                                                </button>
+                                                <button type="button" id="btn-deselect-all-rubros" class="btn btn-sm btn-outline-secondary py-2 px-3 text-nowrap">
+                                                    <i class="bi bi-x"></i> Ninguno
+                                                </button>
+                                            </div>
                                         </div>
-                                        <button type="button" id="btn-cargar-sugerencias" class="btn btn-modern btn-modern-primary">
-                                            <i class="bi bi-arrow-clockwise animate-spin-hover"></i> Cargar Sugerencias
-                                        </button>
+                                        <div class="form-text text-muted">
+                                            Mantenga presionado Ctrl (o Cmd) para seleccionar múltiples rubros. Si no selecciona ninguno, se considerarán todos.
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 col-lg-6 text-md-end">
+                                        <div class="d-flex align-items-center justify-content-md-end gap-3">
+                                            <div id="card-contador-sugerencias" class="card shadow-sm border px-3 py-1 bg-white rounded text-center d-none" style="min-width: 140px;">
+                                                <div class="small text-muted" style="font-size: 0.75rem;">Sugerencias cargadas</div>
+                                                <div class="fw-bold fs-5 text-primary" id="contador-sugerencias-num">0</div>
+                                            </div>
+                                            <button type="button" id="btn-cargar-sugerencias" class="btn btn-modern btn-modern-primary py-3 px-4">
+                                                <i class="bi bi-arrow-clockwise animate-spin-hover"></i> Cargar Sugerencias
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                                
+
                                 <div class="table-container-modern d-none" id="container-tabla-sugerencias">
                                     <div style="max-height: 250px; overflow-y: auto;">
                                         <table class="table table-modern table-hover align-middle" id="tabla-sugerencias">
@@ -180,6 +200,7 @@
                                                 <tr>
                                                     <th>Artículo</th>
                                                     <th>Descripción</th>
+                                                    <th>Rubro</th>
                                                     <th>Fecha Alta</th>
                                                 </tr>
                                             </thead>
