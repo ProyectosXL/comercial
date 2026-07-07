@@ -909,7 +909,6 @@ function fetchQuickPassSolicitudes($fechaDesde, $fechaHasta) {
     curl_close($ch);
 
     if ($httpCode !== 200 || !$response) {
-        file_put_contents(__DIR__ . '/quickpass_err.log', date('Y-m-d H:i:s') . " - HTTP: $httpCode | Error: $curlErr | Response: $response\n", FILE_APPEND);
         return [];
     }
 
@@ -924,7 +923,7 @@ function fetchQuickPassSolicitudes($fechaDesde, $fechaHasta) {
         // Verificamos si hay algún tipo de "Novedad" o "Solicitud"
         $sol = $f['solicitud'] ?? null;
         $parte = trim($f['partes'] ?? '');
-        $esPermisoEnParte = !empty($parte) && preg_match('/PERMISO|LICENCIA|MUDANZA|ENFERMEDAD|SUSPENSION|VACACION/i', $parte);
+        $esPermisoEnParte = !empty($parte) && preg_match('/PERMISO|LICENCIA|MUDANZA|ENFERMEDAD|SUSPENSION|VACACION|PP|AUSENCIA/i', $parte);
         
         if (isset($mapaLegajoAVendedor[$legajo]) && ($sol || $esPermisoEnParte)) {
             $vendId = $mapaLegajoAVendedor[$legajo];
