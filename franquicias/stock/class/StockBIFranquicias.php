@@ -16,7 +16,8 @@ class StockBIFranquicias {
         7  => 'DESTINO',
         8  => 'GRUPO_EMPRESARIO',
         9  => 'MODELO',
-        10 => 'CANT_STOCK',
+        10 => 'LIQUIDACION',
+        11 => 'CANT_STOCK',
     ];
 
     public function __construct() {
@@ -58,54 +59,64 @@ class StockBIFranquicias {
     }
 
     private function buildWhere(array $f): array {
-        $conds  = ["CANT_STOCK > 0", "RUBRO != '_KITS'"];
+        $conds  = ["BI.CANT_STOCK > 0", "BI.RUBRO != '_KITS'"];
         $params = [];
 
         if (!empty($f['sucursal'])) {
-            $conds[]             = "DESC_SUCURSAL = :sucursal";
+            $conds[]             = "BI.DESC_SUCURSAL = :sucursal";
             $params[':sucursal'] = $f['sucursal'];
         }
         if (!empty($f['temporada'])) {
-            $conds[]              = "TEMPORADA = :temporada";
+            $conds[]              = "BI.TEMPORADA = :temporada";
             $params[':temporada'] = $f['temporada'];
         }
-        if (!empty($f['destino'])) {
-            $conds[]            = "DESTINO = :destino";
-            $params[':destino'] = $f['destino'];
+        if (!empty($f['destino']) && is_array($f['destino'])) {
+            $ph = [];
+            foreach ($f['destino'] as $i => $v) {
+                $k = ":destino_{$i}"; $ph[] = $k; $params[$k] = $v;
+            }
+            $conds[] = "BI.DESTINO IN (" . implode(',', $ph) . ")";
         }
         if (!empty($f['rubros']) && is_array($f['rubros'])) {
             $ph = [];
             foreach ($f['rubros'] as $i => $v) {
                 $k = ":rubro_{$i}"; $ph[] = $k; $params[$k] = $v;
             }
-            $conds[] = "RUBRO IN (" . implode(',', $ph) . ")";
+            $conds[] = "BI.RUBRO IN (" . implode(',', $ph) . ")";
         }
         if (!empty($f['categorias']) && is_array($f['categorias'])) {
             $ph = [];
             foreach ($f['categorias'] as $i => $v) {
                 $k = ":cat_{$i}"; $ph[] = $k; $params[$k] = $v;
             }
-            $conds[] = "CATEGORIA IN (" . implode(',', $ph) . ")";
+            $conds[] = "BI.CATEGORIA IN (" . implode(',', $ph) . ")";
         }
         if (!empty($f['grupos']) && is_array($f['grupos'])) {
             $ph = [];
             foreach ($f['grupos'] as $i => $v) {
                 $k = ":grupo_{$i}"; $ph[] = $k; $params[$k] = $v;
             }
-            $conds[] = "GRUPO_EMPRESARIO IN (" . implode(',', $ph) . ")";
+            $conds[] = "BI.GRUPO_EMPRESARIO IN (" . implode(',', $ph) . ")";
         }
         if (!empty($f['modelo'])) {
-            $conds[]           = "MODELO LIKE :modelo";
+            $conds[]           = "BI.MODELO LIKE :modelo";
             $params[':modelo'] = '%' . $f['modelo'] . '%';
         }
         if (!empty($f['articulo'])) {
-            $conds[]           = "(ARTICULO LIKE :art1 OR DESCRIPCION LIKE :art2)";
+            $conds[]           = "(BI.ARTICULO LIKE :art1 OR BI.DESCRIPCION LIKE :art2)";
             $params[':art1']   = '%' . $f['articulo'] . '%';
             $params[':art2']   = '%' . $f['articulo'] . '%';
         }
+        if (isset($f['liquidacion']) && $f['liquidacion'] !== '') {
+            if ($f['liquidacion'] === 'SI') {
+                $conds[] = "MD.LIQUIDACION COLLATE database_default = 'SI'";
+            } elseif ($f['liquidacion'] === 'NO') {
+                $conds[] = "(MD.LIQUIDACION IS NULL OR MD.LIQUIDACION COLLATE database_default = 'NO' OR MD.LIQUIDACION COLLATE database_default = '')";
+            }
+        }
         if (!empty($f['search'])) {
             $s               = '%' . $f['search'] . '%';
-            $conds[]         = "(ARTICULO LIKE :s1 OR DESCRIPCION LIKE :s2 OR MODELO LIKE :s3 OR DESC_SUCURSAL LIKE :s4)";
+            $conds[]         = "(BI.ARTICULO LIKE :s1 OR BI.DESCRIPCION LIKE :s2 OR BI.MODELO LIKE :s3 OR BI.DESC_SUCURSAL LIKE :s4)";
             $params[':s1']   = $s;
             $params[':s2']   = $s;
             $params[':s3']   = $s;
@@ -120,6 +131,8 @@ class StockBIFranquicias {
         $dir    = strtoupper($dir) === 'DESC' ? 'DESC' : 'ASC';
         $length = max(1, min($length, 500));
 
+        $orderSql = $col === 'LIQUIDACION' ? "MD.LIQUIDACION" : "BI.{$col}";
+
         [$where, $params] = $this->buildWhere($f);
 
         $stmtTotal = $this->conn->query(
@@ -128,18 +141,23 @@ class StockBIFranquicias {
         $recordsTotal = (int) $stmtTotal->fetchColumn();
 
         $stmtFiltered = $this->conn->prepare(
-            "SELECT COUNT(*) FROM BI_STOCK_FRANQUICIAS WITH (NOLOCK) $where"
+            "SELECT COUNT(*) 
+             FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+             LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default
+             $where"
         );
         $stmtFiltered->execute($params);
         $recordsFiltered = (int) $stmtFiltered->fetchColumn();
 
         // OFFSET/FETCH no acepta parámetros PDO en SQL Server — se inyectan como literales enteros ya validados
         $sql = "SELECT
-                    ARTICULO, DESCRIPCION, DESC_SUCURSAL, NRO_SUCURSAL, TEMPORADA, RUBRO,
-                    CATEGORIA, DESTINO, GRUPO_EMPRESARIO, MODELO, CANT_STOCK
-                FROM BI_STOCK_FRANQUICIAS WITH (NOLOCK)
+                    BI.ARTICULO, BI.DESCRIPCION, BI.DESC_SUCURSAL, BI.NRO_SUCURSAL, BI.TEMPORADA, BI.RUBRO,
+                    BI.CATEGORIA, BI.DESTINO, BI.GRUPO_EMPRESARIO, BI.MODELO, BI.CANT_STOCK,
+                    MD.LIQUIDACION AS LIQUIDACION
+                FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default
                 $where
-                ORDER BY $col $dir
+                ORDER BY $orderSql $dir
                 OFFSET {$start} ROWS FETCH NEXT {$length} ROWS ONLY";
 
         $stmt = $this->conn->prepare($sql);
@@ -156,10 +174,11 @@ class StockBIFranquicias {
         [$where, $params] = $this->buildWhere($f);
 
         $sql = "SELECT
-                    ISNULL(SUM(CANT_STOCK), 0)   AS stock_total,
-                    COUNT(DISTINCT ARTICULO)      AS articulos_unicos,
-                    COUNT(DISTINCT DESC_SUCURSAL) AS franquicias_con_stock
-                FROM BI_STOCK_FRANQUICIAS WITH (NOLOCK)
+                    ISNULL(SUM(BI.CANT_STOCK), 0)   AS stock_total,
+                    COUNT(DISTINCT BI.ARTICULO)      AS articulos_unicos,
+                    COUNT(DISTINCT BI.DESC_SUCURSAL) AS franquicias_con_stock
+                FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default
                 $where";
 
         $stmt = $this->conn->prepare($sql);
@@ -204,12 +223,13 @@ class StockBIFranquicias {
         [$where, $params] = $this->buildWhere($f);
 
         $sql = "SELECT TOP 100000
-                    ARTICULO, DESCRIPCION, MODELO, CATEGORIA, RUBRO, TEMPORADA,
-                    DESC_SUCURSAL AS FRANQUICIA, NRO_SUCURSAL, GRUPO_EMPRESARIO, DESTINO,
-                    COD_DEPOSI, COD_CLIENT, CANT_STOCK
-                FROM BI_STOCK_FRANQUICIAS WITH (NOLOCK)
+                    BI.ARTICULO, BI.DESCRIPCION, BI.MODELO, BI.CATEGORIA, BI.RUBRO, BI.TEMPORADA,
+                    BI.DESC_SUCURSAL AS FRANQUICIA, BI.NRO_SUCURSAL, BI.GRUPO_EMPRESARIO, BI.DESTINO,
+                    BI.COD_DEPOSI, BI.COD_CLIENT, MD.LIQUIDACION AS LIQUIDACION, BI.CANT_STOCK
+                FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default
                 $where
-                ORDER BY DESC_SUCURSAL, ARTICULO";
+                ORDER BY BI.DESC_SUCURSAL, BI.ARTICULO";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);

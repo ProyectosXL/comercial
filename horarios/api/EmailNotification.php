@@ -187,7 +187,7 @@ class EmailNotification {
             $cuerpo = "
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; padding: 20px;'>
                     <h2 style='color: #e67e22;'>Nuevo Feedback Detectado</h2>
-                    <p>Hola Bárbara,</p>
+                    <p>Hola,</p>
                     <p>Se ha generado un nuevo comentario/feedback en el sistema de horarios:</p>
                     <ul>
                         <li><strong>Local:</strong> $nombreSucursal</li>
@@ -201,14 +201,29 @@ class EmailNotification {
                     </p>
                 </div>";
 
-            $this->mail->clearAddresses();
-            $this->mail->addAddress('barbara.balado@xl.com.ar');
+            $destinatarios = ['barbara.balado@xl.com.ar', 'nahir.actis@xl.com.ar'];
+            $success = true;
+
+            foreach ($destinatarios as $email) {
+                try {
+                    $this->mail->clearAddresses();
+                    $this->mail->addAddress($email);
+                    
+                    $this->mail->isHTML(true);
+                    $this->mail->Subject = $asunto;
+                    $this->mail->Body = $cuerpo;
+                    
+                    if (!$this->mail->send()) {
+                        $success = false;
+                        error_log("Fallo al enviar mail a: $email. Error: " . $this->mail->ErrorInfo);
+                    }
+                } catch (Exception $eMail) {
+                    $success = false;
+                    error_log("Excepción al enviar mail a $email: " . $eMail->getMessage());
+                }
+            }
             
-            $this->mail->isHTML(true);
-            $this->mail->Subject = $asunto;
-            $this->mail->Body = $cuerpo;
-            
-            return $this->mail->send();
+            return $success;
         } catch (Exception $e) {
             error_log("Error al enviar notificación de feedback: " . $e->getMessage());
             return false;

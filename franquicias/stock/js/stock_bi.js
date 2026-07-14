@@ -18,22 +18,23 @@ function mostrarToast(msg, tipo = 'danger') {
 /* ── Filtros ────────────────────────────────────────────────────────────── */
 function obtenerFiltros() {
     return {
-        sucursal:  $('#f-sucursal').val()  || '',
-        temporada: $('#f-temporada').val() || '',
-        destino:   $('#f-destino').val()   || '',
-        rubros:    $('#f-rubros').val()    || [],
-        categorias: $('#f-categorias').val() || [],
-        grupos:    $('#f-grupos').val()    || [],
-        modelo:    $('#f-modelo').val().trim(),
-        articulo:  $('#f-articulo').val().trim(),
+        sucursal:     $('#f-sucursal').val()  || '',
+        temporada:    $('#f-temporada').val() || '',
+        destino:      $('#f-destino').val()   || [],
+        rubros:       $('#f-rubros').val()    || [],
+        categorias:   $('#f-categorias').val() || [],
+        grupos:       $('#f-grupos').val()    || [],
+        modelo:       $('#f-modelo').val().trim(),
+        articulo:     $('#f-articulo').val().trim(),
+        liquidacion:  $('#f-liquidacion').val() || '',
     };
 }
 
 function hayFiltrosActivos() {
     const f = obtenerFiltros();
-    return f.sucursal || f.temporada || f.destino ||
+    return f.sucursal || f.temporada || f.destino.length ||
            f.rubros.length || f.categorias.length || f.grupos.length ||
-           f.modelo || f.articulo;
+           f.modelo || f.articulo || f.liquidacion;
 }
 
 /* ── KPIs ───────────────────────────────────────────────────────────────── */
@@ -68,7 +69,7 @@ function cargarFiltros() {
 
         poblarSelect('#f-sucursal',   d.sucursales, false);
         poblarSelect('#f-temporada',  d.temporadas, false);
-        poblarSelect('#f-destino',    d.destinos,   false);
+        poblarSelect('#f-destino',    d.destinos,   true);
         poblarSelect('#f-rubros',     d.rubros,     true);
         poblarSelect('#f-categorias', d.categorias, true);
         poblarSelect('#f-grupos',     d.grupos,     true);
@@ -133,6 +134,20 @@ function initTabla() {
             { data: 'DESTINO',          title: 'Destino',    width: '80px' },
             { data: 'GRUPO_EMPRESARIO', title: 'Grupo',      width: '90px' },
             { data: 'MODELO',           title: 'Modelo',     width: '80px' },
+            {
+                data: 'LIQUIDACION',
+                title: 'Liquidación',
+                width: '80px',
+                className: 'text-center fw-semibold',
+                render: (d) => {
+                    if (d === null || d === undefined || d === '' || String(d).trim().toUpperCase() === 'NO') return 'No';
+                    const s = String(d).trim().toUpperCase();
+                    if (s === 'SI' || s === 'SÍ') return 'Sí';
+                    const num = Number(d);
+                    if (!isNaN(num) && num > 0) return 'Sí';
+                    return 'No';
+                }
+            },
             {
                 data: 'CANT_STOCK',
                 title: 'Stock',
@@ -306,7 +321,7 @@ $(function () {
     // ── Eventos de filtros ────────────────────────────────────────────────
 
     // Select2 single / multi
-    $('#f-sucursal, #f-temporada, #f-destino, #f-rubros, #f-categorias, #f-grupos')
+    $('#f-sucursal, #f-temporada, #f-destino, #f-rubros, #f-categorias, #f-grupos, #f-liquidacion')
         .on('change', aplicarFiltros);
 
     // Texto con debounce
@@ -314,7 +329,7 @@ $(function () {
 
     // Limpiar filtros
     $('#btn-limpiar').on('click', function () {
-        $('#f-sucursal, #f-temporada, #f-destino').val(null).trigger('change');
+        $('#f-sucursal, #f-temporada, #f-destino, #f-liquidacion').val(null).trigger('change');
         $('#f-rubros, #f-categorias, #f-grupos').val(null).trigger('change');
         $('#f-modelo, #f-articulo').val('');
         aplicarFiltros();

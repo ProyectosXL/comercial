@@ -28,12 +28,12 @@ class SucursalController extends BaseController {
         $fecha_desde = $_GET['fecha_desde'];
         $fecha_hasta = $_GET['fecha_hasta'];
 
-        $justificadosNComp = $auditModel->getJustificadosNComp();
-        $rechazadosIds = $auditModel->getRechazadosIds();
-        $todasLasOperaciones = $ventaModel->getOperacionesDifPrecio($fecha_desde, $fecha_hasta);
+        $justificadosNComp = $auditModel->getJustificadosNComp($nroSucursalUsuario);
+        $rechazadosIds = $auditModel->getRechazadosIds($nroSucursalUsuario);
+        $todasLasOperaciones = $ventaModel->getOperacionesDifPrecio($fecha_desde, $fecha_hasta, $nroSucursalUsuario);
         
-        $operaciones = array_filter($todasLasOperaciones, function($op) use ($justificadosNComp, $nroSucursalUsuario) {
-            return !in_array($op['N_COMP'], $justificadosNComp) && $op['NRO_SUCURS'] == $nroSucursalUsuario;
+        $operaciones = array_filter($todasLasOperaciones, function($op) use ($justificadosNComp) {
+            return !in_array($op['N_COMP'], $justificadosNComp);
         });
 
         $sucursales = $ventaModel->getSucursales();

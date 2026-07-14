@@ -32,14 +32,19 @@ class AuditModel {
         }
     }
 
-public function getJustificadosNComp() {
+public function getJustificadosNComp($nroSucursal = null) {
         // CAMBIO: Filtramos para que NO traiga los rechazados.
         // Así los rechazados no se consideran "ya hechos" y aparecen de nuevo en la lista.
         $sql = "SELECT n_comp FROM FP_AUDITORIA_DIF_PRECIO WHERE estado != 'Rechazado'";
+        $params = [];
+        if ($nroSucursal !== null) {
+            $sql .= " AND nro_sucursal = ? ";
+            $params[] = $nroSucursal;
+        }
         try {
             $pdo = Database::getConnectionSistemas();
             $stmt = $pdo->prepare($sql);
-            $stmt->execute();
+            $stmt->execute($params);
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
             return array_column($results, 'n_comp');
         } catch (PDOException $e) {
@@ -181,12 +186,17 @@ public function getJustificadosNComp() {
             die("Error al actualizar la justificación: " . $e->getMessage()); 
         }
     }
-        public function getRechazadosIds() {
+        public function getRechazadosIds($nroSucursal = null) {
         $sql = "SELECT n_comp FROM FP_AUDITORIA_DIF_PRECIO WHERE estado = 'Rechazado'";
+        $params = [];
+        if ($nroSucursal !== null) {
+            $sql .= " AND nro_sucursal = ? ";
+            $params[] = $nroSucursal;
+        }
         try {
             $pdo = Database::getConnectionSistemas();
             $stmt = $pdo->prepare($sql);
-            $stmt->execute();
+            $stmt->execute($params);
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
             return array_column($results, 'n_comp');
         } catch (PDOException $e) {

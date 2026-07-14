@@ -119,8 +119,7 @@
                 </div>
                 <div class="col-md-4 col-lg-2">
                     <label class="form-label form-label-sm mb-1">Destino</label>
-                    <select id="f-destino" class="form-select form-select-sm select2-single" data-placeholder="Todos">
-                        <option value=""></option>
+                    <select id="f-destino" class="form-select form-select-sm select2-multi" multiple data-placeholder="Todos los destinos">
                     </select>
                 </div>
                 <div class="col-md-6 col-lg-5">
@@ -145,6 +144,14 @@
                 <div class="col-md-3 col-lg-2">
                     <label class="form-label form-label-sm mb-1">Artículo / Descripción</label>
                     <input type="text" id="f-articulo" class="form-control form-control-sm" placeholder="Buscar artículo…">
+                </div>
+                <div class="col-md-3 col-lg-2">
+                    <label class="form-label form-label-sm mb-1">Liquidación</label>
+                    <select id="f-liquidacion" class="form-select form-select-sm select2-single" data-placeholder="Todas">
+                        <option value=""></option>
+                        <option value="SI">Sí</option>
+                        <option value="NO">No</option>
+                    </select>
                 </div>
             </div>
             <div class="row mt-2">
@@ -191,6 +198,7 @@
                             <th>Destino</th>
                             <th>Grupo</th>
                             <th>Modelo</th>
+                            <th class="text-end">Liquidación</th>
                             <th class="text-end">Stock</th>
                         </tr>
                     </thead>

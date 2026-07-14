@@ -15,9 +15,13 @@ class VentaModel {
         }
     }
 
-    public function getOperacionesDifPrecio($fecha_desde = null, $fecha_hasta = null) {
+    public function getOperacionesDifPrecio($fecha_desde = null, $fecha_hasta = null, $nroSucursal = null) {
         $sql = "SELECT FECHA, N_COMP, NRO_SUCURS, IMPORTE FROM POWER_BI_CONTROL.dbo.BI_SALES_SUCURSALES WHERE COD_ARTICU = '*****DIF PRECIO' AND CANAL = 'LOCALES PROPIOS'";
         $params = [];
+        if ($nroSucursal !== null) {
+            $sql .= " AND NRO_SUCURS = ? ";
+            $params[] = $nroSucursal;
+        }
         $this->addDateFilter($sql, $params, $fecha_desde, $fecha_hasta);
         $sql .= " ORDER BY FECHA DESC;";
         try {
