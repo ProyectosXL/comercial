@@ -45,7 +45,6 @@ function initComponents() {
             columnDefs: [
                 {
                     targets: [2], // Rubro
-                    width: "200px",
                     className: "rubro-columna"
                 },
                 {
@@ -202,6 +201,11 @@ function initSelect2() {
  * Configurar event listeners
  */
 function setupEventListeners() {
+    // Botón exportar matriz desglosada
+    $('#btnExportarMatriz').on('click', function() {
+        exportarMatrizEquivalencias();
+    });
+
     // Botón nuevo grupo
     $('#btnNuevoGrupo').on('click', function() {
         abrirModalGrupo();
@@ -1093,5 +1097,26 @@ function precargarImagenesVisibles() {
 $(document).on('DOMNodeInserted', '#listaArticulosGrupo', function() {
     setTimeout(precargarImagenesVisibles, 100);
 });
+
+/**
+ * NUEVA FUNCIÓN: Exportar matriz completa desglosada por artículo
+ */
+function exportarMatrizEquivalencias() {
+    const grupo = $('#buscarGrupo').val();
+    const rubro = $('#filtroRubro').val();
+    const estado = $('#filtroEstado').val();
+
+    const params = {
+        grupo: grupo || '',
+        rubro: rubro || '',
+        estado: estado !== undefined ? estado : ''
+    };
+
+    const queryString = $.param(params);
+    const url = `controller/exportar_matriz_equivalencias.php?${queryString}`;
+    
+    console.log('Exportando matriz desglosada con URL:', url);
+    window.location.href = url;
+}
 
 console.log('Script de gestión de equivalencias cargado correctamente');

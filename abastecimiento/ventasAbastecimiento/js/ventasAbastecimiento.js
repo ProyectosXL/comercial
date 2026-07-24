@@ -36,13 +36,14 @@ const buscar = () =>{
   spinner.classList.add('loading')
 
   let rubros = document.querySelector("#rubro");
+  let destinos = document.querySelector("#destino");
   let desde = document.querySelector("#desde").value;
   let hasta = document.querySelector("#hasta").value;
-  let destino = document.querySelector("#destino").value
   let temporada = document.querySelector("#temporada").value
   let tipoSucursal = document.querySelector("#tipoSucursal").value
   
  let rubrosParaSql = "";
+ let destinosParaSql = "";
  var dt = $('#mytable').DataTable();
  dt.destroy();
 
@@ -54,6 +55,14 @@ const buscar = () =>{
 
   rubrosParaSql = rubrosParaSql.slice(0, -1);
 
+  for (const option of destinos.options) {
+    if (option.selected) {
+      destinosParaSql += "'" + option.value + "',";
+    }
+  }
+
+  destinosParaSql = destinosParaSql.slice(0, -1);
+
   $.ajax({
     url: "Controller/ventasController.php",
     method: "POST",
@@ -61,7 +70,7 @@ const buscar = () =>{
       rubros: rubrosParaSql,
       desde: desde,
       hasta: hasta,
-      destino: destino,
+      destino: destinosParaSql,
       temporada: temporada,
       tipoSucursal: tipoSucursal
      },
@@ -130,6 +139,11 @@ const buscar = () =>{
         tdDestino.setAttribute("onClick", "sweet(this)");
         tdDestino.innerHTML = venta.DESTINO;
         tr.appendChild(tdDestino);
+
+        let tdLiquidacion = document.createElement("td");
+        tdLiquidacion.setAttribute("onClick", "sweet(this)");
+        tdLiquidacion.innerHTML = venta.LIQUIDACION ? venta.LIQUIDACION : '';
+        tr.appendChild(tdLiquidacion);
 
         let tdPrecio = document.createElement("td");
         tdPrecio.setAttribute("onClick", "sweet(this)");

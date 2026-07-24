@@ -32,26 +32,34 @@ class Venta
                  echo $e->getMessage();
          }
  
-         $sql = "SELECT DESC_SUCURSAL, CANAL, ARTICULO, DESCRIPCION, SUM(CANT_VEND) CANT_VEND, RUBRO, CATEGORIA, CATEGORIA_PADRE, TEMPORADA, DESTINO, PRECIO FROM
+         $maestroTable = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'central') ? '[XL-LAKERBIS].[LOCALES_LAKERS].[dbo].[MAESTRO_DESTINOS]' : '[XL-LAKERBIS].[SUCURSALES_URUGUAY].[dbo].[MAESTRO_DESTINOS]';
+
+         $sql = "SELECT DESC_SUCURSAL, CANAL, ARTICULO, DESCRIPCION, SUM(CANT_VEND) CANT_VEND, RUBRO, CATEGORIA, CATEGORIA_PADRE, TEMPORADA, DESTINO, LIQUIDACION, PRECIO FROM
          (
-         SELECT FECHA_VENTA, DESC_SUCURSAL, CANAL, ARTICULO, DESCRIPCION, CANT_VEND, RUBRO, CATEGORIA, CATEGORIA_PADRE, TEMPORADA, DESTINO, PRECIO
-         FROM dbo.RO_VENTAS_COMERCIAL WHERE FECHA_VENTA BETWEEN '$desde' AND '$hasta' AND DESTINO LIKE '$destino' 
-         AND TEMPORADA LIKE '%$temporada'";
+         SELECT V.FECHA_VENTA, V.DESC_SUCURSAL, V.CANAL, V.ARTICULO, V.DESCRIPCION, V.CANT_VEND, V.RUBRO, V.CATEGORIA, V.CATEGORIA_PADRE, V.TEMPORADA, V.DESTINO, M.LIQUIDACION, V.PRECIO
+         FROM dbo.RO_VENTAS_COMERCIAL V
+         LEFT JOIN $maestroTable M ON V.ARTICULO COLLATE Latin1_General_BIN = M.COD_ARTICU COLLATE Latin1_General_BIN
+         WHERE V.FECHA_VENTA BETWEEN '$desde' AND '$hasta' 
+         AND V.TEMPORADA LIKE '%$temporada'";
+
+        if($destino != '' && $destino != '%'){
+            $sql .= " AND V.DESTINO IN ($destino) ";
+        }
 
         if($rubro != '' && $rubro != '%'){
-            $sql .= " AND RUBRO IN ($rubro) ";
+            $sql .= " AND V.RUBRO IN ($rubro) ";
         }
         
         // Filtro por tipo de sucursal basado en la columna CANAL
         if($tipoSucursal == 'propios'){
-            $sql .= " AND CANAL = 'LOCALES PROPIOS' ";
+            $sql .= " AND V.CANAL = 'LOCALES PROPIOS' ";
         } elseif($tipoSucursal == 'franquicias'){
-            $sql .= " AND CANAL = 'FRANQUICIAS' ";
+            $sql .= " AND V.CANAL = 'FRANQUICIAS' ";
         }
         
         $sql .= "
                 ) A
-                GROUP BY DESC_SUCURSAL, CANAL, ARTICULO, DESCRIPCION, RUBRO, CATEGORIA, CATEGORIA_PADRE, TEMPORADA, DESTINO, PRECIO
+                GROUP BY DESC_SUCURSAL, CANAL, ARTICULO, DESCRIPCION, RUBRO, CATEGORIA, CATEGORIA_PADRE, TEMPORADA, DESTINO, LIQUIDACION, PRECIO
         ";
 
         $stmt = sqlsrv_query( $cid_central , $sql );

@@ -47,6 +47,9 @@ require_once 'includes/help-functions.php';
                                 <p class="text-muted mb-0">Administra grupos de artículos equivalentes</p>
                             </div>
                             <div>
+                                <button type="button" class="btn btn-primary me-2" id="btnExportarMatriz">
+                                    <i class="fas fa-file-excel me-2"></i>Exportar Matriz desglosada
+                                </button>
                                 <button type="button" class="btn btn-success" id="btnNuevoGrupo">
                                     <i class="fas fa-plus me-2"></i>Nuevo Grupo
                                 </button>
@@ -113,16 +116,16 @@ require_once 'includes/help-functions.php';
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-hover" id="tablaGrupos">
-                        <thead class="table-dark">
+                        <thead>
                             <tr>
                                 <th>Código</th>
                                 <th>Nombre Familia</th>
-                                <th width="200">Rubro</th>
+                                <th>Rubro</th>
                                 <th>Artículos</th>
                                 <th>Fecha Creación</th>
                                 <th>Fecha Modificación</th>
                                 <th>Estado</th>
-                                <th width="150">Acciones</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>

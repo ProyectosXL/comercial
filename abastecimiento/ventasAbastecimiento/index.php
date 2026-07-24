@@ -218,10 +218,10 @@ $hoy = date("Y-m-d");
       
       <div class="filter-item filter-destino">
         <label class="form-label fw-bold"><i class="fa fa-map-marker me-1"></i>Destino</label>
-        <select id="destino" class="form-control" name="destino">
-          <option value="" selected>Todos</option>
+        <select class="form-control basic-multiple" name="destino[]" id="destino" multiple>
+          <option disabled></option>
           <?php foreach($todosLosDestinos as $destino => $key){ ?>
-            <option value="<?= $key['DESTINO'] ?>"><?= $key['DESTINO'] ?></option>
+            <option value="<?= $key['DESTINO'] ?>" <?= (isset($_GET['destino']) && in_array($key['DESTINO'], $_GET['destino'])) ? 'selected' : '' ?>><?= $key['DESTINO'] ?></option>
           <?php } ?>
         </select>
       </div>
@@ -270,6 +270,7 @@ $hoy = date("Y-m-d");
       <th>Categoría</th>
       <th>Temporada</th>
       <th>Destino</th>
+      <th>Liquidación</th>
       <th>Precio</th>
     </tr>
     </thead>
@@ -300,6 +301,7 @@ $hoy = date("Y-m-d");
       <td onClick="sweet(this)"></td>
       <td onClick="sweet(this)"></td>
       <td onClick="sweet(this)"></td>
+      <td onClick="sweet(this)"></td>
     </tr>
 
     <?php
@@ -313,6 +315,7 @@ $hoy = date("Y-m-d");
 		<td>
 			<h5>  <a id="cantidad"> <?= number_format($sum , 0, '', '.') ?> </a> </h5>
 		</td>
+    <td></td>
     <td></td>
     <td></td>
     <td></td>
@@ -361,7 +364,9 @@ $(document).ready(function() {
   
   $('.basic-multiple').select2();
   $("#search").blur();
-  document.querySelector(".select2-selection.select2-selection--multiple").style.marginTop = '6px';
+  document.querySelectorAll(".select2-selection.select2-selection--multiple").forEach(function(el) {
+    el.style.marginTop = '6px';
+  });
   // document.querySelector(".select2-selection.select2-selection--multiple").style.height = '21px';
 
 
