@@ -65,6 +65,10 @@ const filtrar = () => {
             descripcionCell.textContent = v["DESCRIPCION"];
             row.appendChild(descripcionCell);
   
+            var categoriaCell = document.createElement("td");
+            categoriaCell.textContent = v["CATEGORIA"] || "";
+            row.appendChild(categoriaCell);
+  
             var destinoCell = document.createElement("td");
             destinoCell.classList.add("destino");
             var selectDestino = document.createElement("select");
@@ -213,7 +217,7 @@ const filtrar = () => {
             },
             {
                 // DESTINO (select), LIQUIDACION (select), EXCLUIR (checkbox)
-                "targets": [3, 7, 9],
+                "targets": [4, 8, 10],
                 "orderable": false
             }
         ],
@@ -273,7 +277,7 @@ const cambiarEntorno = (t) =>{
 
         table.forEach((tr) => {
 
-          if(tr.querySelectorAll("td")[7].querySelector("select").value == "SI"){
+          if(tr.querySelectorAll("td")[8].querySelector("select").value == "SI"){
 
             liquidacionSiString += "'" + tr.querySelectorAll("td")[0].textContent + "',"
 
@@ -330,8 +334,8 @@ const cambiarEntorno = (t) =>{
         var fechaFormateada = año + '-' + mes + '-' + dia;
 
         let tds = t.parentElement.parentElement.querySelectorAll("td");
-        tds[4].textContent = destinoAnt;
-        tds[8].innerHTML = fechaFormateada;
+        tds[5].textContent = destinoAnt;
+        tds[9].innerHTML = fechaFormateada;
         t.setAttribute("data-prev", destino);
       }
 
@@ -355,7 +359,7 @@ const cambiarEntorno = (t) =>{
           var mes = ('0' + (fechaHoy.getMonth() + 1)).slice(-2);
           var dia = ('0' + fechaHoy.getDate()).slice(-2);
           var fechaFormateada = año + '-' + mes + '-' + dia;
-          t.parentElement.parentElement.querySelectorAll("td")[8].innerHTML = fechaFormateada
+          t.parentElement.parentElement.querySelectorAll("td")[9].innerHTML = fechaFormateada
         }
 
       })

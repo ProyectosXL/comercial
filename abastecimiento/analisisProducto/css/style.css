@@ -24,15 +24,15 @@
 
 /* Estilos para la tabla */
 .table tbody td {
-    font-size: 0.8rem;
-    padding: 0.5rem;
+    font-size: 0.78rem;
+    padding: 6px 10px !important;
 }
 
 /* Estilos para el encabezado fijo */
 .table thead th {
-    font-size: 0.9rem;
-    padding: 0.5rem;
-    font-weight: 600;
+    font-size: 0.82rem;
+    padding: 8px 10px !important;
+    font-weight: 700;
     background-color: #f8f9fa;  /* Color de fondo gris claro */
     position: sticky;
     top: 0;
@@ -40,23 +40,20 @@
     border-bottom: 2px solid #dee2e6;
 }
 
-/* Añadir sombra al encabezado para mejor visualización */
-.table thead th::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    border-bottom: 1px solid #dee2e6;
+/* Asegurar que las celdas no se colapsen/envuelvan y permitan scroll horizontal */
+#productosTable th, #productosTable td {
+    white-space: nowrap !important;
 }
 
+/* Estilos adicionales para la tabla */
 .table td, .table th {
-    line-height: 1.2;
+    line-height: 1.3;
     vertical-align: middle;
 }
 
 .table {
     margin-bottom: 0;
+    width: 100% !important;
 }
 
 .table-striped tbody tr {
@@ -70,21 +67,6 @@ body, html {
 
 .container-fluid {
     max-width: 100vw;
-}
-
-/* Asegurar que solo el contenedor de tabla tenga scroll */
-.table-responsive {
-    max-height: calc(100vh - 300px);
-    overflow-y: auto;
-    overflow-x: auto;
-}
-
-.dataTables_wrapper {
-    overflow-x: auto;
-}
-
-.dataTables_scrollBody {
-    overflow-x: auto !important;
 }
 
 /* Estilo para el título */

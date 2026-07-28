@@ -239,39 +239,40 @@ if ($_SESSION['entorno'] == 'central') {
 
         <div class="card">
             <div class="card-body">
-                    <table class="table table-striped" id="productosTable">
-                        <thead>
-                            <tr>
-                                <th>Rubro</th>
-                                <th>Categoría</th>
-                                <th>Categoría Padre</th>
-                                <th>Temporada</th>
-                                <th>Destino</th>
-                                <th>Liquidacion</th>
-                                <th>Fecha Ingreso</th>
-                                <th>Cód. Equiv.</th>
-                                <th>Artículo</th>
-                                <th>Descripción</th>
-                                <th>Color</th>
-                                <th>Precio</th>
-                                <th>Stock Locales</th>
-                                <th>Stock Central</th>
-                                <th>Stock Fiscal</th>
-                                <th>Stock Total</th>
-                                <th>Stock Ecommerce</th>
-                                <th>Stock Excluido</th>
-                                <th>Cant. Venta</th>
-                                <th>Venta Total</th>
-                                <th>Cant. Ingr. Central</th>
-                                <th>Venta Franq.</th>
-                                <th>Venta May.</th>
-                                <th>Venta Ecomm.</th>
-                                <th>Venta Propios</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
+                <table class="table table-striped" id="productosTable">
+                    <thead>
+                        <tr>
+                            <th>Rubro</th>
+                            <th>Categoría</th>
+                            <th>Categoría Padre</th>
+                            <th>Temporada</th>
+                            <th>Destino</th>
+                            <th>Liquidacion</th>
+                            <th>Fecha Ingreso</th>
+                            <th>Cód. Equiv.</th>
+                            <th>Artículo</th>
+                            <th>Descripción</th>
+                            <th>Color</th>
+                            <th>Precio</th>
+                            <th>Stock Locales</th>
+                            <th>Stock Central</th>
+                            <th>Stock Fiscal</th>
+                            <th>Stock Total</th>
+                            <th>Stock Ecommerce</th>
+                            <th>Stock Excluido</th>
+                            <th>Cant. Venta</th>
+                            <th>Venta Total</th>
+                            <th>Cant. Ingr. Central</th>
+                            <th>Stock FQS</th>
+                            <th>Venta FQS</th>
+                            <th>Venta May.</th>
+                            <th>Venta Ecomm.</th>
+                            <th>Venta Propios</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -393,6 +394,8 @@ if ($_SESSION['entorno'] == 'central') {
                     }
                 ],
                 scrollX: true,
+                scrollY: 'calc(100vh - 380px)',
+                scrollCollapse: true,
                 order: [[0, 'asc']],
                 columns: [
                     { data: 'RUBRO', defaultContent: '' },
@@ -421,7 +424,8 @@ if ($_SESSION['entorno'] == 'central') {
                     { data: 'CANT_VENTA', render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
                     { data: 'IMP_VENTA', render: function (data, type) { if (type === 'sort' || type === 'filter') return data ? Number(data) : 0; return data ? '$ ' + Number(data).toLocaleString('es-AR') : '$ 0'; } },
                     { data: 'CANT_INGRESO_CENTRAL', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
-                    { data: 'VENTA_FRANQ', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'STOCK_FQS', defaultContent: '0', render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'VENTA_FRANQ', defaultContent: '0', visible: true, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
                     { data: 'VENTA_MAY', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
                     { data: 'VENTA_ECOMM', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
                     { data: 'VENTA_PROPIOS', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } }

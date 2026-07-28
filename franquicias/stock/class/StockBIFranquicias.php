@@ -131,7 +131,11 @@ class StockBIFranquicias {
         $dir    = strtoupper($dir) === 'DESC' ? 'DESC' : 'ASC';
         $length = max(1, min($length, 500));
 
-        $orderSql = $col === 'LIQUIDACION' ? "MD.LIQUIDACION" : "BI.{$col}";
+        $joinMD = (isset($f['liquidacion']) && $f['liquidacion'] !== '') || $col === 'LIQUIDACION';
+        
+        $joinSql = $joinMD 
+            ? "LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default"
+            : "";
 
         [$where, $params] = $this->buildWhere($f);
 
@@ -143,22 +147,39 @@ class StockBIFranquicias {
         $stmtFiltered = $this->conn->prepare(
             "SELECT COUNT(*) 
              FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
-             LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default
+             $joinSql
              $where"
         );
         $stmtFiltered->execute($params);
         $recordsFiltered = (int) $stmtFiltered->fetchColumn();
 
         // OFFSET/FETCH no acepta parámetros PDO en SQL Server — se inyectan como literales enteros ya validados
-        $sql = "SELECT
-                    BI.ARTICULO, BI.DESCRIPCION, BI.DESC_SUCURSAL, BI.NRO_SUCURSAL, BI.TEMPORADA, BI.RUBRO,
-                    BI.CATEGORIA, BI.DESTINO, BI.GRUPO_EMPRESARIO, BI.MODELO, BI.CANT_STOCK,
-                    MD.LIQUIDACION AS LIQUIDACION
-                FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
-                LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default
-                $where
-                ORDER BY $orderSql $dir
-                OFFSET {$start} ROWS FETCH NEXT {$length} ROWS ONLY";
+        if ($joinMD) {
+            $orderSql = $col === 'LIQUIDACION' ? "MD.LIQUIDACION" : "BI.{$col}";
+            $sql = "SELECT
+                        BI.ARTICULO, BI.DESCRIPCION, BI.DESC_SUCURSAL, BI.NRO_SUCURSAL, BI.TEMPORADA, BI.RUBRO,
+                        BI.CATEGORIA, BI.DESTINO, BI.GRUPO_EMPRESARIO, BI.MODELO, BI.CANT_STOCK,
+                        MD.LIQUIDACION AS LIQUIDACION
+                    FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                    LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default
+                    $where
+                    ORDER BY $orderSql $dir
+                    OFFSET {$start} ROWS FETCH NEXT {$length} ROWS ONLY";
+        } else {
+            $sql = "SELECT
+                        Paged.*,
+                        MD.LIQUIDACION AS LIQUIDACION
+                    FROM (
+                        SELECT
+                            BI.ARTICULO, BI.DESCRIPCION, BI.DESC_SUCURSAL, BI.NRO_SUCURSAL, BI.TEMPORADA, BI.RUBRO,
+                            BI.CATEGORIA, BI.DESTINO, BI.GRUPO_EMPRESARIO, BI.MODELO, BI.CANT_STOCK
+                        FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                        $where
+                        ORDER BY BI.{$col} $dir
+                        OFFSET {$start} ROWS FETCH NEXT {$length} ROWS ONLY
+                    ) Paged
+                    LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = Paged.ARTICULO COLLATE database_default";
+        }
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
@@ -173,12 +194,18 @@ class StockBIFranquicias {
     public function getKPIs(array $f): array {
         [$where, $params] = $this->buildWhere($f);
 
+        $joinMD = isset($f['liquidacion']) && $f['liquidacion'] !== '';
+        
+        $joinSql = $joinMD 
+            ? "LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default"
+            : "";
+
         $sql = "SELECT
                     ISNULL(SUM(BI.CANT_STOCK), 0)   AS stock_total,
                     COUNT(DISTINCT BI.ARTICULO)      AS articulos_unicos,
                     COUNT(DISTINCT BI.DESC_SUCURSAL) AS franquicias_con_stock
                 FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
-                LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default
+                $joinSql
                 $where";
 
         $stmt = $this->conn->prepare($sql);
@@ -222,18 +249,56 @@ class StockBIFranquicias {
     public function getExportData(array $f): array {
         [$where, $params] = $this->buildWhere($f);
 
-        $sql = "SELECT TOP 100000
-                    BI.ARTICULO, BI.DESCRIPCION, BI.MODELO, BI.CATEGORIA, BI.RUBRO, BI.TEMPORADA,
-                    BI.DESC_SUCURSAL AS FRANQUICIA, BI.NRO_SUCURSAL, BI.GRUPO_EMPRESARIO, BI.DESTINO,
-                    BI.COD_DEPOSI, BI.COD_CLIENT, MD.LIQUIDACION AS LIQUIDACION, BI.CANT_STOCK
-                FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
-                LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default
-                $where
-                ORDER BY BI.DESC_SUCURSAL, BI.ARTICULO";
+        $joinMD = isset($f['liquidacion']) && $f['liquidacion'] !== '';
+
+        if ($joinMD) {
+            $sql = "SELECT TOP 100000
+                        BI.ARTICULO, BI.DESCRIPCION, BI.MODELO, BI.CATEGORIA, BI.RUBRO, BI.TEMPORADA,
+                        BI.DESC_SUCURSAL AS FRANQUICIA, BI.NRO_SUCURSAL, BI.GRUPO_EMPRESARIO, BI.DESTINO,
+                        BI.COD_DEPOSI, BI.COD_CLIENT, MD.LIQUIDACION AS LIQUIDACION, BI.CANT_STOCK
+                    FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                    LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default
+                    $where
+                    ORDER BY BI.DESC_SUCURSAL, BI.ARTICULO";
+        } else {
+            $sql = "SELECT
+                        Paged.*, MD.LIQUIDACION AS LIQUIDACION
+                    FROM (
+                        SELECT TOP 100000
+                            BI.ARTICULO, BI.DESCRIPCION, BI.MODELO, BI.CATEGORIA, BI.RUBRO, BI.TEMPORADA,
+                            BI.DESC_SUCURSAL AS FRANQUICIA, BI.NRO_SUCURSAL, BI.GRUPO_EMPRESARIO, BI.DESTINO,
+                            BI.COD_DEPOSI, BI.COD_CLIENT, BI.CANT_STOCK
+                        FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                        $where
+                    ) Paged
+                    LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = Paged.ARTICULO COLLATE database_default
+                    ORDER BY Paged.FRANQUICIA, Paged.ARTICULO";
+        }
 
         $stmt = $this->conn->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    public function getCategoriasPorRubros(array $rubros): array {
+        $base = "FROM BI_STOCK_FRANQUICIAS WITH (NOLOCK) WHERE CANT_STOCK > 0 AND RUBRO != '_KITS'";
+        if (empty($rubros)) {
+            $sql = "SELECT DISTINCT CATEGORIA AS v $base AND CATEGORIA IS NOT NULL AND CATEGORIA != '' ORDER BY CATEGORIA";
+            $stmt = $this->conn->query($sql);
+            return array_column($stmt->fetchAll(), 'v');
+        } else {
+            $ph = [];
+            $params = [];
+            foreach ($rubros as $i => $v) {
+                $k = ":rubro_{$i}";
+                $ph[] = $k;
+                $params[$k] = $v;
+            }
+            $sql = "SELECT DISTINCT CATEGORIA AS v $base AND RUBRO IN (" . implode(',', $ph) . ") AND CATEGORIA IS NOT NULL AND CATEGORIA != '' ORDER BY CATEGORIA";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            return array_column($stmt->fetchAll(), 'v');
+        }
     }
 
     public function invalidarCache(): void {

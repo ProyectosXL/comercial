@@ -151,6 +151,7 @@ $imageOff = ($checkedValue === 'central') ? '../css/UY.png' : '../css/bandera_co
                                     <th style="text-align:center;width:5%" >ARTICULO</th>
                                     <th style="text-align:center;width:5%" >SINONIMO</th>
                                     <th style="text-align:center;width:20%" >DESCRIPCION</th>
+                                    <th style="text-align:center;width:10%" >CATEGORIA</th>
                                     <th style="text-align:center;width:15%">DESTINO</th>
                                     <th style="text-align:center;width:10%">DEST. ANT.</th>
                                     <th style="text-align:center;width:10%" >TEMPORADA</th>

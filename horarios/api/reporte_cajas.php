@@ -21,8 +21,11 @@ $sql = "
         NRO_SUCURSAL,
         MIN(HORA) as ENTRADA, 
         MAX(HORA) + 1 as SALIDA,
-        COUNT(*) as TOTAL_HS,
-        SUM(CASE WHEN (LOWER(TIPO_HORA) = 'caja' OR LOWER(TIPO_HORA) = 'c') THEN 1 ELSE 0 END) as HS_CAJA
+        SUM(CASE WHEN LOWER(TIPO_HORA) LIKE '%_media' THEN 0.5 ELSE 1.0 END) as TOTAL_HS,
+        SUM(CASE 
+            WHEN (LOWER(TIPO_HORA) = 'caja' OR LOWER(TIPO_HORA) = 'c') THEN 1.0 
+            WHEN (LOWER(TIPO_HORA) = 'caja_media' OR LOWER(TIPO_HORA) = 'c_media') THEN 0.5
+            ELSE 0.0 END) as HS_CAJA
     FROM FP_GESTION_HORARIOS 
     WHERE FECHA BETWEEN ? AND ?
 ";
@@ -32,7 +35,10 @@ if (!empty($nroSucursal) && $nroSucursal != 0) {
 }
 
 $sql .= " GROUP BY COD_VENDED, FECHA, NRO_SUCURSAL 
-          HAVING SUM(CASE WHEN (LOWER(TIPO_HORA) = 'caja' OR LOWER(TIPO_HORA) = 'c') THEN 1 ELSE 0 END) > 0
+          HAVING SUM(CASE 
+            WHEN (LOWER(TIPO_HORA) = 'caja' OR LOWER(TIPO_HORA) = 'c') THEN 1.0 
+            WHEN (LOWER(TIPO_HORA) = 'caja_media' OR LOWER(TIPO_HORA) = 'c_media') THEN 0.5
+            ELSE 0.0 END) > 0
           ORDER BY FECHA ASC, COD_VENDED ASC";
 
 $stmt = sqlsrv_query($conn, $sql, [$fechaInicio, $fechaFin]);
@@ -54,8 +60,8 @@ if ($stmt) {
             'fecha' => $row['FECHA']->format('d/m/Y'),
             'entrada' => str_pad($entrada, 2, "0", STR_PAD_LEFT) . ":00",
             'salida' => ($salida == 24 ? "00:00" : str_pad($salida, 2, "0", STR_PAD_LEFT) . ":00"),
-            'total_jornada' => intval($row['TOTAL_HS']),
-            'horas_caja' => intval($row['HS_CAJA'])
+            'total_jornada' => floatval($row['TOTAL_HS']),
+            'horas_caja' => floatval($row['HS_CAJA'])
         ];
         
         $listaVendedores[$id] = true;

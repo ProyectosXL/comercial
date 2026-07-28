@@ -34,12 +34,7 @@
     </div>
 </nav>
 
-<!-- ── PAGE HEADER ──────────────────────────────────────────────────────── -->
-<div class="bg-white border-bottom px-4 py-2">
-    <h5 class="mb-0 fw-semibold text-dark">
-        <i class="bi bi-graph-up-arrow me-2 text-primary"></i>Stock disponible en franquicias
-    </h5>
-</div>
+
 
 <!-- ── MAIN ─────────────────────────────────────────────────────────────── -->
 <div class="container-fluid px-4 py-3">
@@ -156,6 +151,9 @@
             </div>
             <div class="row mt-2">
                 <div class="col-12 d-flex gap-2 justify-content-end flex-wrap">
+                    <button id="btn-buscar" class="btn btn-primary btn-sm">
+                        <i class="bi bi-search me-1"></i>Buscar
+                    </button>
                     <button id="btn-limpiar" class="btn btn-outline-secondary btn-sm">
                         <i class="bi bi-x-circle me-1"></i>Limpiar filtros
                     </button>
@@ -185,8 +183,8 @@
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table id="tabla-stock" class="table table-sm table-hover table-bordered mb-0 w-100">
-                    <thead class="table-dark">
+                <table id="tabla-stock" class="table table-hover mb-0 w-100">
+                    <thead>
                         <tr>
                             <th>Artículo</th>
                             <th>Descripción</th>

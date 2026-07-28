@@ -28,10 +28,12 @@ $sqlBloques = "
         NRO_SUCURSAL,
         MIN(HORA) as ENTRADA, 
         MAX(HORA) + 1 as SALIDA,
-        COUNT(*) as TOTAL_HS
+        SUM(CASE 
+            WHEN (LOWER(TIPO_HORA) = 'caja_media' OR LOWER(TIPO_HORA) = 'c_media') THEN 0.5
+            ELSE 1.0 END) as TOTAL_HS
     FROM FP_GESTION_HORARIOS 
     WHERE FECHA BETWEEN ? AND ?
-      AND (LOWER(TIPO_HORA) = 'caja' OR LOWER(TIPO_HORA) = 'c')
+      AND (LOWER(TIPO_HORA) = 'caja' OR LOWER(TIPO_HORA) = 'c' OR LOWER(TIPO_HORA) = 'caja_media' OR LOWER(TIPO_HORA) = 'c_media')
     GROUP BY COD_VENDED, FECHA, NRO_SUCURSAL 
 ";
 
@@ -48,7 +50,7 @@ if ($stmtB) {
             'sucursal_id' => intval($row['NRO_SUCURSAL']),
             'entrada' => intval($row['ENTRADA']) * 10000,
             'salida' => (intval($row['SALIDA']) == 24 ? 240000 : intval($row['SALIDA']) * 10000),
-            'horas' => intval($row['TOTAL_HS'])
+            'horas' => floatval($row['TOTAL_HS'])
         ];
         $sucursalesIds[] = intval($row['NRO_SUCURSAL']);
         $vendedoresIds[] = trim($row['COD_VENDED']);

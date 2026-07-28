@@ -80,7 +80,7 @@ class EmailNew {
                 return false; // No enviar si no hay excesos
             }
 
-            $destinatarios = ['rodrigo.alganaraz@xl.com.ar','julieta.bianculli@xl.com.ar','tesoreria@xl.com.ar','johanna.bolig@xl.com.ar'];
+            $destinatarios = ['rodrigo.alganaraz@xl.com.ar','julieta.bianculli@xl.com.ar','tesoreria@xl.com.ar','johanna.bolig@xl.com.ar','diego.szmulewicz@xl.com.ar'];
             // $destinatarios = ['ramiro.orozco@xl.com.ar'];
 
             $asunto = "Exceso de Presupuesto - {$supervisora} - Semana {$semana}";

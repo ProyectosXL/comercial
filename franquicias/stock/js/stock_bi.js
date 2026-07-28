@@ -94,6 +94,7 @@ function poblarSelect(selector, valores, multiple) {
 
 /* ── DataTable ──────────────────────────────────────────────────────────── */
 let tabla;
+let buscarPresionado = false;
 
 function initTabla() {
     tabla = $('#tabla-stock').DataTable({
@@ -106,22 +107,34 @@ function initTabla() {
         dom: "<'row align-items-center mb-2'<'col-sm-6'l><'col-sm-6 d-flex justify-content-end'f>>" +
              "<'row'<'col-12'tr>>" +
              "<'row align-items-center mt-2'<'col-sm-5'i><'col-sm-7 d-flex justify-content-end'p>>",
-        ajax: {
-            url:  API,
-            type: 'POST',
-            data(d) {
-                d.action  = 'get_data';
-                d.filtros = JSON.stringify(obtenerFiltros());
-                return d;
-            },
-            error(xhr) {
-                let msg = 'Error al cargar datos.';
-                try {
-                    const r = JSON.parse(xhr.responseText);
-                    if (r.message) msg = r.message;
-                } catch (_) {}
-                mostrarToast(msg);
+        ajax: function (data, callback, settings) {
+            if (!buscarPresionado) {
+                callback({
+                    draw: data.draw,
+                    recordsTotal: 0,
+                    recordsFiltered: 0,
+                    data: []
+                });
+                return;
             }
+            data.action  = 'get_data';
+            data.filtros = JSON.stringify(obtenerFiltros());
+            $.ajax({
+                url:  API,
+                type: 'POST',
+                data: data,
+                success(res) {
+                    callback(res);
+                },
+                error(xhr) {
+                    let msg = 'Error al cargar datos.';
+                    try {
+                        const r = JSON.parse(xhr.responseText);
+                        if (r.message) msg = r.message;
+                    } catch (_) {}
+                    mostrarToast(msg);
+                }
+            });
         },
         columns: [
             { data: 'ARTICULO',         title: 'Artículo',   width: '80px' },
@@ -139,13 +152,19 @@ function initTabla() {
                 title: 'Liquidación',
                 width: '80px',
                 className: 'text-center fw-semibold',
-                render: (d) => {
-                    if (d === null || d === undefined || d === '' || String(d).trim().toUpperCase() === 'NO') return 'No';
+                 render: (d) => {
+                    if (d === null || d === undefined || d === '' || String(d).trim().toUpperCase() === 'NO') {
+                        return '<span class="badge bg-light text-muted border" style="opacity:0.75; font-weight:normal;">No</span>';
+                    }
                     const s = String(d).trim().toUpperCase();
-                    if (s === 'SI' || s === 'SÍ') return 'Sí';
+                    if (s === 'SI' || s === 'SÍ') {
+                        return '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Sí</span>';
+                    }
                     const num = Number(d);
-                    if (!isNaN(num) && num > 0) return 'Sí';
-                    return 'No';
+                    if (!isNaN(num) && num > 0) {
+                        return '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Sí</span>';
+                    }
+                    return '<span class="badge bg-light text-muted border" style="opacity:0.75; font-weight:normal;">No</span>';
                 }
             },
             {
@@ -153,7 +172,7 @@ function initTabla() {
                 title: 'Stock',
                 width: '70px',
                 className: 'text-end fw-semibold',
-                render: (d) => `<span class="badge bg-primary rounded-pill">${fmtInt(d)}</span>`
+                render: (d) => `<span class="badge badge-stock">${fmtInt(d)}</span>`
             },
         ],
         order: [[3, 'asc']],
@@ -208,7 +227,14 @@ function exportar(formato) {
 
             const rows     = res.data;
             const headers  = Object.keys(rows[0]);
-            const data     = [headers, ...rows.map(r => headers.map(h => r[h]))];
+            const data     = [headers, ...rows.map(r => headers.map(h => {
+                let val = r[h];
+                if (h === 'CANT_STOCK') {
+                    const parsed = parseInt(val, 10);
+                    val = isNaN(parsed) ? 0 : parsed;
+                }
+                return val;
+            }))];
             const filename = `stock_franquicias_${fechaArchivo()}`;
 
             if (formato === 'excel') {
@@ -269,6 +295,12 @@ function fechaArchivo() {
     ].join('');
 }
 
+function mostrarKPIsVacios() {
+    document.getElementById('kpi-stock-total').textContent  = '-';
+    document.getElementById('kpi-articulos').textContent     = '-';
+    document.getElementById('kpi-franquicias').textContent   = '-';
+}
+
 /* ── Lenguaje DataTables ────────────────────────────────────────────────── */
 function lenguajeES() {
     return {
@@ -282,7 +314,7 @@ function lenguajeES() {
         paginate: {
             first:    '«', last: '»', next: '›', previous: '‹'
         },
-        emptyTable:   '<div class="text-center py-4 text-muted"><i class="bi bi-inbox fs-3 d-block mb-2"></i>Sin resultados para los filtros aplicados.</div>',
+        emptyTable:   '<div class="text-center py-4 text-muted"><i class="bi bi-funnel fs-3 d-block mb-2"></i>Seleccione los filtros y presione Buscar para comenzar.</div>',
         zeroRecords:  '<div class="text-center py-4 text-muted"><i class="bi bi-search fs-3 d-block mb-2"></i>Sin resultados para la búsqueda.</div>',
     };
 }
@@ -315,24 +347,42 @@ $(function () {
     // Tabla server-side
     initTabla();
 
-    // KPIs iniciales
-    cargarKPIs();
+    // KPIs iniciales vacíos
+    mostrarKPIsVacios();
 
     // ── Eventos de filtros ────────────────────────────────────────────────
 
-    // Select2 single / multi
-    $('#f-sucursal, #f-temporada, #f-destino, #f-rubros, #f-categorias, #f-grupos, #f-liquidacion')
-        .on('change', aplicarFiltros);
+    // Buscar
+    $('#btn-buscar').on('click', function () {
+        buscarPresionado = true;
+        cargarKPIs();
+        if (tabla) tabla.ajax.reload(null, true);
+    });
 
-    // Texto con debounce
-    $('#f-modelo, #f-articulo').on('input', aplicarFiltros);
+    // Filtrar categorias en base a rubro
+    $('#f-rubros').on('change', function () {
+        const rubros = $(this).val() || [];
+        $.ajax({
+            url: API + '?action=get_categorias',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ rubros: rubros }),
+            success(res) {
+                if (res.success) {
+                    poblarSelect('#f-categorias', res.data, true);
+                }
+            }
+        });
+    });
 
     // Limpiar filtros
     $('#btn-limpiar').on('click', function () {
         $('#f-sucursal, #f-temporada, #f-destino, #f-liquidacion').val(null).trigger('change');
         $('#f-rubros, #f-categorias, #f-grupos').val(null).trigger('change');
         $('#f-modelo, #f-articulo').val('');
-        aplicarFiltros();
+        buscarPresionado = false;
+        mostrarKPIsVacios();
+        if (tabla) tabla.ajax.reload(null, true);
     });
 
     // Exportar

@@ -61,10 +61,10 @@ try {
     $headers = [
         'Rubro', 'Categoria', 'Categoria Padre', 'Temporada', 'Destino', 'Liquidacion', 'Fecha Ingreso', 'Cod. Equiv.', 'Articulo', 'Descripcion', 'Color', 'Precio', 
         'Stock Locales', 'Stock Central', 'Stock Fiscal', 'Stock Total', 'Stock Ecommerce', 'Stock Excluido', 'Cant. Venta', 'Venta Total',
-        'Cant. Ingr. Central', 'Venta Franq.', 'Venta May.', 'Venta Ecomm.', 'Venta Propios'
+        'Cant. Ingr. Central', 'Stock FQS', 'Venta FQS', 'Venta May.', 'Venta Ecomm.', 'Venta Propios'
     ];
     $sheet->fromArray($headers, NULL, 'A1');
-    $sheet->getStyle('A1:Y1')->getFont()->setBold(true);
+    $sheet->getStyle('A1:Z1')->getFont()->setBold(true);
 
     // Llenar las filas
     $rowNum = 2;
@@ -75,7 +75,7 @@ try {
             $row['FECHA_INGRESO_SUC'], $row['COD_EQUIVALENCIA'], $row['ARTICULO'], $row['DESCRIPCIO'], $row['COLOR'],
             $row['PRECIO'], $row['STOCK_LOCALES'], $row['STOCK_CENTRAL'], $row['STOCK_CENTRAL_FISCAL'],
             $row['STOCK_TOTAL'], $row['STOCK_RESERVA'], $row['STOCK_EXCLUIDO'], $row['CANT_VENTA'], $row['IMP_VENTA'],
-            $row['CANT_INGRESO_CENTRAL'], $row['VENTA_FRANQ'], $row['VENTA_MAY'], $row['VENTA_ECOMM'], $row['VENTA_PROPIOS']
+            $row['CANT_INGRESO_CENTRAL'], $row['STOCK_FQS'], $row['VENTA_FRANQ'], $row['VENTA_MAY'], $row['VENTA_ECOMM'], $row['VENTA_PROPIOS']
         ], NULL, 'A'.$rowNum);
 
         // Formatear columnas de moneda
@@ -86,7 +86,7 @@ try {
     }
 
     // Auto-ajustar el ancho de las columnas
-    foreach (range('A', 'Y') as $columnID) {
+    foreach (range('A', 'Z') as $columnID) {
         $sheet->getColumnDimension($columnID)->setAutoSize(true);
     }
 

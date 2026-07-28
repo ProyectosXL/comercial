@@ -62,6 +62,12 @@ try {
             echo json_encode(['success' => true, 'data' => $bi->getFiltros()]);
             break;
 
+        case 'get_categorias':
+            $body   = json_decode(file_get_contents('php://input'), true) ?? [];
+            $rubros = $body['rubros'] ?? [];
+            echo json_encode(['success' => true, 'data' => $bi->getCategoriasPorRubros($rubros)]);
+            break;
+
         case 'export_data':
             $body    = json_decode(file_get_contents('php://input'), true) ?? [];
             $filtros = $body['filtros'] ?? [];

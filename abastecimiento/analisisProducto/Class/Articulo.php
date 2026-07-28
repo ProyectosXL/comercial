@@ -932,7 +932,8 @@ class Articulo
                         A.VentaFranq AS VENTA_FRANQ,
                         A.VentaMay AS VENTA_MAY,
                         A.VentaEcomm AS VENTA_ECOMM,
-                        A.VentaPropios AS VENTA_PROPIOS
+                        A.VentaPropios AS VENTA_PROPIOS,
+                        A.StockFqs AS STOCK_FQS
                     FROM 
                         [XL-LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL A
                     LEFT JOIN
