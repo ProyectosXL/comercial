@@ -102,8 +102,7 @@
             <div class="row g-2">
                 <div class="col-md-4 col-lg-3">
                     <label class="form-label form-label-sm mb-1">Franquicia</label>
-                    <select id="f-sucursal" class="form-select form-select-sm select2-single" data-placeholder="Todas las franquicias">
-                        <option value=""></option>
+                    <select id="f-sucursal" class="form-select form-select-sm select2-multi" multiple data-placeholder="Todas las franquicias">
                     </select>
                 </div>
                 <div class="col-md-4 col-lg-2">
@@ -257,9 +256,9 @@
                             <tr><th>Filtro</th><th>Tipo</th><th>Descripción</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td><strong>Franquicia</strong></td><td>Selección única</td><td>Filtra por una sucursal/franquicia específica.</td></tr>
+                            <tr><td><strong>Franquicia</strong></td><td>Selección múltiple</td><td>Permite seleccionar una o varias sucursales/franquicias.</td></tr>
                             <tr><td><strong>Temporada</strong></td><td>Selección única</td><td>Filtra por colección o temporada (más reciente primero).</td></tr>
-                            <tr><td><strong>Destino</strong></td><td>Selección única</td><td>Filtra por destino comercial del artículo.</td></tr>
+                            <tr><td><strong>Destino</strong></td><td>Selección múltiple</td><td>Filtra por destino comercial del artículo.</td></tr>
                             <tr><td><strong>Grupo Empresario</strong></td><td>Selección múltiple</td><td>Permite seleccionar uno o varios grupos.</td></tr>
                             <tr><td><strong>Rubro</strong></td><td>Selección múltiple</td><td>Categoría principal del artículo (excluye _KITS automáticamente).</td></tr>
                             <tr><td><strong>Categoría</strong></td><td>Selección múltiple</td><td>Subcategoría del artículo.</td></tr>

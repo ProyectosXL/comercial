@@ -18,7 +18,7 @@ function mostrarToast(msg, tipo = 'danger') {
 /* ── Filtros ────────────────────────────────────────────────────────────── */
 function obtenerFiltros() {
     return {
-        sucursal:     $('#f-sucursal').val()  || '',
+        sucursal:     $('#f-sucursal').val()  || [],
         temporada:    $('#f-temporada').val() || '',
         destino:      $('#f-destino').val()   || [],
         rubros:       $('#f-rubros').val()    || [],
@@ -32,7 +32,7 @@ function obtenerFiltros() {
 
 function hayFiltrosActivos() {
     const f = obtenerFiltros();
-    return f.sucursal || f.temporada || f.destino.length ||
+    return f.sucursal.length || f.temporada || f.destino.length ||
            f.rubros.length || f.categorias.length || f.grupos.length ||
            f.modelo || f.articulo || f.liquidacion;
 }
@@ -67,7 +67,7 @@ function cargarFiltros() {
         if (!res.success) { mostrarToast('Error al cargar filtros'); return; }
         const d = res.data;
 
-        poblarSelect('#f-sucursal',   d.sucursales, false);
+        poblarSelect('#f-sucursal',   d.sucursales, true);
         poblarSelect('#f-temporada',  d.temporadas, false);
         poblarSelect('#f-destino',    d.destinos,   true);
         poblarSelect('#f-rubros',     d.rubros,     true);
@@ -377,8 +377,8 @@ $(function () {
 
     // Limpiar filtros
     $('#btn-limpiar').on('click', function () {
-        $('#f-sucursal, #f-temporada, #f-destino, #f-liquidacion').val(null).trigger('change');
-        $('#f-rubros, #f-categorias, #f-grupos').val(null).trigger('change');
+        $('#f-temporada, #f-liquidacion').val(null).trigger('change');
+        $('#f-sucursal, #f-destino, #f-rubros, #f-categorias, #f-grupos').val(null).trigger('change');
         $('#f-modelo, #f-articulo').val('');
         buscarPresionado = false;
         mostrarKPIsVacios();

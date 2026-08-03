@@ -62,9 +62,12 @@ class StockBIFranquicias {
         $conds  = ["BI.CANT_STOCK > 0", "BI.RUBRO != '_KITS'"];
         $params = [];
 
-        if (!empty($f['sucursal'])) {
-            $conds[]             = "BI.DESC_SUCURSAL = :sucursal";
-            $params[':sucursal'] = $f['sucursal'];
+        if (!empty($f['sucursal']) && is_array($f['sucursal'])) {
+            $ph = [];
+            foreach ($f['sucursal'] as $i => $v) {
+                $k = ":sucursal_{$i}"; $ph[] = $k; $params[$k] = $v;
+            }
+            $conds[] = "BI.DESC_SUCURSAL IN (" . implode(',', $ph) . ")";
         }
         if (!empty($f['temporada'])) {
             $conds[]              = "BI.TEMPORADA = :temporada";
