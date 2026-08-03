@@ -58,7 +58,7 @@ try {
     $sql = "SELECT 
                 A.Rubro AS RUBRO, 
                 A.Categoria AS CATEGORIA, 
-                B.CATEGORIA_PADRE AS CATEGORIA_PADRE,
+                " . ($base == 'SUCURSALES_URUGUAY' ? 'NULL' : 'B.CATEGORIA_PADRE') . " AS CATEGORIA_PADRE,
                 A.Temporada AS TEMPORADA, 
                 A.Destino AS DESTINO, 
                 A.Liquidacion AS LIQUIDACION, 
@@ -85,7 +85,7 @@ try {
             FROM 
                 [XL-LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL A
             LEFT JOIN
-                [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA B
+                [XL-LAKERBIS].[$base].[dbo].SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA B
             ON A.Articulo COLLATE Latin1_General_BIN = B.COD_ARTICU COLLATE Latin1_General_BIN
             WHERE 
                 $where";

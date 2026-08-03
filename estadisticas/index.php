@@ -155,14 +155,6 @@ if (!isset($_SESSION['username'])) {
                                     </div>
                                     <div class="card">
                                         <div class="card-body">
-                                            <i class="bi bi-bullseye card-icon color-purple"></i>
-                                            <h5 class="card-title">Objetivos</h5>
-                                            <p class="card-subtitle">Seguimiento de metas comerciales</p>
-                                            <a href="../../bi/tableros/objetivosSucursales.html" class="btn btn-purple btn-card">Ver Dashboard</a>
-                                        </div>
-                                    </div>
-                                    <div class="card">
-                                        <div class="card-body">
                                             <i class="bi bi-geo-alt card-icon color-warning"></i>
                                             <h5 class="card-title">Geodatos</h5>
                                             <p class="card-subtitle">Análisis geográfico de ventas</p>
