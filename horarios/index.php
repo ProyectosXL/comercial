@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Horarios</title>
+    <link rel="icon" type="image/jpg" href="../assets/css/images/icono.jpg">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
@@ -93,6 +94,146 @@
         .badge-indicador {
             font-size: 0.8rem;
             padding: 0.25rem 0.5rem;
+        }
+
+        /* =========================================
+           CENTRO DE AYUDA
+           ========================================= */
+        #modalAyuda .ayuda-layout {
+            display: flex;
+            align-items: stretch;
+        }
+
+        #modalAyuda .ayuda-lateral {
+            flex: 0 0 250px;
+            width: 250px;
+            max-height: 68vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+        }
+
+        #modalAyuda .ayuda-lateral .nav {
+            overflow-y: auto;
+            padding: 0 0.75rem 0.75rem;
+        }
+
+        #modalAyuda .ayuda-panel {
+            flex: 1 1 auto;
+            min-width: 0;
+            max-height: 68vh;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        #modalAyuda .nav-pills .nav-link {
+            color: #334155;
+            text-align: left;
+            font-size: 0.9rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+        }
+
+        #modalAyuda .nav-pills .nav-link:not(.active):hover {
+            background-color: #e8eef9;
+        }
+
+        #modalAyuda .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: #fff;
+        }
+
+        #modalAyuda .nav-pills .nav-link:focus-visible {
+            outline: 3px solid rgba(59, 130, 246, 0.45);
+            outline-offset: 2px;
+        }
+
+        #modalAyuda .ayuda-topico {
+            scroll-margin-top: 0.5rem;
+        }
+
+        #modalAyuda .ayuda-topico+.ayuda-topico {
+            margin-top: 1.75rem;
+        }
+
+        #modalAyuda .ayuda-titulo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        #modalAyuda .ayuda-barra {
+            display: inline-block;
+            width: 4px;
+            height: 1.15rem;
+            border-radius: 2px;
+            background-color: #3b82f6;
+        }
+
+        #modalAyuda .ayuda-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.6rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.375rem;
+            font-weight: 700;
+            font-size: 0.85rem;
+            line-height: 1.3;
+        }
+
+        #modalAyuda .ayuda-confirmar {
+            border-left: 4px solid #94a3b8;
+            background-color: #f1f5f9;
+            border-radius: 0.375rem;
+        }
+
+        #modalAyuda .ayuda-flash {
+            animation: ayudaFlash 1.8s ease-out;
+        }
+
+        @keyframes ayudaFlash {
+
+            0%,
+            45% {
+                background-color: #fff3cd;
+            }
+
+            100% {
+                background-color: transparent;
+            }
+        }
+
+        @media (max-width: 991.98px) {
+            #modalAyuda .ayuda-layout {
+                flex-direction: column;
+            }
+
+            #modalAyuda .ayuda-lateral {
+                flex: 0 0 auto;
+                width: 100%;
+                max-height: none;
+                border-right: 0;
+                border-bottom: 1px solid #dee2e6;
+            }
+
+            #modalAyuda .ayuda-lateral .nav {
+                flex-direction: row !important;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+
+            #modalAyuda .ayuda-lateral .nav-link {
+                white-space: nowrap;
+            }
+
+            #modalAyuda .ayuda-panel {
+                max-height: 60vh;
+                padding: 1rem;
+            }
         }
     </style>
 </head>
@@ -805,9 +946,9 @@
         </div>
     </div>
 
-    <!-- Modal Ayuda Contextual: GESTIÓN (Premium) -->
-    <div class="modal fade" id="modalAyuda" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+    <!-- Modal Ayuda Contextual: GESTIÓN (Centro de Ayuda) -->
+    <div class="modal fade" id="modalAyuda" tabindex="-1" aria-labelledby="modalAyudaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content border-0 shadow-lg overflow-hidden">
 
                 <!-- Cabecera con Degradado -->
@@ -818,121 +959,516 @@
                             <i class="bi bi-info-circle-fill fs-3"></i>
                         </div>
                         <div>
-                            <h4 class="modal-title fw-bold mb-0">Centro de Ayuda: Gestión</h4>
-                            <small class="opacity-75 text-uppercase fw-semibold" style="letter-spacing: 1px;">Soporte y
-                                Guía de Planificación</small>
+                            <h4 class="modal-title fw-bold mb-0" id="modalAyudaLabel">Centro de Ayuda: Gestión de Horarios</h4>
+                            <small class="opacity-75 text-uppercase fw-semibold" style="letter-spacing: 1px;">Guía para
+                                encargadas y supervisoras</small>
                         </div>
                     </div>
                     <button type="button" class="btn-close btn-close-white align-self-start"
                         data-bs-dismiss="modal"></button>
                 </div>
 
-                <div class="modal-body p-4 bg-white">
-                    <div class="row g-4">
+                <div class="modal-body p-0 bg-white">
+                    <div class="ayuda-layout">
 
-                        <!-- Sección 1: Simbología -->
-                        <div class="col-12">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="vr me-2" style="width: 4px; background-color: #3b82f6; border-radius: 2px;">
+                        <!-- LATERAL: Buscador + Pestañas -->
+                        <div class="ayuda-lateral">
+                            <div class="p-3 pb-2">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                    <input type="search" id="ayudaBuscador" class="form-control"
+                                        placeholder="Buscar en la ayuda..." aria-label="Buscar en la ayuda">
                                 </div>
-                                <h5 class="fw-bold mb-0">Simbología y Tipos de Horas</h5>
+                                <div id="ayudaBuscadorSinResultados" class="small text-muted mt-2" style="display:none;">
+                                    No encontramos nada con ese texto.
+                                </div>
                             </div>
-                            <div class="row g-2 text-center">
-                                <div class="col-6 col-md-4 col-lg-2">
-                                    <div class="p-2 border rounded bg-light">
-                                        <span class="badge bg-success w-100 mb-1">H</span>
-                                        <div class="small fw-bold">Normal</div>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-4 col-lg-2">
-                                    <div class="p-2 border rounded bg-light">
-                                        <span class="badge bg-info text-dark w-100 mb-1">C</span>
-                                        <div class="small fw-bold">Caja</div>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-4 col-lg-2">
-                                    <div class="p-2 border rounded bg-light">
-                                        <span class="badge w-100 mb-1" style="background-color: #d63384;">P</span>
-                                        <div class="small fw-bold">Permiso</div>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-4 col-lg-2">
-                                    <div class="p-2 border rounded bg-light">
-                                        <span class="badge bg-primary w-100 mb-1">E</span>
-                                        <div class="small fw-bold">Extra</div>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-4 col-lg-2">
-                                    <div class="p-2 border rounded bg-light">
-                                        <span class="badge bg-warning text-dark w-100 mb-1">D</span>
-                                        <div class="small fw-bold">Devuelve</div>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-4 col-lg-2">
-                                    <div class="p-2 border rounded bg-light">
-                                        <span class="badge w-100 mb-1 text-white"
-                                            style="background-color: #6f42c1;">F</span>
-                                        <div class="small fw-bold">Franco</div>
-                                    </div>
-                                </div>
+                            <div class="nav nav-pills flex-column" id="ayudaTabs" role="tablist" aria-orientation="vertical">
+                                <button class="nav-link active" id="ayuda-tab-primeros-pasos" data-bs-toggle="pill"
+                                    data-bs-target="#ayuda-primeros-pasos" type="button" role="tab"
+                                    aria-controls="ayuda-primeros-pasos" aria-selected="true">
+                                    <i class="bi bi-rocket-takeoff-fill me-2"></i>Primeros pasos
+                                </button>
+                                <button class="nav-link" id="ayuda-tab-tipos-hora" data-bs-toggle="pill"
+                                    data-bs-target="#ayuda-tipos-hora" type="button" role="tab"
+                                    aria-controls="ayuda-tipos-hora" aria-selected="false">
+                                    <i class="bi bi-palette-fill me-2"></i>Tipos de hora
+                                </button>
+                                <button class="nav-link" id="ayuda-tab-carga-grilla" data-bs-toggle="pill"
+                                    data-bs-target="#ayuda-carga-grilla" type="button" role="tab"
+                                    aria-controls="ayuda-carga-grilla" aria-selected="false">
+                                    <i class="bi bi-grid-3x3-gap-fill me-2"></i>Cómo cargar la grilla
+                                </button>
+                                <button class="nav-link" id="ayuda-tab-refuerzos" data-bs-toggle="pill"
+                                    data-bs-target="#ayuda-refuerzos" type="button" role="tab"
+                                    aria-controls="ayuda-refuerzos" aria-selected="false">
+                                    <i class="bi bi-person-plus-fill me-2"></i>Refuerzos
+                                </button>
+                                <button class="nav-link" id="ayuda-tab-reglas" data-bs-toggle="pill"
+                                    data-bs-target="#ayuda-reglas" type="button" role="tab"
+                                    aria-controls="ayuda-reglas" aria-selected="false">
+                                    <i class="bi bi-shield-exclamation me-2"></i>Reglas y avisos
+                                </button>
+                                <button class="nav-link" id="ayuda-tab-plantillas" data-bs-toggle="pill"
+                                    data-bs-target="#ayuda-plantillas" type="button" role="tab"
+                                    aria-controls="ayuda-plantillas" aria-selected="false">
+                                    <i class="bi bi-layers-fill me-2"></i>Plantillas base
+                                </button>
+                                <button class="nav-link" id="ayuda-tab-indicadores" data-bs-toggle="pill"
+                                    data-bs-target="#ayuda-indicadores" type="button" role="tab"
+                                    aria-controls="ayuda-indicadores" aria-selected="false">
+                                    <i class="bi bi-graph-up-arrow me-2"></i>Indicadores y banco de horas
+                                </button>
+                                <button class="nav-link" id="ayuda-tab-faq" data-bs-toggle="pill"
+                                    data-bs-target="#ayuda-faq" type="button" role="tab"
+                                    aria-controls="ayuda-faq" aria-selected="false">
+                                    <i class="bi bi-question-circle-fill me-2"></i>Preguntas frecuentes
+                                </button>
                             </div>
                         </div>
 
-                        <!-- Sección 2: Operaciones -->
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="vr me-2" style="width: 4px; background-color: #10b981; border-radius: 2px;">
-                                </div>
-                                <h5 class="fw-bold mb-0">Operaciones Clave</h5>
-                            </div>
-                            <ul class="list-unstyled small">
-                                <li class="mb-3 d-flex align-items-start">
-                                    <i class="bi bi-check2-circle text-success fs-5 me-2"></i>
-                                    <div>
-                                        <strong class="d-block">Carga de Horas</strong>
-                                        Seleccione el tipo en el selector superior y haga clic o arrastre sobre la
-                                        grilla para pintar las horas.
-                                    </div>
-                                </li>
-                                <li class="mb-3 d-flex align-items-start">
-                                    <i class="bi bi-layers text-primary fs-5 me-2"></i>
-                                    <div>
-                                        <strong class="d-block">Plantillas Base</strong>
-                                        Al cargar una semana vacía, el sistema sugiere aplicar la Plantilla (A o B).
-                                        Esto ahorra tiempo de carga inicial.
-                                    </div>
-                                </li>
-                                <li class="d-flex align-items-start">
-                                    <i class="bi bi-person-plus text-info fs-5 me-2"></i>
-                                    <div>
-                                        <strong class="d-block">Refuerzos Externos</strong>
-                                        Use "Agregar Refuerzo" para traer personal de otros locales. Si el sistema
-                                        detecta que ya tienen horas en su local de origen, las mostrará bloqueadas con
-                                        <span class="badge bg-secondary">Ø</span>.
-                                    </div>
-                                </li>
-                            </ul>
-                        </div>
+                        <!-- PANEL: Contenido -->
+                        <div class="ayuda-panel tab-content" id="ayudaTabsContent">
 
-                        <!-- Sección 3: Reglas -->
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="vr me-2" style="width: 4px; background-color: #ef4444; border-radius: 2px;">
-                                </div>
-                                <h5 class="fw-bold mb-0">Reglas de Validación</h5>
-                            </div>
-                            <div class="bg-light p-3 rounded" style="border-left: 4px solid #ef4444;">
-                                <ul class="small mb-0">
-                                    <li class="mb-2"><strong>Tope diario:</strong> No se pueden cargar más de 12 horas
-                                        por jornada.</li>
-                                    <li class="mb-2"><strong>Contrato Semanal:</strong> El sistema advierte si no se
-                                        cumplen las horas base (30/36/42/48 hs).</li>
-                                    <li><strong>Conflictos:</strong> No se permite que un mismo legajo tenga horas
-                                        superpuestas en dos sucursales diferentes.</li>
-                                </ul>
-                            </div>
-                        </div>
+                            <!-- 1. PRIMEROS PASOS -->
+                            <div class="tab-pane fade show active" id="ayuda-primeros-pasos" role="tabpanel"
+                                aria-labelledby="ayuda-tab-primeros-pasos">
 
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-signpost-split-fill"></i> El circuito completo</div>
+                                    <p>Para armar los horarios de la semana, seguí estos pasos en orden:</p>
+                                    <ol class="mb-0">
+                                        <li>Elegí tu <strong>sucursal</strong> en el primer selector.</li>
+                                        <li>Elegí la <strong>semana</strong> que querés planificar en el calendario.</li>
+                                        <li>Tocá <strong>Cargar</strong>. El sistema te muestra la grilla con el
+                                            personal de tu local.</li>
+                                        <li>Pintá las horas de cada persona (mirá la pestaña <em>Cómo cargar la
+                                                grilla</em>).</li>
+                                        <li>Tocá <strong>Guardar Cambios</strong> cuando termines.</li>
+                                    </ol>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-magic"></i> Si la semana está vacía</div>
+                                    <p class="mb-2">Cuando cargás una semana que todavía no tiene nada guardado, el
+                                        sistema completa la grilla solo, usando una plantilla base ya armada para tu
+                                        local (Semana A o Semana B). Vas a ver un aviso arriba de la grilla
+                                        contándote que se aplicó la plantilla. Podés modificarla libremente antes de
+                                        guardar, como si la hubieras cargado a mano.</p>
+                                    <div class="ayuda-confirmar p-2 px-3 small">
+                                        <!-- CONFIRMAR: el sistema elige la plantilla A o B según si el número de semana
+                                             del año calendario es impar o par. Falta que el área usuaria valide que
+                                             ese criterio coincide con la definición real de "semana A" y "semana B"
+                                             que se usa en cada local. -->
+                                        <i class="bi bi-patch-question-fill me-1"></i>
+                                        <strong>[CONFIRMAR]</strong> Qué determina si te toca la Semana A o la Semana
+                                        B en una fecha puntual.
+                                    </div>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-exclamation-octagon-fill"></i> Lo que no guardás, se pierde</div>
+                                    <p class="mb-0">Hasta que no tocás <strong>Guardar Cambios</strong>, nada de lo
+                                        que pintaste queda registrado. Si cargás otra semana, cambiás de sucursal o
+                                        volvés a tocar Cargar antes de guardar, perdés lo que hayas pintado sin que el
+                                        sistema te avise. Guardá siempre antes de moverte a otro lado.</p>
+                                </div>
+                            </div>
+
+                            <!-- 2. TIPOS DE HORA -->
+                            <div class="tab-pane fade" id="ayuda-tipos-hora" role="tabpanel"
+                                aria-labelledby="ayuda-tab-tipos-hora">
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-palette-fill"></i> Los 7 tipos de hora</div>
+                                    <p>Elegís el tipo en el selector de arriba de la grilla y después pintás con el
+                                        mouse. Esta es la letra que va a quedar dibujada en la celda:</p>
+
+                                    <div class="d-flex align-items-start gap-3 mb-2 p-2 border rounded">
+                                        <span class="ayuda-chip" style="background:#198754;color:#fff;">X</span>
+                                        <div><strong class="d-block">Normal</strong>
+                                            <span class="small">Es la hora de trabajo habitual. Suma al total
+                                                <strong>H</strong> de la columna de totales.</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-start gap-3 mb-2 p-2 border rounded">
+                                        <span class="ayuda-chip" style="background:#0dcaf0;color:#000;">C</span>
+                                        <div><strong class="d-block">Caja</strong>
+                                            <span class="small">Hora de caja. También suma al total <strong>H</strong>,
+                                                junto con Normal y Ausencia.</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-start gap-3 mb-2 p-2 border rounded">
+                                        <span class="ayuda-chip" style="background:#d63384;color:#fff;">P</span>
+                                        <div><strong class="d-block">Permiso</strong>
+                                            <span class="small">Hora de permiso. Se acumula como crédito en el saldo
+                                                de banco de horas de la persona (columna Saldo).</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-start gap-3 mb-2 p-2 border rounded">
+                                        <span class="ayuda-chip" style="background:#0d6efd;color:#fff;">A</span>
+                                        <div><strong class="d-block">Adicional</strong>
+                                            <span class="small">Hora adicional. Se cuenta aparte, en su propio total
+                                                (<strong>A</strong>), no se mezcla con las horas normales.</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-start gap-3 mb-2 p-2 border rounded">
+                                        <span class="ayuda-chip" style="background:#fd7e14;color:#fff;">D</span>
+                                        <div><strong class="d-block">Devuelve</strong>
+                                            <span class="small">Hora que la persona devuelve de un permiso anterior.
+                                                Descuenta del saldo de banco de horas.</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-start gap-3 mb-2 p-2 border rounded">
+                                        <span class="ayuda-chip" style="background:#f3e5f5;color:#6a1b9a;border:1px solid #d8b4e2;">V</span>
+                                        <div><strong class="d-block">Vacaciones</strong>
+                                            <span class="small">Se ve con fondo lila, parecido al franco (fijate
+                                                bien la letra V para no confundirla). A diferencia de los demás
+                                                tipos, <strong>no se suma en ningún total de la fila</strong>, ni
+                                                entra en el chequeo de horas semanales.</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-start gap-3 mb-0 p-2 border rounded">
+                                        <span class="ayuda-chip" style="background:#6c757d;color:#fff;">AU</span>
+                                        <div><strong class="d-block">Ausencia</strong>
+                                            <span class="small">Suma al total <strong>H</strong>, igual que Normal y
+                                                Caja.</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="ayuda-confirmar p-2 px-3 small mt-3">
+                                        <!-- CONFIRMAR: el código controla cómo se suman y visualizan estos 7 tipos,
+                                             pero no dice qué implica cada uno en la liquidación de sueldos. Eso lo
+                                             maneja otro sistema. Falta que RRHH/Sistemas lo complete. -->
+                                        <i class="bi bi-patch-question-fill me-1"></i>
+                                        <strong>[CONFIRMAR]</strong> Qué impacto tiene cada tipo de hora en la
+                                        liquidación de sueldos.
+                                    </div>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-scissors"></i> Media hora</div>
+                                    <p class="mb-0">Si necesitás cargar media hora en vez de una hora completa, hacé
+                                        <strong>clic derecho</strong> sobre la celda. Funciona tanto sobre una celda
+                                        vacía (la pinta primero con el tipo que tengas elegido arriba y la deja en
+                                        media hora) como sobre una celda ya pintada (la pasa de hora completa a
+                                        media). Vas a ver un <strong>½</strong> en la celda.</p>
+                                </div>
+                            </div>
+
+                            <!-- 3. CÓMO CARGAR LA GRILLA -->
+                            <div class="tab-pane fade" id="ayuda-carga-grilla" role="tabpanel"
+                                aria-labelledby="ayuda-tab-carga-grilla">
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-brush-fill"></i> Pintar y borrar</div>
+                                    <p class="mb-0">Con el tipo de hora elegido arriba, hacé clic sobre una celda
+                                        para pintarla. Si mantenés el clic apretado y arrastrás el mouse, pintás
+                                        varias celdas seguidas de una sola pasada. Para borrar una celda ya pintada,
+                                        volvé a hacer clic sobre ella.</p>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-calendar-x-fill"></i> Columna F (franco)</div>
+                                    <p class="mb-0">Tildá el casillero de la columna F para marcarle el franco a
+                                        alguien ese día. Al tildarlo, el sistema borra automáticamente las horas que
+                                        tuvieras cargadas ese día para esa persona.</p>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-clock-history"></i> Columna T (turno asignado)</div>
+                                    <p class="mb-0">Esta columna la completa el sistema solo, a partir de las horas
+                                        que pintaste ese día: Mañana (TM), Tarde (TT), Full o Mixto. No se toca
+                                        directamente; si querés que cambie, modificá las horas pintadas.</p>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-file-earmark-person-fill"></i> Columna S (solicitudes
+                                        QuickPass)</div>
+                                    <p class="mb-2">Si a alguien le aparece resaltada la S de un día, quiere decir
+                                        que tiene una solicitud de permiso o licencia cargada en QuickPass para esa
+                                        fecha. Hacé clic para ver el detalle: motivo, estado, fechas y comentarios.
+                                        Es solo para consulta, no se carga ni se edita desde acá.</p>
+                                    <div class="ayuda-confirmar p-2 px-3 small">
+                                        <!-- CONFIRMAR: el sistema consulta QuickPass en el momento, cada vez que se
+                                             carga la grilla (no hay caché visible en el código). Falta que el área
+                                             que administra QuickPass confirme si eso es lo esperado. -->
+                                        <i class="bi bi-patch-question-fill me-1"></i>
+                                        <strong>[CONFIRMAR]</strong> Cada cuánto se actualiza la información que
+                                        llega desde QuickPass.
+                                    </div>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-chat-square-text-fill"></i> Observación del día</div>
+                                    <p class="mb-0">Al final de la fila de cada día hay un ícono de globo de diálogo.
+                                        Hacé clic ahí para dejarle una nota puntual a esa persona, ese día.</p>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-card-text"></i> Observaciones de la semana</div>
+                                    <p class="mb-0">Debajo de la grilla hay un cuadro de texto para dejar comentarios
+                                        generales sobre toda la semana, sin atarlos a una persona ni a un día en
+                                        particular.</p>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-calculator-fill"></i> Totales</div>
+                                    <p class="mb-0">Cada persona tiene su columna de totales a la izquierda: <strong>H</strong>
+                                        (Normal + Caja + Ausencia sumadas), <strong>P</strong> (Permiso),
+                                        <strong>A</strong> (Adicional), <strong>D</strong> (Devuelve) y
+                                        <strong>Saldo</strong> (lo que le queda pendiente de banco de horas: Permiso
+                                        acumulado menos lo que ya devolvió). Arriba a la derecha de la grilla está el
+                                        total semanal de todo el local.</p>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-file-earmark-excel-fill"></i> Exportar a QuickPass</div>
+                                    <p class="mb-2">El botón <strong>Descargar Excel QP</strong> genera un archivo con
+                                        las horas cargadas de <strong>todas las sucursales</strong> para la semana
+                                        elegida, no solo la tuya. Por eso el sistema lo llama "Descarga Global".</p>
+                                    <div class="ayuda-confirmar p-2 px-3 small">
+                                        <!-- CONFIRMAR: el código arma un excel consolidado de todas las sucursales,
+                                             pero no dice qué se hace con ese archivo después. Falta que el área
+                                             usuaria lo complete. -->
+                                        <i class="bi bi-patch-question-fill me-1"></i>
+                                        <strong>[CONFIRMAR]</strong> Qué se hace con ese archivo una vez descargado.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 4. REFUERZOS -->
+                            <div class="tab-pane fade" id="ayuda-refuerzos" role="tabpanel"
+                                aria-labelledby="ayuda-tab-refuerzos">
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-person-plus-fill"></i> Qué es un refuerzo</div>
+                                    <p class="mb-0">Un refuerzo es una persona que no trabaja habitualmente en tu
+                                        local, pero que vas a sumar a la planificación de esta semana. Se agrega con
+                                        el botón <strong>Agregar Refuerzo / Personal De Otro Local</strong>, arriba de
+                                        la grilla.</p>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-lock-fill"></i> Horas bloqueadas</div>
+                                    <p class="mb-0">Si la persona que sumás ya tiene horas cargadas en su local de
+                                        origen, esas celdas van a aparecer bloqueadas con una <strong>Ø</strong> y no
+                                        vas a poder pintar encima. Cada local ve únicamente las horas que se cargaron
+                                        en ese local: lo que otro local le cargó a esa persona no se muestra en
+                                        detalle, solo se ve como ocupado.</p>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-person-x-fill"></i> No encuentro a alguien para agregarlo</div>
+                                    <p class="mb-0">Si una persona no aparece en el listado para sumarla como refuerzo,
+                                        o si cargaste sus horas pero no se lista en su local, es porque figura como
+                                        dada de baja en el sistema de ventas. El sistema solo muestra personas activas
+                                        ahí. <strong>Qué hacer:</strong> avisale a Sistemas o a Recursos Humanos para
+                                        que revisen el alta de esa persona en ventas.</p>
+                                </div>
+                            </div>
+
+                            <!-- 5. REGLAS Y AVISOS -->
+                            <div class="tab-pane fade" id="ayuda-reglas" role="tabpanel"
+                                aria-labelledby="ayuda-tab-reglas">
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra" style="background-color:#dc3545;"></span>
+                                        <i class="bi bi-x-octagon-fill text-danger"></i> Esto bloquea el guardado</div>
+                                    <div class="bg-light p-3 rounded border-start border-4 border-danger">
+                                        <p class="mb-0"><strong>Una misma persona con la misma hora cargada en dos
+                                                sucursales distintas.</strong> Si pasa esto, el sistema no guarda
+                                            nada de lo que hiciste (ni siquiera lo del resto del personal) y te
+                                            muestra un mensaje de error indicando quién y en qué sucursal está el
+                                            conflicto. Tenés que resolver esa superposición antes de poder guardar de
+                                            nuevo.</p>
+                                    </div>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra" style="background-color:#ffc107;"></span>
+                                        <i class="bi bi-exclamation-triangle-fill text-warning"></i> Esto solo avisa
+                                        (podés guardar igual)</div>
+                                    <div class="bg-light p-3 rounded border-start border-4 border-warning">
+                                        <ul class="mb-0">
+                                            <li class="mb-2"><strong>Más de 12 horas cargadas en un mismo día</strong>
+                                                para una persona.</li>
+                                            <li class="mb-0"><strong>El total semanal de horas normales (H) no da 30,
+                                                    36, 42 o 48.</strong></li>
+                                        </ul>
+                                    </div>
+                                    <p class="mb-0 mt-2 small">En estos dos casos el sistema te muestra un cartel de
+                                        advertencia con el detalle antes de guardar, pero te deja confirmar y guardar
+                                        de todos modos.</p>
+                                </div>
+                            </div>
+
+                            <!-- 6. PLANTILLAS BASE -->
+                            <div class="tab-pane fade" id="ayuda-plantillas" role="tabpanel"
+                                aria-labelledby="ayuda-tab-plantillas">
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-layers-fill"></i> Qué son las plantillas A y B</div>
+                                    <p class="mb-0">Son una semana modelo por sucursal, para no tener que armar la
+                                        grilla desde cero cada vez. Se editan desde la solapa <strong>ABM Plantillas
+                                            Base</strong>, eligiendo la sucursal y si es Semana A o Semana B. Ahí solo
+                                        se pueden cargar dos tipos de hora: Normal y Adicional; no se pueden cargar
+                                        Caja, Permiso, Devuelve, Vacaciones ni Ausencia en la plantilla.</p>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-magic"></i> Cuándo se ofrecen</div>
+                                    <p class="mb-0">El sistema aplica la plantilla automáticamente, sin que se la
+                                        pidas, cuando cargás una semana que todavía no tiene ninguna hora ni franco
+                                        guardado. Lo vas a ver anunciado con un mensaje al cargar.</p>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-shield-check"></i> Si la semana ya tiene datos cargados</div>
+                                    <p class="mb-0">La plantilla no se vuelve a aplicar sobre una semana que ya tiene
+                                        horas o francos guardados: eso solo pasa la primera vez, con la semana vacía.
+                                        Lo que ya cargaste no se pisa.</p>
+                                </div>
+                            </div>
+
+                            <!-- 7. INDICADORES Y BANCO DE HORAS -->
+                            <div class="tab-pane fade" id="ayuda-indicadores" role="tabpanel"
+                                aria-labelledby="ayuda-tab-indicadores">
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-clock-fill"></i> Indicadores de horas</div>
+                                    <p class="mb-0">Te muestra, para una sucursal (o todas) y un rango de fechas, el
+                                        total de horas cargadas de cada tipo: tarjetas resumen, un gráfico de barras y
+                                        una tabla con el detalle por persona. Podés filtrar por un solo tipo de hora y
+                                        exportar el detalle a Excel.</p>
+                                </div>
+
+                                <div class="ayuda-topico">
+                                    <div class="ayuda-titulo"><span class="ayuda-barra"></span>
+                                        <i class="bi bi-bank2"></i> Banco de horas</div>
+                                    <p class="mb-0">Filtrando por sucursal y, si querés, por una persona puntual, te
+                                        muestra las horas de Permiso acumuladas, las de Devuelve ya utilizadas, el
+                                        saldo actual (Permiso menos Devuelve) y un promedio mensual, con un gráfico
+                                        histórico y una tabla de movimientos exportable a Excel.</p>
+                                </div>
+                            </div>
+
+                            <!-- 8. PREGUNTAS FRECUENTES -->
+                            <div class="tab-pane fade" id="ayuda-faq" role="tabpanel" aria-labelledby="ayuda-tab-faq">
+                                <div class="ayuda-topico">
+                                    <div class="accordion" id="accordionAyudaFAQ">
+
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button"
+                                                    data-bs-toggle="collapse" data-bs-target="#faqAyuda1">
+                                                    No veo a una persona en la grilla de mi local
+                                                </button>
+                                            </h2>
+                                            <div id="faqAyuda1" class="accordion-collapse collapse"
+                                                data-bs-parent="#accordionAyudaFAQ">
+                                                <div class="accordion-body small">Lo más probable es que esa persona
+                                                    figure como dada de baja en el sistema de ventas. Avisale a
+                                                    Sistemas o a Recursos Humanos para que revisen su alta. Mirá la
+                                                    pestaña <em>Refuerzos</em> para más detalle.</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button"
+                                                    data-bs-toggle="collapse" data-bs-target="#faqAyuda2">
+                                                    Aparece una franja marcada como ocupada y no la puedo modificar
+                                                </button>
+                                            </h2>
+                                            <div id="faqAyuda2" class="accordion-collapse collapse"
+                                                data-bs-parent="#accordionAyudaFAQ">
+                                                <div class="accordion-body small">Esa persona ya tiene esa hora
+                                                    cargada en otra sucursal. Por eso aparece bloqueada con una
+                                                    <strong>Ø</strong> y no se puede pintar encima.</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button"
+                                                    data-bs-toggle="collapse" data-bs-target="#faqAyuda3">
+                                                    Guardé y las horas de alguien desaparecieron
+                                                </button>
+                                            </h2>
+                                            <div id="faqAyuda3" class="accordion-collapse collapse"
+                                                data-bs-parent="#accordionAyudaFAQ">
+                                                <div class="accordion-body small">Revisá si esa persona tiene la
+                                                    misma hora cargada en otra sucursal esa semana: es la única
+                                                    situación que bloquea el guardado completo. Corregí el
+                                                    cruce e intentá guardar de nuevo.</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button"
+                                                    data-bs-toggle="collapse" data-bs-target="#faqAyuda4">
+                                                    Cargué las horas pero la persona sigue sin figurar en su otro
+                                                    local
+                                                </button>
+                                            </h2>
+                                            <div id="faqAyuda4" class="accordion-collapse collapse"
+                                                data-bs-parent="#accordionAyudaFAQ">
+                                                <div class="accordion-body small">De nuevo, revisá si esa persona
+                                                    está dada de baja en el sistema de ventas: si lo está, sus horas
+                                                    quedan invisibles para los locales aunque estén guardadas.
+                                                    Avisale a Sistemas o a Recursos Humanos.</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header">
+                                                <button class="accordion-button collapsed" type="button"
+                                                    data-bs-toggle="collapse" data-bs-target="#faqAyuda5">
+                                                    El total semanal no coincide con lo que esperaba
+                                                </button>
+                                            </h2>
+                                            <div id="faqAyuda5" class="accordion-collapse collapse"
+                                                data-bs-parent="#accordionAyudaFAQ">
+                                                <div class="accordion-body small">Recordá que las horas de Vacaciones
+                                                    no se suman en ningún total, y que las de Ausencia sí suman al
+                                                    total H, igual que Normal y Caja. Revisá el detalle por persona en
+                                                    la columna de totales.</div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
 
@@ -981,6 +1517,64 @@
                         const week = instance.config.getWeek(date);
                         const formatted = `${year}-W${String(week).padStart(2, '0')}`;
                         $(instance.element).attr('data-week-val', formatted);
+                    }
+                }
+            });
+
+            // ==========================================
+            // CENTRO DE AYUDA: abrir en la pestaña relacionada con la solapa activa
+            // ==========================================
+            const mapaAyudaPorSolapa = {
+                'panel-semanal': '#ayuda-primeros-pasos',
+                'panel-plantillas': '#ayuda-plantillas',
+                'panel-indicadores': '#ayuda-indicadores'
+            };
+
+            $('[data-bs-target="#modalAyuda"]').on('click', function () {
+                const solapaActivaId = $('#gestionTabsContent > .tab-pane.active').attr('id');
+                const destino = mapaAyudaPorSolapa[solapaActivaId] || '#ayuda-primeros-pasos';
+                const trigger = document.querySelector('#ayudaTabs button[data-bs-target="' + destino + '"]');
+                if (trigger) {
+                    bootstrap.Tab.getOrCreateInstance(trigger).show();
+                }
+            });
+
+            // Al cerrar el modal, limpiar la búsqueda para la próxima apertura
+            $('#modalAyuda').on('hidden.bs.modal', function () {
+                $('#ayudaBuscador').val('').trigger('input');
+            });
+
+            // ==========================================
+            // CENTRO DE AYUDA: buscador simple por texto
+            // ==========================================
+            $('#ayudaBuscador').on('input', function () {
+                const texto = $(this).val().trim().toLowerCase();
+                let primerTabConResultado = null;
+
+                $('#ayudaTabsContent .ayuda-topico').each(function () {
+                    const coincide = texto === '' || $(this).text().toLowerCase().indexOf(texto) > -1;
+                    $(this).toggle(coincide);
+                    if (coincide && texto !== '' && !primerTabConResultado) {
+                        primerTabConResultado = '#' + $(this).closest('.tab-pane').attr('id');
+                    }
+                });
+
+                let hayAlgunResultado = false;
+                $('#ayudaTabs button').each(function () {
+                    const destino = $(this).data('bs-target');
+                    const tieneResultados = texto === '' || $(destino + ' .ayuda-topico:visible').length > 0;
+                    $(this).toggleClass('opacity-50', !tieneResultados);
+                    if (tieneResultados && texto !== '') hayAlgunResultado = true;
+                });
+
+                $('#ayudaBuscadorSinResultados').toggle(texto !== '' && !hayAlgunResultado);
+
+                if (texto !== '' && primerTabConResultado) {
+                    const activePaneId = '#' + $('#ayudaTabsContent .tab-pane.active').attr('id');
+                    const activoTieneResultados = $(activePaneId + ' .ayuda-topico:visible').length > 0;
+                    if (!activoTieneResultados) {
+                        const trigger = document.querySelector('#ayudaTabs button[data-bs-target="' + primerTabConResultado + '"]');
+                        if (trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();
                     }
                 }
             });
