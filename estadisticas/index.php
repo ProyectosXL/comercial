@@ -257,24 +257,15 @@ if (!isset($_SESSION['username'])) {
                                     <i class="bi bi-boxes me-2"></i>
                                     Control de Stock
                                 </h2>
-                                <div class="row row-cols-1 row-cols-md-2 g-4">
+                                <div class="row row-cols-1 row-cols-md-4 g-4">
                                     <div class="col">
                                         <div class="card">
+                                            <span class="badge-nuevo">Web</span>
                                             <div class="card-body">
                                                 <i class="bi bi-box-seam card-icon color-primary"></i>
                                                 <h5 class="card-title">Inventarios</h5>
                                                 <p class="card-subtitle">Control de stock y almacenes</p>
-                                                <a href="../../bi/tableros/inventarios.html" class="btn btn-primary btn-card">Ver Dashboard</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <i class="bi bi-list-ol card-icon color-success"></i>
-                                                <h5 class="card-title">Conteos</h5>
-                                                <p class="card-subtitle">Reportes de inventarios físicos</p>
-                                                <a href="../../bi/tableros/conteos.html" class="btn btn-success btn-card">Ver Dashboard</a>
+                                                <a href="https://app.xl.com.ar/controlgestion/inventarios/" class="btn btn-primary btn-card">Ver Dashboard</a>
                                             </div>
                                         </div>
                                     </div>
