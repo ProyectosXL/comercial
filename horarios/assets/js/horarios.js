@@ -228,7 +228,7 @@ $(document).ready(function () {
 
                     // 3. TURNO POR DÍA
                     filasHTML += '<td class="turno-dia text-center align-middle p-0">';
-                    filasHTML += '<span class="turno-dia-badge badge bg-light text-dark border" data-fecha="' + fechaISO + '" title="Sin horario asignado">-</span>';
+                    filasHTML += '<span class="turno-dia-badge badge bg-light text-dark border" data-fecha="' + fechaISO + '" data-turno-manual="" style="cursor:pointer;" title="Doble clic para editar turno manual">-</span>';
                     filasHTML += '</td>';
 
                     // 4. NUEVO: SOLICITUD QUICKPASS (S)
@@ -396,7 +396,7 @@ $(document).ready(function () {
 
                 // 3. Celda Turno del día
                 bodyHTML += `<td class="turno-dia text-center align-middle p-0">`;
-                bodyHTML += '<span class="turno-dia-badge badge bg-light text-dark border" data-fecha="' + fechaISO + '" title="Sin horario asignado">-</span>';
+                bodyHTML += '<span class="turno-dia-badge badge bg-light text-dark border" data-fecha="' + fechaISO + '" data-turno-manual="" style="cursor:pointer;" title="Doble clic para editar turno manual">-</span>';
                 bodyHTML += '</td>';
 
                 // 3.5 Celda Solicitud QuickPass (S)
@@ -550,9 +550,20 @@ $(document).ready(function () {
             });
         }
 
-        // Carga de Observaciones de Semana
+        // Guardar agendaBase y turnosManualesSemana en variables para el calculo de columna T
+        window.agendaBaseSemanal = data.agendaBase || {};
+        window.turnosManualesSemana = data.turnosManualesSemana || {};
+
+        // Carga de Observaciones de Semana (Individual y General)
         if (data.observaciones) {
             $('#observacionesSemana').val(data.observaciones);
+        } else {
+            $('#observacionesSemana').val('');
+        }
+        if (data.observacionesGeneral) {
+            $('#observacionesSemanaGeneral').val(data.observacionesGeneral);
+        } else {
+            $('#observacionesSemanaGeneral').val('');
         }
 
         // Carga de Promociones (Bancarias)
@@ -873,6 +884,7 @@ $(document).ready(function () {
         // Recorremos cada fila de vendedor (Solo de nuestro contenedor)
         $('#tablaHorariosContainer tbody tr').each(function () {
             const fila = $(this);
+            const vendedorId = String(fila.data('vendedor-id'));
 
             // 1. Contar tipos de hora (Soportando 0.5)
             let n = 0, c = 0, p = 0, e = 0, d = 0, au = 0, nExterno = 0;
@@ -921,24 +933,48 @@ $(document).ready(function () {
                     }
                 });
 
-                const turnoDia = calcularTurno(horasDia);
+                // LA COLUMNA T SOLO LEE DE LA BASE (o Turno Manual) Y NO DE LAS MODIFICACIONES SEMANALES
                 const badgeTurno = fila.find('.turno-dia-badge[data-fecha="' + fechaISO + '"]');
+                const manualSemanal = (window.turnosManualesSemana && window.turnosManualesSemana[vendedorId]) ? window.turnosManualesSemana[vendedorId][fechaISO] : '';
+                const manualAttr = badgeTurno.attr('data-turno-manual') || manualSemanal || '';
 
-                badgeTurno.text(turnoDia);
-                badgeTurno.removeClass('bg-light bg-primary bg-success bg-warning bg-info');
+                badgeTurno.removeClass('bg-light bg-primary bg-success bg-warning bg-info bg-secondary text-white text-dark border border-2 border-primary');
 
-                const esFranco = fila.find('.franco-checkbox[value="' + fechaISO + '"]').is(':checked');
-
-                if (esFranco) {
-                    badgeTurno.addClass('bg-secondary text-white').attr('title', 'Franco');
-                    badgeTurno.text('F');
+                if (manualAttr !== '') {
+                    badgeTurno.text(manualAttr).addClass('bg-primary text-white border-2 border-primary').attr('title', `Manual: ${manualAttr}`);
+                    badgeTurno.attr('data-turno-manual', manualAttr);
                 } else {
-                    switch (turnoDia) {
-                        case 'TM': badgeTurno.addClass('bg-primary text-white'); break;
-                        case 'TT': badgeTurno.addClass('bg-success text-white'); break;
-                        case 'FULL': badgeTurno.addClass('bg-warning text-dark'); break;
-                        case 'MIXTO': badgeTurno.addClass('bg-info text-white'); break;
-                        default: badgeTurno.addClass('bg-light text-dark border');
+                    // Obtener de la agenda base
+                    let horasBaseDia = [];
+                    let esFrancoBase = false;
+                    let manualBase = '';
+                    if (window.agendaBaseSemanal && window.agendaBaseSemanal[vendedorId]) {
+                        const baseVendedor = window.agendaBaseSemanal[vendedorId];
+                        if (baseVendedor.turnosManuales && baseVendedor.turnosManuales[fechaISO]) {
+                            manualBase = baseVendedor.turnosManuales[fechaISO];
+                        }
+                        if (baseVendedor.francos && baseVendedor.francos[fechaISO]) {
+                            esFrancoBase = true;
+                        }
+                        if (baseVendedor.horarios && baseVendedor.horarios[fechaISO]) {
+                            horasBaseDia = Object.keys(baseVendedor.horarios[fechaISO]).map(Number);
+                        }
+                    }
+
+                    if (manualBase !== '') {
+                        badgeTurno.text(manualBase).addClass('bg-primary text-white border-2 border-primary').attr('title', `Manual de Base: ${manualBase}`);
+                    } else if (esFrancoBase) {
+                        badgeTurno.addClass('bg-secondary text-white').attr('title', 'Franco en Base').text('F');
+                    } else {
+                        const turnoDiaBase = calcularTurno(horasBaseDia);
+                        badgeTurno.text(turnoDiaBase);
+                        switch (turnoDiaBase) {
+                            case 'TM': badgeTurno.addClass('bg-primary text-white'); break;
+                            case 'TT': badgeTurno.addClass('bg-success text-white'); break;
+                            case 'FULL': badgeTurno.addClass('bg-warning text-dark'); break;
+                            case 'MIXTO': badgeTurno.addClass('bg-info text-white'); break;
+                            default: badgeTurno.addClass('bg-light text-dark border');
+                        }
                     }
                 }
 
@@ -1153,6 +1189,19 @@ $(document).ready(function () {
             }
         });
 
+        // D. Recolectar Turnos Manuales
+        let turnosManuales = [];
+        $('#tablaHorariosContainer .turno-dia-badge').each(function () {
+            const tm = $(this).attr('data-turno-manual');
+            if (tm && tm.trim() !== '') {
+                turnosManuales.push({
+                    codVended: String($(this).closest('tr').data('vendedor-id')),
+                    fecha: $(this).data('fecha'),
+                    turnoManual: tm.trim()
+                });
+            }
+        });
+
         const payload = {
             nroSucursal: sucursalId,
             fechaInicio: fechaInicio,
@@ -1160,8 +1209,10 @@ $(document).ready(function () {
             horarios: horarios,
             francos: francos,
             notas: notas,
+            turnosManuales: turnosManuales,
             vendedoresEnGrilla: vendedoresEnGrilla,
-            observaciones: $('#observacionesSemana').val()
+            observaciones: $('#observacionesSemana').val(),
+            observacionesGeneral: $('#observacionesSemanaGeneral').val()
         };
 
         const boton = $('#guardarHorariosBtn');
@@ -1361,5 +1412,56 @@ $(document).ready(function () {
         }
 
         modal.hide();
+    });
+
+    // EVENTO DOBLE CLICK EN COLUMNA T EN PLANIFICACIÓN SEMANAL
+    $('#tablaHorariosContainer').on('dblclick', '.turno-dia-badge', function () {
+        const badge = $(this);
+        const fila = badge.closest('tr');
+        const vid = fila.data('vendedor-id');
+        const fecha = badge.data('fecha');
+        const manualActual = badge.attr('data-turno-manual') || '';
+
+        let horasBaseDia = [];
+        if (window.agendaBaseSemanal && window.agendaBaseSemanal[vid] && window.agendaBaseSemanal[vid].horarios && window.agendaBaseSemanal[vid].horarios[fecha]) {
+            horasBaseDia = Object.keys(window.agendaBaseSemanal[vid].horarios[fecha]).map(Number);
+        }
+        const autoBase = calcularTurno(horasBaseDia);
+
+        $('#turnoManualVendedorId').val(vid);
+        $('#turnoManualFechaOrDia').val(fecha);
+        $('#turnoManualModo').val('semana');
+        $('#turnoManualAutoBadge').text(autoBase);
+        $('#turnoManualInput').val(manualActual);
+
+        const modal = new bootstrap.Modal(document.getElementById('modalEditarTurnoManual'));
+        modal.show();
+    });
+
+    // GUARDAR MODAL TURNO MANUAL (TANTO BASE COMO SEMANA)
+    $('#btnGuardarTurnoManualModal').on('click', function () {
+        const vid = $('#turnoManualVendedorId').val();
+        const fechaOrDia = $('#turnoManualFechaOrDia').val();
+        const modo = $('#turnoManualModo').val();
+        const valInput = $('#turnoManualInput').val().trim().toUpperCase();
+
+        if (modo === 'base') {
+            const badge = $(`#base_tablaContainer tr[data-vendedor-id="${vid}"] .turno-dia-base-badge[data-dia="${fechaOrDia}"]`);
+            badge.attr('data-turno-manual', valInput);
+            if (typeof calcularTotalesBase === 'function') {
+                calcularTotalesBase();
+            }
+        } else {
+            const badge = $(`#tablaHorariosContainer tr[data-vendedor-id="${vid}"] .turno-dia-badge[data-fecha="${fechaOrDia}"]`);
+            badge.attr('data-turno-manual', valInput);
+            const fila = badge.closest('tr');
+            if (typeof recalcularFila === 'function') {
+                recalcularFila(fila);
+            }
+        }
+
+        const modalEl = document.getElementById('modalEditarTurnoManual');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
     });
 });

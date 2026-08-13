@@ -398,9 +398,17 @@
 
                         <div id="observacionesContainer" class="mt-4" style="display:none;">
                             <hr>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Observaciones de la Semana</label>
-                                <textarea class="form-control" id="observacionesSemana" rows="3"></textarea>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold text-dark"><i class="bi bi-chat-left-text me-1"></i> Observaciones de la Semana (Esta Sucursal)</label>
+                                    <textarea class="form-control" id="observacionesSemana" rows="3" placeholder="Observaciones específicas para esta sucursal..."></textarea>
+                                    <small class="text-muted">Solo visible para esta sucursal.</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold text-primary"><i class="bi bi-broadcast me-1"></i> Observaciones de la Semana GENERAL (Todos los Locales)</label>
+                                    <textarea class="form-control border-primary" id="observacionesSemanaGeneral" rows="3" placeholder="Mensaje general para todas las sucursales..."></textarea>
+                                    <small class="text-muted">Visible para todos los locales por igual en la vista local.</small>
+                                </div>
                             </div>
                         </div>
 
@@ -1580,6 +1588,36 @@
             });
         });
     </script>
+    <!-- MODAL EDITAR TURNO MANUAL -->
+    <div class="modal fade" id="modalEditarTurnoManual" tabindex="-1" aria-labelledby="modalEditarTurnoManualLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-primary text-white py-2">
+                    <h6 class="modal-title fw-bold" id="modalEditarTurnoManualLabel"><i class="bi bi-pencil-square me-1"></i> Editar Turno (T)</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="turnoManualVendedorId">
+                    <input type="hidden" id="turnoManualFechaOrDia">
+                    <input type="hidden" id="turnoManualModo"> <!-- 'base' o 'semana' -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold mb-1">Turno Automático:</label>
+                        <div><span id="turnoManualAutoBadge" class="badge bg-light text-dark border">-</span></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="turnoManualInput" class="form-label fw-bold small">Turno Manual / Sobreescribir:</label>
+                        <input type="text" class="form-control form-control-sm text-uppercase" id="turnoManualInput" placeholder="Ej: 9/15, 15/21">
+                        <small class="text-muted" style="font-size: 0.75rem;">Deje vacío para restaurar el automático.</small>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="btnGuardarTurnoManualModal">Aplicar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>

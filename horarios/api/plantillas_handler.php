@@ -42,7 +42,7 @@ if ($metodo === 'POST') {
 
         // 2. Insertar los nuevos datos
         if (!empty($datos)) {
-            $sqlIns = "INSERT INTO FP_HORARIOS_BASE (NRO_SUCURSAL, TIPO_SEMANA, COD_VENDED, DIA_SEMANA, HORA, TIPO_HORA, ES_FRANCO) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $sqlIns = "INSERT INTO FP_HORARIOS_BASE (NRO_SUCURSAL, TIPO_SEMANA, COD_VENDED, DIA_SEMANA, HORA, TIPO_HORA, ES_FRANCO, TURNO_MANUAL) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             
             foreach ($datos as $d) {
                 $cod = trim($d['cod']);
@@ -51,8 +51,9 @@ if ($metodo === 'POST') {
                 $hora = (intval($d['franco']) === 1) ? 0 : (isset($d['hora']) ? intval($d['hora']) : null);
                 $tipoHora = isset($d['tipo']) ? trim($d['tipo']) : 'normal';
                 $franco = intval($d['franco']);
+                $turnoManual = isset($d['turno_manual']) && trim($d['turno_manual']) !== '' ? trim($d['turno_manual']) : null;
 
-                $params = [$suc, $tipo, $cod, $dia, $hora, $tipoHora, $franco];
+                $params = [$suc, $tipo, $cod, $dia, $hora, $tipoHora, $franco, $turnoManual];
                 
                 $stmtIns = sqlsrv_query($conn, $sqlIns, $params);
                 
@@ -92,7 +93,7 @@ if ($metodo === 'POST') {
         die(json_encode(['status' => 'error', 'message' => 'Error al conectar con la base de datos de Sistemas para cargar: ' . print_r(sqlsrv_errors(), true)]));
     }
 
-    $sql = "SELECT COD_VENDED, DIA_SEMANA, HORA, TIPO_HORA, ES_FRANCO FROM FP_HORARIOS_BASE WHERE NRO_SUCURSAL = ? AND TIPO_SEMANA = ?";
+    $sql = "SELECT COD_VENDED, DIA_SEMANA, HORA, TIPO_HORA, ES_FRANCO, TURNO_MANUAL FROM FP_HORARIOS_BASE WHERE NRO_SUCURSAL = ? AND TIPO_SEMANA = ?";
     $stmt = sqlsrv_query($conn, $sql, [$suc, $tipo]);
     
     $agenda = [];
@@ -101,8 +102,12 @@ if ($metodo === 'POST') {
             $id = trim($row['COD_VENDED']);
             $dia = intval($row['DIA_SEMANA']); // 1..7
             
-            if (!isset($agenda[$id])) $agenda[$id] = ['horarios' => [], 'francos' => []];
+            if (!isset($agenda[$id])) $agenda[$id] = ['horarios' => [], 'francos' => [], 'turnosManuales' => []];
             
+            if (!empty($row['TURNO_MANUAL'])) {
+                $agenda[$id]['turnosManuales'][$dia] = trim($row['TURNO_MANUAL']);
+            }
+
             // Si ES_FRANCO es 1, se considera franco, independientemente del valor de HORA
             if (intval($row['ES_FRANCO']) == 1) { // Asegurarse de que sea int
                 $agenda[$id]['francos'][$dia] = true;

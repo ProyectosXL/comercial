@@ -152,6 +152,27 @@
           </div>
         </div>
       </div>
+      </div>
+    </div>
+
+    <!-- OBSERVACIONES DE LA SEMANA (VISTA LOCAL) -->
+    <div class="row mt-4" id="observacionesVistaLocalContainer" style="display:none;">
+      <div class="col-md-6 mb-3" id="wrapperObsLocal" style="display:none;">
+        <div class="card shadow-sm border-0 border-start border-dark border-4 h-100">
+          <div class="card-body p-3">
+            <h6 class="card-title fw-bold text-dark mb-2"><i class="bi bi-chat-left-text me-1"></i> Observaciones de la Semana (Local)</h6>
+            <div id="obsLocalTexto" class="text-secondary small fst-italic"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 mb-3" id="wrapperObsGeneral" style="display:none;">
+        <div class="card shadow-sm border-0 border-start border-primary border-4 h-100">
+          <div class="card-body p-3">
+            <h6 class="card-title fw-bold text-primary mb-2"><i class="bi bi-broadcast me-1"></i> Observaciones Generales de la Semana</h6>
+            <div id="obsGeneralTexto" class="text-dark small fw-semibold"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- LEYENDA DE COLORES -->

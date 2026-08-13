@@ -95,19 +95,19 @@ $(document).ready(function () {
 
         // Header Días
         diasSemana.forEach(dia => {
-            // CAMBIO 1: Colspan pasa a 19 (18 horas [7 a 00] + 1 Franco)
-            htmlHeader += `<th colspan="19" class="dia-header">${dia}</th>`;
+            // Colspan pasa a 20 (18 horas [7 a 00] + 1 Franco + 1 Turno T)
+            htmlHeader += `<th colspan="20" class="dia-header">${dia}</th>`;
         });
         htmlHeader += '</tr><tr><th></th><th></th>'; // Vendedor + Total Hs
 
         // Subheader Horas
         for (let d = 0; d < 7; d++) {
-            // CAMBIO 2: El bucle va hasta 24 (00)
             for (let h = 7; h <= 24; h++) {
                 const label = (h === 24) ? '00' : h;
                 htmlHeader += `<th style="font-size:0.7em; min-width:22px;">${label}</th>`;
             }
-            htmlHeader += '<th class="header-dia-fin" style="width:30px; background-color:#e9ecef;">F</th>';
+            htmlHeader += '<th class="text-center align-middle" style="width:30px; background-color:#e9ecef;">F</th>';
+            htmlHeader += '<th class="text-center align-middle header-dia-fin" style="width:45px; background-color:#f1f3f5;">T</th>';
         }
         htmlHeader += '</tr></thead><tbody>';
 
@@ -115,7 +115,7 @@ $(document).ready(function () {
 
         vendedores.forEach(v => {
             const vid = v.COD_VENDED;
-            const data = guardado[vid] || { horarios: {}, francos: {} };
+            const data = guardado[vid] || { horarios: {}, francos: {}, turnosManuales: {} };
             const esRefuerzo = v.ES_REFUERZO || false; // Marca si es refuerzo
 
             htmlBody += `<tr data-vendedor-id="${vid}" data-es-refuerzo="${esRefuerzo}">
@@ -129,9 +129,9 @@ $(document).ready(function () {
             // 7 Días
             for (let dia = 1; dia <= 7; dia++) {
                 const esFranco = data.francos[dia] ? true : false;
+                const manualT = data.turnosManuales ? data.turnosManuales[dia] : '';
 
                 // Horas 7-00
-                // CAMBIO 3: El bucle va hasta 24 (00)
                 for (let h = 7; h <= 24; h++) {
                     let clase = '';
                     let texto = '';
@@ -140,7 +140,7 @@ $(document).ready(function () {
                     if (esFranco) {
                         clase = 'dia-franco';
                     } else if (data.horarios[dia] && data.horarios[dia][horaBusqueda]) {
-                        const tipoGuardado = data.horarios[dia][horaBusqueda]; // <--- DEFINICION RESTAURADA
+                        const tipoGuardado = data.horarios[dia][horaBusqueda];
 
                         if (tipoGuardado.includes('extra')) {
                             clase = 'hora-extra';
@@ -150,7 +150,6 @@ $(document).ready(function () {
                             texto = 'X';
                         }
 
-                        // Chequear media hora
                         if (tipoGuardado.includes('_media')) {
                             clase += ' media-hora';
                             texto += ' <small>½</small>';
@@ -164,8 +163,13 @@ $(document).ready(function () {
                 // Checkbox Franco
                 let checked = esFranco ? 'checked' : '';
                 let activeClass = esFranco ? 'franco-activo' : '';
-                htmlBody += `<td class="text-center p-0 align-middle celda-dia-fin ${activeClass}" style="background-color:#f8f9fa;">
+                htmlBody += `<td class="text-center p-0 align-middle ${activeClass}" style="background-color:#f8f9fa;">
                                 <input type="checkbox" class="form-check-input checkbox-base" data-dia="${dia}" ${checked}>
+                             </td>`;
+
+                // Columna T (Turno por día en Plantilla Base)
+                htmlBody += `<td class="turno-dia-base text-center align-middle p-0 celda-dia-fin">
+                                <span class="turno-dia-base-badge badge bg-light text-dark border" data-dia="${dia}" data-turno-manual="${manualT || ''}" style="cursor:pointer;" title="Doble clic para editar turno manual">-</span>
                              </td>`;
             }
             htmlBody += '</tr>';
@@ -259,18 +263,96 @@ $(document).ready(function () {
         calcularTotalesBase();
     }
 
+    function calcularTurnoBase(horas) {
+        if (!horas || horas.length === 0) return '-';
+        horas.sort((a, b) => a - b);
+        const min = horas[0];
+        const max = horas[horas.length - 1];
+
+        if (min >= 7 && max <= 15) return 'TM';
+        if (min >= 14 && (max <= 23 || max === 24)) return 'TT';
+        if (min >= 10 && (max <= 23 || max === 24)) return 'FULL';
+
+        const tieneTM = horas.some(h => h >= 7 && h <= 15);
+        const tieneTT = horas.some(h => (h >= 16 && h <= 23) || h === 24);
+        if (tieneTM && tieneTT) return 'FULL';
+
+        return 'MIXTO';
+    }
+
     function calcularTotalesBase() {
         $('#base_tablaContainer tbody tr').each(function () {
+            const fila = $(this);
             let total = 0;
-            $(this).find('.hora-base').each(function () {
-                if ($(this).hasClass('marcado') || $(this).hasClass('hora-extra')) {
-                    const val = $(this).hasClass('media-hora') ? 0.5 : 1;
-                    total += val;
+
+            for (let dia = 1; dia <= 7; dia++) {
+                let horasDia = [];
+                let horasDiaValor = 0;
+
+                fila.find(`.hora-base[data-dia="${dia}"]`).each(function () {
+                    if ($(this).hasClass('marcado') || $(this).hasClass('hora-extra')) {
+                        let h = parseInt($(this).data('hora'));
+                        const val = $(this).hasClass('media-hora') ? 0.5 : 1;
+                        horasDia.push(h);
+                        horasDiaValor += val;
+                    }
+                });
+
+                total += horasDiaValor;
+
+                const turnoAuto = calcularTurnoBase(horasDia);
+                const badgeTurno = fila.find(`.turno-dia-base-badge[data-dia="${dia}"]`);
+                const esFranco = fila.find(`.checkbox-base[data-dia="${dia}"]`).is(':checked');
+                const turnoManual = badgeTurno.attr('data-turno-manual') || '';
+
+                badgeTurno.removeClass('bg-light bg-primary bg-success bg-warning bg-info bg-secondary text-white text-dark border border-2 border-primary');
+
+                if (turnoManual !== '') {
+                    badgeTurno.text(turnoManual).addClass('bg-primary text-white border-2 border-primary').attr('title', `Manual: ${turnoManual} (Auto: ${turnoAuto})`);
+                } else if (esFranco) {
+                    badgeTurno.addClass('bg-secondary text-white').attr('title', 'Franco').text('F');
+                } else {
+                    badgeTurno.text(turnoAuto);
+                    switch (turnoAuto) {
+                        case 'TM': badgeTurno.addClass('bg-primary text-white'); break;
+                        case 'TT': badgeTurno.addClass('bg-success text-white'); break;
+                        case 'FULL': badgeTurno.addClass('bg-warning text-dark'); break;
+                        case 'MIXTO': badgeTurno.addClass('bg-info text-white'); break;
+                        default: badgeTurno.addClass('bg-light text-dark border');
+                    }
                 }
-            });
-            $(this).find('.total-hs-base').text(total % 1 === 0 ? total : total.toFixed(1));
+            }
+
+            fila.find('.total-hs-base').text(total % 1 === 0 ? total : total.toFixed(1));
         });
     }
+
+    // EVENTO DOBLE CLICK EN COLUMNA T PLANTILLA BASE
+    $('#base_tablaContainer').on('dblclick', '.turno-dia-base-badge', function () {
+        const badge = $(this);
+        const fila = badge.closest('tr');
+        const vid = fila.data('vendedor-id');
+        const dia = badge.data('dia');
+        const manualActual = badge.attr('data-turno-manual') || '';
+
+        // Calcular auto actual
+        let horasDia = [];
+        fila.find(`.hora-base[data-dia="${dia}"]`).each(function () {
+            if ($(this).hasClass('marcado') || $(this).hasClass('hora-extra')) {
+                horasDia.push(parseInt($(this).data('hora')));
+            }
+        });
+        const autoActual = calcularTurnoBase(horasDia);
+
+        $('#turnoManualVendedorId').val(vid);
+        $('#turnoManualFechaOrDia').val(dia);
+        $('#turnoManualModo').val('base');
+        $('#turnoManualAutoBadge').text(autoActual);
+        $('#turnoManualInput').val(manualActual);
+
+        const modal = new bootstrap.Modal(document.getElementById('modalEditarTurnoManual'));
+        modal.show();
+    });
 
     // =========================================================
     // 5. REFUERZOS EN BASE
@@ -419,6 +501,33 @@ $(document).ready(function () {
                     franco: 1
                 });
             });
+
+            // 3. Adjuntar turno_manual a los registros de este vendedor/día
+            for (let dia = 1; dia <= 7; dia++) {
+                const badgeT = $(this).find(`.turno-dia-base-badge[data-dia="${dia}"]`);
+                const valManual = badgeT.attr('data-turno-manual') || '';
+                if (valManual !== '') {
+                    // Si ya hay registros guardados para este vendedor/día en datosParaGuardar, agregar el atributo
+                    let asignado = false;
+                    datosParaGuardar.forEach(item => {
+                        if (item.cod === vid && parseInt(item.dia) === dia) {
+                            item.turno_manual = valManual;
+                            asignado = true;
+                        }
+                    });
+                    // Si no había horas ni franco guardado para ese día pero hay turno manual, lo insertamos como registro de referencia
+                    if (!asignado) {
+                        datosParaGuardar.push({
+                            cod: vid,
+                            dia: dia,
+                            hora: 0,
+                            tipo: 'normal',
+                            franco: 0,
+                            turno_manual: valManual
+                        });
+                    }
+                }
+            }
         });
 
         // Enviar

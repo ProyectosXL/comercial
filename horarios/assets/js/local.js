@@ -234,6 +234,39 @@ $(document).ready(function () {
             container.append(tableContainer);
         });
 
+        // Renderizado de Observaciones (Local e Individual vs General)
+        let obsLocalTexto = '';
+        let obsGeneralTexto = '';
+
+        resultados.forEach(res => {
+            if (res.data && res.data.observaciones && res.data.observaciones.trim() !== '') {
+                obsLocalTexto = res.data.observaciones.trim();
+            }
+            if (res.data && res.data.observacionesGeneral && res.data.observacionesGeneral.trim() !== '') {
+                obsGeneralTexto = res.data.observacionesGeneral.trim();
+            }
+        });
+
+        if (obsLocalTexto !== '') {
+            $('#obsLocalTexto').text(obsLocalTexto);
+            $('#wrapperObsLocal').show();
+        } else {
+            $('#wrapperObsLocal').hide();
+        }
+
+        if (obsGeneralTexto !== '') {
+            $('#obsGeneralTexto').text(obsGeneralTexto);
+            $('#wrapperObsGeneral').show();
+        } else {
+            $('#wrapperObsGeneral').hide();
+        }
+
+        if (obsLocalTexto !== '' || obsGeneralTexto !== '') {
+            $('#observacionesVistaLocalContainer').show();
+        } else {
+            $('#observacionesVistaLocalContainer').hide();
+        }
+
         setTimeout(() => {
             $('.table-container').each(function() {
                 const tableEl = $(this);

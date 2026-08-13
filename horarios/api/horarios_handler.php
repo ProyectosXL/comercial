@@ -45,6 +45,8 @@ function guardarDatos($usuario)
     $vendedoresEnGrilla = $input['vendedoresEnGrilla'] ?? [];
     $notas = $input['notas'] ?? [];
     $observacionesSemana = $input['observaciones'] ?? '';
+    $observacionesSemanaGeneral = $input['observacionesGeneral'] ?? '';
+    $turnosManuales = $input['turnosManuales'] ?? []; // Array de {codVended, fecha, turnoManual}
 
     if (!$nroSucursal || !$fechaInicio || !$fechaFin) {
         die(json_encode(['status' => 'error', 'message' => 'Faltan parámetros críticos (sucursal, fechaInicio, fechaFin).']));
@@ -313,7 +315,7 @@ function guardarDatos($usuario)
             }
         }
 
-        // --- 4. Guardar Observaciones Semanales (DELETE y luego INSERT) --- (Mantenido)
+        // --- 4. Guardar Observaciones Semanales (DELETE y luego INSERT) ---
         $sqlDeleteObs = "DELETE FROM FP_GESTION_OBSERVACIONES WHERE NRO_SUCURSAL = ? AND FECHA_INICIO_SEMANA = ?";
         $stmtDeleteObs = sqlsrv_query($conn, $sqlDeleteObs, [$nroSucursal, $fechaInicio]);
         if ($stmtDeleteObs === false) {
@@ -326,6 +328,45 @@ function guardarDatos($usuario)
             if ($stmtInsertObs === false) {
                 sqlsrv_rollback($conn);
                 die(json_encode(['status' => 'error', 'message' => 'Error al insertar observaciones semanales: ' . print_r(sqlsrv_errors(), true)]));
+            }
+        }
+
+        // --- 4.B Guardar Observaciones Semanales GENERALES (NRO_SUCURSAL = 0) ---
+        $sqlDeleteObsGen = "DELETE FROM FP_GESTION_OBSERVACIONES WHERE NRO_SUCURSAL = 0 AND FECHA_INICIO_SEMANA = ?";
+        $stmtDeleteObsGen = sqlsrv_query($conn, $sqlDeleteObsGen, [$fechaInicio]);
+        if ($stmtDeleteObsGen === false) {
+            sqlsrv_rollback($conn);
+            die(json_encode(['status' => 'error', 'message' => 'Error al borrar observaciones generales: ' . print_r(sqlsrv_errors(), true)]));
+        }
+        if (!empty(trim($observacionesSemanaGeneral))) {
+            $sqlInsertObsGen = "INSERT INTO FP_GESTION_OBSERVACIONES (NRO_SUCURSAL, FECHA_INICIO_SEMANA, OBSERVACIONES, MODIFICADO_POR) VALUES (0, ?, ?, ?)";
+            $stmtInsertObsGen = sqlsrv_query($conn, $sqlInsertObsGen, [$fechaInicio, $observacionesSemanaGeneral, $usuario]);
+            if ($stmtInsertObsGen === false) {
+                sqlsrv_rollback($conn);
+                die(json_encode(['status' => 'error', 'message' => 'Error al insertar observaciones generales: ' . print_r(sqlsrv_errors(), true)]));
+            }
+        }
+
+        // --- 5. Guardar Turnos Manuales Semanales (DELETE y luego INSERT) ---
+        $sqlDeleteTurnosMan = "DELETE FROM FP_GESTION_TURNOS_MANUALES WHERE NRO_SUCURSAL = ? AND FECHA BETWEEN ? AND ?";
+        $stmtDeleteTurnosMan = sqlsrv_query($conn, $sqlDeleteTurnosMan, [$nroSucursal, $fechaInicio, $fechaFin]);
+        if ($stmtDeleteTurnosMan === false) {
+            sqlsrv_rollback($conn);
+            die(json_encode(['status' => 'error', 'message' => 'Error al borrar turnos manuales: ' . print_r(sqlsrv_errors(), true)]));
+        }
+        if (!empty($turnosManuales)) {
+            $sqlInsertTurnoMan = "INSERT INTO FP_GESTION_TURNOS_MANUALES (NRO_SUCURSAL, COD_VENDED, FECHA, TURNO_MANUAL, MODIFICADO_POR) VALUES (?, ?, ?, ?, ?)";
+            foreach ($turnosManuales as $tm) {
+                $cVal = trim($tm['codVended']);
+                $fVal = trim($tm['fecha']);
+                $tmVal = trim($tm['turnoManual']);
+                if ($cVal !== '' && $fVal !== '' && $tmVal !== '') {
+                    $stmtInsTM = sqlsrv_query($conn, $sqlInsertTurnoMan, [$nroSucursal, $cVal, $fVal, $tmVal, $usuario]);
+                    if ($stmtInsTM === false) {
+                        sqlsrv_rollback($conn);
+                        die(json_encode(['status' => 'error', 'message' => 'Error al insertar turno manual: ' . print_r(sqlsrv_errors(), true)]));
+                    }
+                }
             }
         }
 
@@ -713,66 +754,91 @@ function cargarDatos()
     }
     $respuesta['feedback'] = $feedbackVendedor;
 
-    // D. Observaciones Semanales
-    $sqlObs = "SELECT OBSERVACIONES FROM FP_GESTION_OBSERVACIONES WHERE NRO_SUCURSAL = ? AND FECHA_INICIO_SEMANA = ?";
+    // D. Observaciones Semanales (Individual y General)
+    $sqlObs = "SELECT NRO_SUCURSAL, OBSERVACIONES FROM FP_GESTION_OBSERVACIONES WHERE (NRO_SUCURSAL = ? OR NRO_SUCURSAL = 0) AND FECHA_INICIO_SEMANA = ?";
     $stmtObs = sqlsrv_query($connSistemas, $sqlObs, [$nroSucursal, $fechaInicio]);
     $respuesta['observaciones'] = '';
-    if ($stmtObs && $rowObs = sqlsrv_fetch_array($stmtObs, SQLSRV_FETCH_ASSOC)) {
-        $respuesta['observaciones'] = $rowObs['OBSERVACIONES'];
-    }
-    if ($stmtObs)
+    $respuesta['observacionesGeneral'] = '';
+    if ($stmtObs) {
+        while ($rowObs = sqlsrv_fetch_array($stmtObs, SQLSRV_FETCH_ASSOC)) {
+            if (intval($rowObs['NRO_SUCURSAL']) === 0) {
+                $respuesta['observacionesGeneral'] = $rowObs['OBSERVACIONES'];
+            } else {
+                $respuesta['observaciones'] = $rowObs['OBSERVACIONES'];
+            }
+        }
         sqlsrv_free_stmt($stmtObs);
+    }
+
+    // E. Turnos Manuales Semanales (FP_GESTION_TURNOS_MANUALES)
+    $sqlTurnosManSem = "SELECT COD_VENDED, FECHA, TURNO_MANUAL FROM FP_GESTION_TURNOS_MANUALES WHERE NRO_SUCURSAL = ? AND FECHA BETWEEN ? AND ?";
+    $stmtTurnosManSem = sqlsrv_query($connSistemas, $sqlTurnosManSem, [$nroSucursal, $fechaInicio, $fechaFin]);
+    $turnosManualesSemana = [];
+    if ($stmtTurnosManSem) {
+        while ($row = sqlsrv_fetch_array($stmtTurnosManSem, SQLSRV_FETCH_ASSOC)) {
+            $id = trim($row['COD_VENDED']);
+            $f = $row['FECHA']->format('Y-m-d');
+            if (!isset($turnosManualesSemana[$id])) $turnosManualesSemana[$id] = [];
+            $turnosManualesSemana[$id][$f] = trim($row['TURNO_MANUAL']);
+        }
+        sqlsrv_free_stmt($stmtTurnosManSem);
+    }
+    $respuesta['turnosManualesSemana'] = $turnosManualesSemana;
+
+    // F. SIEMPRE Cargar la Plantilla Base para conocer los horarios y turnos de la base
+    $date = new DateTime($fechaInicio);
+    $numSemana = intval($date->format('W'));
+    $tipoPlantilla = ($numSemana % 2 != 0) ? 'A' : 'B';
+    $respuesta['tipoPlantillaBase'] = $tipoPlantilla;
+
+    $sqlBaseData = "SELECT COD_VENDED, DIA_SEMANA, HORA, TIPO_HORA, ES_FRANCO, TURNO_MANUAL FROM FP_HORARIOS_BASE WHERE NRO_SUCURSAL = ? AND TIPO_SEMANA = ?";
+    $stmtBaseData = sqlsrv_query($connSistemas, $sqlBaseData, [$nroSucursal, $tipoPlantilla]);
+    $agendaBase = [];
+    if ($stmtBaseData) {
+        while ($row = sqlsrv_fetch_array($stmtBaseData, SQLSRV_FETCH_ASSOC)) {
+            $id = trim($row['COD_VENDED']);
+            $diaSemana = intval($row['DIA_SEMANA']);
+            $fechaReal = date('Y-m-d', strtotime($fechaInicio . ' + ' . ($diaSemana - 1) . ' days'));
+
+            if (!isset($agendaBase[$id])) {
+                $agendaBase[$id] = ['horarios' => [], 'francos' => [], 'turnosManuales' => []];
+            }
+
+            if (!empty($row['TURNO_MANUAL'])) {
+                $agendaBase[$id]['turnosManuales'][$fechaReal] = trim($row['TURNO_MANUAL']);
+            }
+
+            if (intval($row['ES_FRANCO']) == 1) {
+                $agendaBase[$id]['francos'][$fechaReal] = true;
+            } else {
+                $agendaBase[$id]['horarios'][$fechaReal][intval($row['HORA'])] = strtolower($row['TIPO_HORA'] ?: 'normal');
+            }
+            $vendedoresConActividad[$id] = true;
+        }
+        sqlsrv_free_stmt($stmtBaseData);
+    }
+    $respuesta['agendaBase'] = $agendaBase;
 
     // =================================================================================
-    // PASO 3: LÓGICA AUTOMÁTICA DE PLANTILLAS BASE (CORREGIDO para usar $respuesta['francos'])
+    // PASO 3: LÓGICA AUTOMÁTICA DE PLANTILLAS BASE SI NO HAY REGISTROS GUARDADOS
     // =================================================================================
-    // Si no hay horarios ni francos guardados *para esta sucursal*, cargamos la plantilla
     if (empty($respuesta['horarios']) && empty($respuesta['francos'])) {
-        $date = new DateTime($fechaInicio);
-        $numSemana = intval($date->format('W'));
-        $tipoPlantilla = ($numSemana % 2 != 0) ? 'A' : 'B';
-
-        $sqlBase = "SELECT COD_VENDED, DIA_SEMANA, HORA, TIPO_HORA, ES_FRANCO FROM FP_HORARIOS_BASE WHERE NRO_SUCURSAL = ? AND TIPO_SEMANA = ?";
-        $stmtBase = sqlsrv_query($connSistemas, $sqlBase, [$nroSucursal, $tipoPlantilla]);
-
-        if ($stmtBase) {
-            while ($row = sqlsrv_fetch_array($stmtBase, SQLSRV_FETCH_ASSOC)) {
-                $diaSemana = intval($row['DIA_SEMANA']);
-                $fechaReal = date('Y-m-d', strtotime($fechaInicio . ' + ' . ($diaSemana - 1) . ' days'));
-                $id = trim($row['COD_VENDED']);
-
-                if (intval($row['ES_FRANCO']) == 1) {
-                    $respuesta['francos'][] = ['COD_VENDED' => $id, 'FECHA_FRANCO' => $fechaReal];
-                } else {
+        foreach ($agendaBase as $id => $dataBase) {
+            foreach ($dataBase['francos'] as $fReal => $val) {
+                $respuesta['francos'][] = ['COD_VENDED' => $id, 'FECHA_FRANCO' => $fReal];
+            }
+            foreach ($dataBase['horarios'] as $fReal => $horasArr) {
+                foreach ($horasArr as $hrVal => $tipoVal) {
                     $respuesta['horarios'][] = [
                         'COD_VENDED' => $id,
-                        'FECHA' => $fechaReal,
-                        'HORA' => $row['HORA'],
-                        'TIPO_HORA' => strtolower($row['TIPO_HORA'] ?: 'normal')
+                        'FECHA' => $fReal,
+                        'HORA' => $hrVal,
+                        'TIPO_HORA' => $tipoVal
                     ];
                 }
-                $vendedoresConActividad[$id] = true;
             }
-            sqlsrv_free_stmt($stmtBase);
-            $respuesta['es_plantilla_base'] = true;
         }
-    } else {
-        // IMPORTANTE: Aunque ya haya datos guardados, necesitamos incluir los refuerzos de la plantilla base
-        // para que aparezcan en la grilla de planificación
-        $date = new DateTime($fechaInicio);
-        $numSemana = intval($date->format('W'));
-        $tipoPlantilla = ($numSemana % 2 != 0) ? 'A' : 'B';
-
-        $sqlBase = "SELECT DISTINCT COD_VENDED FROM FP_HORARIOS_BASE WHERE NRO_SUCURSAL = ? AND TIPO_SEMANA = ?";
-        $stmtBase = sqlsrv_query($connSistemas, $sqlBase, [$nroSucursal, $tipoPlantilla]);
-
-        if ($stmtBase) {
-            while ($row = sqlsrv_fetch_array($stmtBase, SQLSRV_FETCH_ASSOC)) {
-                $id = trim($row['COD_VENDED']);
-                $vendedoresConActividad[$id] = true; // Agregar a la lista de vendedores con actividad
-            }
-            sqlsrv_free_stmt($stmtBase);
-        }
+        $respuesta['es_plantilla_base'] = true;
     }
 
     $respuesta['vendedoresConActividad'] = array_keys($vendedoresConActividad);

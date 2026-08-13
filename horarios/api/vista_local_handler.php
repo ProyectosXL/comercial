@@ -382,6 +382,24 @@ try {
                 $agenda[$id]['feedback'] = $txt;
         }
     }
+
+    // Observaciones de la semana (Individual y General)
+    $sqlObsVista = "SELECT NRO_SUCURSAL, OBSERVACIONES FROM FP_GESTION_OBSERVACIONES WHERE (NRO_SUCURSAL = ? OR NRO_SUCURSAL = 0) AND FECHA_INICIO_SEMANA = ?";
+    $stmtObsVista = sqlsrv_query($connSistemas, $sqlObsVista, [$nroSucursal, $fechaInicio]);
+    $obsSemanaLocal = '';
+    $obsSemanaGeneral = '';
+    if ($stmtObsVista) {
+        while ($row = sqlsrv_fetch_array($stmtObsVista, SQLSRV_FETCH_ASSOC)) {
+            $txtObs = trim($row['OBSERVACIONES']);
+            if (!mb_detect_encoding($txtObs, 'UTF-8', true)) $txtObs = utf8_encode($txtObs);
+            if (intval($row['NRO_SUCURSAL']) === 0) {
+                $obsSemanaGeneral = $txtObs;
+            } else {
+                $obsSemanaLocal = $txtObs;
+            }
+        }
+        sqlsrv_free_stmt($stmtObsVista);
+    }
     sqlsrv_close($connSistemas);
 
     // --- PASO C: NOMBRES VENDEDORES (CENTRAL + RRHH) ---
@@ -579,7 +597,9 @@ try {
         'promociones_internas' => $promocionesInternasPorDia,
         'nombresSucursales' => $nombresSucursales,
         'bloqueosExternos' => $bloqueosExternos,
-        'saldosAnteriores' => $saldosAnteriores
+        'saldosAnteriores' => $saldosAnteriores,
+        'observaciones' => $obsSemanaLocal,
+        'observacionesGeneral' => $obsSemanaGeneral
     ]);
 
 } catch (Exception $e) {
