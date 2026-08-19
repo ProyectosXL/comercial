@@ -383,22 +383,28 @@ try {
         }
     }
 
-    // Observaciones de la semana (Individual y General)
-    $sqlObsVista = "SELECT NRO_SUCURSAL, OBSERVACIONES FROM FP_GESTION_OBSERVACIONES WHERE (NRO_SUCURSAL = ? OR NRO_SUCURSAL = 0) AND FECHA_INICIO_SEMANA = ?";
-    $stmtObsVista = sqlsrv_query($connSistemas, $sqlObsVista, [$nroSucursal, $fechaInicio]);
+    // Observaciones de la semana (Individual y General) - Se hereda la última observación guardada hasta la fecha elegida
     $obsSemanaLocal = '';
     $obsSemanaGeneral = '';
-    if ($stmtObsVista) {
-        while ($row = sqlsrv_fetch_array($stmtObsVista, SQLSRV_FETCH_ASSOC)) {
-            $txtObs = trim($row['OBSERVACIONES']);
-            if (!mb_detect_encoding($txtObs, 'UTF-8', true)) $txtObs = utf8_encode($txtObs);
-            if (intval($row['NRO_SUCURSAL']) === 0) {
-                $obsSemanaGeneral = $txtObs;
-            } else {
-                $obsSemanaLocal = $txtObs;
-            }
-        }
-        sqlsrv_free_stmt($stmtObsVista);
+
+    // Específica del local
+    $sqlObsVistaLocal = "SELECT TOP 1 OBSERVACIONES FROM FP_GESTION_OBSERVACIONES WHERE NRO_SUCURSAL = ? AND FECHA_INICIO_SEMANA <= ? ORDER BY FECHA_INICIO_SEMANA DESC";
+    $stmtObsVistaLocal = sqlsrv_query($connSistemas, $sqlObsVistaLocal, [$nroSucursal, $fechaInicio]);
+    if ($stmtObsVistaLocal && $row = sqlsrv_fetch_array($stmtObsVistaLocal, SQLSRV_FETCH_ASSOC)) {
+        $txtObs = trim($row['OBSERVACIONES'] ?? '');
+        if (!mb_detect_encoding($txtObs, 'UTF-8', true)) $txtObs = utf8_encode($txtObs);
+        $obsSemanaLocal = $txtObs;
+        sqlsrv_free_stmt($stmtObsVistaLocal);
+    }
+
+    // General (NRO_SUCURSAL = 0)
+    $sqlObsVistaGen = "SELECT TOP 1 OBSERVACIONES FROM FP_GESTION_OBSERVACIONES WHERE NRO_SUCURSAL = 0 AND FECHA_INICIO_SEMANA <= ? ORDER BY FECHA_INICIO_SEMANA DESC";
+    $stmtObsVistaGen = sqlsrv_query($connSistemas, $sqlObsVistaGen, [$fechaInicio]);
+    if ($stmtObsVistaGen && $rowGen = sqlsrv_fetch_array($stmtObsVistaGen, SQLSRV_FETCH_ASSOC)) {
+        $txtObsGen = trim($rowGen['OBSERVACIONES'] ?? '');
+        if (!mb_detect_encoding($txtObsGen, 'UTF-8', true)) $txtObsGen = utf8_encode($txtObsGen);
+        $obsSemanaGeneral = $txtObsGen;
+        sqlsrv_free_stmt($stmtObsVistaGen);
     }
     sqlsrv_close($connSistemas);
 

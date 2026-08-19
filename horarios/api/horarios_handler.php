@@ -754,20 +754,24 @@ function cargarDatos()
     }
     $respuesta['feedback'] = $feedbackVendedor;
 
-    // D. Observaciones Semanales (Individual y General)
-    $sqlObs = "SELECT NRO_SUCURSAL, OBSERVACIONES FROM FP_GESTION_OBSERVACIONES WHERE (NRO_SUCURSAL = ? OR NRO_SUCURSAL = 0) AND FECHA_INICIO_SEMANA = ?";
-    $stmtObs = sqlsrv_query($connSistemas, $sqlObs, [$nroSucursal, $fechaInicio]);
+    // D. Observaciones Semanales (Individual y General) - Se hereda la última observación guardada hasta la fecha elegida
     $respuesta['observaciones'] = '';
     $respuesta['observacionesGeneral'] = '';
-    if ($stmtObs) {
-        while ($rowObs = sqlsrv_fetch_array($stmtObs, SQLSRV_FETCH_ASSOC)) {
-            if (intval($rowObs['NRO_SUCURSAL']) === 0) {
-                $respuesta['observacionesGeneral'] = $rowObs['OBSERVACIONES'];
-            } else {
-                $respuesta['observaciones'] = $rowObs['OBSERVACIONES'];
-            }
-        }
-        sqlsrv_free_stmt($stmtObs);
+
+    // Observación Específica del Local
+    $sqlObsLocal = "SELECT TOP 1 OBSERVACIONES FROM FP_GESTION_OBSERVACIONES WHERE NRO_SUCURSAL = ? AND FECHA_INICIO_SEMANA <= ? ORDER BY FECHA_INICIO_SEMANA DESC";
+    $stmtObsLocal = sqlsrv_query($connSistemas, $sqlObsLocal, [$nroSucursal, $fechaInicio]);
+    if ($stmtObsLocal && $rowObs = sqlsrv_fetch_array($stmtObsLocal, SQLSRV_FETCH_ASSOC)) {
+        $respuesta['observaciones'] = $rowObs['OBSERVACIONES'] ?? '';
+        sqlsrv_free_stmt($stmtObsLocal);
+    }
+
+    // Observación General (NRO_SUCURSAL = 0)
+    $sqlObsGen = "SELECT TOP 1 OBSERVACIONES FROM FP_GESTION_OBSERVACIONES WHERE NRO_SUCURSAL = 0 AND FECHA_INICIO_SEMANA <= ? ORDER BY FECHA_INICIO_SEMANA DESC";
+    $stmtObsGen = sqlsrv_query($connSistemas, $sqlObsGen, [$fechaInicio]);
+    if ($stmtObsGen && $rowObsGen = sqlsrv_fetch_array($stmtObsGen, SQLSRV_FETCH_ASSOC)) {
+        $respuesta['observacionesGeneral'] = $rowObsGen['OBSERVACIONES'] ?? '';
+        sqlsrv_free_stmt($stmtObsGen);
     }
 
     // E. Turnos Manuales Semanales (FP_GESTION_TURNOS_MANUALES)

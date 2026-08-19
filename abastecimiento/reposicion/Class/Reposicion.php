@@ -18,13 +18,14 @@ class Reposicion
 
         $datasetBase = $this->obtenerDatasetBase();
         $categorias = $this->obtenerCategorias();
+        $equivalencias = $this->obtenerEquivalencias();
         $ventas7d = $this->obtenerVentas7Dias();
 
         $panel = [];
         $packaging = [];
 
         foreach ($datasetBase as $fila) {
-            $normalizada = $this->normalizarFila($fila, $categorias, $ventas7d);
+            $normalizada = $this->normalizarFila($fila, $categorias, $equivalencias, $ventas7d);
 
             if (strtoupper(trim($normalizada['RUBRO'])) === REPO_RUBRO_PACKAGING) {
                 $packaging[] = $normalizada;
@@ -114,7 +115,36 @@ class Reposicion
     }
 
     /**
-     * Fuente 3: venta de los últimos N días por sucursal (7 días cerrados, sin hoy).
+     * Fuente 3: código de equivalencia por artículo. Indexado por COD_ARTICU (trim) para el merge.
+     */
+    private function obtenerEquivalencias()
+    {
+        $cid = (new Conexion())->conectar('uy');
+
+        if ($cid === false) {
+            throw new Exception('No se pudo conectar a la base de datos (uy).');
+        }
+
+        $sql = 'SELECT Articulo AS COD_ARTICU, CodEquivalencia AS COD_EQUIVALENCIA FROM ' . REPO_TABLA_EQUIVALENCIA . ' WITH (NOLOCK)';
+
+        $stmt = sqlsrv_query($cid, $sql);
+
+        if ($stmt === false) {
+            error_log('Reposicion::obtenerEquivalencias - error: ' . print_r(sqlsrv_errors(), true));
+            throw new Exception('Error al consultar los códigos de equivalencia de artículos.');
+        }
+
+        $equivalencias = [];
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $cod = trim((string) $row['COD_ARTICU']);
+            $equivalencias[$cod] = (string) ($row['COD_EQUIVALENCIA'] ?? '');
+        }
+
+        return $equivalencias;
+    }
+
+    /**
+     * Fuente 4: venta de los últimos N días por sucursal (7 días cerrados, sin hoy).
      * Pivotea NUEVOCENTRO/MONTEVIDEO/TRES CRUCES a VTA_7D_NC/MV/3C, indexado por artículo.
      */
     private function obtenerVentas7Dias()
@@ -163,19 +193,21 @@ class Reposicion
     }
 
     /**
-     * Normaliza una fila del dataset base al esquema final de 20 columnas.
+     * Normaliza una fila del dataset base al esquema final de 21 columnas.
      * El dataset base manda: nunca se agregan ni se pierden filas acá.
      */
-    private function normalizarFila($fila, $categorias, $ventas7d)
+    private function normalizarFila($fila, $categorias, $equivalencias, $ventas7d)
     {
         $cod = trim((string) ($fila['COD_ARTICU'] ?? ''));
         $categoria = $categorias[$cod] ?? '';
+        $equivalencia = $equivalencias[$cod] ?? '';
         $v7 = $ventas7d[$cod] ?? ['NC' => 0, 'MV' => 0, '3C' => 0];
 
         return [
             'COD_ARTICU' => $cod,
             'CATEGORIA' => (string) $categoria,
             'DESCRIPCIO' => (string) ($fila['DESCRIPCIO'] ?? ''),
+            'COD_EQUIVALENCIA' => (string) $equivalencia,
             'RUBRO' => (string) ($fila['RUBRO'] ?? ''),
             'DESTINO' => (string) ($fila['DESTINO'] ?? ''),
             'TEMPORADA' => (string) ($fila['TEMPORADA'] ?? ''),

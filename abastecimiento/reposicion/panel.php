@@ -114,6 +114,7 @@ require_once __DIR__ . '/config.php';
                                         <th>CÓD. ARTÍCULO</th>
                                         <th>CATEGORÍA</th>
                                         <th>DESCRIPCIÓN</th>
+                                        <th>COD. EQUIVALENCIA</th>
                                         <th>RUBRO</th>
                                         <th>DESTINO</th>
                                         <th>TEMPORADA</th>
@@ -121,16 +122,16 @@ require_once __DIR__ . '/config.php';
                                         <th>STK CENTRAL</th>
                                         <th>STOCK NC</th>
                                         <th>VENTA NC</th>
+                                        <th>VTA 7 DÍAS NC</th>
                                         <th>REPO NC</th>
                                         <th>STOCK 3C</th>
                                         <th>VENTA 3C</th>
+                                        <th>VTA 7 DÍAS 3C</th>
                                         <th>REPO 3C</th>
                                         <th>STOCK MV</th>
                                         <th>VENTA MV</th>
-                                        <th>REPO MV</th>
-                                        <th>VTA 7 DÍAS NC</th>
                                         <th>VTA 7 DÍAS MV</th>
-                                        <th>VTA 7 DÍAS 3C</th>
+                                        <th>REPO MV</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>

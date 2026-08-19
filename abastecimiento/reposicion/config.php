@@ -17,6 +17,9 @@ define('REPO_SP_DATASET_BASE', 'RO_SP_ABASTECIMIENTO_SUCURSALES_UY');
 // Tabla de categoría por artículo (servidor central, conexión 'uy')
 define('REPO_TABLA_CATEGORIA', '[XL-LAKERBIS].[SUCURSALES_URUGUAY].[dbo].SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA');
 
+// Tabla con el código de equivalencia por artículo (servidor central, conexión 'uy')
+define('REPO_TABLA_EQUIVALENCIA', '[XL-LAKERBIS].[SUCURSALES_URUGUAY].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL');
+
 // Tabla de ventas diarias (servidor XL-APPS, conexión 'power_uy')
 define('REPO_TABLA_VENTAS', 'dbo.RO_VENTAS_COMERCIAL');
 

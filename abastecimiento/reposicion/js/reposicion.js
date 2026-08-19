@@ -83,6 +83,7 @@ const panelColumns = [
     { data: 'COD_ARTICU', defaultContent: '' },
     { data: 'CATEGORIA', defaultContent: '' },
     { data: 'DESCRIPCIO', defaultContent: '' },
+    { data: 'COD_EQUIVALENCIA', defaultContent: '' },
     { data: 'RUBRO', defaultContent: '' },
     { data: 'DESTINO', defaultContent: '' },
     { data: 'TEMPORADA', defaultContent: '' },
@@ -90,16 +91,16 @@ const panelColumns = [
     { data: 'STOCK_CENTRAL', className: 'text-end', render: renderNumero },
     { data: 'STOCK_NC', className: 'text-end', render: renderNumero },
     { data: 'VENTA_NC', className: 'text-end', render: renderNumero },
+    { data: 'VTA_7D_NC', className: 'text-end', render: renderNumero },
     { data: 'REPO_NC', className: 'text-end col-repo', render: renderRepoVacio },
     { data: 'STOCK_3C', className: 'text-end', render: renderNumero },
     { data: 'VENTA_3C', className: 'text-end', render: renderNumero },
+    { data: 'VTA_7D_3C', className: 'text-end', render: renderNumero },
     { data: 'REPO_3C', className: 'text-end col-repo', render: renderRepoVacio },
     { data: 'STOCK_MV', className: 'text-end', render: renderNumero },
     { data: 'VENTA_MV', className: 'text-end', render: renderNumero },
-    { data: 'REPO_MV', className: 'text-end col-repo', render: renderRepoVacio },
-    { data: 'VTA_7D_NC', className: 'text-end', render: renderNumero },
     { data: 'VTA_7D_MV', className: 'text-end', render: renderNumero },
-    { data: 'VTA_7D_3C', className: 'text-end', render: renderNumero }
+    { data: 'REPO_MV', className: 'text-end col-repo', render: renderRepoVacio }
 ];
 
 const packagingColumns = [

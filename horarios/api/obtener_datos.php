@@ -47,7 +47,7 @@ function getSucursales()
     $stmt = sqlsrv_query($connCorp, $sql);
 
     // --- LISTA NEGRA: Nombres exactos que queremos ocultar ---
-    $excluidos = ['LOGISTICA', 'COMERCIALIZACION', 'ADMINISTRACION', 'FABRICA'];
+    $excluidos = ['LOGISTICA', 'COMERCIALIZACION', 'ADMINISTRACION', 'FABRICA', 'AREAS TRANSVERSALES', 'SUPPLY CHAIN'];
 
     $sucursales = [];
     if ($stmt) {
