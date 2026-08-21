@@ -109,7 +109,7 @@ class SucursalController extends BaseController {
 
             $path_adjunto = null;
 
-            if (isset($_POST['aprobado_supervisora']) && $_POST['aprobado_supervisora'] === 'Sí' && isset($_FILES['adjunto']) && $_FILES['adjunto']['error'] === UPLOAD_ERR_OK) {
+            if (isset($_FILES['adjunto']) && $_FILES['adjunto']['error'] === UPLOAD_ERR_OK) {
                 $uploadDir = __DIR__ . '/../../public/uploads/';
                 if (!is_dir($uploadDir)) { mkdir($uploadDir, 0777, true); }
                 $fileName = time() . '_' . basename($_FILES['adjunto']['name']);

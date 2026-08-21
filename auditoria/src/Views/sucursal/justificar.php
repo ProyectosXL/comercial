@@ -78,7 +78,7 @@
                 </select>
             </div>
 
-            <div class="form-group" id="adjunto_container" style="display: none;">
+            <div class="form-group" id="adjunto_container">
                 <label for="adjunto"><strong>Adjuntar comprobante (foto, PDF, etc.)</strong></label>
                 <!-- Nota: No se puede precargar un input file por seguridad. Si ya había uno, se debe subir de nuevo o manejar en backend que si viene vacío conserve el anterior -->
                 <input type="file" class="form-control-file" id="adjunto" name="adjunto">
@@ -102,20 +102,6 @@
 $pageScripts = "
 <script>
 $(document).ready(function() {
-    // Lógica para mostrar/ocultar el campo de adjunto
-    $('#aprobado_supervisora').on('change', function() {
-        if (this.value === 'Sí') {
-            $('#adjunto_container').slideDown();
-        } else {
-            $('#adjunto_container').slideUp();
-            $('#adjunto').val(''); 
-        }
-    });
-
-    // --- NUEVO: Disparar el evento change al cargar la página ---
-    // Esto hace que si cargamos datos previos y dice 'Sí', aparezca el campo de adjunto inmediatamente.
-    $('#aprobado_supervisora').trigger('change');
-
     // --- Prevenir doble envío ---
     $('form').on('submit', function() {
         var btn = $(this).find('button[type=\"submit\"]');
