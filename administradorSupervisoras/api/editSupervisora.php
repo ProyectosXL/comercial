@@ -8,12 +8,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $body   = json_decode(file_get_contents('php://input'), true);
 $id     = sanitizeInt((string)($body['id'] ?? ''));
 $nombre = strtoupper(trim(sanitizeString($body['nombre'] ?? '')));
+$mail   = sanitizeEmail($body['mail'] ?? '');
 
 if ($id === null) {
     jsonError('ID inválido.', 400);
 }
 if ($nombre === '') {
     jsonError('El nombre es obligatorio.', 400);
+}
+if ($mail === false) {
+    jsonError('El mail ingresado no es válido.', 400);
 }
 
 try {
@@ -38,12 +42,12 @@ try {
 
     dbExecute(
         "UPDATE [dbo].RO_T_SUPERVISORAS_COMERCIAL
-         SET NOMBRE = ?
+         SET NOMBRE = ?, MAIL = ?
          WHERE ID = ?",
-        [$nombre, $id]
+        [$nombre, $mail, $id]
     );
 
-    jsonResponse(['success' => true, 'message' => 'Nombre actualizado correctamente.']);
+    jsonResponse(['success' => true, 'message' => 'Supervisora actualizada correctamente.']);
 
 } catch (Throwable $e) {
     error_log('[editSupervisora] ' . $e->getMessage());

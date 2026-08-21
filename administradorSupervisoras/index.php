@@ -235,13 +235,12 @@ ini_set('display_errors', '0');
         }
         .resumen-chip.active .chip-count { background: var(--color-primary-dark); }
 
-        /* ── Offcanvas gestión supervisoras ── */
-        .offcanvas-supervisoras { width: 480px !important; }
-        .offcanvas-header {
+        /* ── Modal gestión supervisoras ── */
+        #modalGestionSupervisoras .modal-header {
             background: linear-gradient(135deg, #1a1f36 0%, #2d3a6b 100%);
             color: #fff;
         }
-        .offcanvas-header .btn-close { filter: invert(1); }
+        #modalGestionSupervisoras .modal-header .btn-close { filter: invert(1); }
 
         /* Tabla de gestión */
         .table-gestion { font-size: .85rem; margin: 0; }
@@ -300,7 +299,7 @@ ini_set('display_errors', '0');
         Administrador de Supervisoras
         <span class="badge-tool">Sucursales Propias</span>
     </div>
-    <button class="btn btn-sm btn-outline-light" data-bs-toggle="offcanvas" data-bs-target="#offcanvasSupervisoras" title="Gestionar supervisoras">
+    <button class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#modalGestionSupervisoras" title="Gestionar supervisoras">
         <i class="bi bi-person-gear me-1"></i> Gestionar supervisoras
     </button>
     <button class="btn btn-sm btn-outline-light" onclick="recargar()" title="Recargar datos">
@@ -308,51 +307,59 @@ ini_set('display_errors', '0');
     </button>
 </header>
 
-<!-- ═══════ Offcanvas: Gestión de supervisoras ═══════════════ -->
-<div class="offcanvas offcanvas-end offcanvas-supervisoras" tabindex="-1" id="offcanvasSupervisoras">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title">
-            <i class="bi bi-person-gear me-2"></i>Gestión de supervisoras
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-    </div>
-    <div class="offcanvas-body">
-
-        <!-- Form agregar nueva -->
-        <div class="form-nueva">
-            <h6><i class="bi bi-person-plus-fill me-1"></i> Agregar nueva supervisora</h6>
-            <div class="d-flex gap-2">
-                <input type="text" id="input-nueva-sup" class="form-control form-control-sm"
-                       placeholder="Nombre completo…" maxlength="100"
-                       onkeydown="if(event.key==='Enter') agregarSupervisora()">
-                <button class="btn btn-primary btn-sm px-3" onclick="agregarSupervisora()" id="btn-agregar">
-                    <i class="bi bi-plus-lg"></i> Agregar
-                </button>
+<!-- ═══════ Modal: Gestión de supervisoras ═══════════════════ -->
+<div class="modal fade" id="modalGestionSupervisoras" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-person-gear me-2"></i>Gestión de supervisoras
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div id="nueva-sup-error" class="text-danger mt-1" style="font-size:.78rem;display:none;"></div>
-        </div>
+            <div class="modal-body">
 
-        <!-- Tabla gestión -->
-        <div class="table-responsive" style="border-radius:8px;border:1px solid #e9ecef;overflow:hidden;">
-            <table class="table table-gestion table-hover">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th class="text-center">Estado</th>
-                        <th class="text-center">Sucs.</th>
-                        <th class="text-center">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="tbody-gestion">
-                    <tr>
-                        <td colspan="4" class="text-center text-muted py-3">
-                            <div class="loader-spinner mx-auto" style="width:20px;height:20px;border-width:2px;"></div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                <!-- Form agregar nueva -->
+                <div class="form-nueva">
+                    <h6><i class="bi bi-person-plus-fill me-1"></i> Agregar nueva supervisora</h6>
+                    <div class="d-flex gap-2">
+                        <input type="text" id="input-nueva-sup" class="form-control form-control-sm"
+                               placeholder="Nombre completo…" maxlength="100" style="flex:2;"
+                               onkeydown="if(event.key==='Enter') agregarSupervisora()">
+                        <input type="email" id="input-nueva-sup-mail" class="form-control form-control-sm"
+                               placeholder="Mail (opcional)…" maxlength="150" style="flex:2;"
+                               onkeydown="if(event.key==='Enter') agregarSupervisora()">
+                        <button class="btn btn-primary btn-sm px-3" onclick="agregarSupervisora()" id="btn-agregar" style="flex:none;">
+                            <i class="bi bi-plus-lg"></i> Agregar
+                        </button>
+                    </div>
+                    <div id="nueva-sup-error" class="text-danger mt-1" style="font-size:.78rem;display:none;"></div>
+                </div>
 
+                <!-- Tabla gestión -->
+                <div class="table-responsive" style="border-radius:8px;border:1px solid #e9ecef;overflow:hidden;">
+                    <table class="table table-gestion table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width:22%;">Nombre</th>
+                                <th style="width:28%;">Mail</th>
+                                <th class="text-center" style="width:12%;">Estado</th>
+                                <th class="text-center" style="width:10%;">Sucs.</th>
+                                <th class="text-center" style="width:14%;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-gestion">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">
+                                    <div class="loader-spinner mx-auto" style="width:20px;height:20px;border-width:2px;"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
     </div>
 </div>
 
@@ -680,14 +687,14 @@ async function cargarGestion() {
         renderGestion();
     } catch (err) {
         document.getElementById('tbody-gestion').innerHTML =
-            `<tr><td colspan="4" class="text-center text-danger py-2">${escHtml(err.message)}</td></tr>`;
+            `<tr><td colspan="5" class="text-center text-danger py-2">${escHtml(err.message)}</td></tr>`;
     }
 }
 
 function renderGestion() {
     const tbody = document.getElementById('tbody-gestion');
     if (!todasSuper.length) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No hay supervisoras.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">No hay supervisoras.</td></tr>`;
         return;
     }
     tbody.innerHTML = todasSuper.map(s => {
@@ -708,10 +715,18 @@ function renderGestion() {
                        maxlength="100"
                        onkeydown="if(event.key==='Enter'){guardarNombre(${s.ID});this.blur();}">
             </td>
+            <td>
+                <input type="email" class="nombre-editable"
+                       id="mail-input-${s.ID}"
+                       value="${escHtml(s.MAIL ?? '')}"
+                       maxlength="150"
+                       placeholder="—"
+                       onkeydown="if(event.key==='Enter'){guardarNombre(${s.ID});this.blur();}">
+            </td>
             <td class="text-center" id="estado-cell-${s.ID}">${badgeEstado}</td>
             <td class="text-center">${badgeSucs}</td>
             <td class="text-center" style="white-space:nowrap;">
-                <button class="btn-icon" title="Guardar nombre" onclick="guardarNombre(${s.ID})">
+                <button class="btn-icon" title="Guardar" onclick="guardarNombre(${s.ID})">
                     <i class="bi bi-floppy-fill text-primary"></i>
                 </button>
                 <button class="btn-icon" title="${toggleTitle}" id="toggle-btn-${s.ID}" onclick="toggleSupervisora(${s.ID})">
@@ -738,16 +753,19 @@ async function agregarSupervisora() {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
 
+    const mail = document.getElementById('input-nueva-sup-mail').value.trim();
+
     try {
         const res  = await fetch('api/createSupervisora.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre })
+            body: JSON.stringify({ nombre, mail })
         });
         const data = await res.json();
         if (!res.ok || data.error) throw new Error(data.message);
 
         input.value = '';
+        document.getElementById('input-nueva-sup-mail').value = '';
         showToast('Supervisora creada correctamente.');
         await cargarGestion();
         await refreshSupervisoras();
@@ -762,24 +780,29 @@ async function agregarSupervisora() {
 
 // ── Guardar nombre ────────────────────────────────────────────
 async function guardarNombre(id) {
-    const input  = document.getElementById(`nombre-input-${id}`);
-    const nombre = input.value.trim();
+    const input     = document.getElementById(`nombre-input-${id}`);
+    const mailInput = document.getElementById(`mail-input-${id}`);
+    const nombre    = input.value.trim();
+    const mail      = mailInput.value.trim();
     if (!nombre) { showToast('El nombre no puede estar vacío.', 'error'); return; }
 
     try {
         const res  = await fetch('api/editSupervisora.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, nombre })
+            body: JSON.stringify({ id, nombre, mail })
         });
         const data = await res.json();
         if (!res.ok || data.error) throw new Error(data.message);
 
         // Actualizar local
         const sup = todasSuper.find(s => s.ID == id);
-        if (sup) sup.NOMBRE = nombre.toUpperCase();
+        if (sup) {
+            sup.NOMBRE = nombre.toUpperCase();
+            sup.MAIL   = mail || null;
+        }
         await refreshSupervisoras();
-        showToast('Nombre actualizado.');
+        showToast('Supervisora actualizada.');
     } catch (err) {
         showToast(err.message, 'error');
     }
@@ -886,8 +909,8 @@ async function recargar() {
     document.getElementById('f-supervisora').innerHTML =
         '<option value="">Todas</option><option value="__sin__">Sin asignar</option>';
     await init();
-    // Si el offcanvas está abierto, refrescar también la gestión
-    if (document.getElementById('offcanvasSupervisoras').classList.contains('show')) {
+    // Si el modal está abierto, refrescar también la gestión
+    if (document.getElementById('modalGestionSupervisoras').classList.contains('show')) {
         await cargarGestion();
     }
 }
@@ -916,9 +939,9 @@ function showToast(msg, type = 'success') {
     setTimeout(() => el.remove(), 4000);
 }
 
-// ─── Abrir offcanvas → cargar gestión ────────────────────────
-document.getElementById('offcanvasSupervisoras')
-    .addEventListener('show.bs.offcanvas', cargarGestion);
+// ─── Abrir modal → cargar gestión ─────────────────────────────
+document.getElementById('modalGestionSupervisoras')
+    .addEventListener('show.bs.modal', cargarGestion);
 
 // ─── Inicio ──────────────────────────────────────────────────
 init();

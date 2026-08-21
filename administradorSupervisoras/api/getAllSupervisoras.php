@@ -7,6 +7,7 @@ try {
         "SELECT
              sup.ID,
              sup.NOMBRE,
+             sup.MAIL,
              sup.ACTIVA,
              COUNT(s.NRO_SUCURSAL) AS CANT_SUCURSALES
          FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL sup
@@ -14,7 +15,7 @@ try {
              ON s.ID_SUPERVISORA = sup.ID
              AND s.HABILITADO = 1
              AND s.CANAL = 'PROPIOS'
-         GROUP BY sup.ID, sup.NOMBRE, sup.ACTIVA
+         GROUP BY sup.ID, sup.NOMBRE, sup.MAIL, sup.ACTIVA
          ORDER BY sup.NOMBRE"
     );
 

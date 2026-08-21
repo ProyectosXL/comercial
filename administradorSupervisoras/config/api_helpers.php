@@ -34,6 +34,16 @@ function sanitizeString(?string $value, int $maxLen = 200): string
     return substr(strip_tags(trim($value)), 0, $maxLen);
 }
 
+function sanitizeEmail(?string $value): ?string
+{
+    $value = trim((string)$value);
+    if ($value === '') {
+        return null;
+    }
+    $email = filter_var($value, FILTER_VALIDATE_EMAIL);
+    return ($email !== false) ? strtolower($email) : false;
+}
+
 set_exception_handler(function (Throwable $e) {
     error_log('[AdmSupervisoras] ' . $e->getMessage());
     jsonError('Error interno del servidor.', 500);

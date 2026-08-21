@@ -7,9 +7,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $body  = json_decode(file_get_contents('php://input'), true);
 $nombre = strtoupper(trim(sanitizeString($body['nombre'] ?? '')));
+$mail   = sanitizeEmail($body['mail'] ?? '');
 
 if ($nombre === '') {
     jsonError('El nombre es obligatorio.', 400);
+}
+if ($mail === false) {
+    jsonError('El mail ingresado no es válido.', 400);
 }
 
 try {
@@ -26,14 +30,14 @@ try {
 
     dbExecute(
         "INSERT INTO [dbo].RO_T_SUPERVISORAS_COMERCIAL
-             (ID, NOMBRE, ACTIVA)
-         VALUES (ISNULL((SELECT MAX(ID) FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL), 0) + 1, ?, 1)",
-        [$nombre]
+             (ID, NOMBRE, MAIL, ACTIVA)
+         VALUES (ISNULL((SELECT MAX(ID) FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL), 0) + 1, ?, ?, 1)",
+        [$nombre, $mail]
     );
 
     // Recuperar el registro recién creado
     $nueva = dbFetchOne(
-        "SELECT ID, NOMBRE, ACTIVA FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL
+        "SELECT ID, NOMBRE, MAIL, ACTIVA FROM [dbo].RO_T_SUPERVISORAS_COMERCIAL
          WHERE UPPER(NOMBRE) = ?",
         [$nombre]
     );
