@@ -1,4 +1,7 @@
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/Shared/SsoAuth.php';
+SsoAuth::requireLoginAjax();
+
 require_once '../class/Direccionario.php';
 
 header('Content-Type: application/json');

@@ -1,5 +1,7 @@
 <?php
-session_start();
+require_once $_SERVER['DOCUMENT_ROOT'] . '/Shared/SsoAuth.php';
+SsoAuth::requireLogin(); // ya deja la sesión PHP iniciada
+
 require_once 'Class/Interno.php';
 $interno = new Interno();
 $sectores = $interno->getSectores();

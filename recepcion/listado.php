@@ -1,5 +1,8 @@
 
 <?php
+require_once $_SERVER['DOCUMENT_ROOT'] . '/Shared/SsoAuth.php';
+SsoAuth::requireLogin();
+
 require_once 'Class/Interno.php';
 $interno = new Interno();
 ?>
