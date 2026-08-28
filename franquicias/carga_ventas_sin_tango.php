@@ -2427,21 +2427,7 @@ if (!function_exists('es_modo_desarrollo')) {
                 // Validar solo los códigos específicos del archivo
                 try {
                     console.log('📡 Validando artículos específicos...');
-                    const response = await fetch('controller/validar_articulos_simple.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            codigos: codigosAValidar
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    const result = await response.json();
+                    const result = await validarArticulosEnLotes(codigosAValidar);
                     console.log('📊 Respuesta del servidor:', result);
                     console.log('📊 Tipo de respuesta:', typeof result);
                     console.log('📊 Success:', result.success);
@@ -3899,22 +3885,8 @@ if (!function_exists('es_modo_desarrollo')) {
             try {
                 // Validar artículos (IGUAL QUE MODO INDIVIDUAL)
                 console.log('📡 Enviando códigos al servidor:', { codigos: articulosValidar });
-                const responseArticulos = await fetch('controller/validar_articulos_simple.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ codigos: articulosValidar })  // Cambiado de 'articulos' a 'codigos'
-                });
-                
-                if (!responseArticulos.ok) {
-                    throw new Error(`HTTP ${responseArticulos.status}: ${responseArticulos.statusText}`);
-                }
-                
-                const resultArticulos = await responseArticulos.json();
+                const resultArticulos = await validarArticulosEnLotes(articulosValidar);
                 console.log('📊 Respuesta validación múltiple:', resultArticulos);
-                
-                if (!resultArticulos.success) {
-                    throw new Error('Error validando artículos: ' + resultArticulos.message);
-                }
 
                 // Crear tabla de vista previa múltiple (IGUAL QUE MODO INDIVIDUAL)
                 // Extraer códigos válidos y mapas de información del resultado
@@ -5835,13 +5807,7 @@ if (!function_exists('es_modo_desarrollo')) {
                         .filter(codigo => codigo.length > 0) // Eliminar vacíos
                 )];
                 
-                const response = await fetch('controller/validar_articulos_simple.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ codigos: codigosAValidar })
-                });
-
-                const result = await response.json();
+                const result = await validarArticulosEnLotes(codigosAValidar);
 
                 if (result.success) {
                     const descripciones = {};

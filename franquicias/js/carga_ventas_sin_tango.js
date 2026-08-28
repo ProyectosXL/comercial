@@ -325,6 +325,62 @@ document.addEventListener('DOMContentLoaded', function() {
     window.cargaVentasSystem = cargaVentasSystem;
 });
 
+/**
+ * Valida artículos contra el backend en tandas en vez de mandar todos los
+ * códigos únicos en una sola request. Antes, un archivo grande (varios
+ * períodos/sucursales) podía disparar una request de varios minutos que
+ * dependía de que Apache/el proxy tuvieran un Timeout suficientemente alto;
+ * si no lo tenían, la carga se cortaba con timeout aunque el script PHP
+ * todavía tuviera margen de tiempo propio. Con tandas de 300 códigos, cada
+ * request es corta (segundos) y no depende de ningún Timeout largo.
+ *
+ * @param {string[]} codigos Códigos de artículo a validar (pueden repetirse).
+ * @param {number} tamanoLote Cantidad de códigos únicos por request.
+ * @returns {Promise<{success: boolean, articulos: Array, total: number, encontrados: number, noEncontrados: number, completo: boolean, codigosTruncadosPorTiempo: string[]}>}
+ */
+async function validarArticulosEnLotes(codigos, tamanoLote = 300) {
+    const codigosUnicos = [...new Set(codigos)];
+    const articulos = [];
+    const codigosTruncadosPorTiempo = [];
+    let encontrados = 0;
+
+    for (let i = 0; i < codigosUnicos.length; i += tamanoLote) {
+        const lote = codigosUnicos.slice(i, i + tamanoLote);
+
+        const response = await fetch('controller/validar_articulos_simple.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigos: lote })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const resultado = await response.json();
+
+        if (!resultado.success) {
+            throw new Error('Error validando artículos: ' + (resultado.message || 'Error desconocido'));
+        }
+
+        articulos.push(...resultado.articulos);
+        encontrados += resultado.encontrados;
+        if (Array.isArray(resultado.codigosTruncadosPorTiempo)) {
+            codigosTruncadosPorTiempo.push(...resultado.codigosTruncadosPorTiempo);
+        }
+    }
+
+    return {
+        success: true,
+        articulos,
+        total: codigosUnicos.length,
+        encontrados,
+        noEncontrados: codigosUnicos.length - encontrados,
+        completo: codigosTruncadosPorTiempo.length === 0,
+        codigosTruncadosPorTiempo
+    };
+}
+
 // Exportar para uso en otros scripts si es necesario
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = CargaVentasSinTango;
