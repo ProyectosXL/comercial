@@ -202,6 +202,15 @@ if (!isset($_SESSION['username'])) {
                                             <a href="https://app.powerbi.com/groups/10151113-0ef1-4fea-87ad-3360c85ddc8d/reports/dbea17fa-17ec-48d0-8e20-9ac8eb76c1c8/57083f6306141d232526?experience=power-bi" class="btn btn-info btn-card" target="_blank">Ver Dashboard</a>
                                         </div>
                                     </div>
+                                    <div class="card">
+                                        <span class="badge-nuevo">Web</span>
+                                        <div class="card-body">
+                                            <i class="bi bi-megaphone card-icon color-info"></i>
+                                            <h5 class="card-title">Premios Comercial</h5>
+                                            <p class="card-subtitle">Seguimiento de premios comercial</p>
+                                            <a href="https://app.xl.com.ar/bi/premios/" class="btn btn-info btn-card" target="_blank">Ver Dashboard</a>
+                                        </div>
+                                    </div>
                                 </div>
                             </section>
                         </div>
