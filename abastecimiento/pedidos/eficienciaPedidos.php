@@ -11,12 +11,14 @@ error_log("Entorno actual en sesión: " . $_SESSION['entorno']);
 
 require_once '../class/Pedido.php';
 $pedido = new Pedido();
+$grupos = $pedido->traerGrupos();
 $clientes = $pedido->traerClientes();
 
 $desde = isset($_GET['desde']) ? $_GET['desde'] : date('Y-m-d', strtotime('-10 day'));
 $hasta = isset($_GET['hasta']) ? $_GET['hasta'] : date('Y-m-d');
 $canal = isset($_GET['selectCanal']) ? (array)$_GET['selectCanal'] : [];
-$selectCliente = isset($_GET['selectCliente']) ? $_GET['selectCliente'] : '%';
+$selectGrupo = isset($_GET['selectGrupo']) ? (array)$_GET['selectGrupo'] : [];
+$selectCliente = isset($_GET['selectCliente']) ? (array)$_GET['selectCliente'] : [];
 $estado = isset($_GET['selectEstado']) ? $_GET['selectEstado'] : '%';
 $tipo = isset($_GET['selectTipo']) ? $_GET['selectTipo'] : '%';
 
@@ -25,7 +27,7 @@ $busquedaRealizada = false;
 
 // Solo cargar datos si se ha realizado una búsqueda (se envió el formulario)
 if (isset($_GET['buscar']) && $_GET['buscar'] == '1') {
-    $data = $pedido->traePedido($desde, $hasta, $canal, $selectCliente, $estado, $tipo);
+    $data = $pedido->traePedido($desde, $hasta, $canal, $selectCliente, $estado, $tipo, $selectGrupo);
     $busquedaRealizada = true;
 }
 
@@ -113,7 +115,7 @@ error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 
                         </div>
                         
                         <div class="filter-panel-body">
-                            <!-- Fila 1: Fechas y Cliente -->
+                            <!-- Fila 1: Fechas, Grupo Empresario y Cliente -->
                             <div class="row g-3 mb-3 align-items-end">
                                 <div class="col-lg-2 col-md-6">
                                     <label for="desde" class="form-label">Desde</label>
@@ -123,15 +125,27 @@ error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 
                                     <label for="hasta" class="form-label">Hasta</label>
                                     <input type="date" id="hasta" name="hasta" class="form-control form-control-sm" value="<?= $hasta ?>">
                                 </div>
-                                <div class="col-lg-8 col-md-12">
+                                <div class="col-lg-4 col-md-6">
+                                    <label for="selectGrupo" class="form-label">Grupo Empresario</label>
+                                    <select name="selectGrupo[]" id="selectGrupo" class="form-select form-select-sm" multiple>
+                                        <?php 
+                                        foreach ($grupos as $g) {
+                                            $gVal = trim($g['GRUPO_EMPR']);
+                                            $selected = in_array($gVal, $selectGrupo) ? 'selected' : '';
+                                            echo "<option value='{$gVal}' {$selected}>" . htmlspecialchars($gVal) . "</option>";
+                                        }
+                                        ?>
+                                    </select>
+                                </div>
+                                <div class="col-lg-4 col-md-12">
                                     <label for="selectCliente" class="form-label">Cliente</label>
-                                    <select name="selectCliente" id="selectCliente" class="form-select form-select-sm">
-                                        <option value="%">TODOS</option>
+                                    <select name="selectCliente[]" id="selectCliente" class="form-select form-select-sm" multiple>
                                         <?php 
                                         foreach ($clientes as $cliente) {
-                                            $selected = ($cliente['COD_CLIENT'] == $selectCliente) ? 'selected' : '';
-                                            echo "<option value='{$cliente['COD_CLIENT']}' {$selected}>";
-                                            echo htmlspecialchars($cliente['COD_CLIENT'] . " - " . $cliente['RAZON_SOCI']);
+                                            $selected = in_array($cliente['COD_CLIENT'], $selectCliente) ? 'selected' : '';
+                                            $grupoInfo = !empty($cliente['GRUPO_EMPR']) ? " [" . trim($cliente['GRUPO_EMPR']) . "]" : "";
+                                            echo "<option value='{$cliente['COD_CLIENT']}' data-grupo='" . htmlspecialchars(trim($cliente['GRUPO_EMPR'])) . "' {$selected}>";
+                                            echo htmlspecialchars($cliente['COD_CLIENT'] . " - " . $cliente['RAZON_SOCI'] . $grupoInfo);
                                             echo "</option>";
                                         }
                                         ?>
@@ -278,6 +292,7 @@ error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 
                                 <th>Depósito</th>
                                 <th>Cód. Cliente</th>
                                 <th>Cliente</th>
+                                <th>Grupo Emp.</th>
                                 <th>Canal</th>
                                 <th>Tipo</th>
                                 <th>Cód. Artículo</th>
@@ -297,6 +312,7 @@ error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 
                                 <td><?= htmlspecialchars($row['DEPOSITO']) ?></td>
                                 <td><?= htmlspecialchars($row['COD_CLIENT']) ?></td>
                                 <td><?= htmlspecialchars($row['NOMBRE_CLIENTE']) ?></td>
+                                <td><?= htmlspecialchars($row['GRUPO_EMPR'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($row['CANAL']) ?></td>
                                 <td><?= htmlspecialchars($row['TIPO']) ?></td>
                                 <td><?= htmlspecialchars($row['COD_ARTICU']) ?></td>
@@ -309,7 +325,7 @@ error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 
                                     $estado_badge = '';
                                     switch($row['ESTADO']) {
                                         case 'CUMPLIDO':
-                                            $estado_badge = 'bg-success';
+                                             $estado_badge = 'bg-success';
                                             break;
                                         case 'ABIERTO':
                                             $estado_badge = 'bg-warning text-dark';

@@ -37,9 +37,24 @@ function inicializarComponentes() {
         }
     });
 
+    // Inicializar Select2 para el selector de grupo empresario
+    $('#selectGrupo').select2({
+        placeholder: 'Todos los grupos',
+        allowClear: true,
+        width: '100%',
+        language: {
+            noResults: function() {
+                return "No se encontraron resultados";
+            },
+            searching: function() {
+                return "Buscando...";
+            }
+        }
+    });
+
     // Inicializar Select2 para el selector de clientes
     $('#selectCliente').select2({
-        placeholder: 'Seleccione un cliente',
+        placeholder: 'Todos los clientes',
         allowClear: true,
         width: '100%',
         language: {
@@ -174,19 +189,19 @@ dom:
             },
             {
                 // Columna Estado - Alta prioridad
-                targets: 13,
+                targets: 14,
                 responsivePriority: 4,
                 className: 'text-center'
             },
             {
                 // Columnas Pedido y Remitido
-                targets: [10, 11],
+                targets: [11, 12],
                 responsivePriority: 5,
                 className: 'text-end'
             },
             {
                 // Columnas menos importantes (se ocultarán primero en pantallas pequeñas)
-                targets: [2, 3, 4, 6, 7, 8, 9, 12],
+                targets: [2, 3, 4, 6, 7, 8, 9, 10, 13],
                 responsivePriority: 10
             }
         ],
@@ -307,6 +322,7 @@ function exportarAExcel() {
         'Depósito',
         'Cód. Cliente',
         'Cliente',
+        'Grupo Emp.',
         'Canal',
         'Tipo',
         'Cód. Artículo',
@@ -327,7 +343,7 @@ function exportarAExcel() {
             let cellText = $cell.text().trim();
             
             // Convertir números de texto a números para Excel
-            if (index === 10 || index === 11) { // Columnas Pedido y Remitido
+            if (index === 11 || index === 12) { // Columnas Pedido y Remitido
                 cellText = cellText.replace(/\./g, '').replace(/,/g, '.');
                 cellText = parseFloat(cellText) || 0;
             }
@@ -349,6 +365,7 @@ function exportarAExcel() {
         { wch: 12 },  // Depósito
         { wch: 12 },  // Cód. Cliente
         { wch: 30 },  // Cliente
+        { wch: 15 },  // Grupo Emp.
         { wch: 15 },  // Canal
         { wch: 12 },  // Tipo
         { wch: 15 },  // Cód. Artículo
