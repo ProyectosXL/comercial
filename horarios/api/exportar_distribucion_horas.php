@@ -48,9 +48,18 @@ if ($stmt) {
 }
 sqlsrv_close($connSistemas);
 
+$strFechaInicioFile = date('d-m-Y', strtotime($fechaInicio));
+$strFechaFinFile    = date('d-m-Y', strtotime($fechaFin));
+$strFechaInicio     = date('d/m/Y', strtotime($fechaInicio));
+$strFechaFin        = date('d/m/Y', strtotime($fechaFin));
+
 if (empty($horasPorVendSuc)) {
-    $xlsx = SimpleXLSXGen::fromArray([['No hay datos para el período seleccionado.']]);
-    $xlsx->downloadAs('Distribucion_Horas_Vacio.xlsx');
+    $xlsx = SimpleXLSXGen::fromArray([
+        ['<style font-size="14"><b>Distribución de Horas por Local (' . $strFechaInicio . ' al ' . $strFechaFin . ')</b></style>'],
+        [],
+        ['No hay datos para el período seleccionado.']
+    ]);
+    $xlsx->downloadAs("Distribucion_Horas_Por_Local_{$strFechaInicioFile}_al_{$strFechaFinFile}.xlsx");
     exit;
 }
 
@@ -269,9 +278,11 @@ usort($resultado, function($a, $b) {
     return strcmp($a['nombre'], $b['nombre']);
 });
 
-// 5. Generar Excel (Formato específico solicitado para importación)
+// 5. Generar Excel (Formato con período y columnas)
 $s = '<style bgcolor="#E2EFDA" color="#002060"><b>'; $e = '</b></style>';
 $filas = [
+    ['<style font-size="14"><b>Distribución de Horas por Local (' . $strFechaInicio . ' al ' . $strFechaFin . ')</b></style>'],
+    [],
     [
         $s . 'Número de legajo' . $e,
         $s . 'Código tipo de auxiliar de tipo de auxiliar' . $e,
@@ -292,5 +303,5 @@ foreach ($resultado as $r) {
 }
 
 $xlsx = SimpleXLSXGen::fromArray($filas);
-$xlsx->downloadAs('Distribucion_Horas_Por_Local_' . date('Ymd') . '.xlsx');
+$xlsx->downloadAs("Distribucion_Horas_Por_Local_{$strFechaInicioFile}_al_{$strFechaFinFile}.xlsx");
 ?>

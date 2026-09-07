@@ -263,8 +263,10 @@ if ($_SESSION['entorno'] == 'central') {
                             <th>Cant. Venta</th>
                             <th>Venta Total</th>
                             <th>Cant. Ingr. Central</th>
+                            <?php if ($_SESSION['entorno'] == 'central'): ?>
                             <th>Stock FQS</th>
                             <th>Venta FQS</th>
+                            <?php endif; ?>
                             <th>Venta May.</th>
                             <th>Venta Ecomm.</th>
                             <th>Venta Propios</th>
@@ -424,8 +426,10 @@ if ($_SESSION['entorno'] == 'central') {
                     { data: 'CANT_VENTA', render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
                     { data: 'IMP_VENTA', render: function (data, type) { if (type === 'sort' || type === 'filter') return data ? Number(data) : 0; return data ? '$ ' + Number(data).toLocaleString('es-AR') : '$ 0'; } },
                     { data: 'CANT_INGRESO_CENTRAL', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    <?php if ($_SESSION['entorno'] == 'central'): ?>
                     { data: 'STOCK_FQS', defaultContent: '0', render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
                     { data: 'VENTA_FRANQ', defaultContent: '0', visible: true, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    <?php endif; ?>
                     { data: 'VENTA_MAY', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
                     { data: 'VENTA_ECOMM', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
                     { data: 'VENTA_PROPIOS', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } }

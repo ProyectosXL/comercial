@@ -31,11 +31,19 @@ class Destino
 
         $sql = $sqlEnviado;
 
+        if (!$this->cid_central) {
+            return [];
+        }
+
         $stmt = sqlsrv_query($this->cid_central, $sql);
+
+        if (!$stmt) {
+            return [];
+        }
 
         $rows = array();
 
-        while ($v = sqlsrv_fetch_array($stmt)) {
+        while ($v = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
             $rows[] = $v;
         }
 
@@ -47,21 +55,19 @@ class Destino
     {
 
         $sql = " 
-            SELECT A.*, 
-                   (SELECT TOP 1 CATEGORIA FROM SOF_MAESTRO_ARTICULOS_RUBRO_CATEGORIA WHERE COD_ARTICU = A.COD_ARTICU) AS CATEGORIA
+            SELECT A.*, C.CATEGORIA
             FROM MAESTRO_DESTINOS A
-            LEFT JOIN MAESTRO_TEMPORADAS B ON A.TEMPORADA = B.NOMBRE_TEMP
+            LEFT JOIN SOF_MAESTRO_ARTICULOS_RUBRO_CATEGORIA C ON A.COD_ARTICU = C.COD_ARTICU
             WHERE A.EXCLUIR IS NULL
-            AND TEMPORADA LIKE '$temporada' AND FAMILIA LIKE '$rubro'
-
+            AND A.TEMPORADA LIKE '$temporada' AND A.FAMILIA LIKE '$rubro'
         ";
 
         if ($novedades == 1) {
 
-            $sql .= " AND FECHA_MOD = (
-                SELECT  MAX(FECHA_MOD) AS FECHA_MOD
+            $sql .= " AND A.FECHA_MOD = (
+                SELECT MAX(FECHA_MOD) AS FECHA_MOD
                 FROM MAESTRO_DESTINOS)
-            ;";
+            ";
 
         }
 

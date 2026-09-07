@@ -100,11 +100,14 @@ while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
 sqlsrv_free_stmt($stmt);
 sqlsrv_close($connSistemas);
 
+$strFechaInicioFile = date('d-m-Y', strtotime($fechaInicio));
+$strFechaFinFile    = date('d-m-Y', strtotime($fechaFin));
+
 if (empty($reporte)) {
     // Si no hay datos, generar un Excel vacío con encabezados
     $filasExcel = [['No se encontraron datos para los filtros seleccionados.']];
     $xlsx = SimpleXLSXGen::fromArray($filasExcel);
-    $xlsx->downloadAs('Reporte_Desglose_Horas.xlsx');
+    $xlsx->downloadAs("Reporte_Desglose_Horas_{$strFechaInicioFile}_al_{$strFechaFinFile}.xlsx");
     exit;
 }
 
@@ -394,5 +397,5 @@ $filasExcel[] = $filaTotal;
 
 // 6. DESCARGAR
 $xlsx = SimpleXLSXGen::fromArray($filasExcel);
-$xlsx->downloadAs('Reporte_Desglose_Horas.xlsx');
+$xlsx->downloadAs("Reporte_Desglose_Horas_{$strFechaInicioFile}_al_{$strFechaFinFile}.xlsx");
 ?>
