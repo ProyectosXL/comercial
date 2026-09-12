@@ -3,125 +3,25 @@
 --
 -- Este script es idempotente: se puede ejecutar mas de una vez sin efecto adicional.
 --
--- IMPORTANTE: el paso 3 REEMPLAZA el indice unico UQ_GASTO_SUPERVISION por uno
--- filtrado. Sin ese cambio la anulacion logica no sirve de nada, porque marcar
--- una fila como VIGENTE = 0 no libera la clave unica y el INSERT de la segunda
--- carga sigue fallando con error 2601.
+-- La reapertura es COMPLEMENTARIA: habilita a una supervisora a cargar, por
+-- unica vez, los conceptos que todavia no tienen gasto en ese periodo. No
+-- modifica ni anula nada de lo ya cargado.
+--
+-- Por eso NO hace falta tocar la restriccion unica UQ_GASTO_SUPERVISION sobre
+-- (SEMANA, ANIO, ID_CONC, SUPERVISORA). Al contrario: es justamente lo que
+-- garantiza la regla, porque impide que un concepto tenga una segunda fila en
+-- el mismo periodo. Se deja como esta.
+--
+-- El paso 3 limpia la columna VIGENTE y sus indices, de una version anterior de
+-- este script que planteaba la reapertura como reemplazo con anulacion logica.
+-- Si nunca se ejecuto esa version, no hace nada.
 
 SET ANSI_NULLS ON
 SET QUOTED_IDENTIFIER ON
 GO
 
 -- =====================================================================
--- 1. Columna VIGENTE en RO_T_GASTOS_SUPERVISION
--- =====================================================================
-IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
-               WHERE TABLE_NAME = 'RO_T_GASTOS_SUPERVISION' AND COLUMN_NAME = 'VIGENTE')
-BEGIN
-    ALTER TABLE RO_T_GASTOS_SUPERVISION
-        ADD VIGENTE BIT NOT NULL
-        CONSTRAINT DF_RO_T_GASTOS_SUPERVISION_VIGENTE DEFAULT 1
-
-    PRINT 'Columna VIGENTE agregada a RO_T_GASTOS_SUPERVISION'
-END
-ELSE
-BEGIN
-    PRINT 'La columna VIGENTE ya existe en RO_T_GASTOS_SUPERVISION'
-END
-GO
-
--- El DEFAULT ya deja en 1 las filas existentes al agregar la columna,
--- pero lo dejamos explicito por si la columna se creo de otra forma.
-UPDATE RO_T_GASTOS_SUPERVISION SET VIGENTE = 1 WHERE VIGENTE IS NULL
-GO
-
--- =====================================================================
--- 2. Columna VIGENTE en FU_T_ADELANTOS_SUPERVISION
--- =====================================================================
-IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
-               WHERE TABLE_NAME = 'FU_T_ADELANTOS_SUPERVISION' AND COLUMN_NAME = 'VIGENTE')
-BEGIN
-    ALTER TABLE FU_T_ADELANTOS_SUPERVISION
-        ADD VIGENTE BIT NOT NULL
-        CONSTRAINT DF_FU_T_ADELANTOS_SUPERVISION_VIGENTE DEFAULT 1
-
-    PRINT 'Columna VIGENTE agregada a FU_T_ADELANTOS_SUPERVISION'
-END
-ELSE
-BEGIN
-    PRINT 'La columna VIGENTE ya existe en FU_T_ADELANTOS_SUPERVISION'
-END
-GO
-
-UPDATE FU_T_ADELANTOS_SUPERVISION SET VIGENTE = 1 WHERE VIGENTE IS NULL
-GO
-
--- =====================================================================
--- 3. Reemplazo del indice unico por uno filtrado por VIGENTE = 1
--- =====================================================================
--- UQ_GASTO_SUPERVISION es UNIQUE sobre (SEMANA, ANIO, ID_CONC, SUPERVISORA).
--- Al filtrarlo por VIGENTE = 1 las filas anuladas dejan de ocupar la clave,
--- y se sigue garantizando una unica fila vigente por concepto y periodo.
---
--- Ojo: esta implementado como RESTRICCION UNIQUE, no como indice suelto.
--- Aparece igual en sys.indexes, pero DROP INDEX falla con error 3723
--- ("It is being used for UNIQUE KEY constraint enforcement"): hay que sacarlo
--- con ALTER TABLE ... DROP CONSTRAINT. Contemplamos las dos formas por si en
--- algun entorno se creo como indice.
-IF EXISTS (SELECT * FROM sys.key_constraints
-           WHERE name = 'UQ_GASTO_SUPERVISION'
-             AND parent_object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
-BEGIN
-    ALTER TABLE RO_T_GASTOS_SUPERVISION DROP CONSTRAINT UQ_GASTO_SUPERVISION
-    PRINT 'Restriccion UNIQUE UQ_GASTO_SUPERVISION eliminada'
-END
-ELSE IF EXISTS (SELECT * FROM sys.indexes
-                WHERE name = 'UQ_GASTO_SUPERVISION'
-                  AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
-BEGIN
-    DROP INDEX UQ_GASTO_SUPERVISION ON RO_T_GASTOS_SUPERVISION
-    PRINT 'Indice UQ_GASTO_SUPERVISION eliminado'
-END
-ELSE
-BEGIN
-    PRINT 'UQ_GASTO_SUPERVISION ya no existe'
-END
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.indexes
-               WHERE name = 'UQ_GASTO_SUPERVISION_VIGENTE'
-                 AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
-BEGIN
-    CREATE UNIQUE INDEX UQ_GASTO_SUPERVISION_VIGENTE
-        ON RO_T_GASTOS_SUPERVISION (SEMANA, ANIO, ID_CONC, SUPERVISORA)
-        WHERE VIGENTE = 1
-
-    PRINT 'Indice filtrado UQ_GASTO_SUPERVISION_VIGENTE creado'
-END
-ELSE
-BEGIN
-    PRINT 'El indice UQ_GASTO_SUPERVISION_VIGENTE ya existe'
-END
-GO
-
--- Indice de apoyo para la anulacion masiva por periodo
-IF NOT EXISTS (SELECT * FROM sys.indexes
-               WHERE name = 'IX_GASTO_SUPERVISION_PERIODO'
-                 AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
-BEGIN
-    CREATE INDEX IX_GASTO_SUPERVISION_PERIODO
-        ON RO_T_GASTOS_SUPERVISION (SEMANA, ANIO, SUPERVISORA) INCLUDE (VIGENTE)
-
-    PRINT 'Indice IX_GASTO_SUPERVISION_PERIODO creado'
-END
-ELSE
-BEGIN
-    PRINT 'El indice IX_GASTO_SUPERVISION_PERIODO ya existe'
-END
-GO
-
--- =====================================================================
--- 4. Tabla de reaperturas
+-- 1. Tabla de reaperturas
 -- =====================================================================
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RO_T_REAPERTURAS_GASTOS_SUP' AND xtype='U')
 BEGIN
@@ -153,9 +53,11 @@ BEGIN
 END
 GO
 
--- Como maximo una reapertura ABIERTA por periodo y supervisora.
--- Es lo que hace que el consumo con compare-and-swap sea seguro: dos pestañas
--- compiten por la misma fila y solo una obtiene rows_affected = 1.
+-- =====================================================================
+-- 2. Una sola reapertura ABIERTA por periodo y supervisora
+-- =====================================================================
+-- Es lo que hace seguro el consumo con compare-and-swap: dos pestañas compiten
+-- por la misma fila y solo una obtiene rows_affected = 1.
 IF NOT EXISTS (SELECT * FROM sys.indexes
                WHERE name = 'UQ_REAPERTURAS_GASTOS_ABIERTA'
                  AND object_id = OBJECT_ID('RO_T_REAPERTURAS_GASTOS_SUP'))
@@ -173,48 +75,109 @@ END
 GO
 
 -- =====================================================================
--- 5. Verificacion final
+-- 3. Limpieza de la columna VIGENTE (version anterior de este script)
 -- =====================================================================
--- Los pasos anteriores van en batches separados por GO, asi que si uno falla
--- los siguientes se ejecutan igual y el script termina diciendo "finalizada".
--- Este bloque revisa el estado real y falla ruidosamente si algo quedo a medias.
-DECLARE @errores INT = 0
-
-IF EXISTS (SELECT * FROM sys.indexes
-           WHERE name = 'UQ_GASTO_SUPERVISION'
-             AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
+-- Con la reapertura complementaria nada se anula nunca, asi que VIGENTE
+-- quedaria siempre en 1: una columna que no discrimina nada y un segundo
+-- indice unico redundante sobre las mismas columnas que UQ_GASTO_SUPERVISION.
+--
+-- Solo se limpia si no hay filas anuladas. Si aparece alguna con VIGENTE = 0
+-- significa que se llego a usar la version de reemplazo, y borrar la columna
+-- perderia la unica marca de que esas filas estaban anuladas: en ese caso el
+-- script avisa y no toca nada.
+IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+           WHERE TABLE_NAME = 'RO_T_GASTOS_SUPERVISION' AND COLUMN_NAME = 'VIGENTE')
+   AND EXISTS (SELECT * FROM RO_T_GASTOS_SUPERVISION WHERE VIGENTE = 0)
 BEGIN
-    PRINT 'ERROR: UQ_GASTO_SUPERVISION sigue existiendo. La reapertura NO va a funcionar:'
-    PRINT '       el INSERT de la segunda carga va a chocar contra las filas anuladas.'
-    SET @errores = @errores + 1
+    PRINT 'AVISO: hay filas con VIGENTE = 0. No se limpia la columna.'
+    PRINT '       Revisar esas filas a mano antes de continuar.'
 END
-
-IF NOT EXISTS (SELECT * FROM sys.indexes
+ELSE
+BEGIN
+    -- Los indices primero: IX_GASTO_SUPERVISION_PERIODO incluye VIGENTE, asi que
+    -- la columna no se puede borrar mientras exista.
+    IF EXISTS (SELECT * FROM sys.indexes
                WHERE name = 'UQ_GASTO_SUPERVISION_VIGENTE'
-                 AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION') AND has_filter = 1)
-BEGIN
-    PRINT 'ERROR: falta el indice filtrado UQ_GASTO_SUPERVISION_VIGENTE.'
-    SET @errores = @errores + 1
-END
+                 AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
+    BEGIN
+        DROP INDEX UQ_GASTO_SUPERVISION_VIGENTE ON RO_T_GASTOS_SUPERVISION
+        PRINT 'Indice UQ_GASTO_SUPERVISION_VIGENTE eliminado (redundante)'
+    END
 
-IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+    IF EXISTS (SELECT * FROM sys.indexes
+               WHERE name = 'IX_GASTO_SUPERVISION_PERIODO'
+                 AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
+    BEGIN
+        DROP INDEX IX_GASTO_SUPERVISION_PERIODO ON RO_T_GASTOS_SUPERVISION
+        PRINT 'Indice IX_GASTO_SUPERVISION_PERIODO eliminado'
+    END
+
+    IF EXISTS (SELECT * FROM sys.default_constraints
+               WHERE name = 'DF_RO_T_GASTOS_SUPERVISION_VIGENTE')
+    BEGIN
+        ALTER TABLE RO_T_GASTOS_SUPERVISION DROP CONSTRAINT DF_RO_T_GASTOS_SUPERVISION_VIGENTE
+    END
+
+    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
                WHERE TABLE_NAME = 'RO_T_GASTOS_SUPERVISION' AND COLUMN_NAME = 'VIGENTE')
-BEGIN
-    PRINT 'ERROR: falta la columna VIGENTE en RO_T_GASTOS_SUPERVISION.'
-    SET @errores = @errores + 1
-END
+    BEGIN
+        ALTER TABLE RO_T_GASTOS_SUPERVISION DROP COLUMN VIGENTE
+        PRINT 'Columna VIGENTE eliminada de RO_T_GASTOS_SUPERVISION'
+    END
 
-IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+    IF EXISTS (SELECT * FROM sys.default_constraints
+               WHERE name = 'DF_FU_T_ADELANTOS_SUPERVISION_VIGENTE')
+    BEGIN
+        ALTER TABLE FU_T_ADELANTOS_SUPERVISION DROP CONSTRAINT DF_FU_T_ADELANTOS_SUPERVISION_VIGENTE
+    END
+
+    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
                WHERE TABLE_NAME = 'FU_T_ADELANTOS_SUPERVISION' AND COLUMN_NAME = 'VIGENTE')
-BEGIN
-    PRINT 'ERROR: falta la columna VIGENTE en FU_T_ADELANTOS_SUPERVISION.'
-    SET @errores = @errores + 1
+    BEGIN
+        ALTER TABLE FU_T_ADELANTOS_SUPERVISION DROP COLUMN VIGENTE
+        PRINT 'Columna VIGENTE eliminada de FU_T_ADELANTOS_SUPERVISION'
+    END
 END
+GO
+
+-- =====================================================================
+-- 4. Verificacion final
+-- =====================================================================
+-- Los pasos van en batches separados por GO: si uno falla los siguientes se
+-- ejecutan igual, asi que sin esto el script podria terminar diciendo
+-- "finalizada" con la migracion a medias.
+DECLARE @errores INT = 0
 
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RO_T_REAPERTURAS_GASTOS_SUP' AND xtype='U')
 BEGIN
     PRINT 'ERROR: falta la tabla RO_T_REAPERTURAS_GASTOS_SUP.'
     SET @errores = @errores + 1
+END
+
+IF NOT EXISTS (SELECT * FROM sys.indexes
+               WHERE name = 'UQ_REAPERTURAS_GASTOS_ABIERTA'
+                 AND object_id = OBJECT_ID('RO_T_REAPERTURAS_GASTOS_SUP'))
+BEGIN
+    PRINT 'ERROR: falta el indice UQ_REAPERTURAS_GASTOS_ABIERTA. Sin el, dos pestañas'
+    PRINT '       podrian consumir la misma reapertura.'
+    SET @errores = @errores + 1
+END
+
+-- La reapertura complementaria depende de esta restriccion para impedir que un
+-- concepto reciba una segunda fila en el mismo periodo.
+IF NOT EXISTS (SELECT * FROM sys.indexes
+               WHERE name = 'UQ_GASTO_SUPERVISION'
+                 AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
+BEGIN
+    PRINT 'ERROR: falta UQ_GASTO_SUPERVISION sobre RO_T_GASTOS_SUPERVISION.'
+    PRINT '       Es lo que impide cargar dos veces el mismo concepto en un periodo.'
+    SET @errores = @errores + 1
+END
+
+IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+           WHERE TABLE_NAME = 'RO_T_GASTOS_SUPERVISION' AND COLUMN_NAME = 'VIGENTE')
+BEGIN
+    PRINT 'AVISO: la columna VIGENTE sigue presente. El codigo ya no la usa.'
 END
 
 IF @errores > 0

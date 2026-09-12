@@ -11,9 +11,8 @@ function actualizarEstadoInputs(gastos = {}) {
     let hayGastosCargados = Object.keys(gastos).length > 0;
 
     // Solo permitir edición si NO hay gastos cargados Y NO es una semana anterior.
-    // Una reapertura levanta las dos condiciones: es justamente el caso de volver
-    // a cargar un período que ya tiene gastos. La carga nueva reemplaza a la
-    // anterior, que queda anulada al guardar.
+    // Una reapertura levanta las dos condiciones, pero solo para los conceptos
+    // que todavía no tienen carga: es complementaria, no reemplaza nada.
     let puedeEditar = hayReapertura || (!hayGastosCargados && !esAnterior);
 
     $('.importe-input, textarea, #importeAdelanto').prop('disabled', !puedeEditar);
@@ -21,6 +20,36 @@ function actualizarEstadoInputs(gastos = {}) {
     // LÓGICA GLOBAL: Si hay gastos cargados o es semana anterior, ocultar botones de carga
     $('.camara-btn, .archivo-btn').toggle(puedeEditar);
     $('#guardarTodoBtn').toggle(puedeEditar);
+
+    let conceptosDisponibles = 0;
+
+    if (hayReapertura) {
+        // La habilitación de arriba es global, así que acá se vuelve a bloquear
+        // concepto por concepto lo que ya tiene carga. El servidor valida lo
+        // mismo; esto es para que la supervisora vea de entrada qué puede tocar.
+        $('.card').each(function () {
+            let $card = $(this);
+            let idConc = $card.find('.concepto-id').val();
+            let yaCargado = Object.prototype.hasOwnProperty.call(gastos, idConc);
+
+            $card.find('.importe-input, textarea').prop('disabled', yaCargado);
+            $card.find('.camara-btn, .archivo-btn').toggle(!yaCargado);
+            $card.toggleClass('concepto-bloqueado', yaCargado);
+
+            if (!yaCargado) {
+                conceptosDisponibles++;
+            }
+        });
+
+        // El adelanto es del período y ya se cargó en la carga original.
+        // insertarAdelanto hace INSERT y obtenerAdelanto hace SUM, así que
+        // volver a mandarlo duplicaría el importe. El servidor lo ignora igual.
+        $('#importeAdelanto').prop('disabled', true);
+
+        $('#guardarTodoBtn').toggle(conceptosDisponibles > 0);
+    } else {
+        $('.card').removeClass('concepto-bloqueado');
+    }
 
     // El selector de arriba agarra todos los textarea, incluido el de
     // observaciones del autorizante. Con una reapertura puedeEditar pasa a true
@@ -30,10 +59,13 @@ function actualizarEstadoInputs(gastos = {}) {
     $('textarea[id^="observaciones_aut_"]').prop('disabled', true);
 
     let mensaje = "";
-    if (hayReapertura) {
-        mensaje = " Período reabierto por gerencia: podés corregir esta semana por única vez." +
-                  " Al guardar, lo cargado antes se reemplaza y la semana vuelve a cerrarse." +
-                  " Acordate de adjuntar de nuevo los comprobantes de cada concepto que cargues.";
+    if (hayReapertura && conceptosDisponibles === 0) {
+        mensaje = " Período reabierto, pero todos los conceptos ya tienen gastos cargados." +
+                  " No queda nada para agregar: la reapertura solo habilita conceptos sin carga previa.";
+    } else if (hayReapertura) {
+        mensaje = " Período reabierto: podés agregar gastos en los " + conceptosDisponibles +
+                  " concepto(s) que todavía no cargaste. Lo que ya está cargado no se modifica." +
+                  " Al guardar, la semana vuelve a cerrarse.";
     } else if (hayGastosCargados) {
         mensaje = " Gastos ya cargados para esta semana. No se pueden modificar.";
     } else if (esActual) {

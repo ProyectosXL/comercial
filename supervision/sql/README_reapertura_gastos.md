@@ -4,8 +4,13 @@
 
 Permite que desde `supervision/controlarGastos.php` se reabra manualmente un período
 (semana + año) para una supervisora puntual. La reapertura es de **un solo uso**: al
-guardarse la carga vuelve a quedar cerrado. El comportamiento normal no cambia para
-el resto de las supervisoras ni para los demás períodos.
+guardarse la carga vuelve a quedar cerrado.
+
+Es una reapertura **complementaria**: habilita a la supervisora a cargar los conceptos
+que todavía **no tienen gasto** en ese período. **No modifica ni anula nada de lo ya
+cargado** — los importes, los CAE y las marcas de cargado en Tango quedan intactos.
+
+Un concepto que ya tiene carga no se puede volver a cargar ni corregir desde acá.
 
 ## Instrucciones de instalación
 
@@ -23,54 +28,45 @@ El script es idempotente: se puede correr más de una vez sin efecto adicional.
 ### 2. Verificación
 
 ```sql
--- La columna nueva, en 1 para todo lo existente
-SELECT VIGENTE, COUNT(*) FROM RO_T_GASTOS_SUPERVISION GROUP BY VIGENTE;
-SELECT VIGENTE, COUNT(*) FROM FU_T_ADELANTOS_SUPERVISION GROUP BY VIGENTE;
-
--- El índice único viejo ya no está y el filtrado sí
-SELECT name, is_unique, has_filter, filter_definition
-FROM sys.indexes WHERE object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION');
-
--- La tabla de reaperturas, vacía
+-- La tabla nueva, vacía
 SELECT * FROM RO_T_REAPERTURAS_GASTOS_SUP;
+
+-- UQ_GASTO_SUPERVISION tiene que seguir existiendo: es lo que impide
+-- cargar dos veces el mismo concepto en un período
+SELECT name, is_unique, is_unique_constraint
+FROM sys.indexes WHERE object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION');
 ```
 
-En `RO_T_GASTOS_SUPERVISION` tienen que quedar `UQ_GASTO_SUPERVISION_VIGENTE`
-(único, con filtro `([VIGENTE]=(1))`) e `IX_GASTO_SUPERVISION_PERIODO`, y **no**
-debe seguir existiendo `UQ_GASTO_SUPERVISION`.
-
-## Por qué se reemplaza el índice único
-
-`RO_T_GASTOS_SUPERVISION` ya tenía `UQ_GASTO_SUPERVISION`, un índice **único** sobre
-`(SEMANA, ANIO, ID_CONC, SUPERVISORA)`. Por eso una segunda carga sobre el mismo
-período nunca generó filas duplicadas: fallaba con violación de clave única (error
-2601) y la transacción hacía rollback.
-
-Eso significa que **la anulación lógica sola no alcanza**. Marcar las filas previas
-como `VIGENTE = 0` no libera la clave, porque `VIGENTE` no forma parte del índice: el
-INSERT de la segunda carga seguiría chocando contra las filas anuladas.
-
-La solución es reemplazarlo por un índice único **filtrado** por `VIGENTE = 1`. Las
-filas anuladas dejan de ocupar la clave y se sigue garantizando una única fila
-vigente por concepto y período, que es la invariante que interesa.
-
-`UQ_GASTO_SUPERVISION` está implementado como **restricción UNIQUE**, no como
-índice suelto. Aparece igual en `sys.indexes`, pero `DROP INDEX` falla con error
-3723 (*"It is being used for UNIQUE KEY constraint enforcement"*): hay que sacarlo
-con `ALTER TABLE ... DROP CONSTRAINT`. El script contempla las dos formas.
-
-El paso 5 del script verifica el estado final y falla con `RAISERROR` si algo
-quedó a medias. Hace falta porque los pasos van en batches separados por `GO`: si
-uno falla, los siguientes se ejecutan igual y el script terminaría diciendo
+El script ya verifica todo esto por su cuenta en el paso 4 y falla con `RAISERROR`
+si algo quedó a medias. Hace falta porque los pasos van en batches separados por `GO`:
+si uno falla, los siguientes se ejecutan igual y el script terminaría diciendo
 "finalizada" con la migración rota.
 
-### Requisito de SET options
+## Qué NO toca este script
 
-Los índices filtrados exigen `ANSI_NULLS ON` y `QUOTED_IDENTIFIER ON` en toda
-sentencia que haga INSERT/UPDATE/DELETE sobre la tabla. El driver ODBC 17 que usa
-`sqlsrv` los deja en ON por defecto, así que la aplicación no necesita cambios. Si
-alguna vez se inserta desde un job de SQL Agent o desde `sqlcmd`, hay que verificarlo:
-con esas opciones en OFF la escritura falla con error 1934.
+`RO_T_GASTOS_SUPERVISION` ya tenía `UQ_GASTO_SUPERVISION`, una **restricción UNIQUE**
+sobre `(SEMANA, ANIO, ID_CONC, SUPERVISORA)`. Por eso nunca hubo filas duplicadas por
+concepto y período: un segundo intento falla con error 2601.
+
+Esa restricción **se deja como está**, porque es justamente lo que hace cumplir la
+regla de la reapertura complementaria: un concepto no puede recibir una segunda fila
+en el mismo período. El código valida lo mismo antes de insertar, para poder nombrar
+los conceptos en conflicto en vez de propagar un 2601 crudo, pero la restricción es
+la red de seguridad real.
+
+### Sobre la columna `VIGENTE`
+
+Una versión anterior de este script planteaba la reapertura como **reemplazo**: anular
+lógicamente las filas previas (`VIGENTE = 0`) e insertar las nuevas, lo que además
+obligaba a cambiar `UQ_GASTO_SUPERVISION` por un índice filtrado.
+
+Ese enfoque se descartó: la reapertura pasó a ser complementaria y no anula nada, así
+que `VIGENTE` quedaría siempre en 1. El paso 3 del script limpia esa columna y sus
+índices si llegaron a crearse, y no hace nada si nunca se ejecutó aquella versión.
+
+Si aparecen filas con `VIGENTE = 0` — es decir, si se llegó a usar el enfoque de
+reemplazo — el script **no toca nada** y avisa, porque borrar la columna perdería la
+única marca de que esas filas estaban anuladas.
 
 ## Estructura de `RO_T_REAPERTURAS_GASTOS_SUP`
 
@@ -99,14 +95,22 @@ y solo una obtiene `rows_affected = 1`; la otra ve 0, hace rollback y falla.
 
 1. Desde `controlarGastos.php` se elige semana + supervisora y se habilita la
    reapertura con un motivo obligatorio. Se crea una fila en estado `ABIERTA`.
-2. La supervisora entra a `cargaGastosNew.php` y ve esa semana editable, aunque ya
-   tenga gastos cargados.
+   Si el período ya tiene todos los conceptos cargados, la pantalla avisa que no
+   hay nada para agregar y no deja habilitarla.
+2. La supervisora entra a `cargaGastosNew.php` y ve un aviso con los períodos
+   reabiertos. Al seleccionar esa semana, quedan editables **solo los conceptos sin
+   carga**; los ya cargados se muestran atenuados y bloqueados.
 3. Al guardar, dentro de una única transacción:
    - se consume la reapertura (`ABIERTA` → `CONSUMIDA`) verificando `rows_affected = 1`;
-   - se anulan las filas previas del período (`VIGENTE = 1` → `0`), gastos y adelantos;
+   - se valida que ningún concepto enviado tenga ya una fila en el período;
    - se insertan las filas nuevas.
-   Si algo falla, rollback: no se consume la reapertura ni se anula nada.
+   Si algo falla, rollback: no se consume la reapertura ni se inserta nada.
 4. El período vuelve a quedar cerrado.
+
+El **adelanto no se toca** en una reapertura. Es del período, no del concepto, y ya
+se cargó en la carga original; como `insertarAdelanto` hace `INSERT` y `obtenerAdelanto`
+hace `SUM`, volver a mandarlo duplicaría el importe. El campo se deshabilita en la
+pantalla y el servidor lo ignora.
 
 ## Consulta útil: historial de un período
 
@@ -115,19 +119,19 @@ SELECT * FROM RO_T_REAPERTURAS_GASTOS_SUP
 WHERE SEMANA = 36 AND ANIO = 2026 AND SUPERVISORA = 'SONIA PACIFICO'
 ORDER BY FECHA_HABILITACION DESC;
 
--- Filas anuladas de ese período (lo que había antes de la recarga)
-SELECT * FROM RO_T_GASTOS_SUPERVISION
+-- Los gastos cargados por una reapertura son filas normales. Para ubicarlos,
+-- comparar FECHA_MODIF contra la FECHA_USO de la reapertura.
+SELECT SEMANA, ANIO, SUPERVISORA, ID_CONC, IMPORTE, IMPORTE_TARJETA, FECHA_MODIF
+FROM RO_T_GASTOS_SUPERVISION
 WHERE SEMANA = 36 AND ANIO = 2026 AND SUPERVISORA = 'SONIA PACIFICO'
-ORDER BY VIGENTE DESC, ID;
+ORDER BY FECHA_MODIF;
 ```
 
 ## Notas
 
-- Todas las lecturas y los UPDATE de `RO_T_GASTOS_SUPERVISION` en la aplicación
-  filtran por `VIGENTE = 1`. Si se agrega una consulta nueva sobre esta tabla,
-  **tiene que llevar el filtro**: omitirlo hace sobrecontar, sumando la fila anulada
-  junto con la vigente.
-- Las filas anuladas se conservan: son el historial de lo que había antes de la
-  recarga. No se borran nunca.
-- `revertir_reapertura_gastos.sql` deshace la migración completa. Solo tiene sentido
-  si no se consumió ninguna reapertura todavía (ver el aviso dentro del script).
+- El usuario que habilita o anula llega en el payload de
+  `Controller/reaperturasGastos.php`, no de la sesión PHP: a ese controller también
+  lo consume otra aplicación que no comparte la sesión. Si no viene por ninguna vía
+  se registra `SIN_IDENTIFICAR`.
+- `revertir_reapertura_gastos.sql` elimina la tabla de reaperturas. Los gastos
+  cargados mediante una reapertura se conservan: son filas normales.

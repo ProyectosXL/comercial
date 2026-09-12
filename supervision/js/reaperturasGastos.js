@@ -139,35 +139,38 @@ $(document).ready(function () {
     function pedirMotivoYHabilitar(semana, anio, supervisora, estado) {
         let advertencia = '';
 
+        if (estado.disponibles === 0) {
+            // Reabrir no serviria de nada: no queda ningun concepto sin carga.
+            Swal.fire(
+                'No hay nada para agregar',
+                'Los ' + estado.total_conceptos + ' conceptos ya tienen gastos cargados en la semana ' +
+                semana + '/' + anio + '. La reapertura solo habilita conceptos sin carga previa, ' +
+                'así que no tendría efecto.',
+                'info'
+            );
+            return;
+        }
+
         if (estado.conceptos === 0) {
             advertencia =
                 '<div class="alert alert-info text-start mb-3">' +
-                'El período no tiene gastos cargados. La reapertura solo habilita la carga.' +
+                'El período no tiene ningún gasto cargado: quedan disponibles los ' +
+                estado.total_conceptos + ' conceptos.' +
                 '</div>';
         } else {
-            let detalle = '<li>' + estado.conceptos + ' concepto(s) cargado(s), total $' +
-                estado.total.toLocaleString('es-AR', { minimumFractionDigits: 2 }) + '</li>';
-
-            if (estado.cargados > 0) {
-                detalle += '<li><strong>' + estado.cargados + ' ya asentado(s) en Tango</strong> ' +
-                    '(marcados como cargados por administración)</li>';
-            }
-            if (estado.con_cae > 0) {
-                detalle += '<li><strong>' + estado.con_cae + ' con CAE registrado</strong></li>';
-            }
-
-            const critico = estado.cargados > 0 || estado.con_cae > 0;
-
             advertencia =
-                '<div class="alert alert-' + (critico ? 'danger' : 'warning') + ' text-start mb-3">' +
-                '<strong>Al guardarse la nueva carga, lo actual se anula y se reemplaza.</strong>' +
-                '<ul class="mb-' + (critico ? '2' : '0') + ' mt-2">' + detalle + '</ul>' +
-                (critico
-                    ? '<small>Esos conceptos ya fueron asentados en el sistema contable. ' +
-                      'Si se recargan, el registro de supervisión y el contable quedan distintos ' +
-                      'hasta que administración los vuelva a cargar.</small>'
-                    : '') +
-                '</div>';
+                '<div class="alert alert-info text-start mb-3">' +
+                '<strong>Es una carga complementaria: no se modifica nada de lo ya cargado.</strong>' +
+                '<ul class="mb-0 mt-2">' +
+                '<li>' + estado.conceptos + ' concepto(s) ya cargado(s), total $' +
+                estado.total.toLocaleString('es-AR', { minimumFractionDigits: 2 }) +
+                ' — quedan como están' +
+                (estado.cargados > 0
+                    ? ', incluidos ' + estado.cargados + ' ya asentado(s) en Tango'
+                    : '') + '</li>' +
+                '<li><strong>' + estado.disponibles + ' concepto(s) disponible(s)</strong> ' +
+                'para que la supervisora agregue</li>' +
+                '</ul></div>';
         }
 
         Swal.fire({

@@ -798,22 +798,19 @@ public function obtenerGastosAutorizados($semana, $anio, $supervisora = null)
     }
 
     /**
-     * Resumen de lo que hay cargado en un periodo, para advertir antes de reabrir.
+     * Resumen de un periodo, para mostrar antes de reabrirlo.
      *
-     * CARGADOS / CON_CAE son los conceptos que administracion ya asento en Tango:
-     * reabrir el periodo los deja divergir del registro contable, y por eso el
-     * aviso es explicito en la pantalla.
+     * La reapertura es complementaria: no toca lo ya cargado, solo habilita los
+     * conceptos que todavia no tienen fila. Por eso lo que importa mostrar es
+     * cuantos conceptos quedan disponibles: si son cero, reabrir no sirve de nada.
      */
     public function estadoPeriodoGastos($semana, $anio, $supervisora) {
         $sql = "SELECT COUNT(*) AS CONCEPTOS,
                        SUM(CASE WHEN CARGADO = 1 OR CARGADO_TARJ = 1 THEN 1 ELSE 0 END) AS CARGADOS,
-                       SUM(CASE WHEN (CAE_Efectivo IS NOT NULL AND LTRIM(CAE_Efectivo) <> '')
-                                  OR (CAE_Tarjeta IS NOT NULL AND LTRIM(CAE_Tarjeta) <> '')
-                                THEN 1 ELSE 0 END) AS CON_CAE,
                        SUM(CASE WHEN ESTADO = 1 THEN 1 ELSE 0 END) AS AUTORIZADOS,
                        ISNULL(SUM(ISNULL(IMPORTE, 0) + ISNULL(IMPORTE_TARJETA, 0)), 0) AS TOTAL
                 FROM RO_T_GASTOS_SUPERVISION
-                WHERE SEMANA = ? AND ANIO = ? AND SUPERVISORA = ? AND VIGENTE = 1";
+                WHERE SEMANA = ? AND ANIO = ? AND SUPERVISORA = ?";
 
         $params = array($semana, $anio, $supervisora);
         $stmt = sqlsrv_query($this->cid_central, $sql, $params);
@@ -823,13 +820,25 @@ public function obtenerGastosAutorizados($semana, $anio, $supervisora = null)
         }
 
         $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+        $cargados = intval($row['CONCEPTOS']);
+
+        $stmtTotal = sqlsrv_query($this->cid_central,
+            "SELECT COUNT(*) AS TOTAL_CONCEPTOS FROM RO_T_CONCEPTOS_GASTOS_SUP");
+
+        if ($stmtTotal === false) {
+            throw new Exception("Error al contar los conceptos: " . print_r(sqlsrv_errors(), true));
+        }
+
+        $rowTotal = sqlsrv_fetch_array($stmtTotal, SQLSRV_FETCH_ASSOC);
+        $totalConceptos = intval($rowTotal['TOTAL_CONCEPTOS']);
 
         return array(
-            'conceptos'   => intval($row['CONCEPTOS']),
-            'cargados'    => intval($row['CARGADOS']),
-            'con_cae'     => intval($row['CON_CAE']),
-            'autorizados' => intval($row['AUTORIZADOS']),
-            'total'       => floatval($row['TOTAL'])
+            'conceptos'     => $cargados,
+            'cargados'      => intval($row['CARGADOS']),
+            'autorizados'   => intval($row['AUTORIZADOS']),
+            'total'         => floatval($row['TOTAL']),
+            'disponibles'   => max(0, $totalConceptos - $cargados),
+            'total_conceptos' => $totalConceptos
         );
     }
 

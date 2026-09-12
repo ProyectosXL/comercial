@@ -428,9 +428,9 @@ $(document).ready(function() {
         let esAdvertencia = false;
 
         if (hayReapertura) {
-            esAdvertencia = true;
-            mensaje += `\n\n🔓 Esta semana está reabierta por única vez.`;
-            mensaje += `\nLo que ya estaba cargado se reemplaza por esto, y la semana vuelve a cerrarse.`;
+            mensaje += `\n\n🔓 Carga complementaria sobre una semana reabierta.`;
+            mensaje += `\nSe agregan estos conceptos; lo que ya estaba cargado no se modifica.`;
+            mensaje += `\nAl guardar, la semana vuelve a cerrarse.`;
         }
 
         if (!validacion.todosValidados) {
@@ -495,6 +495,7 @@ $(document).ready(function() {
 
                         if (response.reaperturaConsumida) {
                             mensajeFinal += `\n\n🔒 Se usó la reapertura: la semana vuelve a quedar cerrada.`;
+                            mensajeFinal += `\nLo que ya estaba cargado quedó intacto.`;
                         }
 
                         Swal.fire({

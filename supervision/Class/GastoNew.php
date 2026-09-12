@@ -58,50 +58,42 @@ class GastoNew
     }
 
     /**
-     * Anula logicamente las filas previas de un periodo.
+     * Conceptos que ya tienen una fila en el periodo.
      *
-     * Las filas anuladas se conservan como historial de lo que habia antes de la
-     * recarga. El indice unico filtrado UQ_GASTO_SUPERVISION_VIGENTE es lo que
-     * permite insertar las nuevas: al quedar en VIGENTE = 0 las viejas dejan de
-     * ocupar la clave (SEMANA, ANIO, ID_CONC, SUPERVISORA).
+     * La reapertura es complementaria: habilita conceptos sin carga, y no toca
+     * nada de lo ya cargado. Esta consulta es la que hace cumplir esa regla.
+     * Se ejecuta dentro de la transaccion, para que no se cuele un concepto que
+     * otra pestaña acaba de insertar entre la validacion y el insert.
      */
-    private function anularPeriodo($semana, $anio, $supervisora) {
+    private function conceptosYaCargados($semana, $anio, $supervisora) {
+        $sql = "SELECT ID_CONC FROM RO_T_GASTOS_SUPERVISION
+                WHERE SEMANA = ? AND ANIO = ? AND SUPERVISORA = ?";
+
         $params = array($semana, $anio, $supervisora);
+        $stmt = sqlsrv_query($this->cid_central, $sql, $params);
 
-        $sqlGastos = "UPDATE RO_T_GASTOS_SUPERVISION
-                         SET VIGENTE = 0
-                       WHERE SEMANA = ? AND ANIO = ? AND SUPERVISORA = ? AND VIGENTE = 1";
-        $stmt = sqlsrv_query($this->cid_central, $sqlGastos, $params);
         if ($stmt === false) {
-            throw new Exception("Error al anular los gastos previos: " . print_r(sqlsrv_errors(), true));
+            throw new Exception("Error al consultar los conceptos ya cargados: " . print_r(sqlsrv_errors(), true));
         }
-        $gastosAnulados = sqlsrv_rows_affected($stmt);
 
-        // El adelanto tambien se anula: obtenerAdelanto() hace SUM, y sin esto el
-        // adelanto de la carga nueva se sumaria al de la carga original.
-        $sqlAdelantos = "UPDATE FU_T_ADELANTOS_SUPERVISION
-                            SET VIGENTE = 0
-                          WHERE SEMANA = ? AND ANIO = ? AND SUPERVISORA = ? AND VIGENTE = 1";
-        $stmt = sqlsrv_query($this->cid_central, $sqlAdelantos, $params);
-        if ($stmt === false) {
-            throw new Exception("Error al anular los adelantos previos: " . print_r(sqlsrv_errors(), true));
+        $ids = array();
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $ids[intval($row['ID_CONC'])] = true;
         }
-        $adelantosAnulados = sqlsrv_rows_affected($stmt);
 
-        return array(
-            'gastos' => $gastosAnulados === false ? 0 : $gastosAnulados,
-            'adelantos' => $adelantosAnulados === false ? 0 : $adelantosAnulados
-        );
+        return $ids;
     }
 
     /**
      * Inserta gastos con validación automática contra presupuesto
      *
-     * Si el periodo esta cerrado (por fecha o porque ya tiene gastos vigentes),
-     * exige una reapertura ABIERTA y la consume en la misma transaccion. El orden
-     * importa: primero se consume, despues se anula lo anterior y por ultimo se
-     * inserta. Si cualquiera de los tres pasos falla, el rollback deja el periodo
-     * cerrado y la reapertura sin usar.
+     * Si el periodo esta cerrado (por fecha o porque ya tiene gastos cargados),
+     * exige una reapertura ABIERTA y la consume en la misma transaccion.
+     *
+     * La reapertura es COMPLEMENTARIA: solo admite conceptos que todavia no
+     * tienen carga en el periodo. Lo ya cargado queda intacto, con su importe,
+     * su CAE y su marca de cargado en Tango. Si algo falla, el rollback deja el
+     * periodo cerrado y la reapertura sin usar.
      */
     public function insertarGastosConValidacion($semana, $anio, $gastos, $supervisora, $validacion,
                                                 $usuario = null, $importeAdelanto = null,
@@ -119,7 +111,24 @@ class GastoNew
                     );
                 }
                 $reaperturaConsumida = true;
-                $this->anularPeriodo($semana, $anio, $supervisora);
+
+                // Solo conceptos nuevos. La restriccion unica UQ_GASTO_SUPERVISION
+                // ya lo impediria, pero ahi el error seria un 2601 crudo: esto
+                // nombra los conceptos en conflicto y aborta antes de insertar nada.
+                $yaCargados = $this->conceptosYaCargados($semana, $anio, $supervisora);
+                $conflictos = array();
+                foreach ($gastos as $gasto) {
+                    if (isset($yaCargados[intval($gasto['id_conc'])])) {
+                        $conflictos[] = $gasto['concepto'];
+                    }
+                }
+                if (!empty($conflictos)) {
+                    throw new Exception(
+                        "Estos conceptos ya tienen gastos cargados en la semana $semana/$anio y no se pueden " .
+                        "volver a cargar: " . implode(', ', $conflictos) . ". " .
+                        "La reapertura solo habilita conceptos sin carga previa."
+                    );
+                }
             }
 
             $gastosAprobados = 0;
@@ -236,7 +245,12 @@ class GastoNew
             // El adelanto va dentro de la misma transaccion. Antes se insertaba
             // despues del commit desde el controller, asi que un error ahi dejaba
             // los gastos guardados, el periodo cerrado y el adelanto perdido.
-            if ($importeAdelanto !== null && floatval($importeAdelanto) > 0) {
+            //
+            // En una reapertura no se toca: el adelanto es del periodo, no del
+            // concepto, y ya fue cargado en la carga original. insertarAdelanto
+            // hace INSERT y obtenerAdelanto hace SUM, asi que volver a mandarlo
+            // duplicaria el importe. El controller ya lo anula, esto es el respaldo.
+            if (!$reaperturaConsumida && $importeAdelanto !== null && floatval($importeAdelanto) > 0) {
                 $this->insertarAdelanto($semana, $anio, $importeAdelanto, $supervisora);
             }
 
@@ -248,7 +262,8 @@ class GastoNew
                 $mensaje .= "Requieren auditoría: $gastosExcedidos.";
             }
             if ($reaperturaConsumida) {
-                $mensaje .= " Se usó la reapertura del período, que vuelve a quedar cerrado.";
+                $mensaje .= " Se usó la reapertura del período, que vuelve a quedar cerrado. " .
+                            "Lo que ya estaba cargado no se modificó.";
             }
 
             return [

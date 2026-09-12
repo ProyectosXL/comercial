@@ -63,6 +63,17 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
             border-color: #4caf50;
             color: #2e7d32;
         }
+        /* Conceptos que ya tienen carga en un período reabierto: se muestran
+           para que la supervisora vea qué cargó, pero no se pueden tocar. */
+        .card.concepto-bloqueado {
+            opacity: 0.6;
+        }
+        .card.concepto-bloqueado .card-title::after {
+            content: " · ya cargado";
+            font-size: 11px;
+            font-weight: normal;
+            color: #6c757d;
+        }
         .badge-new-version {
             background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
             color: white;

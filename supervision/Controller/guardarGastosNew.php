@@ -50,14 +50,21 @@ try {
     /**
      * Un período está cerrado si ya pasó (misma regla que el combo de la
      * pantalla, compartida en Gasto::esPeriodoCerradoPorFecha) o si ya tiene
-     * gastos vigentes cargados. En cualquiera de los dos casos hace falta una
-     * reapertura habilitada, que se consume dentro de la transacción del insert.
+     * gastos cargados. En cualquiera de los dos casos hace falta una reapertura
+     * habilitada, que se consume dentro de la transacción del insert.
      *
      * Hasta esta versión el controller no validaba nada de esto: cualquier POST
      * insertaba en cualquier semana.
      */
     $gastosExistentes = $gasto->obtenerGastosExistentes($semana, $anio, $supervisora);
     $periodoCerrado = Gasto::esPeriodoCerradoPorFecha($semana, $anio) || !empty($gastosExistentes);
+
+    // En una reapertura el adelanto no se toca: es del período, ya se cargó en la
+    // carga original, y como insertarAdelanto hace INSERT y obtenerAdelanto hace
+    // SUM, volver a mandarlo duplicaría el importe.
+    if ($periodoCerrado) {
+        $importeAdelanto = null;
+    }
 
     // Insertar gastos con estado automático basado en validación de presupuesto.
     // El adelanto y el consumo de la reapertura van en la misma transacción.
