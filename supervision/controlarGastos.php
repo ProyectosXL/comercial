@@ -1,10 +1,16 @@
 <?php
 session_start();
 
+    // La pantalla no validaba nada: entraba cualquiera con la URL.
+    if (!isset($_SESSION['username'])) {
+        header("Location:../sistemas/login.php");
+        exit;
+    }
+
     require_once 'Class/Gasto.php';
     $gastos = new Gasto();
     $supervisoras = $gastos->traerSupervisoras();
-    
+
     // Obtener semana actual
     $semanaActual = date('W');
     $anioActual = date('Y');
@@ -70,10 +76,39 @@ session_start();
                 <button type="button" class="btn btn-primary me-2" id="buscarBtn">
                     <i class="fas fa-search"></i> Buscar
                 </button>
-                <button type="button" class="btn btn-warning" id="verPendientesBtn">
+                <button type="button" class="btn btn-warning me-2" id="verPendientesBtn">
                     <i class="fas fa-clock"></i> Ver Gastos Pendientes
                 </button>
+                <button type="button" class="btn btn-danger" id="reabrirPeriodoBtn"
+                        title="Habilitar por única vez la carga de este período para la supervisora seleccionada">
+                    <i class="fas fa-lock-open"></i> Reabrir Período
+                </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Períodos actualmente reabiertos -->
+    <div class="alert alert-warning d-none" id="reaperturasPanel" role="alert">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong><i class="fas fa-lock-open me-1"></i> Períodos reabiertos pendientes de uso</strong>
+            <button type="button" class="btn btn-sm btn-outline-dark" id="refrescarReaperturasBtn">
+                <i class="fas fa-sync"></i>
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-borderless mb-0" id="reaperturasTable">
+                <thead>
+                    <tr>
+                        <th>Semana</th>
+                        <th>Supervisora</th>
+                        <th>Motivo</th>
+                        <th>Habilitó</th>
+                        <th>Fecha</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
 
@@ -165,6 +200,7 @@ session_start();
     <script src="js/image-rotation-helper.js"></script>
     <script src="js/diagnostico-imagenes.js"></script>
     <script src="js/controlarGastos.js"></script>
+    <script src="js/reaperturasGastos.js"></script>
 
 <!-- Modal para ver Observaciones -->
     <div class="modal fade" id="observacionModal" tabindex="-1" aria-hidden="true">
