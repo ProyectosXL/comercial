@@ -622,6 +622,37 @@ public function obtenerGastosAutorizados($semana, $anio, $supervisora = null)
         return $row ? intval($row['ROTACION']) : 0;
     }
 
+    /**
+     * Indica si un periodo esta cerrado por fecha.
+     *
+     * Es la regla que antes vivia solamente en el HTML de cargaGastosNew.php,
+     * donde se calculaba data-es-anterior por cada opcion del combo. Al tenerla
+     * en un solo lugar, la validacion del servidor en guardarGastosNew.php no
+     * puede quedar desalineada del combo que ve la supervisora: si divergieran,
+     * la pantalla dejaria guardar y el servidor rechazaria.
+     *
+     * Las semanas futuras no estan cerradas, igual que antes.
+     */
+    public static function esPeriodoCerradoPorFecha($semana, $anio) {
+        $semanaActual = intval(date('W'));
+        $anioActual = intval(date('Y'));
+        $semana = intval($semana);
+        $anio = intval($anio);
+
+        $esAnterior = ($anio < $anioActual) || ($anio == $anioActual && $semana < $semanaActual);
+
+        // Se permite cargar la semana pasada si todavia es lunes o martes.
+        $esLunesOMartes = (intval(date('N')) <= 2);
+        $semanaPasada = intval(date('W', strtotime('-1 week')));
+        $anioSemanaPasada = intval(date('Y', strtotime('-1 week')));
+
+        if ($esLunesOMartes && $semana === $semanaPasada && $anio === $anioSemanaPasada) {
+            $esAnterior = false;
+        }
+
+        return $esAnterior;
+    }
+
     /* ================================================================
      * Reapertura manual de periodos
      *
