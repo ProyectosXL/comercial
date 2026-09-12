@@ -54,6 +54,16 @@ La solución es reemplazarlo por un índice único **filtrado** por `VIGENTE = 1
 filas anuladas dejan de ocupar la clave y se sigue garantizando una única fila
 vigente por concepto y período, que es la invariante que interesa.
 
+`UQ_GASTO_SUPERVISION` está implementado como **restricción UNIQUE**, no como
+índice suelto. Aparece igual en `sys.indexes`, pero `DROP INDEX` falla con error
+3723 (*"It is being used for UNIQUE KEY constraint enforcement"*): hay que sacarlo
+con `ALTER TABLE ... DROP CONSTRAINT`. El script contempla las dos formas.
+
+El paso 5 del script verifica el estado final y falla con `RAISERROR` si algo
+quedó a medias. Hace falta porque los pasos van en batches separados por `GO`: si
+uno falla, los siguientes se ejecutan igual y el script terminaría diciendo
+"finalizada" con la migración rota.
+
 ### Requisito de SET options
 
 Los índices filtrados exigen `ANSI_NULLS ON` y `QUOTED_IDENTIFIER ON` en toda

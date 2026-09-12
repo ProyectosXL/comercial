@@ -62,12 +62,29 @@ GO
 -- UQ_GASTO_SUPERVISION es UNIQUE sobre (SEMANA, ANIO, ID_CONC, SUPERVISORA).
 -- Al filtrarlo por VIGENTE = 1 las filas anuladas dejan de ocupar la clave,
 -- y se sigue garantizando una unica fila vigente por concepto y periodo.
-IF EXISTS (SELECT * FROM sys.indexes
+--
+-- Ojo: esta implementado como RESTRICCION UNIQUE, no como indice suelto.
+-- Aparece igual en sys.indexes, pero DROP INDEX falla con error 3723
+-- ("It is being used for UNIQUE KEY constraint enforcement"): hay que sacarlo
+-- con ALTER TABLE ... DROP CONSTRAINT. Contemplamos las dos formas por si en
+-- algun entorno se creo como indice.
+IF EXISTS (SELECT * FROM sys.key_constraints
            WHERE name = 'UQ_GASTO_SUPERVISION'
-             AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
+             AND parent_object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
+BEGIN
+    ALTER TABLE RO_T_GASTOS_SUPERVISION DROP CONSTRAINT UQ_GASTO_SUPERVISION
+    PRINT 'Restriccion UNIQUE UQ_GASTO_SUPERVISION eliminada'
+END
+ELSE IF EXISTS (SELECT * FROM sys.indexes
+                WHERE name = 'UQ_GASTO_SUPERVISION'
+                  AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
 BEGIN
     DROP INDEX UQ_GASTO_SUPERVISION ON RO_T_GASTOS_SUPERVISION
     PRINT 'Indice UQ_GASTO_SUPERVISION eliminado'
+END
+ELSE
+BEGIN
+    PRINT 'UQ_GASTO_SUPERVISION ya no existe'
 END
 GO
 
@@ -155,5 +172,57 @@ BEGIN
 END
 GO
 
-PRINT '--- Migracion de reapertura de gastos finalizada ---'
+-- =====================================================================
+-- 5. Verificacion final
+-- =====================================================================
+-- Los pasos anteriores van en batches separados por GO, asi que si uno falla
+-- los siguientes se ejecutan igual y el script termina diciendo "finalizada".
+-- Este bloque revisa el estado real y falla ruidosamente si algo quedo a medias.
+DECLARE @errores INT = 0
+
+IF EXISTS (SELECT * FROM sys.indexes
+           WHERE name = 'UQ_GASTO_SUPERVISION'
+             AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
+BEGIN
+    PRINT 'ERROR: UQ_GASTO_SUPERVISION sigue existiendo. La reapertura NO va a funcionar:'
+    PRINT '       el INSERT de la segunda carga va a chocar contra las filas anuladas.'
+    SET @errores = @errores + 1
+END
+
+IF NOT EXISTS (SELECT * FROM sys.indexes
+               WHERE name = 'UQ_GASTO_SUPERVISION_VIGENTE'
+                 AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION') AND has_filter = 1)
+BEGIN
+    PRINT 'ERROR: falta el indice filtrado UQ_GASTO_SUPERVISION_VIGENTE.'
+    SET @errores = @errores + 1
+END
+
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+               WHERE TABLE_NAME = 'RO_T_GASTOS_SUPERVISION' AND COLUMN_NAME = 'VIGENTE')
+BEGIN
+    PRINT 'ERROR: falta la columna VIGENTE en RO_T_GASTOS_SUPERVISION.'
+    SET @errores = @errores + 1
+END
+
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+               WHERE TABLE_NAME = 'FU_T_ADELANTOS_SUPERVISION' AND COLUMN_NAME = 'VIGENTE')
+BEGIN
+    PRINT 'ERROR: falta la columna VIGENTE en FU_T_ADELANTOS_SUPERVISION.'
+    SET @errores = @errores + 1
+END
+
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RO_T_REAPERTURAS_GASTOS_SUP' AND xtype='U')
+BEGIN
+    PRINT 'ERROR: falta la tabla RO_T_REAPERTURAS_GASTOS_SUP.'
+    SET @errores = @errores + 1
+END
+
+IF @errores > 0
+BEGIN
+    RAISERROR('La migracion quedo incompleta: revisar los ERROR de arriba y volver a ejecutar el script.', 16, 1)
+END
+ELSE
+BEGIN
+    PRINT '--- Migracion de reapertura de gastos finalizada y verificada ---'
+END
 GO
