@@ -613,13 +613,195 @@ public function obtenerGastosAutorizados($semana, $anio, $supervisora = null)
     public function obtenerRotacionImagen($nombreImagen) {
         $sql = "SELECT ROTACION FROM RO_T_ROTACION_IMAGENES_SUP WHERE NOMBRE_IMAGEN = ?";
         $stmt = sqlsrv_query($this->cid_central, $sql, array($nombreImagen));
-        
+
         if ($stmt === false) {
             return 0;
         }
-        
+
         $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
         return $row ? intval($row['ROTACION']) : 0;
+    }
+
+    /* ================================================================
+     * Reapertura manual de periodos
+     *
+     * Una reapertura habilita a una supervisora a volver a cargar un
+     * periodo ya cerrado, por unica vez. El consumo (ABIERTA -> CONSUMIDA)
+     * no esta aca: vive en GastoNew, dentro de la misma transaccion que
+     * la anulacion y el insert de los gastos nuevos.
+     * ================================================================ */
+
+    /**
+     * Habilita una reapertura para un periodo y supervisora.
+     *
+     * El indice unico filtrado UQ_REAPERTURAS_GASTOS_ABIERTA garantiza que no
+     * puedan coexistir dos reaperturas ABIERTA para el mismo periodo, asi que
+     * un segundo intento choca contra la clave y lo reportamos como tal en vez
+     * de dejar pasar el error crudo de sqlsrv.
+     */
+    public function habilitarReapertura($semana, $anio, $supervisora, $motivo, $usuario) {
+        $sql = "INSERT INTO RO_T_REAPERTURAS_GASTOS_SUP
+                    (SEMANA, ANIO, SUPERVISORA, MOTIVO, USUARIO_HABILITA, FECHA_HABILITACION, ESTADO)
+                VALUES (?, ?, ?, ?, ?, GETDATE(), 'ABIERTA')";
+
+        $params = array($semana, $anio, $supervisora, $motivo, $usuario);
+        $stmt = sqlsrv_query($this->cid_central, $sql, $params);
+
+        if ($stmt === false) {
+            $errors = sqlsrv_errors();
+            foreach ($errors as $error) {
+                // 2601 / 2627: violacion del indice unico filtrado por ESTADO = 'ABIERTA'
+                if ($error['code'] == 2601 || $error['code'] == 2627) {
+                    throw new Exception("El periodo ya tiene una reapertura abierta para $supervisora.");
+                }
+            }
+            throw new Exception("Error al habilitar la reapertura: " . print_r($errors, true));
+        }
+
+        return true;
+    }
+
+    /**
+     * Devuelve la reapertura ABIERTA de un periodo, o null si no hay.
+     */
+    public function obtenerReaperturaActiva($semana, $anio, $supervisora) {
+        $sql = "SELECT ID, SEMANA, ANIO, SUPERVISORA, MOTIVO, USUARIO_HABILITA, FECHA_HABILITACION
+                FROM RO_T_REAPERTURAS_GASTOS_SUP
+                WHERE SEMANA = ? AND ANIO = ? AND SUPERVISORA = ? AND ESTADO = 'ABIERTA'";
+
+        $params = array($semana, $anio, $supervisora);
+        $stmt = sqlsrv_query($this->cid_central, $sql, $params);
+
+        if ($stmt === false) {
+            throw new Exception("Error al consultar la reapertura: " . print_r(sqlsrv_errors(), true));
+        }
+
+        $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+        return $row ? $row : null;
+    }
+
+    public function tieneReaperturaActiva($semana, $anio, $supervisora) {
+        return $this->obtenerReaperturaActiva($semana, $anio, $supervisora) !== null;
+    }
+
+    /**
+     * Reaperturas ABIERTA de una supervisora, indexadas por "SEMANA|ANIO".
+     * Es la forma en que cargaGastosNew.php marca las opciones del combo.
+     */
+    public function reaperturasActivasDeSupervisora($supervisora) {
+        $sql = "SELECT SEMANA, ANIO, MOTIVO, USUARIO_HABILITA, FECHA_HABILITACION
+                FROM RO_T_REAPERTURAS_GASTOS_SUP
+                WHERE SUPERVISORA = ? AND ESTADO = 'ABIERTA'";
+
+        $stmt = sqlsrv_query($this->cid_central, $sql, array($supervisora));
+
+        if ($stmt === false) {
+            throw new Exception("Error al consultar las reaperturas activas: " . print_r(sqlsrv_errors(), true));
+        }
+
+        $reaperturas = array();
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $reaperturas[$row['SEMANA'] . '|' . $row['ANIO']] = $row;
+        }
+
+        return $reaperturas;
+    }
+
+    /**
+     * Lista reaperturas para el panel de controlarGastos.
+     * Sin $estado devuelve todas; con 'ABIERTA' solo las pendientes de uso.
+     */
+    public function listarReaperturas($estado = null, $limite = 50) {
+        $sql = "SELECT TOP (?) ID, SEMANA, ANIO, SUPERVISORA, MOTIVO,
+                       USUARIO_HABILITA, FECHA_HABILITACION, ESTADO,
+                       FECHA_USO, USUARIO_USO, USUARIO_ANULA, FECHA_ANULACION
+                FROM RO_T_REAPERTURAS_GASTOS_SUP";
+
+        $params = array($limite);
+
+        if ($estado !== null) {
+            $sql .= " WHERE ESTADO = ?";
+            $params[] = $estado;
+        }
+
+        $sql .= " ORDER BY FECHA_HABILITACION DESC";
+
+        $stmt = sqlsrv_query($this->cid_central, $sql, $params);
+
+        if ($stmt === false) {
+            throw new Exception("Error al listar las reaperturas: " . print_r(sqlsrv_errors(), true));
+        }
+
+        $reaperturas = array();
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            foreach (['FECHA_HABILITACION', 'FECHA_USO', 'FECHA_ANULACION'] as $campo) {
+                if ($row[$campo] instanceof DateTime) {
+                    $row[$campo] = $row[$campo]->format('d-m-Y H:i');
+                }
+            }
+            $reaperturas[] = $row;
+        }
+
+        return $reaperturas;
+    }
+
+    /**
+     * Anula una reapertura sin usar. Solo afecta filas en ESTADO = 'ABIERTA',
+     * de modo que no se puede "anular" una que ya se consumio.
+     */
+    public function anularReapertura($id, $usuario) {
+        $sql = "UPDATE RO_T_REAPERTURAS_GASTOS_SUP
+                   SET ESTADO = 'ANULADA', USUARIO_ANULA = ?, FECHA_ANULACION = GETDATE()
+                 WHERE ID = ? AND ESTADO = 'ABIERTA'";
+
+        $stmt = sqlsrv_query($this->cid_central, $sql, array($usuario, $id));
+
+        if ($stmt === false) {
+            throw new Exception("Error al anular la reapertura: " . print_r(sqlsrv_errors(), true));
+        }
+
+        $filas = sqlsrv_rows_affected($stmt);
+        if ($filas === false || $filas === 0) {
+            throw new Exception("La reapertura no existe o ya fue consumida o anulada.");
+        }
+
+        return true;
+    }
+
+    /**
+     * Resumen de lo que hay cargado en un periodo, para advertir antes de reabrir.
+     *
+     * CARGADOS / CON_CAE son los conceptos que administracion ya asento en Tango:
+     * reabrir el periodo los deja divergir del registro contable, y por eso el
+     * aviso es explicito en la pantalla.
+     */
+    public function estadoPeriodoGastos($semana, $anio, $supervisora) {
+        $sql = "SELECT COUNT(*) AS CONCEPTOS,
+                       SUM(CASE WHEN CARGADO = 1 OR CARGADO_TARJ = 1 THEN 1 ELSE 0 END) AS CARGADOS,
+                       SUM(CASE WHEN (CAE_Efectivo IS NOT NULL AND LTRIM(CAE_Efectivo) <> '')
+                                  OR (CAE_Tarjeta IS NOT NULL AND LTRIM(CAE_Tarjeta) <> '')
+                                THEN 1 ELSE 0 END) AS CON_CAE,
+                       SUM(CASE WHEN ESTADO = 1 THEN 1 ELSE 0 END) AS AUTORIZADOS,
+                       ISNULL(SUM(ISNULL(IMPORTE, 0) + ISNULL(IMPORTE_TARJETA, 0)), 0) AS TOTAL
+                FROM RO_T_GASTOS_SUPERVISION
+                WHERE SEMANA = ? AND ANIO = ? AND SUPERVISORA = ? AND VIGENTE = 1";
+
+        $params = array($semana, $anio, $supervisora);
+        $stmt = sqlsrv_query($this->cid_central, $sql, $params);
+
+        if ($stmt === false) {
+            throw new Exception("Error al consultar el estado del periodo: " . print_r(sqlsrv_errors(), true));
+        }
+
+        $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+
+        return array(
+            'conceptos'   => intval($row['CONCEPTOS']),
+            'cargados'    => intval($row['CARGADOS']),
+            'con_cae'     => intval($row['CON_CAE']),
+            'autorizados' => intval($row['AUTORIZADOS']),
+            'total'       => floatval($row['TOTAL'])
+        );
     }
 
 }
