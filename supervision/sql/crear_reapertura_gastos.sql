@@ -86,57 +86,72 @@ GO
 -- significa que se llego a usar la version de reemplazo, y borrar la columna
 -- perderia la unica marca de que esas filas estaban anuladas: en ese caso el
 -- script avisa y no toca nada.
-IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
-           WHERE TABLE_NAME = 'RO_T_GASTOS_SUPERVISION' AND COLUMN_NAME = 'VIGENTE')
-   AND EXISTS (SELECT * FROM RO_T_GASTOS_SUPERVISION WHERE VIGENTE = 0)
+--
+-- Todo lo que nombra la columna VIGENTE va por sp_executesql. SQL Server compila
+-- el batch completo antes de ejecutarlo, asi que una referencia directa a VIGENTE
+-- falla con "Invalid column name" en cualquier base donde la columna no exista
+-- (o sea, en una instalacion limpia), aunque el IF que la protege sea falso.
+-- Dentro de una cadena no se resuelve hasta que se ejecuta.
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+               WHERE TABLE_NAME = 'RO_T_GASTOS_SUPERVISION' AND COLUMN_NAME = 'VIGENTE')
 BEGIN
-    PRINT 'AVISO: hay filas con VIGENTE = 0. No se limpia la columna.'
-    PRINT '       Revisar esas filas a mano antes de continuar.'
+    PRINT 'La columna VIGENTE no existe: nada que limpiar'
 END
 ELSE
 BEGIN
-    -- Los indices primero: IX_GASTO_SUPERVISION_PERIODO incluye VIGENTE, asi que
-    -- la columna no se puede borrar mientras exista.
-    IF EXISTS (SELECT * FROM sys.indexes
-               WHERE name = 'UQ_GASTO_SUPERVISION_VIGENTE'
-                 AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
-    BEGIN
-        DROP INDEX UQ_GASTO_SUPERVISION_VIGENTE ON RO_T_GASTOS_SUPERVISION
-        PRINT 'Indice UQ_GASTO_SUPERVISION_VIGENTE eliminado (redundante)'
-    END
+    DECLARE @anuladas INT
 
-    IF EXISTS (SELECT * FROM sys.indexes
-               WHERE name = 'IX_GASTO_SUPERVISION_PERIODO'
-                 AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
-    BEGIN
-        DROP INDEX IX_GASTO_SUPERVISION_PERIODO ON RO_T_GASTOS_SUPERVISION
-        PRINT 'Indice IX_GASTO_SUPERVISION_PERIODO eliminado'
-    END
+    EXEC sp_executesql
+        N'SELECT @cant = COUNT(*) FROM RO_T_GASTOS_SUPERVISION WHERE VIGENTE = 0',
+        N'@cant INT OUTPUT',
+        @cant = @anuladas OUTPUT
 
-    IF EXISTS (SELECT * FROM sys.default_constraints
-               WHERE name = 'DF_RO_T_GASTOS_SUPERVISION_VIGENTE')
+    IF @anuladas > 0
     BEGIN
-        ALTER TABLE RO_T_GASTOS_SUPERVISION DROP CONSTRAINT DF_RO_T_GASTOS_SUPERVISION_VIGENTE
+        PRINT 'AVISO: hay ' + CAST(@anuladas AS VARCHAR(10)) + ' filas con VIGENTE = 0.'
+        PRINT '       No se limpia la columna: revisarlas a mano antes de continuar.'
     END
-
-    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
-               WHERE TABLE_NAME = 'RO_T_GASTOS_SUPERVISION' AND COLUMN_NAME = 'VIGENTE')
+    ELSE
     BEGIN
-        ALTER TABLE RO_T_GASTOS_SUPERVISION DROP COLUMN VIGENTE
+        -- Los indices primero: IX_GASTO_SUPERVISION_PERIODO incluye VIGENTE, asi que
+        -- la columna no se puede borrar mientras exista.
+        IF EXISTS (SELECT * FROM sys.indexes
+                   WHERE name = 'UQ_GASTO_SUPERVISION_VIGENTE'
+                     AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
+        BEGIN
+            DROP INDEX UQ_GASTO_SUPERVISION_VIGENTE ON RO_T_GASTOS_SUPERVISION
+            PRINT 'Indice UQ_GASTO_SUPERVISION_VIGENTE eliminado (redundante)'
+        END
+
+        IF EXISTS (SELECT * FROM sys.indexes
+                   WHERE name = 'IX_GASTO_SUPERVISION_PERIODO'
+                     AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
+        BEGIN
+            DROP INDEX IX_GASTO_SUPERVISION_PERIODO ON RO_T_GASTOS_SUPERVISION
+            PRINT 'Indice IX_GASTO_SUPERVISION_PERIODO eliminado'
+        END
+
+        IF EXISTS (SELECT * FROM sys.default_constraints
+                   WHERE name = 'DF_RO_T_GASTOS_SUPERVISION_VIGENTE')
+        BEGIN
+            ALTER TABLE RO_T_GASTOS_SUPERVISION DROP CONSTRAINT DF_RO_T_GASTOS_SUPERVISION_VIGENTE
+        END
+
+        EXEC sp_executesql N'ALTER TABLE RO_T_GASTOS_SUPERVISION DROP COLUMN VIGENTE'
         PRINT 'Columna VIGENTE eliminada de RO_T_GASTOS_SUPERVISION'
-    END
 
-    IF EXISTS (SELECT * FROM sys.default_constraints
-               WHERE name = 'DF_FU_T_ADELANTOS_SUPERVISION_VIGENTE')
-    BEGIN
-        ALTER TABLE FU_T_ADELANTOS_SUPERVISION DROP CONSTRAINT DF_FU_T_ADELANTOS_SUPERVISION_VIGENTE
-    END
+        IF EXISTS (SELECT * FROM sys.default_constraints
+                   WHERE name = 'DF_FU_T_ADELANTOS_SUPERVISION_VIGENTE')
+        BEGIN
+            ALTER TABLE FU_T_ADELANTOS_SUPERVISION DROP CONSTRAINT DF_FU_T_ADELANTOS_SUPERVISION_VIGENTE
+        END
 
-    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
-               WHERE TABLE_NAME = 'FU_T_ADELANTOS_SUPERVISION' AND COLUMN_NAME = 'VIGENTE')
-    BEGIN
-        ALTER TABLE FU_T_ADELANTOS_SUPERVISION DROP COLUMN VIGENTE
-        PRINT 'Columna VIGENTE eliminada de FU_T_ADELANTOS_SUPERVISION'
+        IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+                   WHERE TABLE_NAME = 'FU_T_ADELANTOS_SUPERVISION' AND COLUMN_NAME = 'VIGENTE')
+        BEGIN
+            EXEC sp_executesql N'ALTER TABLE FU_T_ADELANTOS_SUPERVISION DROP COLUMN VIGENTE'
+            PRINT 'Columna VIGENTE eliminada de FU_T_ADELANTOS_SUPERVISION'
+        END
     END
 END
 GO
