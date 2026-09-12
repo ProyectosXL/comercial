@@ -87,6 +87,23 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
         </nav>
         
         <div class="container">
+            <?php if (!empty($reaperturasActivas)): ?>
+            <?php
+                // Sin esto la supervisora no tendria como enterarse de que le
+                // reabrieron una semana: tendria que ir probando el combo.
+                $semanasReabiertas = array();
+                foreach ($reaperturasActivas as $clave => $reapertura) {
+                    $semanasReabiertas[] = 'semana ' . $reapertura['SEMANA'] . '/' . $reapertura['ANIO'];
+                }
+            ?>
+            <div class="alert alert-warning py-2 mb-2" role="alert">
+                <i class="bi bi-unlock-fill me-1"></i>
+                <strong>Tenés <?php echo count($reaperturasActivas); ?> período(s) reabierto(s):</strong>
+                <?php echo htmlspecialchars(implode(', ', $semanasReabiertas)); ?>.
+                Seleccionalo en el combo de abajo para corregirlo. Se cierra al guardar.
+            </div>
+            <?php endif; ?>
+
             <div class="search-container">
                 <i class="bi bi-search search-icon"></i>
                 <input type="text" class="form-control" id="searchInput" placeholder="Buscar por concepto...">
