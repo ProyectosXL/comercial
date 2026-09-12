@@ -113,10 +113,11 @@ class Gasto
                    SET CAE_Tarjeta = ?, 
                        CAE_Efectivo = ?,
                        FECHA_CARGADO = GETDATE()
-                   WHERE ID_CONC = ? 
-                   AND SUPERVISORA = ? 
-                   AND SEMANA = ? 
-                   AND ANIO = ?";
+                   WHERE ID_CONC = ?
+                   AND SUPERVISORA = ?
+                   AND SEMANA = ?
+                   AND ANIO = ?
+                   AND VIGENTE = 1";
 
             // Preparamos los parámetros incluyendo todos los filtros
             $params = array(
@@ -168,9 +169,9 @@ class Gasto
     }
 
     public function obtenerGastosExistentes($semana, $anio, $supervisora) {
-        $sql = "SELECT ID_CONC, IMPORTE, IMPORTE_TARJETA, OBSERVACIONES, ESTADO, OBSERVACIONES_AUT 
-                FROM RO_T_GASTOS_SUPERVISION 
-                WHERE SEMANA = ? AND ANIO = ? AND SUPERVISORA = ?";
+        $sql = "SELECT ID_CONC, IMPORTE, IMPORTE_TARJETA, OBSERVACIONES, ESTADO, OBSERVACIONES_AUT
+                FROM RO_T_GASTOS_SUPERVISION
+                WHERE SEMANA = ? AND ANIO = ? AND SUPERVISORA = ? AND VIGENTE = 1";
         
         $params = array($semana, $anio, $supervisora);
         $stmt = sqlsrv_query($this->cid_central, $sql, $params);
@@ -191,13 +192,13 @@ class Gasto
     public function obtenerAdelanto($semana, $anio, $supervisora = null) {
         if ($supervisora) {
             $sql = "SELECT SUM(IMPORTE_ADELANTO) as TOTAL_ADELANTO 
-                    FROM FU_T_ADELANTOS_SUPERVISION 
-                    WHERE SEMANA = ? AND ANIO = ? AND SUPERVISORA = ?";
+                    FROM FU_T_ADELANTOS_SUPERVISION
+                    WHERE SEMANA = ? AND ANIO = ? AND SUPERVISORA = ? AND VIGENTE = 1";
             $params = array($semana, $anio, $supervisora);
         } else {
             $sql = "SELECT SUM(IMPORTE_ADELANTO) as TOTAL_ADELANTO 
-                    FROM FU_T_ADELANTOS_SUPERVISION 
-                    WHERE SEMANA = ? AND ANIO = ?";
+                    FROM FU_T_ADELANTOS_SUPERVISION
+                    WHERE SEMANA = ? AND ANIO = ? AND VIGENTE = 1";
             $params = array($semana, $anio);
         }
     
@@ -323,7 +324,7 @@ class Gasto
         foreach ($gastos as $gasto) {
             $sql = "UPDATE RO_T_GASTOS_SUPERVISION 
                     SET ESTADO = ?, FECHA_AUTO = GETDATE()
-                    WHERE SEMANA = ? AND ID_CONC = ? AND SUPERVISORA = ? AND ANIO = ?";
+                    WHERE SEMANA = ? AND ID_CONC = ? AND SUPERVISORA = ? AND ANIO = ? AND VIGENTE = 1";
             
             $autorizado = $gasto['autorizado']; // Asegúrate de que esto sea 1 o 2
             $params = array($autorizado, $semana, $gasto['id_conc'], $supervisora, $anio);
@@ -346,7 +347,7 @@ class Gasto
         $sql = "SELECT g.SUPERVISORA, c.CONCEPTO, g.IMPORTE, g.CARGADO, g.OBSERVACIONES, g.ID_CONC
                 FROM RO_T_GASTOS_SUPERVISION g
                 JOIN RO_T_CONCEPTOS_GASTOS_SUP c ON g.ID_CONC = c.ID_CONC
-                WHERE g.SEMANA = ? AND g.ANIO = ? AND g.ESTADO is null";
+                WHERE g.SEMANA = ? AND g.ANIO = ? AND g.ESTADO is null AND g.VIGENTE = 1";
         $params = array($semana, $anio);
         $stmt = sqlsrv_query($this->cid_central, $sql, $params);
         
@@ -365,7 +366,7 @@ class Gasto
     public function actualizarAutorizacionGasto($semana, $anio, $supervisora, $id_conc, $autorizado, $observaciones_aut) {
     $sql = "UPDATE RO_T_GASTOS_SUPERVISION 
             SET ESTADO = ?, FECHA_AUTO = GETDATE(), OBSERVACIONES_AUT = ?
-            WHERE SEMANA = ? AND ANIO = ? AND SUPERVISORA = ? AND ID_CONC = ?";
+            WHERE SEMANA = ? AND ANIO = ? AND SUPERVISORA = ? AND ID_CONC = ? AND VIGENTE = 1";
     
     $params = array($autorizado, $observaciones_aut, $semana, $anio, $supervisora, $id_conc);
     $stmt = sqlsrv_query($this->cid_central, $sql, $params);
@@ -383,7 +384,7 @@ public function obtenerGastosAutorizados($semana, $anio, $supervisora = null)
                        g.CAE_Tarjeta, g.CAE_Efectivo, g.CARGADO, g.CARGADO_TARJ, g.OBSERVACIONES 
                 FROM RO_T_GASTOS_SUPERVISION g
                 JOIN RO_T_CONCEPTOS_GASTOS_SUP c ON g.ID_CONC = c.ID_CONC
-                WHERE g.SEMANA = ? AND g.ANIO = ? AND g.ESTADO = 1";
+                WHERE g.SEMANA = ? AND g.ANIO = ? AND g.ESTADO = 1 AND g.VIGENTE = 1";
         $params = [$semana, $anio];
 
         if ($supervisora) {
@@ -409,7 +410,7 @@ public function obtenerGastosAutorizados($semana, $anio, $supervisora = null)
     {
         $sql = "UPDATE RO_T_GASTOS_SUPERVISION 
                 SET CARGADO = ?, FECHA_CARGADO = GETDATE()
-                WHERE ID_CONC = ? AND SUPERVISORA = ? AND SEMANA = ? AND ANIO = ?";
+                WHERE ID_CONC = ? AND SUPERVISORA = ? AND SEMANA = ? AND ANIO = ? AND VIGENTE = 1";
         
         $params = [($cargado ? 1 : 0), $id, $supervisora, $semana, $anio];
         $stmt = sqlsrv_query($this->cid_central, $sql, $params);
@@ -430,7 +431,7 @@ public function obtenerGastosAutorizados($semana, $anio, $supervisora = null)
     {
         $sql = "UPDATE RO_T_GASTOS_SUPERVISION 
                 SET CARGADO_TARJ = ?, FECHA_CARGADO_TARJ = GETDATE()
-                WHERE ID_CONC = ? AND SUPERVISORA = ? AND SEMANA = ? AND ANIO = ?";
+                WHERE ID_CONC = ? AND SUPERVISORA = ? AND SEMANA = ? AND ANIO = ? AND VIGENTE = 1";
         
         $params = [($cargado ? 1 : 0), $id, $supervisora, $semana, $anio];
         $stmt = sqlsrv_query($this->cid_central, $sql, $params);
@@ -469,10 +470,11 @@ public function obtenerGastosAutorizados($semana, $anio, $supervisora = null)
                    SET CAE_Tarjeta = ?, 
                        CARGADO_TARJ = 1,
                        FECHA_CARGADO_TARJ = GETDATE()
-                   WHERE ID_CONC = ? 
-                   AND SUPERVISORA = ? 
-                   AND SEMANA = ? 
-                   AND ANIO = ?";
+                   WHERE ID_CONC = ?
+                   AND SUPERVISORA = ?
+                   AND SEMANA = ?
+                   AND ANIO = ?
+                   AND VIGENTE = 1";
 
             // Preparamos los parámetros incluyendo todos los filtros
             $params = array(
@@ -540,8 +542,8 @@ public function obtenerGastosAutorizados($semana, $anio, $supervisora = null)
     public function obtenerGastosPendientes() {
         $sql = "SELECT SEMANA, ANIO, SUPERVISORA, ROUND(IMPORTE, 0) as IMPORTE, 
                        ROUND(IMPORTE_TARJETA, 0) as IMPORTE_TARJETA, OBSERVACIONES 
-                FROM RO_T_GASTOS_SUPERVISION 
-                WHERE ESTADO IS NULL
+                FROM RO_T_GASTOS_SUPERVISION
+                WHERE ESTADO IS NULL AND VIGENTE = 1
                 ORDER BY ANIO DESC, SEMANA DESC, SUPERVISORA";
         
         $stmt = sqlsrv_query($this->cid_central, $sql);
