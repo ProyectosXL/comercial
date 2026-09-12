@@ -1,21 +1,40 @@
 
+function tieneReaperturaActiva() {
+    return $('#semanaRetail option:selected').data('reapertura') === 1;
+}
+
 function actualizarEstadoInputs(gastos = {}) {
     let $opcionSeleccionada = $('#semanaRetail option:selected');
     let esActual = $opcionSeleccionada.data('es-actual') === 1;
     let esAnterior = $opcionSeleccionada.data('es-anterior') === 1;
+    let hayReapertura = $opcionSeleccionada.data('reapertura') === 1;
     let hayGastosCargados = Object.keys(gastos).length > 0;
 
-    // CAMBIO: Solo permitir edición si NO hay gastos cargados Y NO es una semana anterior
-    let puedeEditar = !hayGastosCargados && !esAnterior;
+    // Solo permitir edición si NO hay gastos cargados Y NO es una semana anterior.
+    // Una reapertura levanta las dos condiciones: es justamente el caso de volver
+    // a cargar un período que ya tiene gastos. La carga nueva reemplaza a la
+    // anterior, que queda anulada al guardar.
+    let puedeEditar = hayReapertura || (!hayGastosCargados && !esAnterior);
 
     $('.importe-input, textarea, #importeAdelanto').prop('disabled', !puedeEditar);
-    
+
     // LÓGICA GLOBAL: Si hay gastos cargados o es semana anterior, ocultar botones de carga
     $('.camara-btn, .archivo-btn').toggle(puedeEditar);
     $('#guardarTodoBtn').toggle(puedeEditar);
 
+    // El selector de arriba agarra todos los textarea, incluido el de
+    // observaciones del autorizante. Con una reapertura puedeEditar pasa a true
+    // en una semana que ya tiene gastos, que es justo cuando ese campo tiene
+    // contenido, así que sin esto la supervisora podría escribir sobre las
+    // observaciones del autorizante. No se editan nunca desde esta pantalla.
+    $('textarea[id^="observaciones_aut_"]').prop('disabled', true);
+
     let mensaje = "";
-    if (hayGastosCargados) {
+    if (hayReapertura) {
+        mensaje = " Período reabierto por gerencia: podés corregir esta semana por única vez." +
+                  " Al guardar, lo cargado antes se reemplaza y la semana vuelve a cerrarse." +
+                  " Acordate de adjuntar de nuevo los comprobantes de cada concepto que cargues.";
+    } else if (hayGastosCargados) {
         mensaje = " Gastos ya cargados para esta semana. No se pueden modificar.";
     } else if (esActual) {
         mensaje = " Semana actual seleccionada. Puede cargar gastos.";
@@ -94,8 +113,13 @@ $(document).ready(function() {
         $(this).hide();
     });
 
-    // Ocultar el botón de guardar si todos los gastos ya existen
-    if (Object.keys(gastosExistentes).length === $('.card').length) {
+    // Ocultar el botón de guardar si todos los gastos ya existen.
+    // No aplica con una reapertura activa: ahí el período es editable
+    // justamente porque ya tiene gastos cargados, y este chequeo corre después
+    // de actualizarEstadoInputs(), así que sin la excepción volvería a esconder
+    // el botón que la reapertura acaba de mostrar.
+    if (!tieneReaperturaActiva() &&
+        Object.keys(gastosExistentes).length === $('.card').length) {
         $('#guardarTodoBtn').hide();
     }
 });

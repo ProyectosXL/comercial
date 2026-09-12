@@ -295,8 +295,15 @@ $(document).ready(function() {
             return;
         }
 
-        let esAnterior = $('#semanaRetail option:selected').data('es-anterior') === 1;
-        if (esAnterior) {
+        let $opcion = $('#semanaRetail option:selected');
+        let esAnterior = $opcion.data('es-anterior') === 1;
+        let hayReapertura = $opcion.data('reapertura') === 1;
+
+        // Con una reapertura activa la semana se puede guardar aunque esté
+        // cerrada. El servidor la consume dentro de la transacción del insert,
+        // así que si venció entre que se abrió la pantalla y este click, el
+        // guardado falla ahí y no se pisa nada.
+        if (esAnterior && !hayReapertura) {
             Swal.fire('Error', 'No se pueden cargar gastos de semanas anteriores.', 'error');
             return;
         }
@@ -420,6 +427,12 @@ $(document).ready(function() {
         let mensaje = `Se guardarán ${gastos.length} gasto(s).`;
         let esAdvertencia = false;
 
+        if (hayReapertura) {
+            esAdvertencia = true;
+            mensaje += `\n\n🔓 Esta semana está reabierta por única vez.`;
+            mensaje += `\nLo que ya estaba cargado se reemplaza por esto, y la semana vuelve a cerrarse.`;
+        }
+
         if (!validacion.todosValidados) {
             esAdvertencia = true;
             mensaje += `\n\n⚠️ ATENCIÓN: Los siguientes conceptos exceden el presupuesto:\n`;
@@ -479,7 +492,11 @@ $(document).ready(function() {
                             mensajeFinal += `\n\n✅ Gastos aprobados: ${response.gastosAprobados}`;
                             mensajeFinal += `\n⚠️ Gastos que requieren auditoría: ${response.gastosExcedidos}`;
                         }
-                        
+
+                        if (response.reaperturaConsumida) {
+                            mensajeFinal += `\n\n🔒 Se usó la reapertura: la semana vuelve a quedar cerrada.`;
+                        }
+
                         Swal.fire({
                             title: 'Gastos procesados',
                             text: mensajeFinal,

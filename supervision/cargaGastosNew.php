@@ -24,6 +24,10 @@ $gastosExistentes = $gastos->obtenerGastosExistentes($semanaActual, $anioActual,
 // Verificar si hay al menos un gasto cargado para la semana
 $hayGastosCargados = !empty($gastosExistentes);
 
+// Periodos que gerencia reabrio para esta supervisora, indexados por "SEMANA|ANIO".
+// Habilitan la carga por unica vez, aunque el periodo ya este cerrado.
+$reaperturasActivas = $gastos->reaperturasActivasDeSupervisora($supervisora);
+
 // Convertir a JSON para usar en JavaScript
 $gastosExistentesJSON = json_encode($gastosExistentes);
 ?>
@@ -97,9 +101,6 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
                         $semanasRetail = $gastos->traerSemanasRetail();
                         $semanaActual = date('W');
                         $anioActual = date('Y');
-                        $esLunesOMartes = (date('N') <= 2);
-                        $semanaPasada = date('W', strtotime('-1 week'));
-                        $anioSemanaPasada = date('Y', strtotime('-1 week'));
 
                         if (!empty($semanasRetail)) {
                             foreach ($semanasRetail as $semana) {
@@ -108,18 +109,26 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
                                 $anio = $semana['ANIO'];
                                 $semanaTexto = $semana['SEMANA'] . " (" . $desde . " a " . $hasta . ") ";
                                 $valor = $semana['SEMANA'] . "|" . $anio;
-                                
+
                                 $esActual = ($semana['SEMANA'] == $semanaActual && $anio == $anioActual);
-                                $esAnterior = ($anio < $anioActual) || ($anio == $anioActual && $semana['SEMANA'] < $semanaActual);
-                                
-                                // Permitir carga de la semana anterior si es lunes o martes
-                                if ($esLunesOMartes && $semana['SEMANA'] == $semanaPasada && $anio == $anioSemanaPasada) {
+
+                                // Misma regla que valida el servidor al guardar (incluida la
+                                // excepcion de lunes y martes para la semana pasada).
+                                $esAnterior = Gasto::esPeriodoCerradoPorFecha($semana['SEMANA'], $anio);
+
+                                // Una reapertura activa abre la semana aunque este cerrada.
+                                $tieneReapertura = isset($reaperturasActivas[$valor]);
+                                if ($tieneReapertura) {
                                     $esAnterior = false;
                                 }
 
                                 $selected = $esActual ? 'selected' : '';
-                                
-                                echo "<option value='" . $valor . "' " . $selected . " data-es-actual='" . ($esActual ? '1' : '0') . "' data-es-anterior='" . ($esAnterior ? '1' : '0') . "'>" . $semanaTexto . "</option>";
+
+                                echo "<option value='" . $valor . "' " . $selected
+                                    . " data-es-actual='" . ($esActual ? '1' : '0') . "'"
+                                    . " data-es-anterior='" . ($esAnterior ? '1' : '0') . "'"
+                                    . " data-reapertura='" . ($tieneReapertura ? '1' : '0') . "'>"
+                                    . $semanaTexto . "</option>";
                             }
                         } else {
                             echo "<option value=''>No hay semanas disponibles</option>";
