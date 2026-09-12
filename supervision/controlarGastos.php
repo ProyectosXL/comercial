@@ -4,7 +4,7 @@ session_start();
     require_once 'Class/Gasto.php';
     $gastos = new Gasto();
     $supervisoras = $gastos->traerSupervisoras();
-    
+
     // Obtener semana actual
     $semanaActual = date('W');
     $anioActual = date('Y');
@@ -27,6 +27,9 @@ session_start();
 </head>
 <body>
     <div class="container-fluid">
+    <!-- Queda vacio si se llega sin sesion PHP; en ese caso el llamador manda
+         el usuario en el payload de Controller/reaperturasGastos.php. -->
+    <input type="hidden" id="usuarioActual" value="<?php echo htmlspecialchars($_SESSION['username'] ?? ''); ?>">
     <div class="alert alert-primary" role="alert">
         <h4 class="text-start my-2" id="tituloGastos">
             <strong><i class="bi bi-clipboard2-check-fill"></i> Controlar Gastos Supervisión - <span id="semanaInfo"></span></strong>
@@ -34,8 +37,8 @@ session_start();
     </div>
         
 
-    <div class="row mb-4 align-items-end">
-        <div class="col-md-4">
+    <div class="row mb-4 align-items-end g-3">
+        <div class="col-lg-3 col-md-6">
             <label for="semanaRetail" class="form-label">Semana</label>
             <select class="form-select" id="semanaRetail">
                 <option value="">Seleccionar</option>
@@ -54,7 +57,7 @@ session_start();
                 ?>
             </select>
         </div>
-        <div class="col-md-4">
+        <div class="col-lg-3 col-md-6">
             <label for="supervisoraSelect" class="form-label">Supervisora</label>
             <select class="form-select" id="supervisoraSelect">
                 <option value="">Todas</option>
@@ -65,15 +68,44 @@ session_start();
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="col-md-4">
-            <div class="col-md-12">
-                <button type="button" class="btn btn-primary me-2" id="buscarBtn">
+        <div class="col-lg-6">
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-primary" id="buscarBtn">
                     <i class="fas fa-search"></i> Buscar
                 </button>
                 <button type="button" class="btn btn-warning" id="verPendientesBtn">
                     <i class="fas fa-clock"></i> Ver Gastos Pendientes
                 </button>
+                <button type="button" class="btn btn-danger" id="reabrirPeriodoBtn"
+                        title="Habilitar por única vez la carga de este período para la supervisora seleccionada">
+                    <i class="fas fa-lock-open"></i> Reabrir Período
+                </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Períodos actualmente reabiertos -->
+    <div class="alert alert-warning d-none" id="reaperturasPanel" role="alert">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong><i class="fas fa-lock-open me-1"></i> Períodos reabiertos pendientes de uso</strong>
+            <button type="button" class="btn btn-sm btn-outline-dark" id="refrescarReaperturasBtn">
+                <i class="fas fa-sync"></i>
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm table-borderless mb-0" id="reaperturasTable">
+                <thead>
+                    <tr>
+                        <th>Semana</th>
+                        <th>Supervisora</th>
+                        <th>Motivo</th>
+                        <th>Habilitó</th>
+                        <th>Fecha</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
 
@@ -165,6 +197,7 @@ session_start();
     <script src="js/image-rotation-helper.js"></script>
     <script src="js/diagnostico-imagenes.js"></script>
     <script src="js/controlarGastos.js"></script>
+    <script src="js/reaperturasGastos.js"></script>
 
 <!-- Modal para ver Observaciones -->
     <div class="modal fade" id="observacionModal" tabindex="-1" aria-hidden="true">

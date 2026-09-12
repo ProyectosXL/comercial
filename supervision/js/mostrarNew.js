@@ -1,21 +1,72 @@
 
+function tieneReaperturaActiva() {
+    return $('#semanaRetail option:selected').data('reapertura') === 1;
+}
+
 function actualizarEstadoInputs(gastos = {}) {
     let $opcionSeleccionada = $('#semanaRetail option:selected');
     let esActual = $opcionSeleccionada.data('es-actual') === 1;
     let esAnterior = $opcionSeleccionada.data('es-anterior') === 1;
+    let hayReapertura = $opcionSeleccionada.data('reapertura') === 1;
     let hayGastosCargados = Object.keys(gastos).length > 0;
 
-    // CAMBIO: Solo permitir edición si NO hay gastos cargados Y NO es una semana anterior
-    let puedeEditar = !hayGastosCargados && !esAnterior;
+    // Solo permitir edición si NO hay gastos cargados Y NO es una semana anterior.
+    // Una reapertura levanta las dos condiciones, pero solo para los conceptos
+    // que todavía no tienen carga: es complementaria, no reemplaza nada.
+    let puedeEditar = hayReapertura || (!hayGastosCargados && !esAnterior);
 
     $('.importe-input, textarea, #importeAdelanto').prop('disabled', !puedeEditar);
-    
+
     // LÓGICA GLOBAL: Si hay gastos cargados o es semana anterior, ocultar botones de carga
     $('.camara-btn, .archivo-btn').toggle(puedeEditar);
     $('#guardarTodoBtn').toggle(puedeEditar);
 
+    let conceptosDisponibles = 0;
+
+    if (hayReapertura) {
+        // La habilitación de arriba es global, así que acá se vuelve a bloquear
+        // concepto por concepto lo que ya tiene carga. El servidor valida lo
+        // mismo; esto es para que la supervisora vea de entrada qué puede tocar.
+        $('.card').each(function () {
+            let $card = $(this);
+            let idConc = $card.find('.concepto-id').val();
+            let yaCargado = Object.prototype.hasOwnProperty.call(gastos, idConc);
+
+            $card.find('.importe-input, textarea').prop('disabled', yaCargado);
+            $card.find('.camara-btn, .archivo-btn').toggle(!yaCargado);
+            $card.toggleClass('concepto-bloqueado', yaCargado);
+
+            if (!yaCargado) {
+                conceptosDisponibles++;
+            }
+        });
+
+        // El adelanto es del período y ya se cargó en la carga original.
+        // insertarAdelanto hace INSERT y obtenerAdelanto hace SUM, así que
+        // volver a mandarlo duplicaría el importe. El servidor lo ignora igual.
+        $('#importeAdelanto').prop('disabled', true);
+
+        $('#guardarTodoBtn').toggle(conceptosDisponibles > 0);
+    } else {
+        $('.card').removeClass('concepto-bloqueado');
+    }
+
+    // El selector de arriba agarra todos los textarea, incluido el de
+    // observaciones del autorizante. Con una reapertura puedeEditar pasa a true
+    // en una semana que ya tiene gastos, que es justo cuando ese campo tiene
+    // contenido, así que sin esto la supervisora podría escribir sobre las
+    // observaciones del autorizante. No se editan nunca desde esta pantalla.
+    $('textarea[id^="observaciones_aut_"]').prop('disabled', true);
+
     let mensaje = "";
-    if (hayGastosCargados) {
+    if (hayReapertura && conceptosDisponibles === 0) {
+        mensaje = " Período reabierto, pero todos los conceptos ya tienen gastos cargados." +
+                  " No queda nada para agregar: la reapertura solo habilita conceptos sin carga previa.";
+    } else if (hayReapertura) {
+        mensaje = " Período reabierto: podés agregar gastos en los " + conceptosDisponibles +
+                  " concepto(s) que todavía no cargaste. Lo que ya está cargado no se modifica." +
+                  " Al guardar, la semana vuelve a cerrarse.";
+    } else if (hayGastosCargados) {
         mensaje = " Gastos ya cargados para esta semana. No se pueden modificar.";
     } else if (esActual) {
         mensaje = " Semana actual seleccionada. Puede cargar gastos.";
@@ -94,8 +145,13 @@ $(document).ready(function() {
         $(this).hide();
     });
 
-    // Ocultar el botón de guardar si todos los gastos ya existen
-    if (Object.keys(gastosExistentes).length === $('.card').length) {
+    // Ocultar el botón de guardar si todos los gastos ya existen.
+    // No aplica con una reapertura activa: ahí el período es editable
+    // justamente porque ya tiene gastos cargados, y este chequeo corre después
+    // de actualizarEstadoInputs(), así que sin la excepción volvería a esconder
+    // el botón que la reapertura acaba de mostrar.
+    if (!tieneReaperturaActiva() &&
+        Object.keys(gastosExistentes).length === $('.card').length) {
         $('#guardarTodoBtn').hide();
     }
 });

@@ -24,6 +24,10 @@ $gastosExistentes = $gastos->obtenerGastosExistentes($semanaActual, $anioActual,
 // Verificar si hay al menos un gasto cargado para la semana
 $hayGastosCargados = !empty($gastosExistentes);
 
+// Periodos que gerencia reabrio para esta supervisora, indexados por "SEMANA|ANIO".
+// Habilitan la carga por unica vez, aunque el periodo ya este cerrado.
+$reaperturasActivas = $gastos->reaperturasActivasDeSupervisora($supervisora);
+
 // Convertir a JSON para usar en JavaScript
 $gastosExistentesJSON = json_encode($gastosExistentes);
 ?>
@@ -59,6 +63,17 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
             border-color: #4caf50;
             color: #2e7d32;
         }
+        /* Conceptos que ya tienen carga en un período reabierto: se muestran
+           para que la supervisora vea qué cargó, pero no se pueden tocar. */
+        .card.concepto-bloqueado {
+            opacity: 0.6;
+        }
+        .card.concepto-bloqueado .card-title::after {
+            content: " · ya cargado";
+            font-size: 11px;
+            font-weight: normal;
+            color: #6c757d;
+        }
         .badge-new-version {
             background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
             color: white;
@@ -83,6 +98,23 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
         </nav>
         
         <div class="container">
+            <?php if (!empty($reaperturasActivas)): ?>
+            <?php
+                // Sin esto la supervisora no tendria como enterarse de que le
+                // reabrieron una semana: tendria que ir probando el combo.
+                $semanasReabiertas = array();
+                foreach ($reaperturasActivas as $clave => $reapertura) {
+                    $semanasReabiertas[] = 'semana ' . $reapertura['SEMANA'] . '/' . $reapertura['ANIO'];
+                }
+            ?>
+            <div class="alert alert-warning py-2 mb-2" role="alert">
+                <i class="bi bi-unlock-fill me-1"></i>
+                <strong>Tenés <?php echo count($reaperturasActivas); ?> período(s) reabierto(s):</strong>
+                <?php echo htmlspecialchars(implode(', ', $semanasReabiertas)); ?>.
+                Seleccionalo en el combo de abajo para corregirlo. Se cierra al guardar.
+            </div>
+            <?php endif; ?>
+
             <div class="search-container">
                 <i class="bi bi-search search-icon"></i>
                 <input type="text" class="form-control" id="searchInput" placeholder="Buscar por concepto...">
@@ -97,9 +129,6 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
                         $semanasRetail = $gastos->traerSemanasRetail();
                         $semanaActual = date('W');
                         $anioActual = date('Y');
-                        $esLunesOMartes = (date('N') <= 2);
-                        $semanaPasada = date('W', strtotime('-1 week'));
-                        $anioSemanaPasada = date('Y', strtotime('-1 week'));
 
                         if (!empty($semanasRetail)) {
                             foreach ($semanasRetail as $semana) {
@@ -108,18 +137,26 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
                                 $anio = $semana['ANIO'];
                                 $semanaTexto = $semana['SEMANA'] . " (" . $desde . " a " . $hasta . ") ";
                                 $valor = $semana['SEMANA'] . "|" . $anio;
-                                
+
                                 $esActual = ($semana['SEMANA'] == $semanaActual && $anio == $anioActual);
-                                $esAnterior = ($anio < $anioActual) || ($anio == $anioActual && $semana['SEMANA'] < $semanaActual);
-                                
-                                // Permitir carga de la semana anterior si es lunes o martes
-                                if ($esLunesOMartes && $semana['SEMANA'] == $semanaPasada && $anio == $anioSemanaPasada) {
+
+                                // Misma regla que valida el servidor al guardar (incluida la
+                                // excepcion de lunes y martes para la semana pasada).
+                                $esAnterior = Gasto::esPeriodoCerradoPorFecha($semana['SEMANA'], $anio);
+
+                                // Una reapertura activa abre la semana aunque este cerrada.
+                                $tieneReapertura = isset($reaperturasActivas[$valor]);
+                                if ($tieneReapertura) {
                                     $esAnterior = false;
                                 }
 
                                 $selected = $esActual ? 'selected' : '';
-                                
-                                echo "<option value='" . $valor . "' " . $selected . " data-es-actual='" . ($esActual ? '1' : '0') . "' data-es-anterior='" . ($esAnterior ? '1' : '0') . "'>" . $semanaTexto . "</option>";
+
+                                echo "<option value='" . $valor . "' " . $selected
+                                    . " data-es-actual='" . ($esActual ? '1' : '0') . "'"
+                                    . " data-es-anterior='" . ($esAnterior ? '1' : '0') . "'"
+                                    . " data-reapertura='" . ($tieneReapertura ? '1' : '0') . "'>"
+                                    . $semanaTexto . "</option>";
                             }
                         } else {
                             echo "<option value=''>No hay semanas disponibles</option>";
