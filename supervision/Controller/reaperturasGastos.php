@@ -5,16 +5,29 @@ require_once __DIR__ . '/../Class/Gasto.php';
 header('Content-Type: application/json');
 
 try {
-    if (!isset($_SESSION['username'])) {
-        throw new Exception("No autorizado: la sesión expiró. Volvé a iniciar sesión.");
-    }
-
-    $usuario = $_SESSION['username'];
-
     $data = json_decode(file_get_contents('php://input'), true);
     if (json_last_error() !== JSON_ERROR_NONE) {
         throw new Exception("Error decodificando JSON: " . json_last_error_msg());
     }
+
+    /**
+     * Quien habilita o anula se toma del payload: a este controller no se llega
+     * solamente desde PHP, sino tambien desde otra aplicacion en otro lenguaje,
+     * que no comparte la sesion.
+     *
+     * La sesion queda como respaldo para cuando si se llama desde la pantalla
+     * PHP. Si no viene por ninguna de las dos vias igual se registra la fila,
+     * porque las columnas son NOT NULL y no vale la pena romper la operacion
+     * por esto, pero el valor deja en evidencia que el llamador no se identifico.
+     */
+    $usuario = trim($data['usuario'] ?? '');
+    if ($usuario === '') {
+        $usuario = $_SESSION['username'] ?? '';
+    }
+    if ($usuario === '') {
+        $usuario = 'SIN_IDENTIFICAR';
+    }
+    $usuario = mb_substr($usuario, 0, 100);
 
     $accion = $data['accion'] ?? null;
     $gasto = new Gasto();

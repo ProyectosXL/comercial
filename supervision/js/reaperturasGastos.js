@@ -13,6 +13,14 @@ $(document).ready(function () {
     const URL_REAPERTURAS = 'Controller/reaperturasGastos.php';
 
     function llamar(payload) {
+        // El controller ya no depende de la sesión PHP, así que el usuario viaja
+        // en el payload. Si la pantalla se abrió sin sesión queda vacío y el
+        // controller lo resuelve por su cuenta.
+        const usuario = $('#usuarioActual').val();
+        if (usuario) {
+            payload.usuario = usuario;
+        }
+
         return $.ajax({
             url: URL_REAPERTURAS,
             method: 'POST',

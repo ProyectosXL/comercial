@@ -27,6 +27,9 @@ session_start();
 </head>
 <body>
     <div class="container-fluid">
+    <!-- Queda vacio si se llega sin sesion PHP; en ese caso el llamador manda
+         el usuario en el payload de Controller/reaperturasGastos.php. -->
+    <input type="hidden" id="usuarioActual" value="<?php echo htmlspecialchars($_SESSION['username'] ?? ''); ?>">
     <div class="alert alert-primary" role="alert">
         <h4 class="text-start my-2" id="tituloGastos">
             <strong><i class="bi bi-clipboard2-check-fill"></i> Controlar Gastos Supervisión - <span id="semanaInfo"></span></strong>
