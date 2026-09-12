@@ -7,14 +7,15 @@
 -- unica vez, los conceptos que todavia no tienen gasto en ese periodo. No
 -- modifica ni anula nada de lo ya cargado.
 --
--- Por eso NO hace falta tocar la restriccion unica UQ_GASTO_SUPERVISION sobre
--- (SEMANA, ANIO, ID_CONC, SUPERVISORA). Al contrario: es justamente lo que
--- garantiza la regla, porque impide que un concepto tenga una segunda fila en
--- el mismo periodo. Se deja como esta.
+-- La restriccion unica UQ_GASTO_SUPERVISION sobre
+-- (SEMANA, ANIO, ID_CONC, SUPERVISORA) es justamente lo que garantiza esa regla,
+-- porque impide que un concepto tenga una segunda fila en el mismo periodo.
 --
--- El paso 3 limpia la columna VIGENTE y sus indices, de una version anterior de
--- este script que planteaba la reapertura como reemplazo con anulacion logica.
--- Si nunca se ejecuto esa version, no hace nada.
+-- Los pasos 3 y 4 revierten una version anterior de este script, que planteaba
+-- la reapertura como reemplazo con anulacion logica: esa version agregaba una
+-- columna VIGENTE y cambiaba UQ_GASTO_SUPERVISION por un indice filtrado. El
+-- paso 3 limpia la columna y sus indices, y el paso 4 vuelve a crear la
+-- restriccion. Si nunca se ejecuto esa version, ninguno de los dos hace nada.
 
 SET ANSI_NULLS ON
 SET QUOTED_IDENTIFIER ON
@@ -141,7 +142,50 @@ END
 GO
 
 -- =====================================================================
--- 4. Verificacion final
+-- 4. Restaurar la restriccion unica UQ_GASTO_SUPERVISION
+-- =====================================================================
+-- Es lo que impide que un concepto reciba una segunda fila en el mismo periodo,
+-- o sea la red de seguridad de la reapertura complementaria. La version anterior
+-- de este script la eliminaba para reemplazarla por un indice filtrado por
+-- VIGENTE; si eso ya se ejecuto, aca se vuelve a crear.
+--
+-- No se puede crear si hay conceptos repetidos, asi que primero se verifica y,
+-- si los hay, se listan y no se toca nada: habria que resolverlos a mano.
+IF NOT EXISTS (SELECT * FROM sys.indexes
+               WHERE name = 'UQ_GASTO_SUPERVISION'
+                 AND object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION'))
+BEGIN
+    IF EXISTS (SELECT 1 FROM RO_T_GASTOS_SUPERVISION
+               GROUP BY SEMANA, ANIO, ID_CONC, SUPERVISORA
+               HAVING COUNT(*) > 1)
+    BEGIN
+        PRINT 'ERROR: hay conceptos con mas de una fila en el mismo periodo.'
+        PRINT '       No se puede restaurar UQ_GASTO_SUPERVISION hasta resolverlos.'
+        PRINT '       Se listan a continuacion.'
+
+        SELECT SEMANA, ANIO, SUPERVISORA, ID_CONC, COUNT(*) AS FILAS
+        FROM RO_T_GASTOS_SUPERVISION
+        GROUP BY SEMANA, ANIO, ID_CONC, SUPERVISORA
+        HAVING COUNT(*) > 1
+        ORDER BY ANIO DESC, SEMANA DESC, SUPERVISORA
+    END
+    ELSE
+    BEGIN
+        ALTER TABLE RO_T_GASTOS_SUPERVISION
+            ADD CONSTRAINT UQ_GASTO_SUPERVISION
+            UNIQUE (SEMANA, ANIO, ID_CONC, SUPERVISORA)
+
+        PRINT 'Restriccion UQ_GASTO_SUPERVISION restaurada'
+    END
+END
+ELSE
+BEGIN
+    PRINT 'La restriccion UQ_GASTO_SUPERVISION ya existe'
+END
+GO
+
+-- =====================================================================
+-- 5. Verificacion final
 -- =====================================================================
 -- Los pasos van en batches separados por GO: si uno falla los siguientes se
 -- ejecutan igual, asi que sin esto el script podria terminar diciendo

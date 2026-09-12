@@ -37,36 +37,51 @@ SELECT name, is_unique, is_unique_constraint
 FROM sys.indexes WHERE object_id = OBJECT_ID('RO_T_GASTOS_SUPERVISION');
 ```
 
-El script ya verifica todo esto por su cuenta en el paso 4 y falla con `RAISERROR`
+El script ya verifica todo esto por su cuenta en el paso 5 y falla con `RAISERROR`
 si algo quedó a medias. Hace falta porque los pasos van en batches separados por `GO`:
 si uno falla, los siguientes se ejecutan igual y el script terminaría diciendo
 "finalizada" con la migración rota.
 
-## Qué NO toca este script
+## `UQ_GASTO_SUPERVISION`: la red de seguridad
 
-`RO_T_GASTOS_SUPERVISION` ya tenía `UQ_GASTO_SUPERVISION`, una **restricción UNIQUE**
+`RO_T_GASTOS_SUPERVISION` tiene `UQ_GASTO_SUPERVISION`, una **restricción UNIQUE**
 sobre `(SEMANA, ANIO, ID_CONC, SUPERVISORA)`. Por eso nunca hubo filas duplicadas por
 concepto y período: un segundo intento falla con error 2601.
 
-Esa restricción **se deja como está**, porque es justamente lo que hace cumplir la
-regla de la reapertura complementaria: un concepto no puede recibir una segunda fila
-en el mismo período. El código valida lo mismo antes de insertar, para poder nombrar
-los conceptos en conflicto en vez de propagar un 2601 crudo, pero la restricción es
-la red de seguridad real.
+Esa restricción es justamente lo que hace cumplir la regla de la reapertura
+complementaria: un concepto no puede recibir una segunda fila en el mismo período. El
+código valida lo mismo antes de insertar, para poder nombrar los conceptos en
+conflicto en vez de propagar un 2601 crudo, pero **la restricción es la red real**.
 
-### Sobre la columna `VIGENTE`
+El paso 5 del script verifica que exista y **falla con `RAISERROR` si falta**.
+
+### Deshacer la versión de reemplazo (pasos 3 y 4)
 
 Una versión anterior de este script planteaba la reapertura como **reemplazo**: anular
-lógicamente las filas previas (`VIGENTE = 0`) e insertar las nuevas, lo que además
-obligaba a cambiar `UQ_GASTO_SUPERVISION` por un índice filtrado.
+lógicamente las filas previas (`VIGENTE = 0`) e insertar las nuevas. Eso obligaba a
+cambiar `UQ_GASTO_SUPERVISION` por un índice único **filtrado** por `VIGENTE = 1`, ya
+que marcar una fila como anulada no libera la clave.
 
-Ese enfoque se descartó: la reapertura pasó a ser complementaria y no anula nada, así
-que `VIGENTE` quedaría siempre en 1. El paso 3 del script limpia esa columna y sus
-índices si llegaron a crearse, y no hace nada si nunca se ejecutó aquella versión.
+Ese enfoque se descartó. Los pasos 3 y 4 lo revierten:
 
-Si aparecen filas con `VIGENTE = 0` — es decir, si se llegó a usar el enfoque de
-reemplazo — el script **no toca nada** y avisa, porque borrar la columna perdería la
-única marca de que esas filas estaban anuladas.
+- **Paso 3** elimina la columna `VIGENTE` de las dos tablas y sus índices
+  (`UQ_GASTO_SUPERVISION_VIGENTE`, que quedaría redundante, e
+  `IX_GASTO_SUPERVISION_PERIODO`, que la incluye). Si aparecen filas con
+  `VIGENTE = 0` — es decir, si el enfoque de reemplazo llegó a usarse — **no toca
+  nada** y avisa, porque borrar la columna perdería la única marca de que esas filas
+  estaban anuladas.
+- **Paso 4** vuelve a crear `UQ_GASTO_SUPERVISION` si falta. Antes verifica que no
+  haya conceptos repetidos: si los hubiera, los lista y no la crea, porque el `ALTER
+  TABLE` fallaría.
+
+Si nunca se ejecutó aquella versión, ninguno de los dos pasos hace nada.
+
+> Nota de historia: al aplicar esto en producción, la versión de reemplazo se ejecutó
+> parcialmente antes de descartarse. El `DROP` de la restricción falló en el primer
+> intento (era una restricción UNIQUE, no un índice suelto, así que requería
+> `ALTER TABLE ... DROP CONSTRAINT` en lugar de `DROP INDEX`) y funcionó en el
+> segundo, dejando la tabla sin ninguna restricción única. El paso 4 existe para
+> recuperar exactamente ese estado.
 
 ## Estructura de `RO_T_REAPERTURAS_GASTOS_SUP`
 
