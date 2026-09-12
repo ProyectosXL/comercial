@@ -126,9 +126,8 @@ function obtenerGastosAcumuladosMes($mes, $anio, $supervisora) {
             FROM RO_T_GASTOS_SUPERVISION
             WHERE SUPERVISORA = ? 
             AND YEAR(FECHA_MODIF) = ? 
-            AND MONTH(FECHA_MODIF) = ?
+            AND MONTH(FECHA_MODIF) = ? 
             AND ESTADO = 1
-            AND VIGENTE = 1
             GROUP BY ID_CONC";
     
     $params = [$supervisora, $anio, $mes];

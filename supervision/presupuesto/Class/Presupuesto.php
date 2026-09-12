@@ -311,7 +311,7 @@ private function retornarArray($sqlEnviado){
                       FROM RO_T_GASTOS_SUPERVISION g
                       JOIN RO_T_CONCEPTOS_GASTOS_SUP c ON g.ID_CONC = c.ID_CONC
                       JOIN SOF_USUARIOS s ON g.SUPERVISORA = s.DESCRIPCION
-                      WHERE g.ESTADO = 1 AND g.VIGENTE = 1 AND ($condicionSemanas)
+                      WHERE g.ESTADO = 1 AND ($condicionSemanas)
                       GROUP BY g.SUPERVISORA, s.ID, g.ID_CONC, c.CONCEPTO";
         
         $stmtGastos = sqlsrv_query($this->cid_central, $sqlGastos, $paramsSemanas);

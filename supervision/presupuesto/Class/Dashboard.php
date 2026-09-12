@@ -104,7 +104,7 @@ class Dashboard
                 YEAR(g.FECHA_MODIF) as ANIO_FECHA
                 FROM RO_T_GASTOS_SUPERVISION g
                 JOIN RO_T_CONCEPTOS_GASTOS_SUP c ON g.ID_CONC = c.ID_CONC
-                WHERE g.ESTADO = 1 AND g.VIGENTE = 1";
+                WHERE g.ESTADO = 1";
 
         $params = [];
 
@@ -152,7 +152,7 @@ class Dashboard
 
     public function obtenerListaSupervisoras()
     {
-        $sql = "SELECT DISTINCT SUPERVISORA FROM RO_T_GASTOS_SUPERVISION WHERE ESTADO = 1 AND VIGENTE = 1 ORDER BY SUPERVISORA";
+        $sql = "SELECT DISTINCT SUPERVISORA FROM RO_T_GASTOS_SUPERVISION WHERE ESTADO = 1 ORDER BY SUPERVISORA";
         $stmt = sqlsrv_query($this->cid_central, $sql);
 
         if ($stmt === false) {
@@ -204,7 +204,7 @@ class Dashboard
                 YEAR(g.FECHA_MODIF) as ANIO_FECHA
                 FROM RO_T_GASTOS_SUPERVISION g
                 JOIN RO_T_CONCEPTOS_GASTOS_SUP c ON g.ID_CONC = c.ID_CONC
-                WHERE g.ESTADO = 1 AND g.VIGENTE = 1";
+                WHERE g.ESTADO = 1";
 
         $params = [];
 
@@ -279,7 +279,6 @@ class Dashboard
                         ISNULL(SUM(IMPORTE), 0) + ISNULL(SUM(IMPORTE_TARJETA), 0) AS IMPORTE_GASTO
                     FROM RO_T_GASTOS_SUPERVISION
                     WHERE ESTADO = 1
-                    AND VIGENTE = 1
                     AND CAST(FECHA_MODIF AS DATE) >= ?
                     AND CAST(FECHA_MODIF AS DATE) <= ?";
 
