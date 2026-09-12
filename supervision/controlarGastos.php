@@ -1,12 +1,6 @@
 <?php
 session_start();
 
-    // La pantalla no validaba nada: entraba cualquiera con la URL.
-    if (!isset($_SESSION['username'])) {
-        header("Location:../sistemas/login.php");
-        exit;
-    }
-
     require_once 'Class/Gasto.php';
     $gastos = new Gasto();
     $supervisoras = $gastos->traerSupervisoras();
@@ -40,8 +34,8 @@ session_start();
     </div>
         
 
-    <div class="row mb-4 align-items-end">
-        <div class="col-md-4">
+    <div class="row mb-4 align-items-end g-3">
+        <div class="col-lg-3 col-md-6">
             <label for="semanaRetail" class="form-label">Semana</label>
             <select class="form-select" id="semanaRetail">
                 <option value="">Seleccionar</option>
@@ -60,7 +54,7 @@ session_start();
                 ?>
             </select>
         </div>
-        <div class="col-md-4">
+        <div class="col-lg-3 col-md-6">
             <label for="supervisoraSelect" class="form-label">Supervisora</label>
             <select class="form-select" id="supervisoraSelect">
                 <option value="">Todas</option>
@@ -71,12 +65,12 @@ session_start();
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="col-md-4">
-            <div class="col-md-12">
-                <button type="button" class="btn btn-primary me-2" id="buscarBtn">
+        <div class="col-lg-6">
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-primary" id="buscarBtn">
                     <i class="fas fa-search"></i> Buscar
                 </button>
-                <button type="button" class="btn btn-warning me-2" id="verPendientesBtn">
+                <button type="button" class="btn btn-warning" id="verPendientesBtn">
                     <i class="fas fa-clock"></i> Ver Gastos Pendientes
                 </button>
                 <button type="button" class="btn btn-danger" id="reabrirPeriodoBtn"
