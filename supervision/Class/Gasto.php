@@ -651,6 +651,34 @@ public function obtenerGastosAutorizados($semana, $anio, $supervisora = null)
         return $esAnterior;
     }
 
+    /**
+     * Valida que se pueda adjuntar un comprobante a un periodo. Lanza si no.
+     *
+     * El nombre del archivo es el unico vinculo entre el comprobante y el gasto
+     * (obtenerImagenesSup los busca por prefijo SEMANA_SUPERVISORA_...), asi que
+     * un numero de semana equivocado deja el comprobante huerfano en disco, sin
+     * error ni aviso. Hasta esta version subirImagen.php y subirArchivo.php
+     * aceptaban cualquier semana que les mandaran: se podia adjuntar a un
+     * periodo ya cerrado, o a uno distinto del que la pantalla estaba mostrando.
+     *
+     * Es la misma regla que aplica guardarGastosNew.php al guardar, para que no
+     * queden comprobantes de periodos en los que despues no se puede cargar.
+     */
+    public function validarPeriodoParaComprobante($semana, $anio, $supervisora) {
+        if (!self::esPeriodoCerradoPorFecha($semana, $anio)) {
+            return;
+        }
+
+        // Una reapertura activa vuelve a abrir el periodo. No se consume aca:
+        // la consume el insert de los gastos, no el adjunto de un comprobante.
+        $reaperturas = $this->reaperturasActivasDeSupervisora($supervisora);
+        if (isset($reaperturas[intval($semana) . '|' . intval($anio)])) {
+            return;
+        }
+
+        throw new Exception("El periodo $semana/$anio esta cerrado: no se pueden adjuntar comprobantes.");
+    }
+
     /* ================================================================
      * Reapertura manual de periodos
      *

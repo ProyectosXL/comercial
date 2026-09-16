@@ -71,31 +71,58 @@ function corregirOrientacionEXIF($imagenData, $extension) {
     }
 }
 
+require_once __DIR__ . '/../Class/Gasto.php';
+
 try {
     session_start();
     if (!isset($_SESSION['username'])) {
         throw new Exception('No autorizado');
     }
 
+    $supervisoraSesion = $_SESSION['descLocal'] ?? null;
+    if (empty($supervisoraSesion)) {
+        throw new Exception('No autorizado: la sesion no tiene una supervisora asociada.');
+    }
+
     $data = json_decode(file_get_contents('php://input'), true);
 
-    if (!isset($data['imagen']) || !isset($data['id_conc']) || !isset($data['semana']) || !isset($data['supervisora']) || !isset($data['type'])) {
+    if (!isset($data['imagen']) || !isset($data['id_conc']) || !isset($data['semana']) || !isset($data['anio']) || !isset($data['type'])) {
         $missing = [];
         if (!isset($data['imagen'])) $missing[] = 'imagen';
         if (!isset($data['id_conc'])) $missing[] = 'id_conc';
         if (!isset($data['semana'])) $missing[] = 'semana';
-        if (!isset($data['supervisora'])) $missing[] = 'supervisora';
+        if (!isset($data['anio'])) $missing[] = 'anio';
         if (!isset($data['type'])) $missing[] = 'type';
-        
+
         error_log("subirImagen.php - Datos faltantes: " . implode(', ', $missing));
         throw new Exception('Datos incompletos: faltan ' . implode(', ', $missing));
     }
 
     $imagen = $data['imagen'];
-    $id_conc = $data['id_conc'];
-    $semana = $data['semana'];
-    $supervisora = $data['supervisora'];
+
+    // Semana, anio e id van al nombre del archivo, asi que se fuerzan a entero:
+    // ademas de normalizar el formato (el combo manda 7, no "07", que es como
+    // estan nombrados los comprobantes historicos), corta cualquier intento de
+    // salirse del directorio armando el nombre con barras o "..".
+    $id_conc = intval($data['id_conc']);
+    $semana = intval($data['semana']);
+    $anio = intval($data['anio']);
+
+    // El tipo tambien es parte del nombre y solo puede ser uno de estos dos.
     $type = $data['type'];
+    if (!in_array($type, array('tarjeta', 'efectivo'), true)) {
+        throw new Exception('Tipo de comprobante invalido.');
+    }
+
+    // La supervisora sale de la sesion, no del payload: el nombre es parte del
+    // nombre del archivo, asi que aceptarlo del cliente permitia dejar un
+    // comprobante colgado del gasto de otra. guardarGastosNew.php ya lo hacia.
+    $supervisora = $supervisoraSesion;
+
+    // El periodo tiene que estar abierto, igual que para guardar. Si no, se
+    // podian adjuntar comprobantes a semanas donde despues no se puede cargar.
+    $gasto = new Gasto();
+    $gasto->validarPeriodoParaComprobante($semana, $anio, $supervisora);
 
     // Detectar el tipo MIME y extensión del archivo
     $extension = 'jpg'; // Default

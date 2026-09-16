@@ -154,44 +154,126 @@ public function getStockBase($filterSucursal = null, $filterRubro = null, $order
         try {
             $spreadsheet = IOFactory::load($file['tmp_name']);
             $rows = $spreadsheet->getActiveSheet()->toArray();
+            if (empty($rows)) {
+                return ['success' => false, 'message' => 'El archivo Excel está vacío.'];
+            }
+
             $headers = array_map('trim', array_map('strtoupper', array_shift($rows)));
             $requiredHeaders = ['ID_SUCURSAL', 'ID_RUBRO', 'STOCK_BASE'];
             
             foreach ($requiredHeaders as $requiredHeader) {
                 if (!in_array($requiredHeader, $headers)) {
-                    return ['success' => false, 'message' => "Falta encabezado: $requiredHeader"];
+                    return ['success' => false, 'message' => "Falta encabezado obligatorio: $requiredHeader"];
                 }
             }
 
             $colMap = array_flip($headers);
-            $imported = 0; $errors = 0; $errorMessages = [];
-            
+
+            // Pre-cargar sucursales y rubros para evitar cientos de queries individuales
+            $sucursales = $this->getSucursales();
+            $sucursalMap = [];
+            foreach ($sucursales as $s) {
+                $sucursalMap[(string)$s['ID_SUCURSAL']] = [
+                    'COD_CLIENT' => $s['COD_CLIENT'],
+                    'DESC_SUCURSAL' => $s['DESC_SUCURSAL']
+                ];
+            }
+
+            $rubros = $this->getRubros();
+            $rubroMap = [];
+            foreach ($rubros as $r) {
+                $rubroMap[(string)$r['ID_RUBRO']] = $r['RUBRO'];
+            }
+
+            // Preparar statements
+            $checkStmt = $this->pdo->prepare("SELECT COUNT(*) FROM EB_StockBase WHERE Codigo_Sucursal = ? AND Id_Rubro = ?");
+            $insertStmt = $this->pdo->prepare("INSERT INTO EB_StockBase (Codigo_Sucursal, Codigo_Cliente, Nombre_Sucursal, Id_Rubro, Nombre_Rubro, Stock_Base) VALUES (?, ?, ?, ?, ?, ?)");
+            $updateStmt = $this->pdo->prepare("UPDATE EB_StockBase SET Stock_Base = ?, Codigo_Cliente = ?, Nombre_Sucursal = ?, Nombre_Rubro = ? WHERE Codigo_Sucursal = ? AND Id_Rubro = ?");
+
+            $imported = 0;
+            $updated = 0;
+            $errors = 0;
+
             $this->pdo->beginTransaction();
-            foreach ($rows as $i => $row) {
-                if (empty(array_filter($row))) continue;
-                $codigoSucursal = trim($row[$colMap['ID_SUCURSAL']]);
-                $idRubro = trim($row[$colMap['ID_RUBRO']]);
-                $stockBase = trim($row[$colMap['STOCK_BASE']]);
-                if (empty($codigoSucursal) || empty($idRubro) || !is_numeric($stockBase)) {
-                    $errors++; continue;
+
+            foreach ($rows as $index => $row) {
+                if (empty(array_filter($row, function($v) { return $v !== null && trim($v) !== ''; }))) {
+                    continue;
                 }
 
-                $checkSql = "SELECT COUNT(*) FROM EB_StockBase WHERE Codigo_Sucursal = ? AND Id_Rubro = ?";
-                $checkStmt = $this->pdo->prepare($checkSql);
+                $codigoSucursal = isset($row[$colMap['ID_SUCURSAL']]) ? trim((string)$row[$colMap['ID_SUCURSAL']]) : '';
+                $idRubro = isset($row[$colMap['ID_RUBRO']]) ? trim((string)$row[$colMap['ID_RUBRO']]) : '';
+                $stockBaseRaw = isset($row[$colMap['STOCK_BASE']]) ? trim((string)$row[$colMap['STOCK_BASE']]) : '';
+
+                if ($codigoSucursal === '' || $idRubro === '' || !is_numeric($stockBaseRaw)) {
+                    $errors++;
+                    continue;
+                }
+
+                $stockBase = (float)$stockBaseRaw;
+
+                // Obtener datos descriptivos
+                $codCliente = $sucursalMap[$codigoSucursal]['COD_CLIENT'] ?? null;
+                $descSucursal = $sucursalMap[$codigoSucursal]['DESC_SUCURSAL'] ?? null;
+                $descRubro = $rubroMap[$idRubro] ?? null;
+
+                // Si no se encontraron en las consultas pre-cargadas, intentar búsqueda directa
+                if (!$descSucursal) {
+                    $sqlSuc = "SELECT COD_CLIENT, DESC_SUCURSAL FROM [XL-LAKERBIS].[LOCALES_LAKERS].[dbo].SUCURSALES_LAKERS WHERE NRO_SUCURSAL = :sucursal";
+                    $stmtSuc = $this->pdo->prepare($sqlSuc);
+                    $stmtSuc->execute([':sucursal' => $codigoSucursal]);
+                    $sucData = $stmtSuc->fetch(PDO::FETCH_ASSOC);
+                    if ($sucData) {
+                        $codCliente = $sucData['COD_CLIENT'];
+                        $descSucursal = $sucData['DESC_SUCURSAL'];
+                    }
+                }
+
+                if (!$descRubro) {
+                    $sqlRubro = "SELECT DESCRIP FROM STA11FLD WHERE IDFOLDER = :id_rubro";
+                    $stmtRubro = $this->pdo->prepare($sqlRubro);
+                    $stmtRubro->execute([':id_rubro' => $idRubro]);
+                    $rubData = $stmtRubro->fetch(PDO::FETCH_ASSOC);
+                    if ($rubData) {
+                        $descRubro = $rubData['DESCRIP'];
+                    }
+                }
+
+                // Verificar si el registro ya existe para pisarlo o insertarlo
                 $checkStmt->execute([$codigoSucursal, $idRubro]);
-                
-                if ($checkStmt->fetchColumn() > 0) {
-                    if ($this->updateStock($codigoSucursal, $idRubro, $stockBase)) $imported++; else $errors++;
+                $exists = ($checkStmt->fetchColumn() > 0);
+
+                if ($exists) {
+                    $res = $updateStmt->execute([$stockBase, $codCliente, $descSucursal, $descRubro, $codigoSucursal, $idRubro]);
+                    if ($res) {
+                        $updated++;
+                    } else {
+                        $errors++;
+                    }
                 } else {
-                    if ($this->addStock($codigoSucursal, $idRubro, $stockBase)) $imported++; else $errors++;
+                    $res = $insertStmt->execute([$codigoSucursal, $codCliente, $descSucursal, $idRubro, $descRubro, $stockBase]);
+                    if ($res) {
+                        $imported++;
+                    } else {
+                        $errors++;
+                    }
                 }
             }
+
             $this->pdo->commit();
-            
-            $message = "Importación completada: $imported registros procesados, $errors errores.";
+
+            $total = $imported + $updated;
+            $message = "Importación exitosa: $total registros procesados ($updated actualizados/pisados, $imported nuevos).";
+            if ($errors > 0) {
+                $message .= " Se detectaron $errors filas con errores u omitidas.";
+            }
+
             return ['success' => true, 'message' => $message];
         } catch (Exception $e) {
-            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log("Error processExcelImport: " . $e->getMessage());
             return ['success' => false, 'message' => 'Error al procesar el archivo: ' . $e->getMessage()];
         }
     }

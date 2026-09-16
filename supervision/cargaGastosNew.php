@@ -14,12 +14,56 @@ require_once 'Class/Gasto.php';
 $gastos = new Gasto();
 $conceptos = $gastos->traerConceptos();
 
-// Obtener gastos existentes
 $semanaActual = date('W');
 $anioActual = date('Y');
 $supervisora = $_SESSION['descLocal'];
 
-$gastosExistentes = $gastos->obtenerGastosExistentes($semanaActual, $anioActual, $supervisora);
+$semanasRetail = $gastos->traerSemanasRetail();
+
+/**
+ * Periodo que se esta viendo.
+ *
+ * Por defecto la semana corriente, pero la pantalla puede venir apuntada a otra
+ * con ?semana=&anio= (el combo navega asi, igual que el redirect posterior al
+ * guardado). TODO lo que se renderiza abajo tiene que salir de aca: mientras los
+ * gastos existentes se leian con date('W'), el combo podia decir una semana y
+ * los importes, badges y comprobantes ser de otra. Esa desincronizacion es la
+ * que terminaba escribiendo comprobantes con el numero de semana equivocado.
+ */
+$semanaSeleccionada = isset($_GET['semana']) ? $_GET['semana'] : $semanaActual;
+$anioSeleccionado = isset($_GET['anio']) ? $_GET['anio'] : $anioActual;
+
+/**
+ * El periodo se resuelve siempre contra las semanas del combo, y se toman los
+ * valores de ahi.
+ *
+ * Por un lado valida: un ?semana= armado a mano no puede renderizar un periodo
+ * que la supervisora no podria elegir. Por otro normaliza el formato, que no es
+ * cosmetico: date('W') devuelve "07" con cero a la izquierda y el SP devuelve 7,
+ * y como el JS compara #semanaHidden contra el value de la option como strings,
+ * esa sola diferencia haria que la pantalla se creyera desincronizada.
+ */
+$periodoValido = false;
+foreach ($semanasRetail as $semanaRetail) {
+    if (intval($semanaRetail['SEMANA']) === intval($semanaSeleccionada)
+        && intval($semanaRetail['ANIO']) === intval($anioSeleccionado)) {
+        $semanaSeleccionada = $semanaRetail['SEMANA'];
+        $anioSeleccionado = $semanaRetail['ANIO'];
+        $periodoValido = true;
+        break;
+    }
+}
+
+// El SP define su propia ventana de semanas, asi que la corriente puede no estar
+// en el combo. Si no hay con que resolver, se cae a la primera opcion: es la que
+// el navegador va a seleccionar solo, y el hidden tiene que decir lo mismo.
+if (!$periodoValido && !empty($semanasRetail)) {
+    $semanaSeleccionada = $semanasRetail[0]['SEMANA'];
+    $anioSeleccionado = $semanasRetail[0]['ANIO'];
+}
+
+// Obtener gastos existentes del periodo que se esta viendo
+$gastosExistentes = $gastos->obtenerGastosExistentes($semanaSeleccionada, $anioSeleccionado, $supervisora);
 
 // Verificar si hay al menos un gasto cargado para la semana
 $hayGastosCargados = !empty($gastosExistentes);
@@ -126,10 +170,10 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
                     <label for="semanaRetail">Seleccione semana</label>
                     <select class="form-select" id="semanaRetail">
                     <?php
-                        $semanasRetail = $gastos->traerSemanasRetail();
-                        $semanaActual = date('W');
-                        $anioActual = date('Y');
-
+                        // $semanasRetail, $semanaSeleccionada y $anioSeleccionado
+                        // se resuelven arriba, junto con los gastos existentes,
+                        // para que el combo y el contenido de la pantalla salgan
+                        // siempre del mismo periodo.
                         if (!empty($semanasRetail)) {
                             foreach ($semanasRetail as $semana) {
                                 $desde = $semana['DESDE']->format("d-m");
@@ -150,7 +194,13 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
                                     $esAnterior = false;
                                 }
 
-                                $selected = $esActual ? 'selected' : '';
+                                // Se preselecciona el periodo que se esta
+                                // renderizando, no la semana corriente: si la
+                                // pantalla vino apuntada con ?semana=, el combo
+                                // tiene que coincidir con los importes y
+                                // comprobantes que se ven abajo.
+                                $esSeleccionada = ($semana['SEMANA'] == $semanaSeleccionada && $anio == $anioSeleccionado);
+                                $selected = $esSeleccionada ? 'selected' : '';
 
                                 echo "<option value='" . $valor . "' " . $selected
                                     . " data-es-actual='" . ($esActual ? '1' : '0') . "'"
@@ -164,7 +214,13 @@ $gastosExistentesJSON = json_encode($gastosExistentes);
                     ?>
                     </select>
 
-                    <input type="hidden" name="semana" id="semanaHidden" value="">
+                    <!-- Periodo que el servidor realmente renderizo. El JS lo
+                         compara contra el combo antes de subir un comprobante:
+                         si no coinciden, la pantalla quedo desincronizada y el
+                         archivo se guardaria con el numero de semana de una y
+                         los importes de la otra. -->
+                    <input type="hidden" name="semana" id="semanaHidden"
+                           value="<?php echo htmlspecialchars($semanaSeleccionada . '|' . $anioSeleccionado); ?>">
                 </div>
                 <button type="button" class="btn btn-guardar text-white w-100" id="guardarTodoBtn">
                     <i class="bi bi-download me-1"></i>Guardar y Validar Presupuesto

@@ -6,10 +6,17 @@ ini_set('error_log', __DIR__ . '/php_errors.log');
 
 header('Content-Type: application/json');
 
+require_once __DIR__ . '/../Class/Gasto.php';
+
 try {
     session_start();
     if (!isset($_SESSION['username'])) {
         throw new Exception('No autorizado');
+    }
+
+    $supervisoraSesion = $_SESSION['descLocal'] ?? null;
+    if (empty($supervisoraSesion)) {
+        throw new Exception('No autorizado: la sesion no tiene una supervisora asociada.');
     }
 
     if (!isset($_FILES['archivo']) || $_FILES['archivo']['error'] !== UPLOAD_ERR_OK) {
@@ -17,15 +24,31 @@ try {
     }
 
     $archivo = $_FILES['archivo'];
-    $id_conc = $_POST['id_conc'] ?? null;
-    $semana = $_POST['semana'] ?? null;
-    $anio = $_POST['anio'] ?? null;
-    $supervisora = $_POST['supervisora'] ?? null;
+
+    // Igual que en subirImagen.php: todo lo que va al nombre del archivo se
+    // fuerza a entero o se valida contra una lista cerrada, para que no se pueda
+    // armar un nombre con barras o ".." y escribir fuera del directorio.
+    $id_conc = intval($_POST['id_conc'] ?? 0);
+    $semana = intval($_POST['semana'] ?? 0);
+    $anio = intval($_POST['anio'] ?? 0);
     $type = $_POST['type'] ?? null;
 
-    if (!$id_conc || !$semana || !$anio || !$supervisora || !$type) {
-        throw new Exception('Datos incompletos. Se requiere: id_conc, semana, año, supervisora y type');
+    if (!$id_conc || !$semana || !$anio || !$type) {
+        throw new Exception('Datos incompletos. Se requiere: id_conc, semana, año y type');
     }
+
+    if (!in_array($type, array('tarjeta', 'efectivo'), true)) {
+        throw new Exception('Tipo de comprobante invalido.');
+    }
+
+    // Mismo criterio que subirImagen.php y guardarGastosNew.php: la supervisora
+    // sale de la sesion (forma parte del nombre del archivo) y el periodo tiene
+    // que estar abierto. Este endpoint hoy no lo llama ninguna pantalla, pero es
+    // alcanzable por HTTP y escribe con la misma convencion de nombres.
+    $supervisora = $supervisoraSesion;
+
+    $gasto = new Gasto();
+    $gasto->validarPeriodoParaComprobante($semana, $anio, $supervisora);
 
     // Validar tipo de archivo - SOLO IMÁGENES
     $extensionesPermitidas = ['jpg', 'jpeg', 'png'];

@@ -35,13 +35,70 @@ $(document).ready(function() {
         }).format(saldo));
     });
 
-    // Cargar presupuestos al cambiar de semana
+    // Al cambiar de semana hay que recargar la pantalla entera, no solo los
+    // presupuestos: los importes, los badges y los comprobantes los renderiza el
+    // servidor para un periodo concreto (el que quedo en #semanaHidden). Cuando
+    // el combo solo recargaba presupuestos, la pantalla seguia mostrando los
+    // datos del periodo anterior y cualquier comprobante que se adjuntara se
+    // guardaba con el numero de semana del combo contra los importes de la otra.
     $('#semanaRetail').on('change', function() {
-        cargarPresupuestos();
+        let seleccion = $(this).val();
+        let renderizada = $('#semanaHidden').val();
+
+        // Un trigger('change') programatico, o volver a la misma semana, no
+        // tiene que navegar: sin esto la carga inicial entraria en bucle.
+        if (!seleccion || seleccion === renderizada) {
+            cargarPresupuestos();
+            return;
+        }
+
+        irASemana(seleccion, renderizada);
     });
 
     // Cargar presupuestos inicialmente
     cargarPresupuestos();
+
+    function hayImportesSinGuardar() {
+        let hay = false;
+        $('.importe-input').each(function() {
+            // Los importes ya guardados vienen deshabilitados, no cuentan.
+            if (!$(this).prop('disabled') && $(this).val().trim() !== '') {
+                hay = true;
+                return false;
+            }
+        });
+        return hay;
+    }
+
+    function irASemana(seleccion, renderizada) {
+        let [semana, anio] = seleccion.split('|');
+        let destino = '?semana=' + encodeURIComponent(semana) + '&anio=' + encodeURIComponent(anio);
+
+        if (!hayImportesSinGuardar()) {
+            window.location.href = destino;
+            return;
+        }
+
+        Swal.fire({
+            title: '¿Cambiar de semana?',
+            text: 'Tenés importes cargados sin guardar. Si cambiás de semana se pierden.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, cambiar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = destino;
+            } else {
+                // Volver el combo a la semana que la pantalla esta mostrando, y
+                // re-disparar el change: mostrarNew.js tiene su propio handler
+                // que ya fue y busco los gastos de la semana nueva, asi que sin
+                // esto el combo quedaria en una semana y los importes en otra,
+                // que es exactamente lo que este fix viene a evitar.
+                $('#semanaRetail').val(renderizada).trigger('change');
+            }
+        });
+    }
 
     function tieneImagenesCargadas(input) {
         // Obtener el ID del concepto y el tipo del input
@@ -634,25 +691,13 @@ $(document).ready(function() {
         }).format(importe);
     }
 
-    // Función para seleccionar la semana al cargar la página
-    function seleccionarSemanaAlCargar() {
-        let params = new URLSearchParams(window.location.search);
-        let semana = params.get('semana');
-        let anio = params.get('anio');
-        
-        if (semana && anio) {
-            let valorSelect = semana + '|' + anio;
-            $('#semanaRetail').val(valorSelect);
-            $('#semanaRetail').trigger('change');
-            
-            if (typeof buscarGastos === 'function') {
-                buscarGastos();
-            }
-        }
-    }
-
-    // Llamar a esta función cuando se carga la página
-    seleccionarSemanaAlCargar();
+    // Acá vivía seleccionarSemanaAlCargar(), que leía ?semana= de la URL y se lo
+    // aplicaba al combo. Ya no hace falta: el servidor preselecciona el período
+    // que realmente renderizó (y valida el parámetro contra las semanas retail
+    // antes de aceptarlo), así que volver a setear el valor desde la URL solo
+    // podía dejar el combo en blanco si el parámetro no correspondía a ninguna
+    // opción. Los gastos del período los trae cargarDatosSemanaActual() en
+    // mostrarNew.js, que ya corre en cada carga de la pantalla.
 
     // Actualizar estado de presupuesto cuando cambian los importes
     $(document).on('input', '.importe-input', function() {
@@ -688,11 +733,58 @@ $(document).ready(function() {
 // Definir la ruta base para las imágenes
 const BASE_IMAGE_PATH = '/comercial/imagenes/compSupervision/';
 
+/**
+ * Semana con la que se puede nombrar un comprobante, o null si no se puede.
+ *
+ * El nombre del archivo es el unico vinculo entre el comprobante y el gasto
+ * (obtenerImagenesSup los busca por prefijo), asi que un digito de mas deja el
+ * comprobante huerfano, sin error ni aviso. Antes las subidas leian el combo
+ * directo y sin validar nada: se podia adjuntar a una semana cerrada, o a una
+ * distinta de la que la pantalla estaba mostrando.
+ *
+ * Las mismas condiciones las revalida el servidor en subirImagen.php y
+ * subirArchivo.php; esto es para avisar antes de que la foto se suba.
+ */
+function semanaParaComprobante() {
+    let seleccion = $('#semanaRetail').val();
+
+    if (!seleccion) {
+        Swal.fire('Error', 'Seleccioná una semana antes de adjuntar comprobantes.', 'error');
+        return null;
+    }
+
+    // La pantalla la renderiza el servidor para un periodo concreto. Si el combo
+    // apunta a otro, los importes de abajo no son los de esa semana.
+    let renderizada = $('#semanaHidden').val();
+    if (renderizada && seleccion !== renderizada) {
+        Swal.fire('Error', 'La pantalla quedó desactualizada. Recargala antes de adjuntar comprobantes.', 'error');
+        return null;
+    }
+
+    let $opcion = $('#semanaRetail option:selected');
+    let esAnterior = $opcion.data('es-anterior') === 1;
+    let hayReapertura = $opcion.data('reapertura') === 1;
+
+    if (esAnterior && !hayReapertura) {
+        Swal.fire('Error', 'No se pueden adjuntar comprobantes a semanas anteriores.', 'error');
+        return null;
+    }
+
+    let [semana, anio] = seleccion.split('|');
+    return { semana: semana, anio: anio };
+}
+
 // Funciones globales para manejo de archivos e imágenes
 window.elegirImagen = async function(btn, tipo) {
+    let periodo = semanaParaComprobante();
+    if (!periodo) {
+        return;
+    }
+
     let $card = $(btn).closest('.card-body');
     let id_conc = $card.find('.concepto-id').val();
-    let semana = $('#semanaRetail').val().split('|')[0];
+    let semana = periodo.semana;
+    let anio = periodo.anio;
     let supervisora = $('#nombreSupervisora').val() || 'SUPERVISORA_DESCONOCIDA';
     let $importeInput = $card.find(`.importe-input[attr-type="${tipo}"]`);
 
@@ -743,7 +835,7 @@ window.elegirImagen = async function(btn, tipo) {
                 reader.onload = async (readerEvent) => {
                     let content = readerEvent.target.result;
                     try {
-                        await subirImagen(content, id_conc, semana, supervisora, tipo);
+                        await subirImagen(content, id_conc, semana, supervisora, tipo, anio);
                         console.log("Imagen subida exitosamente");
                         if (!$importeInput.val() || $importeInput.val() === '0,00') {
                             $importeInput.addClass('is-invalid');
@@ -765,16 +857,22 @@ window.elegirImagen = async function(btn, tipo) {
 
 window.adjuntarArchivo = function(btn, tipo) {
     console.log("Adjuntar archivo iniciado para:", tipo);
-    
+
+    let periodo = semanaParaComprobante();
+    if (!periodo) {
+        return;
+    }
+
     let input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*,.pdf'; // Solo imágenes y PDF por ahora
     input.multiple = true; // Permitir selección múltiple
-    
+
     let $btn = $(btn);
     let $card = $btn.closest('.card-body'); // Cambiar a card-body para consistencia
     let id_conc = $card.find('.concepto-id').val();
-    let semana = $('#semanaRetail').val().split('|')[0]; // Usar split para consistencia
+    let semana = periodo.semana;
+    let anio = periodo.anio;
     let supervisora = $('#nombreSupervisora').val() || 'SUPERVISORA_DESCONOCIDA'; // Usar nombreSupervisora
 
     input.onchange = async function(e) {
@@ -879,12 +977,13 @@ window.adjuntarArchivo = function(btn, tipo) {
                             archivo: file.name,
                             id_conc: id_conc,
                             semana: semana,
+                            anio: anio,
                             supervisora: supervisora,
                             tipo: tipo,
                             contentLength: content ? content.length : 'undefined'
                         });
-                        
-                        subirImagen(content, id_conc, semana, supervisora, tipo)
+
+                        subirImagen(content, id_conc, semana, supervisora, tipo, anio)
                             .then(response => {
                                 console.log(`Archivo ${file.name} subido exitosamente:`, response);
                                 resolve(response);
@@ -962,8 +1061,10 @@ function actualizarEstadoVisual($card) {
     }
 }
 
-function subirImagen(content, id_conc, semana, supervisora, type) {
-    console.log("📤 Iniciando subida de imagen...", {id_conc, semana, supervisora, type});
+// El anio viaja aparte de la semana porque el servidor lo necesita para poder
+// decidir si el periodo esta cerrado (una semana sola es ambigua entre anios).
+function subirImagen(content, id_conc, semana, supervisora, type, anio) {
+    console.log("📤 Iniciando subida de imagen...", {id_conc, semana, anio, supervisora, type});
     return new Promise((resolve, reject) => {
         $.ajax({
             url: 'Controller/subirImagen.php',
@@ -972,6 +1073,7 @@ function subirImagen(content, id_conc, semana, supervisora, type) {
                 imagen: content,
                 id_conc: id_conc,
                 semana: semana,
+                anio: anio,
                 supervisora: supervisora,
                 type: type
             }),
@@ -981,9 +1083,13 @@ function subirImagen(content, id_conc, semana, supervisora, type) {
         .done(function(response) {
             console.log("✅ Respuesta del servidor (subirImagen):", response);
             if (response.success) {
+                // Se nombra la semana explicitamente: el comprobante queda atado
+                // al gasto solo por el numero que lleva en el nombre del archivo,
+                // asi que si es el equivocado tiene que notarse ahora y no cuando
+                // el comprobante no aparezca en la semana que corresponde.
                 Swal.fire({
                     icon: 'success',
-                    title: 'Éxito',
+                    title: 'Comprobante guardado en la semana ' + semana,
                     text: response.message,
                     timer: 2000,
                     showConfirmButton: false
