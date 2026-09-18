@@ -148,10 +148,10 @@ class ReportesCumplimientoController {
             }
             
             // PRIMERA CONSULTA: Obtener las sucursales reales de franquicias
-            $sqlSucursalesReales = "SELECT NRO_SUCURSAL 
-                                   FROM [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS 
-                                   WHERE HABILITADO = 1 
-                                   AND CANAL = 'FRANQUICIAS' 
+            $sqlSucursalesReales = "SELECT NRO_SUCURSAL
+                                   FROM [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS
+                                   WHERE HABILITADO = 1
+                                   AND (CANAL = 'FRANQUICIAS' OR CANAL = 'FRANQUICIAS GA')
                                    AND NRO_SUC_MADRE IS NULL AND NRO_SUCURSAL NOT IN (812, 912)";
             
             error_log("DEBUG REPORTES: Ejecutando PRIMERA consulta para obtener sucursales reales: " . $sqlSucursalesReales);
