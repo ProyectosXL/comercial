@@ -191,7 +191,7 @@ class ReportesCumplimientoController {
                                        u.DESCRIPCION as nombre,
                                        u.NRO_SUCURS as nro_sucurs
                                    FROM SOF_USUARIOS u
-                                   WHERE u.TIPO = 'FRANQUICIA'
+                                   WHERE (u.TIPO = 'FRANQUICIA' OR u.TIPO = 'FRANQUICIA_GA')
                                    AND u.NRO_SUCURS IS NOT NULL
                                    ORDER BY u.DESCRIPCION";
             

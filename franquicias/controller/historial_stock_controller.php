@@ -75,7 +75,7 @@ class HistorialStockController {
                 error_log("ERROR HISTORIAL: No hay conexión a LAKER_SA");
                 return $nombreUsuario; // Fallback al nombre de usuario
             }
-            $sql = "SELECT NRO_SUCURS FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' AND NOMBRE = ?";
+            $sql = "SELECT NRO_SUCURS FROM SOF_USUARIOS WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'FRANQUICIA_GA') AND NOMBRE = ?";
             error_log("DEBUG HISTORIAL: Consultando SOF_USUARIOS para usuario: '$nombreUsuario'");
             $stmt = sqlsrv_prepare($this->laker_conn, $sql, [$nombreUsuario]);
             if ($stmt && sqlsrv_execute($stmt)) {

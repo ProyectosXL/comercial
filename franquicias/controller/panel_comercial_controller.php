@@ -31,8 +31,8 @@ class PanelComercialController {
             $sql_franquicias = "SELECT 
                                     NOMBRE as codigo,
                                     DESCRIPCION as nombre
-                                FROM SOF_USUARIOS 
-                                WHERE TIPO = 'FRANQUICIA'
+                                FROM SOF_USUARIOS
+                                WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'FRANQUICIA_GA')
                                 ORDER BY DESCRIPCION";
             
             $stmt_franquicias = sqlsrv_query($laker_conn, $sql_franquicias);

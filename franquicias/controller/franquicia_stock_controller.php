@@ -109,7 +109,7 @@ if (!class_exists('FranquiciaStockController')) {
                 return $nombreUsuario; // Fallback al nombre de usuario
             }
             
-            $sql = "SELECT NRO_SUCURS FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' AND NOMBRE = ?";
+            $sql = "SELECT NRO_SUCURS FROM SOF_USUARIOS WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'FRANQUICIA_GA') AND NOMBRE = ?";
             error_log("DEBUG: Consultando SOF_USUARIOS para usuario: '$nombreUsuario'");
             $stmt = sqlsrv_prepare($this->laker_conn, $sql, [$nombreUsuario]);
             
@@ -1399,9 +1399,9 @@ if (!class_exists('FranquiciaStockController')) {
             }
             
             // Buscar el ID en SOF_USUARIOS
-            $sql = "SELECT TOP 1 CAST(CODIGO AS INT) as id_numerico 
-                    FROM SOF_USUARIOS 
-                    WHERE NOMBRE = ? AND TIPO = 'FRANQUICIA'";
+            $sql = "SELECT TOP 1 CAST(CODIGO AS INT) as id_numerico
+                    FROM SOF_USUARIOS
+                    WHERE NOMBRE = ? AND (TIPO = 'FRANQUICIA' OR TIPO = 'FRANQUICIA_GA')";
             
             $stmt = sqlsrv_prepare($conn_laker, $sql, [$franquicia_codigo]);
             if ($stmt && sqlsrv_execute($stmt)) {

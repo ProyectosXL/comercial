@@ -98,7 +98,7 @@ class AuthFranquicia {
     public function obtenerUsuariosFranquicia() {
         try {
             $stmt = $this->conexion_laker->query(
-                "SELECT NOMBRE, PASS, TIPO FROM SOF_USUARIOS WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'SUPERVISION') ORDER BY TIPO, NOMBRE"
+                "SELECT NOMBRE, PASS, TIPO FROM SOF_USUARIOS WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'FRANQUICIA_GA' OR TIPO = 'SUPERVISION') ORDER BY TIPO, NOMBRE"
             );
             $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
             error_log("DEBUG AUTH: Obtenidos " . count($usuarios) . " usuarios (franquicia + supervisión)");
@@ -116,11 +116,11 @@ class AuthFranquicia {
     public function validarCredenciales($usuario, $password) {
         try {
             $stmt = $this->conexion_laker->prepare(
-                "SELECT NOMBRE, PASS, TIPO FROM SOF_USUARIOS WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'SUPERVISION') AND NOMBRE = ?"
+                "SELECT NOMBRE, PASS, TIPO FROM SOF_USUARIOS WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'FRANQUICIA_GA' OR TIPO = 'SUPERVISION') AND NOMBRE = ?"
             );
             $stmt->execute([$usuario]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             error_log("DEBUG AUTH: Validando credenciales para usuario: $usuario");
             
             if ($user) {
@@ -149,7 +149,7 @@ class AuthFranquicia {
         try {
             // Buscar el ID numérico de la franquicia (NRO_SUCURS)
             $stmt = $this->conexion_laker->prepare(
-                "SELECT NRO_SUCURS, NOMBRE, DESCRIPCION FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' AND NOMBRE = ?"
+                "SELECT NRO_SUCURS, NOMBRE, DESCRIPCION FROM SOF_USUARIOS WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'FRANQUICIA_GA') AND NOMBRE = ?"
             );
             $stmt->execute([$nombreUsuario]);
             $franquicia = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -174,7 +174,7 @@ class AuthFranquicia {
     public function obtenerNombreFranquicia($nombreUsuario) {
         try {
             $stmt = $this->conexion_laker->prepare(
-                "SELECT DESCRIPCION FROM SOF_USUARIOS WHERE TIPO = 'FRANQUICIA' AND NOMBRE = ?"
+                "SELECT DESCRIPCION FROM SOF_USUARIOS WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'FRANQUICIA_GA') AND NOMBRE = ?"
             );
             $stmt->execute([$nombreUsuario]);
             $franquicia = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -198,14 +198,17 @@ class AuthFranquicia {
     public function obtenerRolUsuario($usuario) {
         try {
             $stmt = $this->conexion_laker->prepare(
-                "SELECT TIPO FROM SOF_USUARIOS WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'SUPERVISION') AND NOMBRE = ?"
+                "SELECT TIPO FROM SOF_USUARIOS WHERE (TIPO = 'FRANQUICIA' OR TIPO = 'FRANQUICIA_GA' OR TIPO = 'SUPERVISION') AND NOMBRE = ?"
             );
             $stmt->execute([$usuario]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             if ($user) {
-                $rol = strtolower($user['TIPO']); // 'franquicia' o 'supervision'
-                error_log("DEBUG AUTH: Rol determinado para $usuario: $rol");
+                // FRANQUICIA_GA se trata como alias completo de FRANQUICIA: mismo
+                // rol de sesión ('franquicia') para que el resto de la app (que
+                // compara $_SESSION['user_role'] === 'franquicia') funcione igual.
+                $rol = $user['TIPO'] === 'FRANQUICIA_GA' ? 'franquicia' : strtolower($user['TIPO']); // 'franquicia' o 'supervision'
+                error_log("DEBUG AUTH: Rol determinado para $usuario: $rol (TIPO original: {$user['TIPO']})");
                 return $rol;
             }
             
