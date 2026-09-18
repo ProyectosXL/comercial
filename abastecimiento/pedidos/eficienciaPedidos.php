@@ -160,6 +160,7 @@ error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 
                                     <select name="selectCanal[]" id="selectCanal" class="form-select form-select-sm" multiple>
                                         <option value="PROPIOS" <?= in_array('PROPIOS', $canal) ? 'selected' : '' ?>>Propios</option>
                                         <option value="FRANQUICIAS" <?= in_array('FRANQUICIAS', $canal) ? 'selected' : '' ?>>Franquicias</option>
+                                        <option value="FRANQUICIAS GA" <?= in_array('FRANQUICIAS GA', $canal) ? 'selected' : '' ?>>Franquicias GA</option>
                                         <option value="MAYORISTAS" <?= in_array('MAYORISTAS', $canal) ? 'selected' : '' ?>>Mayoristas</option>
                                         <option value="ECOMMERCE" <?= in_array('ECOMMERCE', $canal) ? 'selected' : '' ?>>Ecommerce</option>
                                     </select>

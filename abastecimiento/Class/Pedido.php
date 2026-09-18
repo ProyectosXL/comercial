@@ -49,7 +49,7 @@ class Pedido
         ";
 
         if(isset($_SESSION['entorno']) && $_SESSION['entorno'] != 'uy'){
-            $sql .= " AND COD_CLIENT LIKE '[GFM0E]%'";
+            $sql .= " AND COD_CLIENT LIKE '[GFML0E]%'";
         }
 
         $sql .= " ORDER BY GRUPO_EMPR";
@@ -72,7 +72,7 @@ class Pedido
         ";
 
         if(isset($_SESSION['entorno']) && $_SESSION['entorno'] != 'uy'){
-            $sql .= "WHERE A.COD_CLIENT LIKE '[GFM0E]%'";
+            $sql .= "WHERE A.COD_CLIENT LIKE '[GFML0E]%'";
         }
 
         $sql .= " ORDER BY A.COD_CLIENT";
