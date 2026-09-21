@@ -55,6 +55,8 @@ class Venta
             $sql .= " AND V.CANAL = 'LOCALES PROPIOS' ";
         } elseif($tipoSucursal == 'franquicias'){
             $sql .= " AND V.CANAL = 'FRANQUICIAS' ";
+        } elseif($tipoSucursal == 'franquicias_ga'){
+            $sql .= " AND V.CANAL = 'FRANQUICIAS GA' ";
         }
         
         $sql .= "

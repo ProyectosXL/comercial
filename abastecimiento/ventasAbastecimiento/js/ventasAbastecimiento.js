@@ -96,8 +96,16 @@ const buscar = () =>{
         let tdTipo = document.createElement("td");
         tdTipo.setAttribute("onClick", "sweet(this)");
         tdTipo.innerHTML = venta.TIPO_SUCURSAL;
-        tdTipo.style.fontWeight = venta.TIPO_SUCURSAL === 'Franquicia' ? 'bold' : 'normal';
-        tdTipo.style.color = venta.TIPO_SUCURSAL === 'Franquicia' ? '#0066cc' : '#006600';
+        if (venta.TIPO_SUCURSAL === 'FRANQUICIAS' || venta.TIPO_SUCURSAL === 'Franquicia') {
+          tdTipo.style.fontWeight = 'bold';
+          tdTipo.style.color = '#0066cc';
+        } else if (venta.TIPO_SUCURSAL === 'FRANQUICIAS GA') {
+          tdTipo.style.fontWeight = 'bold';
+          tdTipo.style.color = '#7952b3';
+        } else {
+          tdTipo.style.fontWeight = 'normal';
+          tdTipo.style.color = '#006600';
+        }
         tr.appendChild(tdTipo);
 
         let tdArticulo = document.createElement("td");

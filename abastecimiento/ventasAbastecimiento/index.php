@@ -232,6 +232,7 @@ $hoy = date("Y-m-d");
           <option value="" selected>Todos</option>
           <option value="propios">Locales Propios</option>
           <option value="franquicias">Franquicias</option>
+          <option value="franquicias_ga">Franquicias GA</option>
         </select>
       </div>
       
@@ -356,8 +357,19 @@ $hoy = date("Y-m-d");
 //} );
 
 function sweet(value){
-
-  swal(value.innerHTML);
+  if (value && value.innerHTML && value.innerHTML.trim() !== '') {
+    if (typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
+      Swal.fire({
+        text: value.innerText || value.textContent
+      });
+    } else if (typeof swal === 'function') {
+      try {
+        swal(value.innerText || value.textContent);
+      } catch (e) {
+        new swal(value.innerText || value.textContent);
+      }
+    }
+  }
 }
 
 $(document).ready(function() {
