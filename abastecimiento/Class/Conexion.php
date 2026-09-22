@@ -1,6 +1,5 @@
-
 <?php
-
+if (!class_exists('Conexion')) {
 class Conexion{
 
     function __construct(){
@@ -154,3 +153,5 @@ class Conexion{
     }
     
 }
+}
+
