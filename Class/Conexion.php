@@ -44,6 +44,8 @@ if (!class_exists('Conexion')) {
             $this->database_locales = $this->envVars['DATABASE_LOCALES'];
             $this->database_power_franquicias = $this->envVars['DATABASE_POWER_FRANQUICIAS'];
             $this->database_franquicias = $this->envVars['DATABASE_FRANQUICIAS'];
+            $this->host_sales = $this->envVars['HOST_SALES'] ?? 'XL-SALES\\SQLEXPRESS';
+            $this->database_wms = $this->envVars['DATABASE_WMS'] ?? 'UbicacionesStockMvc';
             $this->user = $this->envVars['USER'];
             $this->pass = $this->envVars['PASS'];
             $this->pass_locales = $this->envVars['PASS_LOCALES'];
@@ -75,6 +77,8 @@ if (!class_exists('Conexion')) {
                 return array($this->host_apps, $this->database_power_franquicias);
             } elseif ($nameServer == 'franquicias') {
                 return array($this->host_locales, $this->database_franquicias);
+            } elseif ($nameServer == 'wms') {
+                return array($this->host_sales, $this->database_wms);
             } else {
                 // Solo usar sesión si no se especifica servidor o si se especifica uno no reconocido
                 if (session_status() === PHP_SESSION_NONE) {
