@@ -443,7 +443,7 @@
                     </div>
                     <div class="card-body">
                         <div class="row g-3 align-items-end mb-4">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="fw-bold">Sucursal</label>
                                 <select id="base_sucursalSelector" class="form-select form-select-lg"></select>
                             </div>
@@ -467,12 +467,16 @@
                                 </div>
                             </div>
                             <div class="col-md-1">
-                                <button id="base_btnCargar" class="btn btn-outline-primary w-100"><i
+                                <button id="base_btnCargar" class="btn btn-outline-primary w-100" title="Buscar / Cargar"><i
                                         class="bi bi-search"></i></button>
                             </div>
                             <div class="col-md-1">
-                                <button id="base_btnGuardar" class="btn btn-success w-100" disabled><i
+                                <button id="base_btnGuardar" class="btn btn-primary w-100" disabled title="Guardar Cambios"><i
                                         class="bi bi-save"></i></button>
+                            </div>
+                            <div class="col-md-1">
+                                <button id="base_btnExportarExcel" class="btn btn-success w-100" title="Exportar Plantilla Base a Excel"><i
+                                        class="bi bi-file-earmark-excel"></i></button>
                             </div>
                         </div>
                         <div class="d-flex justify-content-end mb-2">

@@ -19,6 +19,12 @@ $(document).ready(function () {
         tipoHoraSeleccionada = $(this).val();
     });
 
+    // BOTÓN EXPORTAR EXCEL PLANTILLAS BASE POR LOCAL
+    $('#base_btnExportarExcel').on('click', function () {
+        const tipoSemana = $('#base_tipoSemana').val() || '';
+        window.location.href = `api/exportar_plantillas_base.php?tipo=${tipoSemana}`;
+    });
+
     // 2. BOTÓN CARGAR (Editar Base)
     $('#base_btnCargar').on('click', function () {
         const sucursal = $('#base_sucursalSelector').val();
