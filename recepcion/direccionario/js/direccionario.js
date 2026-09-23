@@ -128,6 +128,32 @@
         self._copyToClipboard($(this).data('mail'));
       });
 
+      /* Eliminar sucursal */
+      $(document).on('click', '.dir-delete-btn', function () {
+        var id = $(this).data('id');
+        var nombre = $(this).data('nombre') || ('#' + id);
+        if (window.Swal) {
+          Swal.fire({
+            title: '¿Eliminar sucursal?',
+            text: '¿Está seguro de eliminar la sucursal #' + id + ' (' + nombre + ')?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e53e3e',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+          }).then(function (result) {
+            if (result.isConfirmed) {
+              self._eliminarSucursal(id);
+            }
+          });
+        } else {
+          if (confirm('¿Está seguro de eliminar la sucursal #' + id + ' (' + nombre + ')?')) {
+            self._eliminarSucursal(id);
+          }
+        }
+      });
+
       /* Mobile sidebar */
       $('#dir-hamburger').on('click', function () {
         $('#dir-sidebar').addClass('open');
@@ -578,6 +604,36 @@
       XLSX.utils.book_append_sheet(wb, ws, 'Sucursales');
       var fecha = new Date().toISOString().slice(0, 10);
       XLSX.writeFile(wb, 'Direccionario_Sucursales_' + fecha + '.xlsx');
+    },
+
+    /* -------- ELIMINAR SUCURSAL -------- */
+    _eliminarSucursal: function (id) {
+      var self = this;
+      self._showLoading(true);
+      $.ajax({
+        url: this.ajaxUrl,
+        type: 'POST',
+        dataType: 'json',
+        data: { action: 'eliminar', nro_sucursal: id },
+        success: function (res) {
+          self._showLoading(false);
+          if (res && res.success) {
+            self._toast(res.message || 'Sucursal eliminada con éxito', 'success');
+            self._fetchData();
+          } else {
+            self._toast((res && res.message) || 'Error al eliminar sucursal', 'error');
+          }
+        },
+        error: function (xhr) {
+          self._showLoading(false);
+          var msg = 'Error de conexión al eliminar';
+          try {
+            var json = JSON.parse(xhr.responseText);
+            if (json && json.message) msg = json.message;
+          } catch (e) {}
+          self._toast(msg, 'error');
+        }
+      });
     }
   };
 

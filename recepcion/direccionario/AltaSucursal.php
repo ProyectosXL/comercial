@@ -9,16 +9,37 @@ $user = Auth::usuario();
 $username = Auth::username();
 $esAdmin = Auth::esAdmin();
 $rol = $_SESSION['rol'] ?? ($user['rol'] ?? '');
+$rolNom = strtoupper(trim($user['rol_nombre'] ?? $rol ?? ''));
 $sectorCod = strtoupper($user['sector_codigo'] ?? '');
+$sectorNom = strtoupper($user['sector_nombre'] ?? '');
+$subsectorNom = strtoupper($user['subsector_nombre'] ?? '');
 
 $es_admin_sistemas = $esAdmin 
                   || in_array(strtolower($rol), ['admin', 'sistemas', 'gerencia_adm', 'superadmin', 'controltotal']) 
                   || in_array(strtolower($username ?? ''), ['admin', 'sistemas', 'francopertus', 'franco.pertus'])
                   || in_array($sectorCod, ['SISTEMAS', 'IT']);
 
-if (!$es_admin_sistemas) {
+// Rol Recepcionista (Comercial y Ventas -> Analistas -> Recepcionista)
+$es_recepcionista = ($rolNom === 'RECEPCIONISTA' || ($user['rol_id'] ?? 0) == 18)
+                 || ($sectorNom === 'COMERCIAL Y VENTAS' && $subsectorNom === 'ANALISTAS' && $rolNom === 'RECEPCIONISTA');
+
+$puede_crear  = $es_admin_sistemas;
+$puede_editar = $es_admin_sistemas || $es_recepcionista;
+
+$idSucursal = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$clonarId   = isset($_GET['clonar']) ? (int)$_GET['clonar'] : 0;
+$esEdicion  = ($idSucursal > 0);
+$esClonar   = ($clonarId > 0);
+
+if ($esEdicion && !$puede_editar) {
     http_response_code(403);
-    echo '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Acceso Denegado</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light d-flex align-items-center justify-content-center" style="min-height:100vh"><div class="card p-5 text-center shadow-sm" style="max-width:480px"><h3 class="text-danger mb-3">Acceso Denegado</h3><p class="text-muted">No posee los permisos necesarios para dar de alta o editar sucursales.</p><a href="index.php" class="btn btn-primary mt-3">Volver al Direccionario</a></div></body></html>';
+    echo '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Acceso Denegado</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light d-flex align-items-center justify-content-center" style="min-height:100vh"><div class="card p-5 text-center shadow-sm" style="max-width:480px"><h3 class="text-danger mb-3">Acceso Denegado</h3><p class="text-muted">No posee permisos para editar sucursales.</p><a href="index.php" class="btn btn-primary mt-3">Volver al Direccionario</a></div></body></html>';
+    exit;
+}
+
+if (!$esEdicion && !$puede_crear) {
+    http_response_code(403);
+    echo '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Acceso Denegado</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light d-flex align-items-center justify-content-center" style="min-height:100vh"><div class="card p-5 text-center shadow-sm" style="max-width:480px"><h3 class="text-danger mb-3">Acceso Denegado</h3><p class="text-muted">No posee permisos para crear nuevas sucursales. Solo puede editar sucursales existentes.</p><a href="index.php" class="btn btn-primary mt-3">Volver al Direccionario</a></div></body></html>';
     exit;
 }
 
@@ -27,6 +48,17 @@ $canales       = $direccionario->getCanales();
 $provincias    = $direccionario->getProvincias();
 $tipos_local   = $direccionario->getTiposLocal();
 $grupos        = $direccionario->getGruposEmpresarios();
+
+$sucursalData = null;
+if ($idSucursal > 0) {
+    $sucursalData = $direccionario->getSucursalById($idSucursal);
+} elseif ($clonarId > 0) {
+    $sucursalData = $direccionario->getSucursalById($clonarId);
+    if ($sucursalData) {
+        $sucursalData['NRO_SUCURSAL'] = '';
+        $sucursalData['DESC_SUCURSAL'] = trim($sucursalData['DESC_SUCURSAL'] ?? '') . ' (COPIA)';
+    }
+}
 
 // Lista estándar de provincias argentinas
 $listaProvincias = [
@@ -43,23 +75,58 @@ $listaTiposLocal = ['SHOPPING', 'CALLE'];
 $mensaje = null;
 $error = null;
 
-// NOTA DE SEGURIDAD: NO se ejecutan queries de escritura (INSERT/UPDATE) sin autorización expresa.
-// Si llega una petición POST simulada o de formulario, informamos y registramos de forma limpia.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Modo presentación / simulación controlada
-    $desc_sucursal = trim($_POST['desc_sucursal'] ?? '');
-    $nro_sucursal = trim($_POST['nro_sucursal'] ?? '');
-    if (!empty($desc_sucursal) && !empty($nro_sucursal)) {
-        $mensaje = "Formulario validado con éxito para sucursal #{$nro_sucursal} - {$desc_sucursal}. (Modo consulta activo - sin escrituras en base de datos).";
+    try {
+        if ($esEdicion && !$puede_editar) {
+            throw new Exception("No tiene permisos para editar esta sucursal.");
+        }
+        if (!$esEdicion && !$puede_crear) {
+            throw new Exception("No tiene permisos para crear una nueva sucursal.");
+        }
+
+        $direccionario->guardarSucursal($_POST, $esEdicion);
+        $nro = (int)($_POST['nro_sucursal'] ?? 0);
+        $desc = trim($_POST['desc_sucursal'] ?? '');
+        $mensaje = "Sucursal #{$nro} - {$desc} guardada exitosamente.";
+        
+        // Recargar datos actualizados
+        if ($esEdicion) {
+            $sucursalData = $direccionario->getSucursalById($nro);
+        }
+    } catch (Exception $e) {
+        $error = $e->getMessage();
     }
 }
+
+$valNroSucursal = htmlspecialchars($sucursalData['NRO_SUCURSAL'] ?? '');
+$valCodClient   = htmlspecialchars(trim($sucursalData['COD_CLIENT'] ?? ''));
+$valDesc        = htmlspecialchars(trim($sucursalData['DESC_SUCURSAL'] ?? ''));
+$valDireccion   = htmlspecialchars(trim($sucursalData['DIRECCION'] ?? ''));
+$valLocalidad   = htmlspecialchars(trim($sucursalData['LOCALIDAD'] ?? ''));
+$valProvincia   = trim($sucursalData['PROVINCIA'] ?? '');
+$valTelefono    = htmlspecialchars(trim($sucursalData['TELEFONO'] ?? ''));
+$valMail        = htmlspecialchars(trim($sucursalData['MAIL'] ?? ''));
+$valCanal       = trim($sucursalData['CANAL'] ?? '');
+$valTipoLocal   = trim($sucursalData['TIPO_LOCAL'] ?? '');
+$valCodDeposi   = htmlspecialchars(trim($sucursalData['COD_DEPOSI'] ?? ''));
+$valHorario     = htmlspecialchars(trim($sucursalData['HORARIO'] ?? ''));
+$valMailGrupo   = htmlspecialchars(trim($sucursalData['MAIL_GRUP_EMP'] ?? ''));
+$valTango       = (trim($sucursalData['TANGO'] ?? '') === 'SI' || !isset($sucursalData));
+$valTienda      = (trim($sucursalData['TIENDA'] ?? '') === 'SI' || !isset($sucursalData));
+$valVtex        = (trim($sucursalData['INTEGRA_VTEX'] ?? '') === 'SI');
+$valRetiroExp   = (trim($sucursalData['RETIRO_EXPRES'] ?? '') === 'SI');
+$valSucMadre    = htmlspecialchars($sucursalData['NRO_SUC_MADRE'] ?? '');
+
+$tituloPagina = $esEdicion ? "Editar Sucursal #{$valNroSucursal} · Direccionario XL" : "Alta de Sucursal · Direccionario XL";
+$tituloHeader = $esEdicion ? "Editar Sucursal #{$valNroSucursal}" : "Alta de Sucursal";
+$subtituloHeader = $esEdicion ? "Actualizar datos y configuración de la sucursal en el Direccionario" : "Registrar una nueva sucursal o punto de venta en el Direccionario general";
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alta de Sucursal · Direccionario XL</title>
+    <title><?= $tituloPagina ?></title>
     <link rel="shortcut icon" href="/sistemas/assets/css/icono.jpg">
 
     <!-- Google Fonts: Sora + DM Sans -->
@@ -149,9 +216,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .form-card {
             background: var(--bg-card);
-            border-radius: var(--radius-card);
             border: 1px solid var(--border);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            border-radius: var(--radius-card);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
             overflow: hidden;
         }
 
@@ -159,13 +226,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 1rem 1.5rem;
             background: #fafbfc;
             border-bottom: 1px solid var(--border);
+            font-family: var(--font-display);
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-title);
             display: flex;
             align-items: center;
             gap: 8px;
-            font-family: var(--font-display);
-            font-weight: 600;
-            font-size: 0.92rem;
+        }
+
+        .form-section-header i {
             color: var(--primary);
+            font-size: 1.1rem;
         }
 
         .form-section-body {
@@ -173,8 +245,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .form-label {
-            font-weight: 600;
             font-size: 0.82rem;
+            font-weight: 600;
             color: #4b5563;
             margin-bottom: 0.35rem;
             text-transform: uppercase;
@@ -182,16 +254,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .form-label .req {
-            color: #dc2626;
-            margin-left: 2px;
+            color: #e53e3e;
         }
 
         .form-control, .form-select {
-            border-radius: 9px;
             border: 1.5px solid #d1d5db;
-            padding: 0.55rem 0.85rem;
-            font-size: 0.88rem;
-            color: #1f2937;
+            border-radius: 10px;
+            padding: 0.6rem 0.85rem;
+            font-size: 0.9rem;
+            color: var(--text-title);
             transition: all 0.2s ease;
         }
 
@@ -350,8 +421,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <i class="bi bi-shop"></i>
             </div>
             <div>
-                <h1 class="header-title">Alta de Sucursal</h1>
-                <p class="header-subtitle">Registrar una nueva sucursal o punto de venta en el Direccionario general</p>
+                <h1 class="header-title"><?= $tituloHeader ?></h1>
+                <p class="header-subtitle"><?= $subtituloHeader ?></p>
             </div>
         </div>
         <div>
@@ -368,6 +439,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     <?php endif; ?>
 
+    <?php if ($error): ?>
+    <div class="alert alert-danger d-flex align-items-center gap-2 mb-4" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <div><?= htmlspecialchars($error) ?></div>
+    </div>
+    <?php endif; ?>
+
     <form method="POST" action="" class="needs-validation" novalidate id="formAltaSucursal">
 
         <div class="form-card mb-4">
@@ -379,31 +457,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label" for="nro_sucursal">Nro Sucursal <span class="req">*</span></label>
-                        <input type="number" class="form-control" id="nro_sucursal" name="nro_sucursal" placeholder="Ej: 110" required>
+                        <input type="number" class="form-control" id="nro_sucursal" name="nro_sucursal" value="<?= $valNroSucursal ?>" placeholder="Ej: 110" <?= $esEdicion ? 'readonly' : 'required' ?>>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label" for="cod_client">Cód. Cliente <span class="req">*</span></label>
-                        <input type="text" class="form-control text-uppercase" id="cod_client" name="cod_client" placeholder="Ej: GTNUNI" maxlength="8" required>
+                        <input type="text" class="form-control text-uppercase" id="cod_client" name="cod_client" value="<?= $valCodClient ?>" placeholder="Ej: GTNUNI" maxlength="8" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="desc_sucursal">Nombre Sucursal <span class="req">*</span></label>
-                        <input type="text" class="form-control text-uppercase" id="desc_sucursal" name="desc_sucursal" placeholder="Ej: ALTO PALERMO" required>
+                        <input type="text" class="form-control text-uppercase" id="desc_sucursal" name="desc_sucursal" value="<?= $valDesc ?>" placeholder="Ej: ALTO PALERMO" required>
                     </div>
 
                     <div class="col-md-6">
                         <label class="form-label" for="direccion">Dirección <span class="req">*</span></label>
-                        <input type="text" class="form-control text-uppercase" id="direccion" name="direccion" placeholder="Calle, número, piso o local" required>
+                        <input type="text" class="form-control text-uppercase" id="direccion" name="direccion" value="<?= $valDireccion ?>" placeholder="Calle, número, piso o local" required>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label" for="localidad">Localidad <span class="req">*</span></label>
-                        <input type="text" class="form-control text-uppercase" id="localidad" name="localidad" placeholder="Ej: CAPITAL FEDERAL" required>
+                        <input type="text" class="form-control text-uppercase" id="localidad" name="localidad" value="<?= $valLocalidad ?>" placeholder="Ej: CAPITAL FEDERAL" required>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label" for="provincia">Provincia <span class="req">*</span></label>
                         <select class="form-select" id="provincia" name="provincia" required>
-                            <option value="" disabled selected>Seleccione...</option>
+                            <option value="" disabled <?= empty($valProvincia) ? 'selected' : '' ?>>Seleccione...</option>
                             <?php foreach ($listaProvincias as $prov): ?>
-                            <option value="<?= $prov ?>"><?= $prov ?></option>
+                            <option value="<?= $prov ?>" <?= ($valProvincia === $prov) ? 'selected' : '' ?>><?= $prov ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -418,18 +496,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label" for="telefono">Teléfono <span class="req">*</span></label>
-                        <input type="text" class="form-control" id="telefono" name="telefono" placeholder="Ej: 4717-6295" required>
+                        <input type="text" class="form-control" id="telefono" name="telefono" value="<?= $valTelefono ?>" placeholder="Ej: 4717-6295" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="mail">Email Sucursal <span class="req">*</span></label>
-                        <input type="email" class="form-control" id="mail" name="mail" placeholder="sucursal@xl.com.ar" required>
+                        <input type="email" class="form-control" id="mail" name="mail" value="<?= $valMail ?>" placeholder="sucursal@xl.com.ar" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="canal">Canal Comercial <span class="req">*</span></label>
                         <select class="form-select" id="canal" name="canal" required>
-                            <option value="" disabled selected>Seleccione...</option>
+                            <option value="" disabled <?= empty($valCanal) ? 'selected' : '' ?>>Seleccione...</option>
                             <?php foreach ($listaCanales as $c): ?>
-                            <option value="<?= $c ?>"><?= $c ?></option>
+                            <option value="<?= $c ?>" <?= ($valCanal === $c) ? 'selected' : '' ?>><?= $c ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -437,25 +515,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="col-md-6">
                         <label class="form-label" for="tipo_local">Tipo de Punto de Venta <span class="req">*</span></label>
                         <select class="form-select" id="tipo_local" name="tipo_local" required>
-                            <option value="" disabled selected>Seleccione...</option>
+                            <option value="" disabled <?= empty($valTipoLocal) ? 'selected' : '' ?>>Seleccione...</option>
                             <?php foreach ($listaTiposLocal as $tipo): ?>
-                            <option value="<?= $tipo ?>"><?= $tipo ?></option>
+                            <option value="<?= $tipo ?>" <?= ($valTipoLocal === $tipo) ? 'selected' : '' ?>><?= $tipo ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="cod_deposi">Cód. Depósito <span class="req">*</span></label>
-                        <input type="text" class="form-control" id="cod_deposi" name="cod_deposi" placeholder="Ej: 02" maxlength="3" required>
+                        <input type="text" class="form-control" id="cod_deposi" name="cod_deposi" value="<?= $valCodDeposi ?>" placeholder="Ej: 02" maxlength="3" required>
                     </div>
 
                     <div class="col-12">
                         <label class="form-label" for="horario">Horario de Atención <span class="req">*</span></label>
-                        <input type="text" class="form-control text-uppercase" id="horario" name="horario" placeholder="Ej: LUN A DOM 10 A 22" required>
+                        <input type="text" class="form-control text-uppercase" id="horario" name="horario" value="<?= $valHorario ?>" placeholder="Ej: LUN A DOM 10 A 22" required>
                     </div>
 
                     <div class="col-12">
                         <label class="form-label" for="mail_grupo_emp">Emails Empresa / Grupo (opcional)</label>
-                        <textarea class="form-control" id="mail_grupo_emp" name="mail_grupo_emp" rows="2" placeholder="Ingrese uno por línea o sepárelos por coma o punto y coma"></textarea>
+                        <textarea class="form-control" id="mail_grupo_emp" name="mail_grupo_emp" rows="2" placeholder="Ingrese uno por línea o sepárelos por coma o punto y coma"><?= $valMailGrupo ?></textarea>
                         <div class="form-text-muted">Se almacenará normalizado con punto y coma (;) para notificaciones automáticas.</div>
                     </div>
                 </div>
@@ -468,25 +546,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-section-body">
                 <label class="form-label d-block mb-2">Seleccione los días en que el local se encuentra abierto:</label>
                 <div class="dias-wrap">
-                    <label class="btn-dia">
+                    <label class="btn-dia active">
                         <input type="checkbox" name="lunes" value="1" checked> Lunes
                     </label>
-                    <label class="btn-dia">
+                    <label class="btn-dia active">
                         <input type="checkbox" name="martes" value="1" checked> Martes
                     </label>
-                    <label class="btn-dia">
+                    <label class="btn-dia active">
                         <input type="checkbox" name="miercoles" value="1" checked> Miércoles
                     </label>
-                    <label class="btn-dia">
+                    <label class="btn-dia active">
                         <input type="checkbox" name="jueves" value="1" checked> Jueves
                     </label>
-                    <label class="btn-dia">
+                    <label class="btn-dia active">
                         <input type="checkbox" name="viernes" value="1" checked> Viernes
                     </label>
-                    <label class="btn-dia">
+                    <label class="btn-dia active">
                         <input type="checkbox" name="sabado" value="1" checked> Sábado
                     </label>
-                    <label class="btn-dia">
+                    <label class="btn-dia active">
                         <input type="checkbox" name="domingo" value="1" checked> Domingo
                     </label>
                 </div>
@@ -501,23 +579,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="col-md-6">
                         <div class="switch-group">
                             <div class="switch-label-wrap">
-                                <span class="switch-title">Habilitado</span>
-                                <span class="switch-desc">Activo y disponible para consultas y compras</span>
-                            </div>
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="habilitado" name="habilitado" value="1" checked>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="switch-group">
-                            <div class="switch-label-wrap">
                                 <span class="switch-title">Integración Tango</span>
                                 <span class="switch-desc">Sincroniza comprobantes y stock con Tango Gestión</span>
                             </div>
                             <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="tango" name="tango" value="1" checked>
+                                <input class="form-check-input" type="checkbox" id="tango" name="tango" value="1" <?= $valTango ? 'checked' : '' ?>>
                             </div>
                         </div>
                     </div>
@@ -525,11 +591,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="col-md-6">
                         <div class="switch-group">
                             <div class="switch-label-wrap">
-                                <span class="switch-title">Dashboard Power BI</span>
-                                <span class="switch-desc">Incluir en tableros comerciales y de ventas</span>
+                                <span class="switch-title">Tienda Física Activa</span>
+                                <span class="switch-desc">Local disponible para ventas</span>
                             </div>
                             <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="dashboard_bi" name="dashboard_bi" value="1" checked>
+                                <input class="form-check-input" type="checkbox" id="tienda" name="tienda" value="1" <?= $valTienda ? 'checked' : '' ?>>
                             </div>
                         </div>
                     </div>
@@ -541,7 +607,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <span class="switch-desc">Punto de retiro o disponibilidad omnicanal</span>
                             </div>
                             <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="integra_vtex" name="integra_vtex" value="1">
+                                <input class="form-check-input" type="checkbox" id="integra_vtex" name="integra_vtex" value="1" <?= $valVtex ? 'checked' : '' ?>>
                             </div>
                         </div>
                     </div>
@@ -553,27 +619,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <span class="switch-desc">Habilita modalidad click and collect express</span>
                             </div>
                             <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="retiro_expres" name="retiro_expres" value="1">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="switch-group">
-                            <div class="switch-label-wrap">
-                                <span class="switch-title">Ferretería</span>
-                                <span class="switch-desc">Habilitar vínculo con sucursal madre</span>
-                            </div>
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="empresa_ferreteria" name="empresa_ferreteria" value="1">
+                                <input class="form-check-input" type="checkbox" id="retiro_expres" name="retiro_expres" value="1" <?= $valRetiroExp ? 'checked' : '' ?>>
                             </div>
                         </div>
                     </div>
 
                     <div class="col-md-6">
                         <label class="form-label" for="nro_suc_madre">N° Sucursal Madre (si aplica)</label>
-                        <input type="number" class="form-control" id="nro_suc_madre" name="nro_suc_madre" placeholder="Ej: 2" disabled>
-                        <div class="form-text-muted">Se habilita al activar la opción Ferretería.</div>
+                        <input type="number" class="form-control" id="nro_suc_madre" name="nro_suc_madre" value="<?= $valSucMadre ?>" placeholder="Ej: 2">
+                        <div class="form-text-muted">Indicar únicamente si es anexo o sub-sucursal.</div>
                     </div>
                 </div>
             </div>
@@ -584,7 +638,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i class="bi bi-x-lg"></i> Cancelar
                 </a>
                 <button type="submit" class="btn-save" id="btnGuardar">
-                    <i class="bi bi-check2-circle"></i> Guardar Sucursal
+                    <i class="bi bi-check2-circle"></i> <?= $esEdicion ? 'Actualizar Sucursal' : 'Guardar Sucursal' ?>
                 </button>
             </div>
 
@@ -598,14 +652,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Habilitar / deshabilitar sucursal madre al cambiar Ferretería
-    $('#empresa_ferreteria').on('change', function() {
-        $('#nro_suc_madre').prop('disabled', !this.checked);
-        if (!this.checked) {
-            $('#nro_suc_madre').val('');
-        }
-    });
-
     // Toggle styling para botones de días
     $('.btn-dia').on('click', function(e) {
         if (e.target.tagName !== 'INPUT') {

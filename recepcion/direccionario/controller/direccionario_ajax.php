@@ -18,7 +18,10 @@ try {
     $username = Auth::username();
     $esAdmin = Auth::esAdmin();
     $rol = $_SESSION['rol'] ?? ($user['rol'] ?? '');
+    $rolNom = strtoupper(trim($user['rol_nombre'] ?? $rol ?? ''));
     $sectorCod = strtoupper($user['sector_codigo'] ?? '');
+    $sectorNom = strtoupper($user['sector_nombre'] ?? '');
+    $subsectorNom = strtoupper($user['subsector_nombre'] ?? '');
 
     // Solo Sistemas, IT y Administrador Total tienen acceso a datos de infraestructura y ver sucursales no principales
     $es_admin_sistemas = $esAdmin 
@@ -26,8 +29,15 @@ try {
                       || in_array(strtolower($username ?? ''), ['admin', 'sistemas', 'francopertus', 'franco.pertus'])
                       || in_array($sectorCod, ['SISTEMAS', 'IT']);
 
+    // Rol Recepcionista (Comercial y Ventas -> Analistas -> Recepcionista)
+    $es_recepcionista = ($rolNom === 'RECEPCIONISTA' || ($user['rol_id'] ?? 0) == 18)
+                     || ($sectorNom === 'COMERCIAL Y VENTAS' && $subsectorNom === 'ANALISTAS' && $rolNom === 'RECEPCIONISTA');
+
     $puede_ver_todo    = $es_admin_sistemas;
     $puede_ver_tecnico = $es_admin_sistemas;
+    $puede_crear       = $es_admin_sistemas;
+    $puede_editar      = $es_admin_sistemas || $es_recepcionista;
+    $puede_eliminar    = $es_admin_sistemas || $es_recepcionista;
 
     switch ($action) {
         case 'buscar':
@@ -73,6 +83,18 @@ try {
         case 'getGruposEmpresarios':
             $grupos = $direccionario->getGruposEmpresarios();
             echo json_encode(['success' => true, 'grupos' => $grupos], JSON_UNESCAPED_UNICODE);
+            break;
+
+        case 'eliminar':
+            if (!$puede_eliminar) {
+                throw new Exception('No posee permisos para eliminar sucursales.');
+            }
+            $nro = (int)($_POST['nro_sucursal'] ?? 0);
+            if ($nro <= 0) {
+                throw new Exception('Número de sucursal inválido.');
+            }
+            $direccionario->eliminarSucursal($nro);
+            echo json_encode(['success' => true, 'message' => "Sucursal #$nro eliminada con éxito."], JSON_UNESCAPED_UNICODE);
             break;
 
         default:

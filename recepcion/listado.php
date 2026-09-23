@@ -1,6 +1,31 @@
 
 <?php
+require_once __DIR__ . '/../../nodo/Class/bootstrap.php';
 require_once 'Class/Interno.php';
+
+Auth::exigir();
+$user = Auth::usuario();
+$username = Auth::username();
+$esAdmin = Auth::esAdmin();
+
+$rol = $_SESSION['rol'] ?? ($user['rol'] ?? '');
+$rolNom = strtoupper(trim($user['rol_nombre'] ?? $rol ?? ''));
+$sectorCod = strtoupper($user['sector_codigo'] ?? '');
+$sectorNom = strtoupper($user['sector_nombre'] ?? '');
+$subsectorNom = strtoupper($user['subsector_nombre'] ?? '');
+
+$es_admin_sistemas = $esAdmin 
+                  || in_array(strtolower($rol), ['admin', 'sistemas', 'gerencia_adm', 'superadmin', 'controltotal']) 
+                  || in_array(strtolower($username ?? ''), ['admin', 'sistemas', 'francopertus', 'franco.pertus'])
+                  || in_array($sectorCod, ['SISTEMAS', 'IT']);
+
+$es_recepcionista = ($rolNom === 'RECEPCIONISTA' || ($user['rol_id'] ?? 0) == 18)
+                 || ($sectorNom === 'COMERCIAL Y VENTAS' && $subsectorNom === 'ANALISTAS' && $rolNom === 'RECEPCIONISTA');
+
+$puede_crear    = $es_admin_sistemas;
+$puede_editar   = $es_admin_sistemas || $es_recepcionista;
+$puede_eliminar = $es_admin_sistemas || $es_recepcionista;
+
 $interno = new Interno();
 ?>
 <!DOCTYPE html>
@@ -27,10 +52,12 @@ $interno = new Interno();
                                 <i class="bi bi-people-fill me-2"></i>
                                 Listado de Personal
                             </h1>
+                            <?php if ($puede_crear): ?>
                             <button class="btn btn-primary" onclick="nuevoRegistro()">
                                 <i class="bi bi-plus-lg me-2"></i>
                                 Nuevo Registro
                             </button>
+                            <?php endif; ?>
                         </div>
 
                         <!-- Search Section -->

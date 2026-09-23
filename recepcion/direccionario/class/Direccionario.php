@@ -329,4 +329,109 @@ class Direccionario {
             return [];
         }
     }
+
+    public function getSucursalById($nro) {
+        try {
+            $query = "SELECT TOP 1 * FROM DIRECCIONARIO WHERE NRO_SUCURSAL = ?";
+            $stmt = sqlsrv_query($this->cid_locales, $query, [$nro]);
+            if ($stmt && ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC))) {
+                return $row;
+            }
+            return null;
+        } catch (Exception $e) {
+            error_log("Error en getSucursalById: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function eliminarSucursal($nro) {
+        try {
+            $query = "DELETE FROM DIRECCIONARIO WHERE NRO_SUCURSAL = ?";
+            $stmt = sqlsrv_query($this->cid_locales, $query, [$nro]);
+            if ($stmt === false) {
+                throw new Exception(print_r(sqlsrv_errors(), true));
+            }
+            return true;
+        } catch (Exception $e) {
+            error_log("Error en eliminarSucursal: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function guardarSucursal($d, $esEdicion = false) {
+        try {
+            $nro = (int)($d['nro_sucursal'] ?? 0);
+            if ($nro <= 0) {
+                throw new Exception("Número de sucursal inválido.");
+            }
+
+            $codClient = trim($d['cod_client'] ?? '');
+            $descSucursal = trim($d['desc_sucursal'] ?? '');
+            $canal = trim($d['canal'] ?? '');
+            $tipoLocal = trim($d['tipo_local'] ?? '');
+            $grupoEmp = trim($d['grupo_empresario'] ?? '');
+            $direccion = trim($d['direccion'] ?? '');
+            $localidad = trim($d['localidad'] ?? '');
+            $provincia = trim($d['provincia'] ?? '');
+            $telefono = trim($d['telefono'] ?? '');
+            $mail = trim($d['mail'] ?? '');
+            $horario = trim($d['horario'] ?? '');
+            $codDeposi = trim($d['cod_deposi'] ?? '');
+            $mailGrupEmp = trim($d['mail_grupo_emp'] ?? '');
+            $tango = !empty($d['tango']) ? 'SI' : 'NO';
+            $tienda = !empty($d['tienda']) ? 'SI' : 'NO';
+            $vtex = !empty($d['integra_vtex']) ? 'SI' : 'NO';
+            $retiroExp = !empty($d['retiro_expres']) ? 'SI' : 'NO';
+
+            if ($esEdicion) {
+                $sql = "UPDATE DIRECCIONARIO SET
+                        COD_CLIENT = ?, DESC_SUCURSAL = ?, CANAL = ?, TIPO_LOCAL = ?, GRUPO_EMPRESARIO = ?,
+                        DIRECCION = ?, LOCALIDAD = ?, PROVINCIA = ?, TELEFONO = ?, MAIL = ?, HORARIO = ?,
+                        COD_DEPOSI = ?, MAIL_GRUP_EMP = ?, TANGO = ?, TIENDA = ?, INTEGRA_VTEX = ?, RETIRO_EXPRES = ?
+                        WHERE NRO_SUCURSAL = ?";
+                $params = [
+                    $codClient, $descSucursal, $canal, $tipoLocal, $grupoEmp,
+                    $direccion, $localidad, $provincia, $telefono, $mail, $horario,
+                    $codDeposi, $mailGrupEmp, $tango, $tienda, $vtex, $retiroExp,
+                    $nro
+                ];
+                $stmt = sqlsrv_query($this->cid_locales, $sql, $params);
+                if ($stmt === false) {
+                    throw new Exception(print_r(sqlsrv_errors(), true));
+                }
+            } else {
+                $sql = "INSERT INTO DIRECCIONARIO (
+                        NRO_SUCURSAL, COD_CLIENT, DESC_SUCURSAL, CANAL, TIPO_LOCAL, GRUPO_EMPRESARIO,
+                        DIRECCION, LOCALIDAD, PROVINCIA, TELEFONO, MAIL, HORARIO,
+                        COD_DEPOSI, MAIL_GRUP_EMP, TANGO, TIENDA, INTEGRA_VTEX, RETIRO_EXPRES
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                $params = [
+                    $nro, $codClient, $descSucursal, $canal, $tipoLocal, $grupoEmp,
+                    $direccion, $localidad, $provincia, $telefono, $mail, $horario,
+                    $codDeposi, $mailGrupEmp, $tango, $tienda, $vtex, $retiroExp
+                ];
+                $stmt = sqlsrv_query($this->cid_locales, $sql, $params);
+                if ($stmt === false) {
+                    throw new Exception(print_r(sqlsrv_errors(), true));
+                }
+            }
+
+            // Actualizar días en SUCURSALES_LAKERS si existe
+            $lunes = !empty($d['lunes']) ? 1 : 0;
+            $martes = !empty($d['martes']) ? 1 : 0;
+            $miercoles = !empty($d['miercoles']) ? 1 : 0;
+            $jueves = !empty($d['jueves']) ? 1 : 0;
+            $viernes = !empty($d['viernes']) ? 1 : 0;
+            $sabado = !empty($d['sabado']) ? 1 : 0;
+            $domingo = !empty($d['domingo']) ? 1 : 0;
+
+            $sqlDias = "UPDATE SUCURSALES_LAKERS SET LUNES = ?, MARTES = ?, MIERCOLES = ?, JUEVES = ?, VIERNES = ?, SABADO = ?, DOMINGO = ? WHERE NRO_SUCURSAL = ?";
+            sqlsrv_query($this->cid_locales, $sqlDias, [$lunes, $martes, $miercoles, $jueves, $viernes, $sabado, $domingo, $nro]);
+
+            return true;
+        } catch (Exception $e) {
+            error_log("Error en guardarSucursal: " . $e->getMessage());
+            throw $e;
+        }
+    }
 }
