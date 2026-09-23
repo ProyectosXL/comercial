@@ -917,18 +917,23 @@ $(document).ready(function () {
                 let horasDiaValor = 0;
 
                 fila.find(`.hora-celda[data-fecha="${fechaISO}"]`).each(function () {
-                    if ($(this).hasClass('marcado') || $(this).hasClass('hora-caja') || $(this).hasClass('hora-permiso') || $(this).hasClass('hora-extra') || $(this).hasClass('hora-devuelve') || $(this).hasClass('bloqueo-externo') || $(this).hasClass('hora-ausencia')) {
+                    const esBloqueo = $(this).hasClass('bloqueo-externo');
+                    if ($(this).hasClass('marcado') || $(this).hasClass('hora-caja') || $(this).hasClass('hora-permiso') || $(this).hasClass('hora-extra') || $(this).hasClass('hora-devuelve') || $(this).hasClass('hora-ausencia') || esBloqueo) {
                         const hora = $(this).data('hora');
                         const esMedia = $(this).hasClass('media-hora');
                         const valor = esMedia ? 0.5 : 1;
 
                         horasDia.push(hora);
-                        horasDiaValor += valor;
 
-                        // Contar para total por columna
-                        const horaIndex = hora - 7;
-                        if (horaIndex >= 0 && horaIndex < 18) {
-                            totalesPorHora[diaIndex][horaIndex] += valor;
+                        // No sumar al Total Hs del local si la persona está trabajando en otra sucursal
+                        if (!esBloqueo) {
+                            horasDiaValor += valor;
+
+                            // Contar para total por columna (Fila Total Hs)
+                            const horaIndex = hora - 7;
+                            if (horaIndex >= 0 && horaIndex < 18) {
+                                totalesPorHora[diaIndex][horaIndex] += valor;
+                            }
                         }
                     }
                 });
