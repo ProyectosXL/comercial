@@ -51,12 +51,8 @@ class Venta
         }
         
         // Filtro por tipo de sucursal basado en la columna CANAL
-        if($tipoSucursal == 'propios'){
-            $sql .= " AND V.CANAL = 'LOCALES PROPIOS' ";
-        } elseif($tipoSucursal == 'franquicias'){
-            $sql .= " AND V.CANAL = 'FRANQUICIAS' ";
-        } elseif($tipoSucursal == 'franquicias_ga'){
-            $sql .= " AND V.CANAL = 'FRANQUICIAS GA' ";
+        if($tipoSucursal != '' && $tipoSucursal != '%'){
+            $sql .= " AND V.CANAL IN ($tipoSucursal) ";
         }
         
         $sql .= "

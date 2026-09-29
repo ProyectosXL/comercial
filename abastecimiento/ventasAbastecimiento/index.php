@@ -103,7 +103,8 @@ $paisActual = ($checkedValue === 'central') ? 'ARGENTINA' : 'URUGUAY';
     }
     
     .filter-tipo {
-      flex: 0 0 180px;
+      flex: 0 0 220px;
+      min-width: 180px;
     }
     
     .filter-temporada {
@@ -228,11 +229,11 @@ $hoy = date("Y-m-d");
       
       <div class="filter-item filter-tipo">
         <label class="form-label fw-bold"><i class="fa fa-building me-1"></i>Tipo Sucursal</label>
-        <select id="tipoSucursal" class="form-control" name="tipoSucursal">
-          <option value="" selected>Todos</option>
-          <option value="propios">Locales Propios</option>
-          <option value="franquicias">Franquicias</option>
-          <option value="franquicias_ga">Franquicias GA</option>
+        <select id="tipoSucursal" class="form-control basic-multiple" name="tipoSucursal[]" multiple>
+          <option disabled></option>
+          <option value="LOCALES PROPIOS" <?= (isset($_GET['tipoSucursal']) && in_array('LOCALES PROPIOS', (array)$_GET['tipoSucursal'])) ? 'selected' : '' ?>>Locales Propios</option>
+          <option value="FRANQUICIAS" <?= (isset($_GET['tipoSucursal']) && in_array('FRANQUICIAS', (array)$_GET['tipoSucursal'])) ? 'selected' : '' ?>>Franquicias</option>
+          <option value="FRANQUICIAS GA" <?= (isset($_GET['tipoSucursal']) && in_array('FRANQUICIAS GA', (array)$_GET['tipoSucursal'])) ? 'selected' : '' ?>>Franquicias GA</option>
         </select>
       </div>
       

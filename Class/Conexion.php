@@ -17,6 +17,8 @@ if (!class_exists('Conexion')) {
         private $database_locales;
         private $database_power_franquicias;
         private $database_franquicias;
+        private $host_sales;
+        private $database_wms;
         private $user;
         private $pass;
         private $pass_locales;

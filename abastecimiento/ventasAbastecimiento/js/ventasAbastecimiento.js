@@ -37,13 +37,14 @@ const buscar = () =>{
 
   let rubros = document.querySelector("#rubro");
   let destinos = document.querySelector("#destino");
+  let tipoSucursal = document.querySelector("#tipoSucursal");
   let desde = document.querySelector("#desde").value;
   let hasta = document.querySelector("#hasta").value;
-  let temporada = document.querySelector("#temporada").value
-  let tipoSucursal = document.querySelector("#tipoSucursal").value
+  let temporada = document.querySelector("#temporada").value;
   
  let rubrosParaSql = "";
  let destinosParaSql = "";
+ let tipoSucursalParaSql = "";
  var dt = $('#mytable').DataTable();
  dt.destroy();
 
@@ -62,6 +63,14 @@ const buscar = () =>{
   }
 
   destinosParaSql = destinosParaSql.slice(0, -1);
+
+  for (const option of tipoSucursal.options) {
+    if (option.selected) {
+      tipoSucursalParaSql += "'" + option.value + "',";
+    }
+  }
+
+  tipoSucursalParaSql = tipoSucursalParaSql.slice(0, -1);
 
   $.ajax({
     url: "Controller/ventasController.php",
