@@ -349,7 +349,7 @@ $hoy = date("Y-m-d");
 
 <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
 <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
-<script src="js/ventasAbastecimiento.js"></script>
+<script src="js/ventasAbastecimiento.js?v=<?= filemtime(__DIR__ . '/js/ventasAbastecimiento.js') ?>"></script>
 
 <script>
 

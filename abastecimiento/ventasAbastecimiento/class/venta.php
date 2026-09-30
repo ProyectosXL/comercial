@@ -4,6 +4,43 @@
 class Venta
 {
 
+    private function formatearParaIn($valor, $esTipoSucursal = false) {
+        if (empty($valor) || $valor === '%') {
+            return '';
+        }
+        
+        if (is_array($valor)) {
+            $items = $valor;
+        } else {
+            $valorLimpio = trim($valor);
+            if ($valorLimpio === '' || $valorLimpio === '%') {
+                return '';
+            }
+            $items = str_getcsv($valorLimpio, ',', "'");
+        }
+        
+        $limpios = [];
+        foreach ($items as $item) {
+            $item = trim($item, " \t\n\r\0\x0B'\"");
+            if ($item !== '' && $item !== '%') {
+                if ($esTipoSucursal) {
+                    $itemUpper = strtoupper($item);
+                    if ($itemUpper === 'PROPIOS' || $itemUpper === 'LOCALES PROPIOS') {
+                        $item = 'LOCALES PROPIOS';
+                    } elseif ($itemUpper === 'FRANQUICIAS' || $itemUpper === 'FRANQUICIA') {
+                        $item = 'FRANQUICIAS';
+                    } elseif ($itemUpper === 'FRANQUICIAS_GA' || $itemUpper === 'FRANQUICIAS GA') {
+                        $item = 'FRANQUICIAS GA';
+                    }
+                }
+                $itemEscaped = str_replace("'", "''", $item);
+                $limpios[] = "'$itemEscaped'";
+            }
+        }
+        
+        return empty($limpios) ? '' : implode(',', $limpios);
+    }
+
     public function traerVentas($rubro, $destino, $temporada, $desde, $hasta, $tipoSucursal = ''){
         try {
             
@@ -42,17 +79,20 @@ class Venta
          WHERE V.FECHA_VENTA BETWEEN '$desde' AND '$hasta' 
          AND V.TEMPORADA LIKE '%$temporada'";
 
-        if($destino != '' && $destino != '%'){
-            $sql .= " AND V.DESTINO IN ($destino) ";
+        $destinoIn = $this->formatearParaIn($destino);
+        if($destinoIn !== ''){
+            $sql .= " AND V.DESTINO IN ($destinoIn) ";
         }
 
-        if($rubro != '' && $rubro != '%'){
-            $sql .= " AND V.RUBRO IN ($rubro) ";
+        $rubroIn = $this->formatearParaIn($rubro);
+        if($rubroIn !== ''){
+            $sql .= " AND V.RUBRO IN ($rubroIn) ";
         }
         
         // Filtro por tipo de sucursal basado en la columna CANAL
-        if($tipoSucursal != '' && $tipoSucursal != '%'){
-            $sql .= " AND V.CANAL IN ($tipoSucursal) ";
+        $tipoSucursalIn = $this->formatearParaIn($tipoSucursal, true);
+        if($tipoSucursalIn !== ''){
+            $sql .= " AND V.CANAL IN ($tipoSucursalIn) ";
         }
         
         $sql .= "
@@ -71,7 +111,7 @@ class Venta
 
         $rows = array();
 
-        while( $v = sqlsrv_fetch_array( $stmt) ) {
+        while( $v = sqlsrv_fetch_array( $stmt, SQLSRV_FETCH_ASSOC) ) {
             // Renombrar CANAL a TIPO_SUCURSAL para compatibilidad con el frontend
             $v['TIPO_SUCURSAL'] = $v['CANAL'];
             $rows[] = $v;

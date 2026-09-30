@@ -35,42 +35,20 @@ const buscar = () =>{
   let spinner = document.querySelector('.boxLoading')
   spinner.classList.add('loading')
 
-  let rubros = document.querySelector("#rubro");
-  let destinos = document.querySelector("#destino");
-  let tipoSucursal = document.querySelector("#tipoSucursal");
   let desde = document.querySelector("#desde").value;
   let hasta = document.querySelector("#hasta").value;
   let temporada = document.querySelector("#temporada").value;
   
- let rubrosParaSql = "";
- let destinosParaSql = "";
- let tipoSucursalParaSql = "";
- var dt = $('#mytable').DataTable();
- dt.destroy();
+  let rubrosVals = $('#rubro').val() || [];
+  let destinosVals = $('#destino').val() || [];
+  let tipoSucursalVals = $('#tipoSucursal').val() || [];
 
- for (const option of rubros.options) {
-    if (option.selected) {
-      rubrosParaSql += "'" + option.value + "',";
-    }
-  }
+  let rubrosParaSql = rubrosVals.map(v => "'" + v + "'").join(',');
+  let destinosParaSql = destinosVals.map(v => "'" + v + "'").join(',');
+  let tipoSucursalParaSql = tipoSucursalVals.map(v => "'" + v + "'").join(',');
 
-  rubrosParaSql = rubrosParaSql.slice(0, -1);
-
-  for (const option of destinos.options) {
-    if (option.selected) {
-      destinosParaSql += "'" + option.value + "',";
-    }
-  }
-
-  destinosParaSql = destinosParaSql.slice(0, -1);
-
-  for (const option of tipoSucursal.options) {
-    if (option.selected) {
-      tipoSucursalParaSql += "'" + option.value + "',";
-    }
-  }
-
-  tipoSucursalParaSql = tipoSucursalParaSql.slice(0, -1);
+  var dt = $('#mytable').DataTable();
+  dt.destroy();
 
   $.ajax({
     url: "Controller/ventasController.php",
@@ -81,7 +59,7 @@ const buscar = () =>{
       hasta: hasta,
       destino: destinosParaSql,
       temporada: temporada,
-      tipoSucursal: tipoSucursal
+      tipoSucursal: tipoSucursalParaSql
      },
     success: function (data) {
       document.querySelector("#tbody").innerHTML = '';
