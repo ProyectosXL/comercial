@@ -23,6 +23,7 @@ session_start();
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/estilos-comunes.css">
+    <link rel="stylesheet" href="css/gestionarPremiosEcommerce.css">
 </head>
 <body class="bg-light">
     <div class="container form-container">
@@ -44,6 +45,29 @@ session_start();
             <i class="fas fa-trophy text-warning me-3 fs-2"></i>
             <h3 class="mb-0">Gestión de Premios Comercial</h3>
         </div>
+
+        <!-- Sub-pestañas: premios de supervisoras y configuración de Premios Ecommerce
+             (lo que el dashboard /bi/premios/ muestra en su pestaña Premios Ecommerce). -->
+        <ul class="nav nav-pills mb-4" id="premiosSubTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="supervisoras-tab" data-bs-toggle="pill" data-bs-target="#supervisoras-pane" type="button" role="tab">
+                    <i class="fas fa-user-tie me-2"></i>Supervisoras
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="ecom-personas-tab" data-bs-toggle="pill" data-bs-target="#ecom-personas-pane" type="button" role="tab">
+                    <i class="fas fa-users me-2"></i>Ecommerce · Personas
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="ecom-escalas-tab" data-bs-toggle="pill" data-bs-target="#ecom-escalas-pane" type="button" role="tab">
+                    <i class="fas fa-sliders-h me-2"></i>Ecommerce · Escalas
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+        <div class="tab-pane fade show active" id="supervisoras-pane" role="tabpanel">
 
         <form id="premiosForm" method="POST">
             <div class="row mb-4">
@@ -92,11 +116,23 @@ session_start();
                 </button>
             </div>
         </form>
+
+        </div><!-- /supervisoras-pane -->
+
+        <!-- Se completan desde js/gestionarPremiosEcommerce.js la primera vez que se abren. -->
+        <div class="tab-pane fade" id="ecom-personas-pane" role="tabpanel">
+            <div id="ecom-personas-wrap" class="text-muted">Cargando…</div>
+        </div>
+        <div class="tab-pane fade" id="ecom-escalas-pane" role="tabpanel">
+            <div id="ecom-escalas-wrap" class="text-muted">Cargando…</div>
+        </div>
+        </div><!-- /tab-content -->
     </div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="js/gestionarPremio.js"></script>
+    <script src="js/gestionarPremiosEcommerce.js"></script>
 </body>
 </html>

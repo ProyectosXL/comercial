@@ -87,9 +87,14 @@ $(document).ready(function () {
         return d;
     }
 
-    // 4. VER AGENDA
     $('#btnVerAgenda').on('click', function () {
-        const sucursalesSeleccionadas = $('#sucursalSelector').val() || [];
+        const rawSucursales = $('#sucursalSelector').val();
+        let sucursalesSeleccionadas = [];
+        if (Array.isArray(rawSucursales)) {
+            sucursalesSeleccionadas = rawSucursales.filter(s => s && s !== '');
+        } else if (typeof rawSucursales === 'string' && rawSucursales.trim() !== '') {
+            sucursalesSeleccionadas = [rawSucursales.trim()];
+        }
         const vendedorId = $('#vendedorSelector').val();
 
         // Detectar modo: semana o día

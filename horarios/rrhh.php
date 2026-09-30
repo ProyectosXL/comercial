@@ -73,7 +73,7 @@
         </div>
     </nav>
 
-    <div class="container my-4">
+    <div class="container-fluid my-4 px-3 px-md-4">
 
         <!-- PESTAÑAS SUPERIORES -->
         <ul class="nav nav-tabs mb-4" id="rrhhTabs" role="tablist">
@@ -433,8 +433,7 @@
                             <!-- Selector Sucursal -->
                             <div class="col-md-4">
                                 <label class="form-label text-muted small fw-bold text-uppercase">Sucursal</label>
-                                <select id="sucursalSelector" class="form-select form-select-lg fw-bold border-secondary">
-                                    <option value="">-- Seleccionar --</option>
+                                <select id="sucursalSelector" class="form-select form-select-lg fw-bold border-secondary" multiple="multiple">
                                 </select>
                             </div>
                             <!-- Selector Semana -->
