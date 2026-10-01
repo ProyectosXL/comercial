@@ -300,13 +300,14 @@ class Articulo
             $offset = ($page - 1) * $pageSize;
             $terminoEscapado = $this->escapeSqlString($termino);
 
-            // SQL con LEFT JOIN para verificar si el artículo ya está en un grupo
+            // SQL con LEFT JOIN para verificar si el artículo ya está en un grupo ACTIVO
             $sql = "SELECT TOP " . ($pageSize + 1) . "
                         s.COD_ARTICU as id,
                         s.DESCRIPCIO as descripcion,
                         '' as color,
                         CONCAT(s.COD_ARTICU COLLATE Latin1_General_BIN, ' - ', s.DESCRIPCIO COLLATE Latin1_General_BIN) as text,
-                        eq.COD_EQUIVALENCIA as en_grupo
+                        eq.COD_EQUIVALENCIA as en_grupo,
+                        eq.DESCRIPCION_GRUPO as nombre_grupo
                     FROM STA11 s
                     LEFT JOIN RO_T_ARTICULOS_EQUIVALENTES eq ON s.COD_ARTICU COLLATE Latin1_General_BIN = eq.COD_ARTICULO COLLATE Latin1_General_BIN AND eq.ACTIVO = 1
                     WHERE s.USA_ESC = 'B' 
@@ -353,6 +354,9 @@ class Articulo
                 if (!isset($resultado['en_grupo']) || is_null($resultado['en_grupo'])) {
                     $resultado['en_grupo'] = null;
                 }
+                if (!isset($resultado['nombre_grupo']) || is_null($resultado['nombre_grupo'])) {
+                    $resultado['nombre_grupo'] = '';
+                }
             }
 
             $respuesta = [
@@ -375,6 +379,28 @@ class Articulo
                 'error' => $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Helper para formatear errores SQL a mensajes legibles para el usuario
+     */
+    private function formatearErrorSql($errores, $articuloCod = '')
+    {
+        if (is_array($errores)) {
+            foreach ($errores as $err) {
+                $msg = $err['message'] ?? '';
+                $code = $err['code'] ?? 0;
+                // Error 2627 o 2601: Violation of UNIQUE KEY / PRIMARY KEY constraint
+                if ($code == 2627 || $code == 2601 || stripos($msg, 'UK_ARTICULOS_EQUIVALENTES') !== false || stripos($msg, 'duplicate key') !== false) {
+                    $art = !empty($articuloCod) ? "el artículo '$articuloCod'" : "un artículo";
+                    return "$art ya está asignado a otro grupo de equivalencias activo. Para poder agregarlo a este grupo, primero debes quitarlo del grupo al que pertenece.";
+                }
+            }
+            if (isset($errores[0]['message'])) {
+                return $errores[0]['message'];
+            }
+        }
+        return "Error al procesar la solicitud en la base de datos.";
     }
 
     /**
@@ -438,15 +464,28 @@ class Articulo
      */
     public function crearGrupoEquivalencias($descripcionGrupo, $rubro, $estado, $articulos)
     {
+        if (!$this->cid_central) {
+            throw new Exception("No hay conexión con la base de datos central");
+        }
+
         try {
+            // Iniciar transacción
+            if (sqlsrv_begin_transaction($this->cid_central) === false) {
+                throw new Exception("Error al iniciar transacción: " . print_r(sqlsrv_errors(), true));
+            }
+
             // Obtener el siguiente código de equivalencia
-            $sqlMaxCod = "SELECT COALESCE(MAX(COD_EQUIVALENCIA), 1000) + 1 as SIGUIENTE_COD FROM RO_T_ARTICULOS_EQUIVALENTES";
+            $sqlMaxCod = "SELECT COALESCE(MAX(CAST(COD_EQUIVALENCIA AS INT)), 1000) + 1 as SIGUIENTE_COD FROM RO_T_ARTICULOS_EQUIVALENTES";
             $stmt = sqlsrv_query($this->cid_central, $sqlMaxCod);
+            if ($stmt === false) {
+                throw new Exception("Error al calcular el código de equivalencia: " . print_r(sqlsrv_errors(), true));
+            }
             $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
-            $nuevoCodEquivalencia = $row['SIGUIENTE_COD'];
+            $nuevoCodEquivalencia = $row['SIGUIENTE_COD'] ?? 1001;
             sqlsrv_free_stmt($stmt);
 
-            // Insertar artículos del grupo con RUBRO
+            // Preparar consultas para limpiar inactivos y verificar
+            $sqlLimpiarInactivo = "DELETE FROM RO_T_ARTICULOS_EQUIVALENTES WHERE COD_ARTICULO = ? AND ACTIVO = 0";
             $sqlInsert = "INSERT INTO RO_T_ARTICULOS_EQUIVALENTES (
                             COD_EQUIVALENCIA, 
                             COD_ARTICULO, 
@@ -458,24 +497,40 @@ class Articulo
                         ) VALUES (?, ?, ?, ?, GETDATE(), GETDATE(), ?)";
 
             foreach ($articulos as $articulo) {
+                $codArt = $articulo['COD_ARTICU'];
+
+                // Liberar registros inactivos previos del artículo para evitar error de clave única
+                $stmtDel = sqlsrv_prepare($this->cid_central, $sqlLimpiarInactivo, array($codArt));
+                if ($stmtDel) {
+                    sqlsrv_execute($stmtDel);
+                    sqlsrv_free_stmt($stmtDel);
+                }
+
                 $params = array(
                     $nuevoCodEquivalencia,
-                    $articulo['COD_ARTICU'],
+                    $codArt,
                     $descripcionGrupo,
                     $rubro,
                     $estado
                 );
 
                 $stmt = sqlsrv_prepare($this->cid_central, $sqlInsert, $params);
-                if (!sqlsrv_execute($stmt)) {
-                    throw new Exception("Error al insertar artículo: " . print_r(sqlsrv_errors(), true));
+                if ($stmt === false || !sqlsrv_execute($stmt)) {
+                    $errSql = sqlsrv_errors();
+                    throw new Exception($this->formatearErrorSql($errSql, $codArt));
                 }
                 sqlsrv_free_stmt($stmt);
             }
 
+            // Confirmar transacción
+            sqlsrv_commit($this->cid_central);
+
             return $nuevoCodEquivalencia;
 
         } catch (Exception $e) {
+            if ($this->cid_central) {
+                sqlsrv_rollback($this->cid_central);
+            }
             error_log("Error en crearGrupoEquivalencias: " . $e->getMessage());
             throw $e;
         }
@@ -485,30 +540,56 @@ class Articulo
      * Editar grupo de equivalencias
      * @param int $codEquivalencia
      * @param string $descripcionGrupo
+     * @param string $rubro
      * @param int $estado
      * @param array $articulos
      * @return bool
      */
     public function editarGrupoEquivalencias($codEquivalencia, $descripcionGrupo, $rubro, $estado, $articulos)
     {
+        if (!$this->cid_central) {
+            throw new Exception("No hay conexión con la base de datos central");
+        }
+
         try {
+            // Iniciar transacción
+            if (sqlsrv_begin_transaction($this->cid_central) === false) {
+                throw new Exception("Error al iniciar transacción: " . print_r(sqlsrv_errors(), true));
+            }
+
             // Obtener la fecha de creación original del grupo
             $sqlFechaCreacion = "SELECT TOP 1 FECHA_CREACION 
                                 FROM RO_T_ARTICULOS_EQUIVALENTES 
                                 WHERE COD_EQUIVALENCIA = ?";
 
             $stmt = sqlsrv_prepare($this->cid_central, $sqlFechaCreacion, array($codEquivalencia));
-            sqlsrv_execute($stmt);
+            if ($stmt === false || !sqlsrv_execute($stmt)) {
+                throw new Exception("Error al obtener fecha de creación: " . print_r(sqlsrv_errors(), true));
+            }
             $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
 
-            $fechaCreacionOriginal = $row['FECHA_CREACION'];
+            $fechaCreacionOriginal = $row['FECHA_CREACION'] ?? null;
             sqlsrv_free_stmt($stmt);
 
-            // Eliminar artículos existentes del grupo
+            // Formatear la fecha original correctamente para SQL Server si es un objeto DateTime
+            if ($fechaCreacionOriginal instanceof DateTime) {
+                $fechaCreacionOriginal = $fechaCreacionOriginal->format('Y-m-d H:i:s');
+            } elseif (!empty($fechaCreacionOriginal) && is_string($fechaCreacionOriginal)) {
+                $dt = new DateTime($fechaCreacionOriginal);
+                $fechaCreacionOriginal = $dt->format('Y-m-d H:i:s');
+            } else {
+                $fechaCreacionOriginal = null;
+            }
+
+            // Eliminar artículos existentes de este grupo
             $sqlDelete = "DELETE FROM RO_T_ARTICULOS_EQUIVALENTES WHERE COD_EQUIVALENCIA = ?";
             $stmt = sqlsrv_prepare($this->cid_central, $sqlDelete, array($codEquivalencia));
-            sqlsrv_execute($stmt);
+            if ($stmt === false || !sqlsrv_execute($stmt)) {
+                throw new Exception("Error al limpiar artículos previos del grupo: " . print_r(sqlsrv_errors(), true));
+            }
             sqlsrv_free_stmt($stmt);
+
+            $sqlLimpiarInactivo = "DELETE FROM RO_T_ARTICULOS_EQUIVALENTES WHERE COD_ARTICULO = ? AND ACTIVO = 0";
 
             // Insertar artículos actualizados con RUBRO
             if ($fechaCreacionOriginal) {
@@ -523,9 +604,18 @@ class Articulo
                             ) VALUES (?, ?, ?, ?, ?, GETDATE(), ?)";
 
                 foreach ($articulos as $articulo) {
+                    $codArt = $articulo['COD_ARTICU'];
+
+                    // Liberar registros inactivos previos del artículo para evitar error de clave única
+                    $stmtDel = sqlsrv_prepare($this->cid_central, $sqlLimpiarInactivo, array($codArt));
+                    if ($stmtDel) {
+                        sqlsrv_execute($stmtDel);
+                        sqlsrv_free_stmt($stmtDel);
+                    }
+
                     $params = array(
                         $codEquivalencia,
-                        $articulo['COD_ARTICU'],
+                        $codArt,
                         $descripcionGrupo,
                         $rubro,
                         $fechaCreacionOriginal,
@@ -533,8 +623,9 @@ class Articulo
                     );
 
                     $stmt = sqlsrv_prepare($this->cid_central, $sqlInsert, $params);
-                    if (!sqlsrv_execute($stmt)) {
-                        throw new Exception("Error al insertar artículo: " . print_r(sqlsrv_errors(), true));
+                    if ($stmt === false || !sqlsrv_execute($stmt)) {
+                        $errSql = sqlsrv_errors();
+                        throw new Exception($this->formatearErrorSql($errSql, $codArt));
                     }
                     sqlsrv_free_stmt($stmt);
                 }
@@ -551,45 +642,63 @@ class Articulo
                             ) VALUES (?, ?, ?, ?, GETDATE(), GETDATE(), ?)";
 
                 foreach ($articulos as $articulo) {
+                    $codArt = $articulo['COD_ARTICU'];
+
+                    // Liberar registros inactivos previos del artículo para evitar error de clave única
+                    $stmtDel = sqlsrv_prepare($this->cid_central, $sqlLimpiarInactivo, array($codArt));
+                    if ($stmtDel) {
+                        sqlsrv_execute($stmtDel);
+                        sqlsrv_free_stmt($stmtDel);
+                    }
+
                     $params = array(
                         $codEquivalencia,
-                        $articulo['COD_ARTICU'],
+                        $codArt,
                         $descripcionGrupo,
                         $rubro,
                         $estado
                     );
 
                     $stmt = sqlsrv_prepare($this->cid_central, $sqlInsert, $params);
-                    if (!sqlsrv_execute($stmt)) {
-                        throw new Exception("Error al insertar artículo: " . print_r(sqlsrv_errors(), true));
+                    if ($stmt === false || !sqlsrv_execute($stmt)) {
+                        $errSql = sqlsrv_errors();
+                        throw new Exception($this->formatearErrorSql($errSql, $codArt));
                     }
                     sqlsrv_free_stmt($stmt);
                 }
             }
 
+            // Confirmar transacción
+            sqlsrv_commit($this->cid_central);
+
             return true;
 
         } catch (Exception $e) {
+            if ($this->cid_central) {
+                sqlsrv_rollback($this->cid_central);
+            }
             error_log("Error en editarGrupoEquivalencias: " . $e->getMessage());
             throw $e;
         }
     }
 
     /**
-     * Eliminar grupo de equivalencias (borrado lógico)
+     * Eliminar grupo de equivalencias (libera los artículos)
      * @param int $codEquivalencia
      * @return bool
      */
     public function eliminarGrupoEquivalencias($codEquivalencia)
     {
+        if (!$this->cid_central) {
+            throw new Exception("No hay conexión con la base de datos central");
+        }
+
         try {
-            $sql = "UPDATE RO_T_ARTICULOS_EQUIVALENTES 
-                    SET ACTIVO = 0, FECHA_MODIFICACION = GETDATE() 
-                    WHERE COD_EQUIVALENCIA = ?";
+            $sql = "DELETE FROM RO_T_ARTICULOS_EQUIVALENTES WHERE COD_EQUIVALENCIA = ?";
 
             $stmt = sqlsrv_prepare($this->cid_central, $sql, array($codEquivalencia));
 
-            if (!sqlsrv_execute($stmt)) {
+            if ($stmt === false || !sqlsrv_execute($stmt)) {
                 throw new Exception("Error al eliminar grupo: " . print_r(sqlsrv_errors(), true));
             }
 

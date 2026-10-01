@@ -167,6 +167,7 @@ function initSelect2() {
                         text: item.text || (item.id + ' - ' + item.descripcion),
                         descripcion: item.descripcion || '',
                         en_grupo: item.en_grupo || null,
+                        nombre_grupo: item.nombre_grupo || '',
                         disabled: !!item.en_grupo
                     };
                 });
@@ -444,8 +445,15 @@ function cargarDatosGrupo(codEquivalencia) {
         },
         error: function(xhr, status, error) {
             ocultarSpinner();
-            mostrarError('Error de conexión al cargar grupo');
-            console.error('Error:', error);
+            let errorMessage = 'Error al cargar grupo';
+            try {
+                const response = xhr.responseJSON || JSON.parse(xhr.responseText);
+                if (response && response.message) {
+                    errorMessage = response.message;
+                }
+            } catch(e) {}
+            mostrarError(errorMessage);
+            console.error('Error al cargar grupo:', {xhr, status, error});
         }
     });
 }
@@ -474,21 +482,22 @@ function ocultarSelectorArticulo() {
 function agregarArticuloAlGrupo() {
     const articuloSeleccionado = $('#nuevoArticulo').select2('data')[0];
     
-    if (!articuloSeleccionado) {
-        mostrarError('Debe seleccionar un artículo');
+    if (!articuloSeleccionado || !articuloSeleccionado.id) {
+        mostrarError('Debe seleccionar un artículo de la lista');
         return;
     }
     
     // Verificar si el artículo ya pertenece a otro grupo
     if (articuloSeleccionado.en_grupo) {
-        mostrarError(`El artículo ${articuloSeleccionado.id} ya pertenece al grupo de equivalencia ${articuloSeleccionado.en_grupo}. No se puede agregar.`);
+        const nomGrupo = articuloSeleccionado.nombre_grupo ? ` ("${articuloSeleccionado.nombre_grupo}")` : '';
+        mostrarError(`El artículo <strong>${articuloSeleccionado.id}</strong> ya pertenece al grupo de equivalencias <strong>#${articuloSeleccionado.en_grupo}${nomGrupo}</strong>.<br><br>Para agregarlo a este grupo, primero debes quitarlo del grupo al que pertenece.`);
         return;
     }
 
-    // Verificar si ya existe en el grupo
+    // Verificar si ya existe en el grupo actual
     const yaExiste = articulosGrupo.some(art => art.COD_ARTICU === articuloSeleccionado.id);
     if (yaExiste) {
-        mostrarError('Este artículo ya está en el grupo');
+        mostrarError(`El artículo ${articuloSeleccionado.id} ya está agregado en este grupo`);
         return;
     }
     
@@ -590,8 +599,19 @@ function guardarGrupo() {
         },
         error: function(xhr, status, error) {
             ocultarSpinner();
-            mostrarError('Error de conexión al guardar');
-            console.error('Error:', error);
+            let errorMessage = 'Error al guardar grupo';
+            try {
+                const response = xhr.responseJSON || JSON.parse(xhr.responseText);
+                if (response && response.message) {
+                    errorMessage = response.message;
+                }
+            } catch(e) {
+                if (xhr.statusText && xhr.statusText !== 'error') {
+                    errorMessage += ': ' + xhr.statusText;
+                }
+            }
+            mostrarError(errorMessage);
+            console.error('Error al guardar:', {xhr, status, error});
         }
     });
 }
@@ -668,8 +688,15 @@ function eliminarGrupo(codEquivalencia) {
         },
         error: function(xhr, status, error) {
             ocultarSpinner();
-            mostrarError('Error de conexión al eliminar');
-            console.error('Error:', error);
+            let errorMessage = 'Error al eliminar grupo';
+            try {
+                const response = xhr.responseJSON || JSON.parse(xhr.responseText);
+                if (response && response.message) {
+                    errorMessage = response.message;
+                }
+            } catch(e) {}
+            mostrarError(errorMessage);
+            console.error('Error al eliminar:', {xhr, status, error});
         }
     });
 }
@@ -723,6 +750,7 @@ function reinicializarSelect2Modal() {
                         text: item.text || (item.id + ' - ' + item.descripcion),
                         descripcion: item.descripcion || '',
                         en_grupo: item.en_grupo || null,
+                        nombre_grupo: item.nombre_grupo || '',
                         disabled: !!item.en_grupo
                     };
                 });
@@ -790,7 +818,7 @@ function generarImagenArticulo(codigoArticulo, esPrincipal = false) {
              onclick="mostrarImagenCompleta('${imageId}')">
         <div id="${imageId}-placeholder" class="img-placeholder" style="display: none; cursor: pointer;" 
              onclick="mostrarImagenCompleta('${imageId}')">
-            Sin imagen
+             Sin imagen
         </div>
     `;
 }
@@ -809,11 +837,12 @@ function formatearResultadoArticulo(articulo) {
     
     let grupoInfo = '';
     if (articulo.en_grupo) {
-        grupoInfo = `<span class="badge bg-warning text-dark ms-2">En grupo ${articulo.en_grupo}</span>`;
+        const nom = articulo.nombre_grupo ? ` - ${articulo.nombre_grupo}` : '';
+        grupoInfo = `<span class="badge bg-danger ms-2"><i class="fas fa-lock me-1"></i>En grupo #${articulo.en_grupo}${nom}</span>`;
     }
 
     return $(`
-        <div class="d-flex align-items-center">
+        <div class="d-flex align-items-center ${articulo.disabled ? 'opacity-75' : ''}">
             <div class="me-3">
                 <strong>${articulo.id}</strong>
             </div>
