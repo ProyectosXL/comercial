@@ -21,13 +21,14 @@ $selectGrupo = isset($_GET['selectGrupo']) ? (array)$_GET['selectGrupo'] : [];
 $selectCliente = isset($_GET['selectCliente']) ? (array)$_GET['selectCliente'] : [];
 $estado = isset($_GET['selectEstado']) ? $_GET['selectEstado'] : '%';
 $tipo = isset($_GET['selectTipo']) ? $_GET['selectTipo'] : '%';
+$nroPedido = isset($_GET['nroPedido']) ? trim($_GET['nroPedido']) : '';
 
 $data = [];
 $busquedaRealizada = false;
 
 // Solo cargar datos si se ha realizado una búsqueda (se envió el formulario)
 if (isset($_GET['buscar']) && $_GET['buscar'] == '1') {
-    $data = $pedido->traePedido($desde, $hasta, $canal, $selectCliente, $estado, $tipo, $selectGrupo);
+    $data = $pedido->traePedido($desde, $hasta, $canal, $selectCliente, $estado, $tipo, $selectGrupo, $nroPedido);
     $busquedaRealizada = true;
 }
 
@@ -37,6 +38,14 @@ $isARG = ($checkedValue === 'central');
 
 // Debug: mostrar estado del toggle
 error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 'false'));
+
+// Enlace al Rastreo de pedidos (logistica/rastreoPedidos): solo ARG, porque el diagnóstico corre en LAKER_SA
+$accesoRastreo = $_SERVER['DOCUMENT_ROOT'] . '/logistica/rastreoPedidos/Class/acceso.php';
+$puedeRastrear = false;
+if ($isARG && file_exists($accesoRastreo)) {
+    require_once $accesoRastreo;
+    $puedeRastrear = puedeUsarRastreo();
+}
 ?>
 
 <!DOCTYPE html>
@@ -165,7 +174,7 @@ error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 
                                         <option value="ECOMMERCE" <?= in_array('ECOMMERCE', $canal) ? 'selected' : '' ?>>Ecommerce</option>
                                     </select>
                                 </div>
-                                <div class="col-lg-3 col-md-6">
+                                <div class="col-lg-2 col-md-6">
                                     <label for="selectTipo" class="form-label">Tipo de Pedido</label>
                                     <select name="selectTipo" id="selectTipo" class="form-select form-select-sm">
                                         <option value="%" <?= ($tipo == '%') ? 'selected' : '' ?>>Todos</option>
@@ -173,7 +182,7 @@ error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 
                                         <option value="DISTRIBUCION" <?= ($tipo == 'DISTRIBUCION') ? 'selected' : '' ?>>Distribución</option>
                                     </select>
                                 </div>
-                                <div class="col-lg-3 col-md-6">
+                                <div class="col-lg-2 col-md-6">
                                     <label for="selectEstado" class="form-label">Estado</label>
                                     <select name="selectEstado" id="selectEstado" class="form-select form-select-sm">
                                         <option value="%" <?= ($estado == '%') ? 'selected' : '' ?>>Todos</option>
@@ -182,7 +191,13 @@ error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 
                                         <option value="CUMPLIDO" <?= ($estado == 'CUMPLIDO') ? 'selected' : '' ?>>Cumplido</option>
                                     </select>
                                 </div>
-                                
+                                <div class="col-lg-2 col-md-6">
+                                    <label for="nroPedido" class="form-label">Nro. Pedido</label>
+                                    <input type="text" id="nroPedido" name="nroPedido" class="form-control form-control-sm"
+                                           placeholder="Ej: 1234" value="<?= htmlspecialchars($nroPedido) ?>"
+                                           title="Si se completa, se ignora el rango de fechas">
+                                </div>
+
                                 <!-- Botones de Acción -->
                                 <div class="col-lg-3 col-md-6 d-flex justify-content-end">
                                     <button type="button" class="btn btn-outline-success me-2" id="btnExportar" <?= !$busquedaRealizada ? 'disabled' : '' ?>>
@@ -308,7 +323,15 @@ error_log("Valor checked: " . $checkedValue . " | isARG: " . ($isARG ? 'true' : 
                             <?php foreach ($data as $row): ?>
                             <tr>
                                 <td><?= $row['FECHA_PEDIDO']->format('d/m/Y') ?></td>
-                                <td><?= htmlspecialchars($row['NRO_PEDIDO']) ?></td>
+                                <td>
+                                    <?= htmlspecialchars($row['NRO_PEDIDO']) ?>
+                                    <?php if ($puedeRastrear && $row['ESTADO'] === 'ABIERTO'): ?>
+                                    <a href="/logistica/rastreoPedidos/index.php?<?= htmlspecialchars(http_build_query(['q' => trim($row['NRO_PEDIDO']), 'tipo' => 'PEDIDO', 'talon' => trim((string)$row['TALON_PED'])])) ?>"
+                                       target="_blank" rel="noopener" class="ms-1 link-rastreo" title="¿Por qué sigue pendiente? Ver rastreo del pedido">
+                                        <i class="bi bi-search"></i>
+                                    </a>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?= htmlspecialchars($row['TALON_PED']) ?></td>
                                 <td><?= htmlspecialchars($row['DEPOSITO']) ?></td>
                                 <td><?= htmlspecialchars($row['COD_CLIENT']) ?></td>

@@ -82,8 +82,10 @@ function inicializarComponentes() {
         // Validar que se hayan seleccionado las fechas
         const desde = $('#desde').val();
         const hasta = $('#hasta').val();
-        
-        if (!desde || !hasta) {
+        const nroPedido = $.trim($('#nroPedido').val());
+
+        // Si se busca por nro de pedido, las fechas no son obligatorias
+        if (!nroPedido && (!desde || !hasta)) {
             e.preventDefault();
             Swal.fire({
                 icon: 'warning',

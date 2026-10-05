@@ -83,16 +83,25 @@ class Pedido
 
     }  
 
-    public function traePedido($desde, $hasta, $canal = [], $cliente = [], $estado = '%', $tipo = '%', $grupo = []){
+    public function traePedido($desde, $hasta, $canal = [], $cliente = [], $estado = '%', $tipo = '%', $grupo = [], $nroPedido = ''){
 
-        $sql = " 
-            SELECT p.*, ISNULL(cl.GRUPO_EMPR, '') AS GRUPO_EMPR 
+        // Solo se permiten letras, números y guiones en el nro de pedido
+        $nroPedido = preg_replace('/[^0-9A-Za-z\-]/', '', (string)$nroPedido);
+
+        $sql = "
+            SELECT p.*, ISNULL(cl.GRUPO_EMPR, '') AS GRUPO_EMPR
             FROM RO_V_EFICIENCIA_PEDIDOS p
             LEFT JOIN GVA14 cl ON p.COD_CLIENT = cl.COD_CLIENT
-            WHERE p.FECHA_PEDIDO BETWEEN  '$desde' AND '$hasta'
-            AND p.ESTADO LIKE '%$estado%'
+            WHERE p.ESTADO LIKE '%$estado%'
             AND p.TIPO LIKE '%$tipo%'
         ";
+
+        // Si se busca por nro de pedido se ignora el rango de fechas
+        if ($nroPedido !== '') {
+            $sql .= " AND p.NRO_PEDIDO LIKE '%$nroPedido%'";
+        } else {
+            $sql .= " AND p.FECHA_PEDIDO BETWEEN '$desde' AND '$hasta'";
+        }
 
         if (!empty($cliente)) {
             $clientesFiltrados = array_filter((array)$cliente, function($c) {
