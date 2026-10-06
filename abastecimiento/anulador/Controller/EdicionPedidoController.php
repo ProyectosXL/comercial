@@ -22,6 +22,10 @@ switch ($action) {
         editarPedido($edicionHandler, $pais, false);
         break;
 
+    case 'historial':
+        historialEdiciones($edicionHandler, $pais);
+        break;
+
     default:
         echo json_encode(['success' => false, 'message' => 'Acción no permitida']);
         break;
@@ -120,5 +124,50 @@ function editarPedido($handler, $pais, $test) {
     } catch (Throwable $e) {
         error_log('EdicionPedidoController ' . ($test ? 'simular' : 'aplicar') . ': ' . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Error al procesar la edición del pedido']);
+    }
+}
+
+function fechaValida($fecha) {
+    $d = DateTime::createFromFormat('Y-m-d', $fecha);
+    return $d !== false && $d->format('Y-m-d') === $fecha;
+}
+
+function historialEdiciones($handler, $pais) {
+    $filtros = [
+        'desde' => isset($_POST['desde']) ? trim($_POST['desde']) : '',
+        'hasta' => isset($_POST['hasta']) ? trim($_POST['hasta']) : '',
+        'usuario' => isset($_POST['usuario_filtro']) ? trim($_POST['usuario_filtro']) : '',
+        'talon_ped' => isset($_POST['talon_ped']) ? trim($_POST['talon_ped']) : '',
+        'nro_pedido' => isset($_POST['nro_pedido']) ? trim($_POST['nro_pedido']) : ''
+    ];
+
+    if (!fechaValida($filtros['desde']) || !fechaValida($filtros['hasta'])) {
+        echo json_encode(['success' => false, 'message' => 'Indique un rango de fechas válido.']);
+        return;
+    }
+    if ($filtros['hasta'] < $filtros['desde']) {
+        echo json_encode(['success' => false, 'message' => 'La fecha "hasta" no puede ser anterior a "desde".']);
+        return;
+    }
+    if ((new DateTime($filtros['desde']))->diff(new DateTime($filtros['hasta']))->days > 366) {
+        echo json_encode(['success' => false, 'message' => 'El rango de fechas no puede superar un año.']);
+        return;
+    }
+    if ($filtros['talon_ped'] !== '' && !ctype_digit($filtros['talon_ped'])) {
+        echo json_encode(['success' => false, 'message' => 'El talón debe ser numérico.']);
+        return;
+    }
+    $filtros['usuario'] = mb_substr($filtros['usuario'], 0, 50);
+
+    try {
+        $resultado = $handler->historial($pais, $filtros);
+        echo json_encode([
+            'success' => true,
+            'operaciones' => $resultado['operaciones'],
+            'truncado' => $resultado['truncado']
+        ]);
+    } catch (Throwable $e) {
+        error_log('EdicionPedidoController historial: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Error al consultar el historial de ediciones']);
     }
 }

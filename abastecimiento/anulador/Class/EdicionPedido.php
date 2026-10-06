@@ -27,8 +27,8 @@ class EdicionPedido
         return $conexion;
     }
 
-    // Ejecuta un SP parametrizado y devuelve todos sus result sets
-    private function ejecutarSP($pais, $sql, $params)
+    // Ejecuta un SP o consulta parametrizada y devuelve todos sus result sets
+    private function ejecutar($pais, $sql, $params, $formatoFecha = 'd/m/Y')
     {
         // Los PRINT / mensajes informativos del SP no deben cortar la ejecución
         sqlsrv_configure('WarningsReturnAsErrors', 0);
@@ -48,7 +48,7 @@ class EdicionPedido
                     if ($row === false) {
                         $this->lanzarError();
                     }
-                    $rows[] = $this->normalizarFila($row);
+                    $rows[] = $this->normalizarFila($row, $formatoFecha);
                 }
                 $resultSets[] = $rows;
             }
@@ -63,11 +63,11 @@ class EdicionPedido
         return $resultSets;
     }
 
-    private function normalizarFila($row)
+    private function normalizarFila($row, $formatoFecha)
     {
         foreach ($row as $col => $valor) {
             if ($valor instanceof DateTimeInterface) {
-                $row[$col] = $valor->format('d/m/Y');
+                $row[$col] = $valor->format($formatoFecha);
             } elseif (is_string($valor)) {
                 // Los campos CHAR de Tango vienen con espacios a la derecha
                 $row[$col] = rtrim($valor);
@@ -98,7 +98,7 @@ class EdicionPedido
             array(intval($talon_ped), SQLSRV_PARAM_IN, null, SQLSRV_SQLTYPE_INT),
             array(FormatoPedido::nroPedido($nro_pedido), SQLSRV_PARAM_IN, null, SQLSRV_SQLTYPE_VARCHAR(14)),
         );
-        $sets = $this->ejecutarSP($pais, '{CALL dbo.RO_Pedido_Consultar(?, ?)}', $params);
+        $sets = $this->ejecutar($pais, '{CALL dbo.RO_Pedido_Consultar(?, ?)}', $params);
 
         if (empty($sets[0])) {
             throw new EdicionPedidoException('El pedido no existe.', 51001);
@@ -122,7 +122,7 @@ class EdicionPedido
             array($usuario, SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_STRING('UTF-8'), SQLSRV_SQLTYPE_VARCHAR(50)),
             array($test ? 1 : 0, SQLSRV_PARAM_IN, null, SQLSRV_SQLTYPE_BIT),
         );
-        $sets = $this->ejecutarSP($pais, '{CALL dbo.RO_Pedido_Editar(?, ?, ?, ?, ?)}', $params);
+        $sets = $this->ejecutar($pais, '{CALL dbo.RO_Pedido_Editar(?, ?, ?, ?, ?)}', $params);
 
         if (empty($sets[0])) {
             throw new RuntimeException('RO_Pedido_Editar no devolvió el resumen');
@@ -132,6 +132,96 @@ class EdicionPedido
             'resumen' => $sets[0][0],
             'renglones' => isset($sets[1]) ? $sets[1] : array(),
             'stock' => isset($sets[2]) ? $sets[2] : array(),
+        );
+    }
+
+    const HISTORIAL_MAX_OPERACIONES = 300;
+
+    // Historial de ediciones (RO_LOG_EDICION_PEDIDO) agrupado por operación.
+    // $filtros: desde y hasta (Y-m-d, obligatorios), usuario, talon_ped, nro_pedido (opcionales)
+    public function historial($pais, $filtros)
+    {
+        $where = array('L.FECHA >= ?', 'L.FECHA < DATEADD(DAY, 1, ?)');
+        $params = array(
+            array($filtros['desde'], SQLSRV_PARAM_IN, null, SQLSRV_SQLTYPE_DATE),
+            array($filtros['hasta'], SQLSRV_PARAM_IN, null, SQLSRV_SQLTYPE_DATE),
+        );
+
+        if ($filtros['usuario'] !== '') {
+            $where[] = 'L.USUARIO LIKE ?';
+            $params[] = array('%' . $filtros['usuario'] . '%', SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_STRING('UTF-8'), SQLSRV_SQLTYPE_VARCHAR(52));
+        }
+        if ($filtros['talon_ped'] !== '') {
+            $where[] = 'L.TALON_PED = ?';
+            $params[] = array(intval($filtros['talon_ped']), SQLSRV_PARAM_IN, null, SQLSRV_SQLTYPE_INT);
+        }
+        if ($filtros['nro_pedido'] !== '') {
+            $where[] = 'L.NRO_PEDIDO = ?';
+            $params[] = array(FormatoPedido::nroPedido($filtros['nro_pedido']), SQLSRV_PARAM_IN, null, SQLSRV_SQLTYPE_VARCHAR(14));
+        }
+
+        // Se limitan las operaciones (no las filas) para no cortar el detalle de una edición
+        $sql = "SELECT L.OPERACION, L.FECHA, L.USUARIO, L.TALON_PED, L.NRO_PEDIDO, L.N_RENGLON, L.RENGL_PADR,
+                       L.COD_ARTICU, A.DESCRIPCIO, L.COD_DEPOSI, L.CANT_PEDID_ANT, L.CANT_PEDID_NUEVA,
+                       L.DELTA_COMP, L.COMP_ANTES, L.COMP_DESPUES, L.TOTAL_PEDI_ANT, L.TOTAL_PEDI_NUEVO
+                FROM RO_LOG_EDICION_PEDIDO L
+                LEFT JOIN STA11 A ON A.COD_ARTICU = L.COD_ARTICU COLLATE DATABASE_DEFAULT
+                WHERE L.OPERACION IN (
+                    SELECT TOP (" . self::HISTORIAL_MAX_OPERACIONES . ") L.OPERACION
+                    FROM RO_LOG_EDICION_PEDIDO L
+                    WHERE " . implode(' AND ', $where) . "
+                    GROUP BY L.OPERACION
+                    ORDER BY MAX(L.FECHA) DESC
+                )
+                ORDER BY L.FECHA DESC, L.OPERACION, L.N_RENGLON";
+
+        $sets = $this->ejecutar($pais, $sql, $params, 'd/m/Y H:i:s');
+        $filas = isset($sets[0]) ? $sets[0] : array();
+
+        $operaciones = array();
+        foreach ($filas as $f) {
+            $id = $f['OPERACION'];
+            if (!isset($operaciones[$id])) {
+                $operaciones[$id] = array(
+                    'operacion' => $id,
+                    'fecha' => $f['FECHA'],
+                    'usuario' => $f['USUARIO'],
+                    'talon_ped' => $f['TALON_PED'],
+                    'nro_pedido' => ltrim($f['NRO_PEDIDO']),
+                    'total_ant' => $f['TOTAL_PEDI_ANT'],
+                    'total_nuevo' => $f['TOTAL_PEDI_NUEVO'],
+                    'eliminados' => 0,
+                    'modificados' => 0,
+                    'detalle' => array(),
+                );
+            }
+
+            // El conteo es sobre renglones principales; los componentes de kit van solo en el detalle
+            if (intval($f['RENGL_PADR']) === 0) {
+                if (floatval($f['CANT_PEDID_NUEVA']) == 0) {
+                    $operaciones[$id]['eliminados']++;
+                } else {
+                    $operaciones[$id]['modificados']++;
+                }
+            }
+
+            $operaciones[$id]['detalle'][] = array(
+                'N_RENGLON' => $f['N_RENGLON'],
+                'RENGL_PADR' => $f['RENGL_PADR'],
+                'COD_ARTICU' => $f['COD_ARTICU'],
+                'DESCRIPCIO' => $f['DESCRIPCIO'],
+                'COD_DEPOSI' => $f['COD_DEPOSI'],
+                'CANT_PEDID_ANT' => $f['CANT_PEDID_ANT'],
+                'CANT_NUEVA' => $f['CANT_PEDID_NUEVA'],
+                'DELTA_COMP' => $f['DELTA_COMP'],
+                'COMP_ANTES' => $f['COMP_ANTES'],
+                'COMP_DESPUES' => $f['COMP_DESPUES'],
+            );
+        }
+
+        return array(
+            'operaciones' => array_values($operaciones),
+            'truncado' => count($operaciones) >= self::HISTORIAL_MAX_OPERACIONES,
         );
     }
 }
