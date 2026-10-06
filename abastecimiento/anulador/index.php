@@ -297,8 +297,11 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
                                         <i class="bi bi-search"></i> Buscar
                                     </button>
                                 </div>
-                                <div class="col-auto ms-auto align-self-center">
-                                    <span class="form-text">País: <span id="pais-label-edicion" class="text-primary">AR</span></span>
+                                <div class="col-auto ms-auto align-self-center d-flex align-items-center gap-3">
+                                    <button type="button" class="btn btn-modern btn-modern-link" id="btn-toggle-historial">
+                                        <i class="bi bi-clock-history"></i> Historial de ediciones
+                                    </button>
+                                    <span class="form-text m-0">País: <span id="pais-label-edicion" class="text-primary">AR</span></span>
                                 </div>
                             </form>
                         </div>
@@ -319,6 +322,9 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
                                 <div class="ph-item"><span class="ph-label">Cliente</span><span class="ph-value" id="ph-cliente"></span></div>
                                 <div class="ph-item"><span class="ph-label">Estado</span><span class="ph-value" id="ph-estado"></span></div>
                                 <div class="ph-item"><span class="ph-label">Total del pedido</span><span class="ph-value" id="ph-total"></span></div>
+                                <button type="button" class="btn btn-modern btn-modern-link ms-auto" id="btn-historial-pedido">
+                                    <i class="bi bi-clock-history"></i> Ver historial del pedido
+                                </button>
                             </div>
                             <div id="edicion-no-editable" class="alert-modern alert-modern-warning mt-2 d-none">
                                 <i class="bi bi-exclamation-triangle"></i>
@@ -368,6 +374,69 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
                                 </button>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Historial de ediciones -->
+                    <div id="edicion-historial" class="card-modern d-none">
+                        <div class="card-header flex-wrap">
+                            <i class="bi bi-clock-history"></i>
+                            <span>Historial de ediciones</span>
+                            <div class="quick-search ms-auto">
+                                <i class="bi bi-search"></i>
+                                <input type="search" id="historial-busqueda" class="form-control form-control-modern" placeholder="Buscar artículo o descripción" autocomplete="off">
+                            </div>
+                            <button type="button" class="btn-close" id="btn-cerrar-historial" aria-label="Cerrar historial" style="font-size: 10px;"></button>
+                        </div>
+                        <div class="card-body py-2 border-bottom">
+                            <form id="formHistorial" class="row g-2 align-items-end">
+                                <div class="col-auto">
+                                    <label for="historial_desde" class="form-label form-label-modern">Desde</label>
+                                    <input type="date" class="form-control form-control-modern" id="historial_desde">
+                                </div>
+                                <div class="col-auto">
+                                    <label for="historial_hasta" class="form-label form-label-modern">Hasta</label>
+                                    <input type="date" class="form-control form-control-modern" id="historial_hasta">
+                                </div>
+                                <div class="col-auto">
+                                    <label for="historial_usuario" class="form-label form-label-modern">Usuario</label>
+                                    <input type="text" class="form-control form-control-modern" id="historial_usuario" placeholder="Todos" style="width: 140px;">
+                                </div>
+                                <div class="col-auto">
+                                    <label for="historial_talon" class="form-label form-label-modern">Talón</label>
+                                    <input type="text" inputmode="numeric" class="form-control form-control-modern" id="historial_talon" placeholder="Todos" style="width: 80px;">
+                                </div>
+                                <div class="col-auto">
+                                    <label for="historial_nro" class="form-label form-label-modern">Nro. Pedido</label>
+                                    <input type="text" class="form-control form-control-modern" id="historial_nro" placeholder="Todos" style="width: 150px;">
+                                </div>
+                                <div class="col-auto d-flex gap-2">
+                                    <button type="submit" class="btn btn-modern btn-modern-primary">
+                                        <i class="bi bi-funnel"></i> Filtrar
+                                    </button>
+                                    <button type="button" class="btn btn-modern btn-modern-outline" id="btn-limpiar-historial">Limpiar</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="table-scroll historial-scroll">
+                            <table class="table table-modern table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 28px;"></th>
+                                        <th>Fecha y hora</th>
+                                        <th>Usuario</th>
+                                        <th>Talón</th>
+                                        <th>Nro. Pedido</th>
+                                        <th class="num">Quitados</th>
+                                        <th class="num">Modificados</th>
+                                        <th class="num">Total anterior → nuevo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-historial">
+                                    <!-- Cargado por JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="historial-info d-none" id="historial-info"></div>
                     </div>
 
                 </div>
@@ -457,6 +526,13 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
                                 <li>No se pueden quitar todos los renglones (para eso está <strong>Anular Pedidos</strong>).</li>
                                 <li>Los cambios se aplican <strong>todos juntos o ninguno</strong>.</li>
                                 <li>Al quitar o reducir, se libera el stock comprometido y se recalcula el total del pedido.</li>
+                            </ul>
+
+                            <h6>Búsqueda e historial</h6>
+                            <ul>
+                                <li>Use <strong>Buscar artículo o descripción</strong> para filtrar los renglones del pedido. La búsqueda solo cambia la vista: los cambios pendientes se mantienen.</li>
+                                <li><strong>Historial de ediciones</strong> muestra cada edición confirmada con usuario, fecha y hora, y el total anterior y nuevo. Haga clic en una fila para ver el detalle de los artículos quitados o modificados y la variación del stock comprometido.</li>
+                                <li>Desde un pedido cargado, <strong>Ver historial del pedido</strong> muestra solo las ediciones de ese pedido.</li>
                             </ul>
                         </div>
                     </div>

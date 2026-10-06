@@ -472,6 +472,29 @@ code { font-size: 12px; color: var(--an-danger); }
 
 .table-modern tr.row-sin-resultados td { text-align: center; color: var(--an-muted); padding: 16px; }
 
+/* ---------- Historial de ediciones ---------- */
+.historial-scroll { max-height: 460px; min-height: 0; }
+
+.table-modern tr.row-historial { cursor: pointer; }
+.table-modern tr.row-historial.expanded > td { background: var(--an-primary-soft); }
+.table-modern tr.row-historial-detalle > td { padding: 0; background: var(--an-surface-alt); }
+
+.historial-detalle { padding: 8px 12px 10px 36px; }
+.historial-detalle .table-container-modern { border-color: var(--an-border-light); }
+/* La tabla anidada no debe quedar pegada arriba del scroll del historial */
+.historial-detalle .table-modern thead th { position: static; background: var(--an-surface); box-shadow: none; border-bottom: 1px solid var(--an-border-light); }
+.historial-detalle .table-modern tbody td { background: var(--an-surface); }
+.historial-detalle .table-modern tr.row-componente td { background: var(--an-surface-alt); }
+
+.usuario-vacio { color: var(--an-muted); font-style: italic; }
+
+.historial-info {
+    font-size: 12px;
+    color: var(--an-text-secondary);
+    padding: 8px 16px;
+    border-top: 1px solid var(--an-border-light);
+}
+
 .btn-expand {
     background: transparent;
     border: none;

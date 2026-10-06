@@ -34,6 +34,7 @@ $(document).ready(function() {
             actualizarVisibilidadSugerencias();
             cargarRubros();
             limpiarEdicion();
+            refrescarHistorialSiVisible();
 
             toastr.info(`Base de datos cambiada a: ${paisSeleccionado === 'AR' ? 'Argentina (LAKER_SA)' : 'Uruguay (TASKY_SA)'}`);
         });
@@ -769,6 +770,8 @@ function initEdicionPedido() {
 
     $('#btn-revisar-edicion').on('click', simularEdicion);
     $('#btn-confirmar-edicion').on('click', aplicarEdicion);
+
+    initHistorialEdiciones();
 }
 
 function registrarCantidadEdicion($input) {
@@ -864,6 +867,7 @@ function aplicarEdicion() {
         edicion.cambios = {};
         edicion.cambiosSimulados = null;
         consultarPedidoEdicion(edicion.pedido.TALON_PED, edicion.pedido.NRO_PEDIDO);
+        refrescarHistorialSiVisible();
     });
 }
 
@@ -921,6 +925,18 @@ function mostrarErrorEdicion(response) {
     });
 }
 
+// Ordena renglones afectados: cada kit seguido de sus componentes (RENGL_PADR = renglón del kit)
+function ordenarConComponentes(lista) {
+    const renglones = (lista || []).slice().sort((a, b) => Number(a.N_RENGLON) - Number(b.N_RENGLON));
+    const ordenados = [];
+    renglones.filter(r => Number(r.RENGL_PADR) === 0).forEach(p => {
+        ordenados.push(p);
+        renglones.filter(c => Number(c.RENGL_PADR) === Number(p.N_RENGLON)).forEach(c => ordenados.push(c));
+    });
+    renglones.forEach(r => { if (ordenados.indexOf(r) === -1) { ordenados.push(r); } });
+    return ordenados;
+}
+
 function renderVistaPreviaEdicion(data) {
     const resumen = data.resumen;
     $('#prev-eliminados').text(resumen.ELIMINADOS);
@@ -928,18 +944,8 @@ function renderVistaPreviaEdicion(data) {
     $('#prev-total-ant').text('$ ' + formatearImporte(resumen.TOTAL_PEDI_ANT));
     $('#prev-total-nuevo').text('$ ' + formatearImporte(resumen.TOTAL_PEDI_NUEVO));
 
-    // Renglones afectados: cada kit seguido de sus componentes (RENGL_PADR = renglón del kit)
-    const renglones = (data.renglones || []).slice().sort((a, b) => Number(a.N_RENGLON) - Number(b.N_RENGLON));
-    const principales = renglones.filter(r => Number(r.RENGL_PADR) === 0);
-    const ordenados = [];
-    principales.forEach(p => {
-        ordenados.push(p);
-        renglones.filter(c => Number(c.RENGL_PADR) === Number(p.N_RENGLON)).forEach(c => ordenados.push(c));
-    });
-    renglones.forEach(r => { if (ordenados.indexOf(r) === -1) { ordenados.push(r); } });
-
     const tbodyRenglones = $('#prev-tbody-renglones').empty();
-    ordenados.forEach(r => {
+    ordenarConComponentes(data.renglones).forEach(r => {
         const esComponente = Number(r.RENGL_PADR) !== 0;
         const eliminado = r.ESTADO_RENGLON === 'ELIMINADO';
         const badge = eliminado
@@ -1249,4 +1255,247 @@ function escapeHtml(texto) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+
+// ----- Historial de ediciones (dentro de Editar Pedido) -----
+const historial = {
+    operaciones: [],
+    expandidas: {}
+};
+
+function initHistorialEdiciones() {
+    $('#btn-toggle-historial').on('click', function() {
+        if ($('#edicion-historial').hasClass('d-none')) {
+            abrirHistorial({});
+        } else {
+            $('#edicion-historial').addClass('d-none');
+        }
+    });
+
+    $('#btn-cerrar-historial').on('click', function() {
+        $('#edicion-historial').addClass('d-none');
+    });
+
+    // Historial del pedido cargado (último año)
+    $('#btn-historial-pedido').on('click', function() {
+        if (!edicion.pedido) { return; }
+        abrirHistorial({
+            desde: fechaISO(sumarDias(new Date(), -365)),
+            talon: edicion.pedido.TALON_PED,
+            nro: edicion.pedido.NRO_PEDIDO
+        });
+    });
+
+    $('#formHistorial').on('submit', function(e) {
+        e.preventDefault();
+        cargarHistorial();
+    });
+
+    $('#btn-limpiar-historial').on('click', function() {
+        setFiltrosHistorial({});
+        cargarHistorial();
+    });
+
+    // Expandir / colapsar el detalle de una edición
+    $(document).on('click', '#tbody-historial tr.row-historial', function() {
+        const i = $(this).data('op');
+        historial.expandidas[i] = !$(this).hasClass('expanded');
+        aplicarBusquedaHistorial();
+    });
+
+    // Al cambiar la búsqueda, las coincidencias vuelven a mostrarse expandidas
+    $('#historial-busqueda').on('input', function() {
+        historial.expandidas = {};
+        aplicarBusquedaHistorial();
+    });
+}
+
+function sumarDias(fecha, dias) {
+    const d = new Date(fecha);
+    d.setDate(d.getDate() + dias);
+    return d;
+}
+
+// Fecha local en formato yyyy-mm-dd (el que usan los input date)
+function fechaISO(fecha) {
+    const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dd = String(fecha.getDate()).padStart(2, '0');
+    return `${fecha.getFullYear()}-${mm}-${dd}`;
+}
+
+// Filtros por defecto: últimos 30 días, sin usuario ni pedido
+function setFiltrosHistorial(filtros) {
+    $('#historial_desde').val(filtros.desde || fechaISO(sumarDias(new Date(), -30)));
+    $('#historial_hasta').val(filtros.hasta || fechaISO(new Date()));
+    $('#historial_usuario').val(filtros.usuario || '');
+    $('#historial_talon').val(filtros.talon || '');
+    $('#historial_nro').val(filtros.nro || '');
+}
+
+function abrirHistorial(filtros) {
+    setFiltrosHistorial(filtros);
+    $('#historial-busqueda').val('');
+    $('#edicion-historial').removeClass('d-none');
+    cargarHistorial(function() {
+        document.getElementById('edicion-historial').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+
+function refrescarHistorialSiVisible() {
+    if (!$('#edicion-historial').hasClass('d-none')) {
+        cargarHistorial();
+    }
+}
+
+function cargarHistorial(onLoad) {
+    const desde = $('#historial_desde').val();
+    const hasta = $('#historial_hasta').val();
+    const talon = $('#historial_talon').val().trim();
+
+    if (!desde || !hasta) {
+        toastr.warning('Indique el rango de fechas.');
+        return;
+    }
+    if (talon !== '' && !/^\d+$/.test(talon)) {
+        toastr.warning('El talón debe ser numérico.');
+        return;
+    }
+
+    mostrarLoader('Consultando historial de ediciones...');
+    $.ajax({
+        url: 'Controller/EdicionPedidoController.php?action=historial',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            pais: paisSeleccionado,
+            desde: desde,
+            hasta: hasta,
+            usuario_filtro: $('#historial_usuario').val().trim(),
+            talon_ped: talon,
+            nro_pedido: $('#historial_nro').val().trim()
+        },
+        success: function(response) {
+            ocultarLoader();
+            if (response.success) {
+                historial.operaciones = response.operaciones || [];
+                historial.expandidas = {};
+                renderHistorial(response.truncado);
+                if (onLoad) { onLoad(); }
+            } else {
+                Swal.fire('No se pudo consultar el historial', response.message, 'warning');
+            }
+        },
+        error: function() {
+            ocultarLoader();
+            toastr.error('Error de red al consultar el historial.');
+        }
+    });
+}
+
+function renderHistorial(truncado) {
+    const tbody = $('#tbody-historial').empty();
+
+    historial.operaciones.forEach(function(op, i) {
+        const usuario = op.usuario
+            ? escapeHtml(op.usuario)
+            : '<span class="usuario-vacio">Sin usuario</span>';
+
+        tbody.append(`<tr class="row-historial" data-op="${i}">
+            <td><span class="btn-expand"><i class="bi bi-chevron-right"></i></span></td>
+            <td class="num text-start">${escapeHtml(op.fecha)}</td>
+            <td>${usuario}</td>
+            <td>${escapeHtml(op.talon_ped)}</td>
+            <td><strong>${escapeHtml(op.nro_pedido)}</strong></td>
+            <td class="num">${op.eliminados}</td>
+            <td class="num">${op.modificados}</td>
+            <td class="num total-cambio">$ ${formatearImporte(op.total_ant)}<span class="arrow">→</span>$ ${formatearImporte(op.total_nuevo)}</td>
+        </tr>`);
+        tbody.append(`<tr class="row-historial-detalle d-none" data-op="${i}">
+            <td colspan="8">${detalleHistorialHtml(op)}</td>
+        </tr>`);
+    });
+
+    const vacio = historial.operaciones.length === 0
+        ? 'No hay ediciones registradas para los filtros indicados.'
+        : 'No hay ediciones que coincidan con la búsqueda.';
+    tbody.append(`<tr class="row-sin-resultados d-none"><td colspan="8">${vacio}</td></tr>`);
+
+    const info = $('#historial-info');
+    if (truncado) {
+        info.text(`Se muestran las ${historial.operaciones.length} ediciones más recientes. Acote los filtros para ver otras.`).removeClass('d-none');
+    } else {
+        info.addClass('d-none');
+    }
+
+    aplicarBusquedaHistorial();
+}
+
+// Detalle de una edición: un renglón por artículo afectado, con los componentes de kit indentados
+function detalleHistorialHtml(op) {
+    const filas = ordenarConComponentes(op.detalle).map(function(d) {
+        const esComponente = Number(d.RENGL_PADR) !== 0;
+        const eliminado = Number(d.CANT_NUEVA) === 0;
+        const badge = eliminado
+            ? '<span class="badge-modern badge-danger-modern">Eliminado</span>'
+            : '<span class="badge-modern badge-warning-modern">Modificado</span>';
+        const delta = Number(d.DELTA_COMP) || 0;
+        const tieneStock = d.DELTA_COMP !== null && d.DELTA_COMP !== undefined;
+
+        return `<tr class="${esComponente ? 'row-componente' : ''}">
+            <td class="col-articulo">${esComponente ? '' : '<strong>'}${escapeHtml(d.COD_ARTICU)}${esComponente ? '' : '</strong>'}</td>
+            <td>${escapeHtml(d.DESCRIPCIO || '---')}</td>
+            <td>${escapeHtml(d.COD_DEPOSI || '')}</td>
+            <td class="num">${formatearCantidad(d.CANT_PEDID_ANT)}</td>
+            <td class="num">${formatearCantidad(d.CANT_NUEVA)}</td>
+            <td>${badge}</td>
+            <td class="num">${tieneStock ? formatearCantidad(d.COMP_ANTES) : ''}</td>
+            <td class="num">${tieneStock ? (delta > 0 ? '+' : '') + formatearCantidad(delta) : ''}</td>
+            <td class="num">${tieneStock ? formatearCantidad(d.COMP_DESPUES) : ''}</td>
+        </tr>`;
+    }).join('');
+
+    return `<div class="historial-detalle">
+        <div class="table-container-modern">
+            <table class="table table-modern align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Artículo</th>
+                        <th>Descripción</th>
+                        <th>Depósito</th>
+                        <th class="num">Cant. anterior</th>
+                        <th class="num">Cant. nueva</th>
+                        <th>Acción</th>
+                        <th class="num">Comprometido antes</th>
+                        <th class="num">Variación</th>
+                        <th class="num">Comprometido después</th>
+                    </tr>
+                </thead>
+                <tbody>${filas}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+// Filtra las ediciones que afectaron algún artículo que coincide; esas se muestran expandidas
+function aplicarBusquedaHistorial() {
+    const texto = normalizarBusqueda($('#historial-busqueda').val());
+    let visibles = 0;
+
+    historial.operaciones.forEach(function(op, i) {
+        const coincide = texto !== '' && op.detalle.some(d => coincideBusqueda(d, texto));
+        const visible = texto === '' || coincide;
+        // Si el usuario no la abrió/cerró a mano, se expande cuando coincide con la búsqueda
+        const manual = historial.expandidas[i];
+        const expandida = visible && (manual !== undefined ? manual : coincide);
+
+        $(`#tbody-historial tr.row-historial[data-op="${i}"]`)
+            .toggleClass('d-none', !visible)
+            .toggleClass('expanded', expandida)
+            .find('.btn-expand').toggleClass('expanded', expandida);
+        $(`#tbody-historial tr.row-historial-detalle[data-op="${i}"]`).toggleClass('d-none', !expandida);
+        if (visible) { visibles++; }
+    });
+
+    $('#tbody-historial tr.row-sin-resultados').toggleClass('d-none', visibles > 0);
 }
