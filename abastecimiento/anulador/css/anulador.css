@@ -335,6 +335,7 @@ code { font-size: 12px; color: var(--an-danger); }
 .stat-card.danger .stat-value, .stat-card.danger .bi { color: var(--an-danger); }
 .stat-card.muted .stat-value, .stat-card.muted .bi { color: var(--an-muted); }
 .stat-card.primary .stat-value, .stat-card.primary .bi { color: var(--an-primary); }
+.stat-card.warning .stat-value, .stat-card.warning .bi { color: #c9821f; }
 
 /* Panel secundario */
 .panel-alt {

@@ -720,6 +720,7 @@ const edicion = {
     pedido: null,
     renglones: [],
     cambios: {},
+    cambiosSimulados: null, // lote exacto enviado a simular, se reutiliza al aplicar
     expandidos: {}
 };
 
@@ -737,6 +738,232 @@ function initEdicionPedido() {
         $(this).toggleClass('expanded', edicion.expandidos[nRenglon]);
         $(`#tbody-edicion tr.row-componente[data-padre="${nRenglon}"]`).toggleClass('d-none', !edicion.expandidos[nRenglon]);
     });
+
+    // Nueva cantidad: solo se registra si es un entero entre 1 y CANT_PEDID - 1
+    $(document).on('input change', '#tbody-edicion .input-cantidad', function() {
+        registrarCantidadEdicion($(this));
+    });
+
+    // Quitar / Deshacer
+    $(document).on('click', '#tbody-edicion .btn-quitar', function() {
+        const nRenglon = Number($(this).data('renglon'));
+        const r = buscarRenglon(nRenglon);
+        if (!r) { return; }
+
+        const cambio = edicion.cambios[nRenglon];
+        if (cambio !== undefined && cambio.cantidad === 0) {
+            delete edicion.cambios[nRenglon];
+        } else {
+            edicion.cambios[nRenglon] = { n_renglon: nRenglon, cod_articu: r.COD_ARTICU, cantidad: 0 };
+        }
+        actualizarFilaEdicion(nRenglon);
+    });
+
+    $('#btn-descartar-edicion').on('click', function() {
+        edicion.cambios = {};
+        renderGrillaEdicion();
+    });
+
+    $('#btn-revisar-edicion').on('click', simularEdicion);
+    $('#btn-confirmar-edicion').on('click', aplicarEdicion);
+}
+
+function registrarCantidadEdicion($input) {
+    const nRenglon = Number($input.data('renglon'));
+    const r = buscarRenglon(nRenglon);
+    if (!r) { return; }
+
+    const actual = Number(r.CANT_PEDID);
+    const texto = String($input.val()).trim();
+    const el = $input.get(0);
+
+    if (texto === '' && !(el.validity && el.validity.badInput)) {
+        // Vacío: sin cambio de cantidad
+        $input.removeClass('is-invalid');
+        delete edicion.cambios[nRenglon];
+    } else {
+        const cantidad = Number(texto);
+        const valida = /^\d+$/.test(texto) && cantidad >= 1 && cantidad <= actual - 1;
+        $input.toggleClass('is-invalid', !valida);
+        if (valida) {
+            edicion.cambios[nRenglon] = { n_renglon: nRenglon, cod_articu: r.COD_ARTICU, cantidad: cantidad };
+        } else {
+            delete edicion.cambios[nRenglon];
+        }
+    }
+    actualizarFilaEdicion(nRenglon, true);
+}
+
+// Refresca marcas, input y botón de una fila sin re-renderizar la grilla (no pierde el foco ni lo tipeado)
+function actualizarFilaEdicion(nRenglon, desdeInput) {
+    const r = buscarRenglon(nRenglon);
+    const cambio = edicion.cambios[nRenglon];
+    const quitado = cambio !== undefined && cambio.cantidad === 0;
+    const modificado = cambio !== undefined && cambio.cantidad > 0;
+    const $fila = $(`#tbody-edicion tr.row-principal[data-renglon="${nRenglon}"]`);
+
+    $fila.toggleClass('row-quitado', quitado).toggleClass('row-modificado', modificado);
+
+    if (!desdeInput) {
+        const $input = $fila.find('.input-cantidad');
+        if (quitado) {
+            $input.val('').removeClass('is-invalid').prop('disabled', true);
+        } else {
+            $input.prop('disabled', Number(r.CANT_PEDID) <= 1);
+        }
+        $fila.find('.btn-quitar').replaceWith(botonAccionEdicion(nRenglon, quitado));
+    }
+
+    actualizarBarraEdicion();
+}
+
+function actualizarBarraEdicion() {
+    const cantidad = Object.keys(edicion.cambios).length;
+    $('#edicion-pendientes')
+        .text(cantidad > 0 ? `${cantidad} cambio(s) pendiente(s)` : 'Sin cambios pendientes')
+        .toggleClass('has-cambios', cantidad > 0);
+    $('#btn-descartar-edicion, #btn-revisar-edicion').prop('disabled', cantidad === 0);
+}
+
+function listaCambiosEdicion() {
+    return Object.values(edicion.cambios).sort((a, b) => a.n_renglon - b.n_renglon);
+}
+
+function simularEdicion() {
+    const cambios = listaCambiosEdicion();
+    if (cambios.length === 0) { return; }
+
+    // No se pueden quitar todos los renglones principales
+    const principales = renglonesPrincipales();
+    const quitados = principales.filter(r => {
+        const c = edicion.cambios[r.N_RENGLON];
+        return c !== undefined && c.cantidad === 0;
+    });
+    if (principales.length > 0 && quitados.length === principales.length) {
+        Swal.fire('Atención', 'No se pueden quitar todos los renglones. Para eso usá Anular Pedidos.', 'warning');
+        return;
+    }
+
+    // Se guarda el lote exacto que se simula para aplicar los mismos cambios
+    edicion.cambiosSimulados = JSON.stringify(cambios);
+    llamarEdicion('simular', edicion.cambiosSimulados, 'Simulando cambios...', function(response) {
+        renderVistaPreviaEdicion(response);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmarEdicion')).show();
+    });
+}
+
+function aplicarEdicion() {
+    if (!edicion.cambiosSimulados) { return; }
+
+    llamarEdicion('aplicar', edicion.cambiosSimulados, 'Aplicando cambios...', function(response) {
+        cerrarModalEdicion();
+        toastr.success(`Pedido actualizado. Total: $ ${formatearImporte(response.resumen.TOTAL_PEDI_NUEVO)}`);
+        edicion.cambios = {};
+        edicion.cambiosSimulados = null;
+        consultarPedidoEdicion(edicion.pedido.TALON_PED, edicion.pedido.NRO_PEDIDO);
+    });
+}
+
+function llamarEdicion(action, cambiosJson, mensajeLoader, onSuccess) {
+    mostrarLoader(mensajeLoader);
+    $.ajax({
+        url: `Controller/EdicionPedidoController.php?action=${action}`,
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            pais: paisSeleccionado,
+            talon_ped: edicion.pedido.TALON_PED,
+            nro_pedido: edicion.pedido.NRO_PEDIDO,
+            cambios: cambiosJson,
+            usuario: $('body').attr('data-username') || ''
+        },
+        success: function(response) {
+            ocultarLoader();
+            if (response.success) {
+                onSuccess(response);
+            } else {
+                cerrarModalEdicion();
+                mostrarErrorEdicion(response);
+            }
+        },
+        error: function() {
+            ocultarLoader();
+            toastr.error('Error de red al procesar la edición del pedido.');
+        }
+    });
+}
+
+function cerrarModalEdicion() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmarEdicion'));
+    if (modal) { modal.hide(); }
+}
+
+// Los cambios pendientes se conservan; si el pedido cambió (51004) se ofrece recargarlo
+function mostrarErrorEdicion(response) {
+    const pedidoCambio = Number(response.codigo) === 51004;
+    Swal.fire({
+        title: 'No se pudo editar el pedido',
+        text: response.message,
+        icon: 'error',
+        confirmButtonColor: '#3366ff',
+        confirmButtonText: pedidoCambio ? 'Recargar pedido' : 'Entendido',
+        showCancelButton: pedidoCambio,
+        cancelButtonText: 'Cerrar'
+    }).then(result => {
+        if (pedidoCambio && result.isConfirmed) {
+            edicion.cambios = {};
+            edicion.cambiosSimulados = null;
+            consultarPedidoEdicion(edicion.pedido.TALON_PED, edicion.pedido.NRO_PEDIDO);
+        }
+    });
+}
+
+function renderVistaPreviaEdicion(data) {
+    const resumen = data.resumen;
+    $('#prev-eliminados').text(resumen.ELIMINADOS);
+    $('#prev-modificados').text(resumen.MODIFICADOS);
+    $('#prev-total-ant').text('$ ' + formatearImporte(resumen.TOTAL_PEDI_ANT));
+    $('#prev-total-nuevo').text('$ ' + formatearImporte(resumen.TOTAL_PEDI_NUEVO));
+
+    // Renglones afectados: cada kit seguido de sus componentes (RENGL_PADR = renglón del kit)
+    const renglones = (data.renglones || []).slice().sort((a, b) => Number(a.N_RENGLON) - Number(b.N_RENGLON));
+    const principales = renglones.filter(r => Number(r.RENGL_PADR) === 0);
+    const ordenados = [];
+    principales.forEach(p => {
+        ordenados.push(p);
+        renglones.filter(c => Number(c.RENGL_PADR) === Number(p.N_RENGLON)).forEach(c => ordenados.push(c));
+    });
+    renglones.forEach(r => { if (ordenados.indexOf(r) === -1) { ordenados.push(r); } });
+
+    const tbodyRenglones = $('#prev-tbody-renglones').empty();
+    ordenados.forEach(r => {
+        const esComponente = Number(r.RENGL_PADR) !== 0;
+        const eliminado = r.ESTADO_RENGLON === 'ELIMINADO';
+        const badge = eliminado
+            ? '<span class="badge-modern badge-danger-modern">Eliminado</span>'
+            : '<span class="badge-modern badge-warning-modern">Modificado</span>';
+        tbodyRenglones.append(`<tr class="${esComponente ? 'row-componente' : ''}">
+            <td class="col-articulo">${esComponente ? '' : '<strong>'}${escapeHtml(r.COD_ARTICU)}${esComponente ? '' : '</strong>'}</td>
+            <td class="num">${formatearCantidad(r.CANT_PEDID_ANT)}</td>
+            <td class="num">${formatearCantidad(r.CANT_NUEVA)}</td>
+            <td>${badge}</td>
+        </tr>`);
+    });
+
+    const tbodyStock = $('#prev-tbody-stock').empty();
+    (data.stock || []).forEach(s => {
+        const delta = Number(s.DELTA) || 0;
+        tbodyStock.append(`<tr>
+            <td><strong>${escapeHtml(s.COD_ARTICU)}</strong></td>
+            <td>${escapeHtml(s.COD_DEPOSI)}</td>
+            <td class="num">${formatearCantidad(s.COMP_ANTES)}</td>
+            <td class="num">${delta > 0 ? '+' : ''}${formatearCantidad(delta)}</td>
+            <td class="num">${formatearCantidad(s.COMP_DESPUES)}</td>
+        </tr>`);
+    });
+    if (!data.stock || data.stock.length === 0) {
+        tbodyStock.append('<tr><td colspan="5" class="text-muted text-center">Sin variaciones de stock</td></tr>');
+    }
 }
 
 function hayCambiosEdicion() {
@@ -796,6 +1023,7 @@ function consultarPedidoEdicion(talon, nroPedido) {
                 edicion.pedido = response.pedido;
                 edicion.renglones = response.renglones || [];
                 edicion.cambios = {};
+                edicion.cambiosSimulados = null;
                 edicion.expandidos = {};
                 renderEncabezadoEdicion();
                 renderGrillaEdicion();
@@ -815,6 +1043,7 @@ function limpiarEdicion() {
     edicion.pedido = null;
     edicion.renglones = [];
     edicion.cambios = {};
+    edicion.cambiosSimulados = null;
     edicion.expandidos = {};
     $('#tbody-edicion').empty();
     $('#edicion-encabezado, #edicion-grilla').addClass('d-none');
@@ -881,6 +1110,8 @@ function renderGrillaEdicion() {
         }
     });
 
+    $('#edicion-actions').toggleClass('d-none', !editable);
+    actualizarBarraEdicion();
     $('#edicion-grilla').removeClass('d-none');
 }
 

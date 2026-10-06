@@ -353,6 +353,17 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
                                 </tbody>
                             </table>
                         </div>
+                        <div class="edicion-actions" id="edicion-actions">
+                            <span class="pendientes" id="edicion-pendientes">Sin cambios pendientes</span>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-modern btn-modern-outline" id="btn-descartar-edicion" disabled>
+                                    <i class="bi bi-x-lg"></i> Descartar cambios
+                                </button>
+                                <button type="button" class="btn btn-modern btn-modern-primary" id="btn-revisar-edicion" disabled>
+                                    <i class="bi bi-eye"></i> Revisar y confirmar
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
@@ -607,6 +618,94 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
                     </button>
                     <button type="button" class="btn btn-modern btn-modern-danger" id="btnInhabilitarValidos">
                         <i class="bi bi-slash-circle"></i> Confirmar Inhabilitación de Válidos (<span id="modal_art_total_validos">0</span>)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmar Edición Modal -->
+    <div class="modal fade modal-modern" id="modalConfirmarEdicion" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square"></i> Confirmar edición del pedido
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+
+                    <!-- Resumen -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <div class="stat-card danger">
+                                <div>
+                                    <span class="stat-label">Renglones quitados</span>
+                                    <span class="stat-value" id="prev-eliminados">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card warning">
+                                <div>
+                                    <span class="stat-label">Renglones modificados</span>
+                                    <span class="stat-value" id="prev-modificados">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="stat-card primary">
+                                <div>
+                                    <span class="stat-label">Total del pedido</span>
+                                    <span class="stat-value total-cambio">
+                                        <span id="prev-total-ant"></span><span class="arrow">→</span><span id="prev-total-nuevo"></span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Renglones afectados -->
+                    <h6 class="modal-section-title">Renglones afectados</h6>
+                    <div class="table-container-modern mb-3" style="max-height: 260px; overflow-y: auto;">
+                        <table class="table table-modern align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Artículo</th>
+                                    <th class="num">Cant. anterior</th>
+                                    <th class="num">Cant. nueva</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="prev-tbody-renglones"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Stock comprometido -->
+                    <h6 class="modal-section-title">Stock comprometido</h6>
+                    <div class="table-container-modern" style="max-height: 220px; overflow-y: auto;">
+                        <table class="table table-modern align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Artículo</th>
+                                    <th>Depósito</th>
+                                    <th class="num">Comprometido antes</th>
+                                    <th class="num">Variación</th>
+                                    <th class="num">Comprometido después</th>
+                                </tr>
+                            </thead>
+                            <tbody id="prev-tbody-stock"></tbody>
+                        </table>
+                    </div>
+
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-modern btn-modern-outline" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-modern btn-modern-danger" id="btn-confirmar-edicion">
+                        <i class="bi bi-check-lg"></i> Confirmar cambios
                     </button>
                 </div>
             </div>
