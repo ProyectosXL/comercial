@@ -438,7 +438,7 @@ function mostrarPreviewTable(data) {
     data.pedidos_data.forEach(function(p) {
         const badgeClass = p.valido ? 'badge-success-modern' : 'badge-danger-modern';
         const checkbox = p.valido 
-            ? `<input type="checkbox" class="form-check-input check-pedido-valido" data-nro="${p.nro_pedido}" data-tal="${p.talon_ped}">`
+            ? `<input type="checkbox" class="form-check-input check-pedido-valido" data-nro="${p.nro_pedido}" data-talon="${p.talon_ped}">`
             : `<input type="checkbox" class="form-check-input" disabled>`;
 
         const row = `<tr>
