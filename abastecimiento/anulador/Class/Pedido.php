@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/FormatoPedido.php';
+
 class Pedido
 {
     private function retornarArray($sqlEnviado, $pais)
@@ -49,8 +51,8 @@ class Pedido
     public function validarPedido($pedido, $talon_pedido, $pais)
     {
         $talon_pedido = strval($talon_pedido);
-        // Formatear el pedido a 14 caracteres: ' 0000' + últimos 9 caracteres
-        $pedidoFormateado = ' 0000' . substr(strval($pedido), -9);
+        // Formatear el pedido a 14 caracteres
+        $pedidoFormateado = FormatoPedido::nroPedido($pedido);
 
         // Limpiar parámetros básicos para prevención de inyección
         $talon_pedido = str_replace("'", "''", $talon_pedido);
@@ -68,7 +70,7 @@ class Pedido
     public function anularPedido($pedido, $talon_pedido, $pais)
     {
         $talon_pedido = strval($talon_pedido);
-        $pedidoFormateado = ' 0000' . substr(strval($pedido), -9);
+        $pedidoFormateado = FormatoPedido::nroPedido($pedido);
 
         $talon_pedido = str_replace("'", "''", $talon_pedido);
         $pedidoFormateado = str_replace("'", "''", $pedidoFormateado);
