@@ -444,6 +444,34 @@ code { font-size: 12px; color: var(--an-danger); }
 
 .input-cantidad { width: 84px; text-align: right; display: inline-block; }
 
+/* Contenedor con scroll propio para que el thead sticky quede fijo */
+.table-scroll {
+    max-height: calc(100vh - 460px);
+    min-height: 240px;
+    overflow: auto;
+}
+
+/* Con border-collapse el borde del th sticky se pierde al scrollear: se dibuja con sombra */
+.table-scroll .table-modern thead th {
+    border-bottom: none;
+    box-shadow: inset 0 -1px 0 var(--an-border);
+}
+
+.quick-search { position: relative; width: 260px; max-width: 100%; }
+.card-modern .quick-search .bi,
+.quick-search .bi {
+    position: absolute;
+    left: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: var(--an-muted);
+    pointer-events: none;
+}
+.quick-search .form-control-modern { padding-left: 28px; font-weight: 400; }
+
+.table-modern tr.row-sin-resultados td { text-align: center; color: var(--an-muted); padding: 16px; }
+
 .btn-expand {
     background: transparent;
     border: none;

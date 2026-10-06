@@ -736,7 +736,7 @@ function initEdicionPedido() {
         const nRenglon = $(this).data('renglon');
         edicion.expandidos[nRenglon] = !edicion.expandidos[nRenglon];
         $(this).toggleClass('expanded', edicion.expandidos[nRenglon]);
-        $(`#tbody-edicion tr.row-componente[data-padre="${nRenglon}"]`).toggleClass('d-none', !edicion.expandidos[nRenglon]);
+        aplicarBusquedaEdicion();
     });
 
     // Nueva cantidad: solo se registra si es un entero entre 1 y CANT_PEDID - 1
@@ -763,6 +763,9 @@ function initEdicionPedido() {
         edicion.cambios = {};
         renderGrillaEdicion();
     });
+
+    // Búsqueda rápida por artículo o descripción (solo filtra la vista, no toca los cambios)
+    $('#edicion-busqueda').on('input', aplicarBusquedaEdicion);
 
     $('#btn-revisar-edicion').on('click', simularEdicion);
     $('#btn-confirmar-edicion').on('click', aplicarEdicion);
@@ -1020,6 +1023,12 @@ function consultarPedidoEdicion(talon, nroPedido) {
         success: function(response) {
             ocultarLoader();
             if (response.success) {
+                // Al recargar el mismo pedido (después de aplicar) se conserva la búsqueda
+                const mismoPedido = edicion.pedido !== null
+                    && Number(edicion.pedido.TALON_PED) === Number(response.pedido.TALON_PED)
+                    && edicion.pedido.NRO_PEDIDO === response.pedido.NRO_PEDIDO;
+                if (!mismoPedido) { $('#edicion-busqueda').val(''); }
+
                 edicion.pedido = response.pedido;
                 edicion.renglones = response.renglones || [];
                 edicion.cambios = {};
@@ -1046,6 +1055,7 @@ function limpiarEdicion() {
     edicion.cambiosSimulados = null;
     edicion.expandidos = {};
     $('#tbody-edicion').empty();
+    $('#edicion-busqueda').val('');
     $('#edicion-encabezado, #edicion-grilla').addClass('d-none');
     $('#edicion-vacio').removeClass('d-none');
 }
@@ -1110,9 +1120,45 @@ function renderGrillaEdicion() {
         }
     });
 
+    tbody.append('<tr class="row-sin-resultados d-none"><td colspan="9">No hay renglones que coincidan con la búsqueda.</td></tr>');
+
     $('#edicion-actions').toggleClass('d-none', !editable);
     actualizarBarraEdicion();
+    aplicarBusquedaEdicion();
     $('#edicion-grilla').removeClass('d-none');
+}
+
+// Normaliza para comparar sin mayúsculas ni acentos
+function normalizarBusqueda(texto) {
+    return String(texto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
+function coincideBusqueda(renglon, texto) {
+    return normalizarBusqueda(renglon.COD_ARTICU).indexOf(texto) !== -1
+        || normalizarBusqueda(renglon.DESCRIPCIO).indexOf(texto) !== -1;
+}
+
+// Un renglón principal se ve si coincide él o alguno de sus componentes.
+// Los componentes se ven si el kit está expandido o si ellos mismos coinciden con la búsqueda.
+function aplicarBusquedaEdicion() {
+    const texto = normalizarBusqueda($('#edicion-busqueda').val());
+    let visibles = 0;
+
+    renglonesPrincipales().forEach(function(r) {
+        const n = r.N_RENGLON;
+        const componentes = Number(r.ES_KIT) === 1 ? componentesDe(n) : [];
+        const coincideComponente = texto !== '' && componentes.some(c => coincideBusqueda(c, texto));
+        const visible = texto === '' || coincideBusqueda(r, texto) || coincideComponente;
+
+        $(`#tbody-edicion tr.row-principal[data-renglon="${n}"]`).toggleClass('d-none', !visible);
+        $(`#tbody-edicion tr.row-componente[data-padre="${n}"]`).each(function(i) {
+            const mostrar = visible && (edicion.expandidos[n] || (texto !== '' && coincideBusqueda(componentes[i], texto)));
+            $(this).toggleClass('d-none', !mostrar);
+        });
+        if (visible) { visibles++; }
+    });
+
+    $('#tbody-edicion tr.row-sin-resultados').toggleClass('d-none', visibles > 0 || renglonesPrincipales().length === 0);
 }
 
 function filaRenglonEdicion(r, editable) {

@@ -329,11 +329,15 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
 
                     <!-- Grilla de renglones -->
                     <div id="edicion-grilla" class="card-modern d-none">
-                        <div class="card-header">
+                        <div class="card-header flex-wrap">
                             <i class="bi bi-list-ul"></i>
                             <span>Renglones del pedido</span>
+                            <div class="quick-search ms-auto">
+                                <i class="bi bi-search"></i>
+                                <input type="search" id="edicion-busqueda" class="form-control form-control-modern" placeholder="Buscar artículo o descripción" autocomplete="off">
+                            </div>
                         </div>
-                        <div class="table-responsive">
+                        <div class="table-scroll">
                             <table class="table table-modern align-middle mb-0" id="tabla-edicion">
                                 <thead>
                                     <tr>
