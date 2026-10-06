@@ -15,20 +15,28 @@ $(document).ready(function() {
 
     // Toggle de País (AR / UY)
     $('.country-btn').on('click', function() {
-        $('.country-btn').removeClass('active');
-        $(this).addClass('active');
-        paisSeleccionado = $(this).data('country');
-        
-        // Actualizar UI
-        $('#pais-label-individual').text(paisSeleccionado);
-        $('#pais-label-masivo').text(paisSeleccionado);
-        $('#pais-label-articulo').text(paisSeleccionado);
-        
-        // Manejar visibilidad/estado de sugerencias según el país
-        actualizarVisibilidadSugerencias();
-        cargarRubros();
+        const btn = this;
+        // Si hay una edición de pedido sin confirmar, pedir confirmación antes de cambiar
+        confirmarDescarteEdicion().then(function(continuar) {
+            if (!continuar) { return; }
 
-        toastr.info(`Base de datos cambiada a: ${paisSeleccionado === 'AR' ? 'Argentina (LAKER_SA)' : 'Uruguay (TASKY_SA)'}`);
+            $('.country-btn').removeClass('active');
+            $(btn).addClass('active');
+            paisSeleccionado = $(btn).data('country');
+
+            // Actualizar UI
+            $('#pais-label-individual').text(paisSeleccionado);
+            $('#pais-label-masivo').text(paisSeleccionado);
+            $('#pais-label-articulo').text(paisSeleccionado);
+            $('#pais-label-edicion').text(paisSeleccionado);
+
+            // Manejar visibilidad/estado de sugerencias según el país
+            actualizarVisibilidadSugerencias();
+            cargarRubros();
+            limpiarEdicion();
+
+            toastr.info(`Base de datos cambiada a: ${paisSeleccionado === 'AR' ? 'Argentina (LAKER_SA)' : 'Uruguay (TASKY_SA)'}`);
+        });
     });
 
     // Select/deselect all rubros
@@ -291,6 +299,8 @@ $(document).ready(function() {
             }
         });
     });
+
+    initEdicionPedido();
 });
 
 // Renderizar tabla de sugerencias
@@ -701,4 +711,265 @@ function cargarRubros() {
             toastr.error('Error de red al obtener rubros.');
         }
     });
+}
+
+
+// ===== EDITAR PEDIDO =====
+// Estado de la pestaña: pedido cargado, todos sus renglones y cambios pendientes (n_renglon -> cambio)
+const edicion = {
+    pedido: null,
+    renglones: [],
+    cambios: {},
+    expandidos: {}
+};
+
+function initEdicionPedido() {
+    // Buscar (Enter en Talón o Nro. Pedido dispara el submit)
+    $('#formBuscarEdicion').on('submit', function(e) {
+        e.preventDefault();
+        buscarPedidoEdicion();
+    });
+
+    // Expandir / colapsar componentes de un kit
+    $(document).on('click', '#tbody-edicion .btn-expand', function() {
+        const nRenglon = $(this).data('renglon');
+        edicion.expandidos[nRenglon] = !edicion.expandidos[nRenglon];
+        $(this).toggleClass('expanded', edicion.expandidos[nRenglon]);
+        $(`#tbody-edicion tr.row-componente[data-padre="${nRenglon}"]`).toggleClass('d-none', !edicion.expandidos[nRenglon]);
+    });
+}
+
+function hayCambiosEdicion() {
+    return Object.keys(edicion.cambios).length > 0;
+}
+
+// Resuelve true si se puede continuar (no hay cambios o el usuario acepta descartarlos)
+function confirmarDescarteEdicion() {
+    if (!hayCambiosEdicion()) {
+        return Promise.resolve(true);
+    }
+    return Swal.fire({
+        title: 'Hay cambios sin confirmar. ¿Descartarlos?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#8c93a8',
+        confirmButtonText: 'Descartar cambios',
+        cancelButtonText: 'Volver'
+    }).then(result => result.isConfirmed);
+}
+
+function buscarPedidoEdicion() {
+    const talon = $('#edicion_talon').val().trim();
+    const nroPedido = $('#edicion_nro_pedido').val().trim();
+
+    if (!talon || !nroPedido) {
+        toastr.warning('Complete el talón y el número de pedido.');
+        return;
+    }
+    if (!/^\d+$/.test(talon)) {
+        toastr.warning('El talón debe ser numérico.');
+        return;
+    }
+
+    confirmarDescarteEdicion().then(function(continuar) {
+        if (continuar) {
+            consultarPedidoEdicion(talon, nroPedido);
+        }
+    });
+}
+
+function consultarPedidoEdicion(talon, nroPedido) {
+    mostrarLoader('Consultando pedido...');
+    $.ajax({
+        url: 'Controller/EdicionPedidoController.php?action=consultar',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            pais: paisSeleccionado,
+            talon_ped: talon,
+            nro_pedido: nroPedido
+        },
+        success: function(response) {
+            ocultarLoader();
+            if (response.success) {
+                edicion.pedido = response.pedido;
+                edicion.renglones = response.renglones || [];
+                edicion.cambios = {};
+                edicion.expandidos = {};
+                renderEncabezadoEdicion();
+                renderGrillaEdicion();
+            } else {
+                limpiarEdicion();
+                Swal.fire('No se pudo consultar el pedido', response.message, 'warning');
+            }
+        },
+        error: function() {
+            ocultarLoader();
+            toastr.error('Error de red al consultar el pedido.');
+        }
+    });
+}
+
+function limpiarEdicion() {
+    edicion.pedido = null;
+    edicion.renglones = [];
+    edicion.cambios = {};
+    edicion.expandidos = {};
+    $('#tbody-edicion').empty();
+    $('#edicion-encabezado, #edicion-grilla').addClass('d-none');
+    $('#edicion-vacio').removeClass('d-none');
+}
+
+function pedidoEditable() {
+    return edicion.pedido !== null && Number(edicion.pedido.EDITABLE) === 1;
+}
+
+function renglonEditable(r) {
+    return pedidoEditable() && Number(r.EDITABLE) === 1;
+}
+
+function renglonesPrincipales() {
+    return edicion.renglones.filter(r => Number(r.RENGL_PADR) === 0);
+}
+
+function componentesDe(nRenglon) {
+    return edicion.renglones.filter(r => Number(r.RENGL_PADR) === Number(nRenglon));
+}
+
+function buscarRenglon(nRenglon) {
+    return edicion.renglones.find(r => Number(r.N_RENGLON) === Number(nRenglon));
+}
+
+function renderEncabezadoEdicion() {
+    const p = edicion.pedido;
+    const estado = Number(p.ESTADO) === 2 ? '2 · Pendiente' : `Estado ${p.ESTADO}`;
+
+    $('#ph-talon').text(p.TALON_PED);
+    $('#ph-nro').text(p.NRO_PEDIDO);
+    $('#ph-fecha').text(p.FECHA_PEDI || '---');
+    $('#ph-cliente').text(p.COD_CLIENT || '---');
+    $('#ph-estado').text(estado);
+    $('#ph-total').text('$ ' + formatearImporte(p.TOTAL_PEDI));
+
+    if (pedidoEditable()) {
+        $('#edicion-no-editable').addClass('d-none');
+    } else {
+        $('#edicion-no-editable-motivo').text(p.MOTIVO_NO_EDITABLE || 'El pedido no se puede editar.');
+        $('#edicion-no-editable').removeClass('d-none');
+    }
+
+    $('#edicion-vacio').addClass('d-none');
+    $('#edicion-encabezado').removeClass('d-none');
+}
+
+function renderGrillaEdicion() {
+    const tbody = $('#tbody-edicion');
+    const editable = pedidoEditable();
+    tbody.empty();
+
+    // En solo lectura no se muestran las columnas de edición
+    $('#tabla-edicion .col-edicion').toggleClass('d-none', !editable);
+
+    renglonesPrincipales().forEach(function(r) {
+        tbody.append(filaRenglonEdicion(r, editable));
+
+        if (Number(r.ES_KIT) === 1) {
+            componentesDe(r.N_RENGLON).forEach(function(c) {
+                tbody.append(filaComponenteEdicion(c, r.N_RENGLON, editable));
+            });
+        }
+    });
+
+    $('#edicion-grilla').removeClass('d-none');
+}
+
+function filaRenglonEdicion(r, editable) {
+    const n = r.N_RENGLON;
+    const esKit = Number(r.ES_KIT) === 1;
+    const cantidad = Number(r.CANT_PEDID);
+    const cambio = edicion.cambios[n];
+    const quitado = cambio !== undefined && cambio.cantidad === 0;
+    const modificado = cambio !== undefined && cambio.cantidad > 0;
+
+    const expand = esKit
+        ? `<button type="button" class="btn-expand ${edicion.expandidos[n] ? 'expanded' : ''}" data-renglon="${n}" title="Ver componentes"><i class="bi bi-chevron-right"></i></button>`
+        : '';
+    const badgeKit = esKit ? ' <span class="badge-modern badge-primary-modern ms-1">Kit</span>' : '';
+
+    let estado = '';
+    if (Number(r.TIENE_REMITO) === 1) {
+        estado = `<span class="badge-modern badge-warning-modern" title="${escapeHtml(r.MOTIVO_NO_EDITABLE || '')}">Con remito</span>`;
+    } else if (Number(r.EDITABLE) !== 1) {
+        estado = `<span class="badge-modern badge-neutral-modern" title="${escapeHtml(r.MOTIVO_NO_EDITABLE || '')}">No editable</span>`;
+    } else if (editable) {
+        estado = '<span class="badge-modern">Editable</span>';
+    }
+
+    let colsEdicion = '';
+    if (editable) {
+        let input = '';
+        let accion = '';
+        if (renglonEditable(r)) {
+            const deshabilitado = (cantidad <= 1 || quitado) ? 'disabled' : '';
+            input = `<input type="number" class="form-control form-control-modern input-cantidad" data-renglon="${n}"
+                        min="1" max="${cantidad - 1}" step="1" value="${modificado ? cambio.cantidad : ''}" ${deshabilitado}>`;
+            accion = botonAccionEdicion(n, quitado);
+        }
+        colsEdicion = `<td class="col-edicion">${input}</td><td class="col-edicion">${accion}</td>`;
+    }
+
+    const clases = ['row-principal'];
+    if (quitado) { clases.push('row-quitado'); }
+    if (modificado) { clases.push('row-modificado'); }
+
+    return `<tr class="${clases.join(' ')}" data-renglon="${n}">
+        <td>${expand}</td>
+        <td class="tachable"><strong>${escapeHtml(r.COD_ARTICU)}</strong>${badgeKit}</td>
+        <td class="tachable">${escapeHtml(r.DESCRIPCIO || '---')}</td>
+        <td class="num tachable">${formatearCantidad(r.CANT_PEDID)}</td>
+        <td class="num tachable">${esKit ? '' : formatearImporte(r.PRECIO)}</td>
+        <td class="num tachable">${formatearImporte(r.IMPORTE)}</td>
+        <td>${estado}</td>
+        ${colsEdicion}
+    </tr>`;
+}
+
+// Componente de kit: solo informativo, sin inputs ni acciones
+function filaComponenteEdicion(c, nPadre, editable) {
+    const oculto = edicion.expandidos[nPadre] ? '' : 'd-none';
+    const colsEdicion = editable ? '<td class="col-edicion"></td><td class="col-edicion"></td>' : '';
+    return `<tr class="row-componente ${oculto}" data-padre="${nPadre}">
+        <td></td>
+        <td class="col-articulo">${escapeHtml(c.COD_ARTICU)}</td>
+        <td>${escapeHtml(c.DESCRIPCIO || '---')}</td>
+        <td class="num">${formatearCantidad(c.CANT_PEDID)}</td>
+        <td class="num">${formatearImporte(c.PRECIO)}</td>
+        <td class="num">${formatearImporte(c.IMPORTE)}</td>
+        <td></td>
+        ${colsEdicion}
+    </tr>`;
+}
+
+function botonAccionEdicion(nRenglon, quitado) {
+    return quitado
+        ? `<button type="button" class="btn btn-modern btn-modern-outline btn-modern-sm btn-quitar" data-renglon="${nRenglon}"><i class="bi bi-arrow-counterclockwise"></i> Deshacer</button>`
+        : `<button type="button" class="btn btn-modern btn-modern-outline-danger btn-modern-sm btn-quitar" data-renglon="${nRenglon}"><i class="bi bi-trash"></i> Quitar</button>`;
+}
+
+function formatearImporte(valor) {
+    return (Number(valor) || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatearCantidad(valor) {
+    return (Number(valor) || 0).toLocaleString('es-AR', { maximumFractionDigits: 2 });
+}
+
+function escapeHtml(texto) {
+    return String(texto === null || texto === undefined ? '' : texto)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }

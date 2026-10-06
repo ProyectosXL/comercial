@@ -1,3 +1,6 @@
+<?php
+$userName = isset($_GET['userName']) ? $_GET['userName'] : "";
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -23,7 +26,7 @@
 
     <link rel="shortcut icon" href="../../image/logoOld.jpg" />
 </head>
-<body>
+<body data-username="<?php echo htmlspecialchars($userName, ENT_QUOTES, 'UTF-8'); ?>">
 
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loading-overlay">
@@ -70,6 +73,11 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="articulos-tab" data-bs-toggle="tab" data-bs-target="#articulos-pane" type="button" role="tab" aria-controls="articulos-pane" aria-selected="false">
                     <i class="bi bi-slash-circle"></i> Inhabilitar Artículos
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="editar-tab" data-bs-toggle="tab" data-bs-target="#editar-pane" type="button" role="tab" aria-controls="editar-pane" aria-selected="false">
+                    <i class="bi bi-pencil-square"></i> Editar Pedido
                 </button>
             </li>
         </ul>
@@ -262,6 +270,88 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Editar Pedido Tab Pane -->
+            <div class="tab-pane fade" id="editar-pane" role="tabpanel" aria-labelledby="editar-tab">
+                <div class="d-flex flex-column gap-3">
+
+                    <!-- Búsqueda -->
+                    <div class="card-modern">
+                        <div class="card-body py-3">
+                            <form id="formBuscarEdicion" class="row g-2 align-items-end">
+                                <div class="col-auto">
+                                    <label for="edicion_talon" class="form-label form-label-modern">Talón</label>
+                                    <input type="text" inputmode="numeric" class="form-control form-control-modern" id="edicion_talon" placeholder="Ej: 97" style="width: 100px;">
+                                </div>
+                                <div class="col-auto">
+                                    <label for="edicion_nro_pedido" class="form-label form-label-modern">Nro. Pedido</label>
+                                    <input type="text" class="form-control form-control-modern" id="edicion_nro_pedido" placeholder="Ej: 0000300097307" style="width: 180px;">
+                                </div>
+                                <div class="col-auto">
+                                    <button type="submit" class="btn btn-modern btn-modern-primary">
+                                        <i class="bi bi-search"></i> Buscar
+                                    </button>
+                                </div>
+                                <div class="col-auto ms-auto align-self-center">
+                                    <span class="form-text">País: <span id="pais-label-edicion" class="text-primary">AR</span></span>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div id="edicion-vacio" class="empty-state">
+                        <i class="bi bi-search d-block mb-1"></i>
+                        Busque un pedido por talón y número para ver sus renglones.
+                    </div>
+
+                    <!-- Encabezado del pedido -->
+                    <div id="edicion-encabezado" class="card-modern d-none">
+                        <div class="card-body py-2">
+                            <div class="pedido-header">
+                                <div class="ph-item"><span class="ph-label">Talón</span><span class="ph-value" id="ph-talon"></span></div>
+                                <div class="ph-item"><span class="ph-label">Nro. Pedido</span><span class="ph-value" id="ph-nro"></span></div>
+                                <div class="ph-item"><span class="ph-label">Fecha</span><span class="ph-value" id="ph-fecha"></span></div>
+                                <div class="ph-item"><span class="ph-label">Cliente</span><span class="ph-value" id="ph-cliente"></span></div>
+                                <div class="ph-item"><span class="ph-label">Estado</span><span class="ph-value" id="ph-estado"></span></div>
+                                <div class="ph-item"><span class="ph-label">Total del pedido</span><span class="ph-value" id="ph-total"></span></div>
+                            </div>
+                            <div id="edicion-no-editable" class="alert-modern alert-modern-warning mt-2 d-none">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <div id="edicion-no-editable-motivo"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grilla de renglones -->
+                    <div id="edicion-grilla" class="card-modern d-none">
+                        <div class="card-header">
+                            <i class="bi bi-list-ul"></i>
+                            <span>Renglones del pedido</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-modern align-middle mb-0" id="tabla-edicion">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 28px;"></th>
+                                        <th>Artículo</th>
+                                        <th>Descripción</th>
+                                        <th class="num">Cantidad</th>
+                                        <th class="num">Precio</th>
+                                        <th class="num">Importe</th>
+                                        <th>Estado</th>
+                                        <th class="col-edicion">Nueva cantidad</th>
+                                        <th class="col-edicion">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-edicion">
+                                    <!-- Cargado por JS -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
