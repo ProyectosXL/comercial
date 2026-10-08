@@ -10,6 +10,7 @@ try {
     
     $supervisora = $data['supervisora'] ?? null;
     $semana = $data['semana'] ?? null;
+    $anio = $data['anio'] ?? null;
     $conceptosExcedidos = $data['conceptosExcedidos'] ?? [];
 
     if (empty($supervisora) || empty($semana) || empty($conceptosExcedidos)) {
@@ -21,7 +22,7 @@ try {
     }
 
     $email = new EmailNew();
-    $resultado = $email->enviarNotificacionExcesoPresupuesto($supervisora, $semana, $conceptosExcedidos);
+    $resultado = $email->enviarNotificacionExcesoPresupuesto($supervisora, $semana, $conceptosExcedidos, $anio);
 
     if ($resultado) {
         echo json_encode([

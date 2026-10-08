@@ -1,6 +1,7 @@
 <?php
 
 
+if (!class_exists('DotEnv')) {
 class DotEnv
 {
     /**
@@ -94,4 +95,5 @@ class DotEnv
         return $defaultVars;
     }
 
+}
 }

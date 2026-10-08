@@ -1,5 +1,25 @@
 <?php
-$userName = isset($_GET['userName']) ? $_GET['userName'] : "";
+if (file_exists($_SERVER['DOCUMENT_ROOT'] . '/sistemas/hub/Class/bootstrap.php')) {
+    require_once $_SERVER['DOCUMENT_ROOT'] . '/sistemas/hub/Class/bootstrap.php';
+} elseif (file_exists(__DIR__ . '/../../../../sistemas/hub/Class/bootstrap.php')) {
+    require_once __DIR__ . '/../../../../sistemas/hub/Class/bootstrap.php';
+} elseif (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$userName = '';
+if (class_exists('Auth') && Auth::check()) {
+    $userName = Auth::username() ?? Auth::nombre() ?? '';
+}
+
+if (empty($userName)) {
+    $userName = $_SESSION['nodo_usuario_activo'] 
+        ?? $_SESSION['fp_auth_user']['username'] 
+        ?? $_SESSION['username'] 
+        ?? $_SESSION['usuario'] 
+        ?? $_GET['userName'] 
+        ?? '';
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -46,6 +66,12 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
                     <p>Anulación de pedidos, inhabilitación de artículos y edición de pedidos en Tango.</p>
                 </div>
                 <div class="d-flex align-items-center gap-2">
+                    <?php if (!empty($userName)): ?>
+                    <div class="d-flex align-items-center gap-1 text-secondary me-2 bg-light border rounded px-2 py-1">
+                        <i class="bi bi-person-circle text-primary"></i>
+                        <span class="fw-semibold text-dark"><?php echo htmlspecialchars($userName, ENT_QUOTES, 'UTF-8'); ?></span>
+                    </div>
+                    <?php endif; ?>
                     <!-- Help Button -->
                     <button type="button" class="btn btn-modern btn-modern-outline" data-bs-toggle="modal" data-bs-target="#modalAyuda">
                         <i class="bi bi-question-circle"></i> Ayuda
@@ -87,72 +113,155 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
 
             <!-- Pedidos Tab Pane -->
             <div class="tab-pane fade show active" id="pedidos-pane" role="tabpanel" aria-labelledby="pedidos-tab">
-                <div class="row g-3">
-                    <!-- Individual Order Cancellation -->
-                    <div class="col-lg-6">
-                        <div class="card-modern h-100">
-                            <div class="card-header">
-                                <i class="bi bi-lightning-charge"></i>
-                                <span>Pedido Individual (País: <span id="pais-label-individual" class="text-primary">AR</span>)</span>
+                <div class="d-flex flex-column gap-3">
+                    
+                    <div class="d-flex justify-content-end align-items-center">
+                        <button type="button" class="btn btn-modern btn-modern-link" id="btn-toggle-historial-anulaciones">
+                            <i class="bi bi-clock-history"></i> Historial de anulaciones
+                        </button>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- Individual Order Cancellation -->
+                        <div class="col-lg-6">
+                            <div class="card-modern h-100">
+                                <div class="card-header">
+                                    <i class="bi bi-lightning-charge"></i>
+                                    <span>Pedido Individual (País: <span id="pais-label-individual" class="text-primary">AR</span>)</span>
+                                </div>
+                                <div class="card-body d-flex flex-column justify-content-between">
+                                    <form id="formAnularIndividual" class="d-flex flex-column gap-3 h-100">
+                                        <div class="row g-2">
+                                            <div class="col-sm-6">
+                                                <label for="input_nro_pedido" class="form-label form-label-modern">
+                                                    <i class="bi bi-hash"></i> Nro. Pedido
+                                                </label>
+                                                <input type="text" class="form-control form-control-modern" id="input_nro_pedido" name="nro_pedido" placeholder="Ej: 12345" required>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <label for="input_talon_ped" class="form-label form-label-modern">
+                                                    <i class="bi bi-tag"></i> Talón
+                                                </label>
+                                                <input type="text" class="form-control form-control-modern" id="input_talon_ped" name="talon_ped" placeholder="Ej: 100" required>
+                                            </div>
+                                        </div>
+                                        <div class="mt-auto">
+                                            <button type="submit" class="btn btn-modern btn-modern-danger">
+                                                <i class="bi bi-x-circle"></i>
+                                                Anular Pedido Individual
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
-                            <div class="card-body d-flex flex-column justify-content-between">
-                                <form id="formAnularIndividual" class="d-flex flex-column gap-3 h-100">
-                                    <div class="row g-2">
-                                        <div class="col-sm-6">
-                                            <label for="input_nro_pedido" class="form-label form-label-modern">
-                                                <i class="bi bi-hash"></i> Nro. Pedido
-                                            </label>
-                                            <input type="text" class="form-control form-control-modern" id="input_nro_pedido" name="nro_pedido" placeholder="Ej: 12345" required>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <label for="input_talon_ped" class="form-label form-label-modern">
-                                                <i class="bi bi-tag"></i> Talón
-                                            </label>
-                                            <input type="text" class="form-control form-control-modern" id="input_talon_ped" name="talon_ped" placeholder="Ej: 100" required>
+                        </div>
+
+                        <!-- Bulk Cancellation -->
+                        <div class="col-lg-6">
+                            <div class="card-modern h-100">
+                                <div class="card-header">
+                                    <i class="bi bi-file-earmark-excel"></i>
+                                    <span>Anulación Masiva por Excel (País: <span id="pais-label-masivo" class="text-primary">AR</span>)</span>
+                                </div>
+                                <div class="card-body d-flex flex-column gap-3">
+                                    <p class="card-desc mb-0">
+                                        Permite anular múltiples pedidos cargando una plantilla excel con los números de pedido y talones correspondientes. El sistema validará su estado en lote.
+                                    </p>
+
+                                    <div>
+                                        <a href="assets/PlantillaAnulacion.xlsx" download="PlantillaAnulacion.xlsx" class="btn btn-modern btn-modern-outline">
+                                            <i class="bi bi-download"></i>
+                                            Descargar plantilla Excel
+                                        </a>
+                                    </div>
+
+                                    <div>
+                                        <label for="fileupload" class="form-label form-label-modern">
+                                            <i class="bi bi-upload"></i> Subir Archivo Excel
+                                        </label>
+                                        <input type="file" name="excel_file" class="form-control form-control-modern" id="fileupload" accept=".xlsx, .xls">
+                                        <div class="form-text mt-1">
+                                            <i class="bi bi-info-circle"></i> El archivo debe contener los encabezados NRO_PEDIDO y TALON_PED.
                                         </div>
                                     </div>
-                                    <div class="mt-auto">
-                                        <button type="submit" class="btn btn-modern btn-modern-danger">
-                                            <i class="bi bi-x-circle"></i>
-                                            Anular Pedido Individual
-                                        </button>
-                                    </div>
-                                </form>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Bulk Cancellation -->
-                    <div class="col-lg-6">
-                        <div class="card-modern h-100">
-                            <div class="card-header">
-                                <i class="bi bi-file-earmark-excel"></i>
-                                <span>Anulación Masiva por Excel (País: <span id="pais-label-masivo" class="text-primary">AR</span>)</span>
+                    <!-- Historial de anulaciones -->
+                    <div id="anulacion-historial" class="card-modern d-none">
+                        <div class="card-header flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-clock-history"></i>
+                                <span>Historial de anulaciones de pedidos</span>
                             </div>
-                            <div class="card-body d-flex flex-column gap-3">
-                                <p class="card-desc mb-0">
-                                    Permite anular múltiples pedidos cargando una plantilla excel con los números de pedido y talones correspondientes. El sistema validará su estado en lote.
-                                </p>
-
-                                <div>
-                                    <a href="assets/PlantillaAnulacion.xlsx" download="PlantillaAnulacion.xlsx" class="btn btn-modern btn-modern-outline">
-                                        <i class="bi bi-download"></i>
-                                        Descargar plantilla Excel
-                                    </a>
+                            <div class="d-flex align-items-center gap-2 ms-auto">
+                                <div class="quick-search">
+                                    <i class="bi bi-search"></i>
+                                    <input type="search" id="historial-anulacion-busqueda" class="form-control form-control-modern" placeholder="Buscar pedido, cliente, usuario..." autocomplete="off">
                                 </div>
-
-                                <div>
-                                    <label for="fileupload" class="form-label form-label-modern">
-                                        <i class="bi bi-upload"></i> Subir Archivo Excel
-                                    </label>
-                                    <input type="file" name="excel_file" class="form-control form-control-modern" id="fileupload" accept=".xlsx, .xls">
-                                    <div class="form-text mt-1">
-                                        <i class="bi bi-info-circle"></i> El archivo debe contener los encabezados NRO_PEDIDO y TALON_PED.
-                                    </div>
-                                </div>
+                                <button type="button" class="btn btn-modern btn-modern-outline btn-modern-sm" id="btn-descargar-historial-anulacion" title="Descargar a Excel">
+                                    <i class="bi bi-file-earmark-arrow-down"></i> Descargar Excel
+                                </button>
+                                <button type="button" class="btn-close" id="btn-cerrar-historial-anulacion" aria-label="Cerrar historial" style="font-size: 10px;"></button>
                             </div>
                         </div>
+                        <div class="card-body py-2 border-bottom">
+                            <form id="formHistorialAnulacion" class="row g-2 align-items-end">
+                                <div class="col-auto">
+                                    <label for="historial_anul_desde" class="form-label form-label-modern">Desde</label>
+                                    <input type="date" class="form-control form-control-modern" id="historial_anul_desde">
+                                </div>
+                                <div class="col-auto">
+                                    <label for="historial_anul_hasta" class="form-label form-label-modern">Hasta</label>
+                                    <input type="date" class="form-control form-control-modern" id="historial_anul_hasta">
+                                </div>
+                                <div class="col-auto">
+                                    <label for="historial_anul_usuario" class="form-label form-label-modern">Usuario</label>
+                                    <input type="text" class="form-control form-control-modern" id="historial_anul_usuario" placeholder="Todos" style="width: 130px;">
+                                </div>
+                                <div class="col-auto">
+                                    <label for="historial_anul_talon" class="form-label form-label-modern">Talón</label>
+                                    <input type="text" inputmode="numeric" class="form-control form-control-modern" id="historial_anul_talon" placeholder="Todos" style="width: 80px;">
+                                </div>
+                                <div class="col-auto">
+                                    <label for="historial_anul_nro" class="form-label form-label-modern">Nro. Pedido</label>
+                                    <input type="text" class="form-control form-control-modern" id="historial_anul_nro" placeholder="Todos" style="width: 140px;">
+                                </div>
+                                <div class="col-auto">
+                                    <label for="historial_anul_cliente" class="form-label form-label-modern">Cliente</label>
+                                    <input type="text" class="form-control form-control-modern" id="historial_anul_cliente" placeholder="Código / Razón" style="width: 150px;">
+                                </div>
+                                <div class="col-auto d-flex gap-2">
+                                    <button type="submit" class="btn btn-modern btn-modern-primary">
+                                        <i class="bi bi-funnel"></i> Filtrar
+                                    </button>
+                                    <button type="button" class="btn btn-modern btn-modern-outline" id="btn-limpiar-historial-anul">Limpiar</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="table-scroll historial-scroll">
+                            <table class="table table-modern table-hover align-middle mb-0" id="tabla-historial-anulaciones">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha y hora</th>
+                                        <th>Usuario</th>
+                                        <th>Talón</th>
+                                        <th>Nro. Pedido</th>
+                                        <th>Cliente</th>
+                                        <th class="num">Total del Pedido</th>
+                                        <th>Origen</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-historial-anulaciones">
+                                    <!-- Cargado por JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="historial-info d-none" id="historial-anul-info"></div>
                     </div>
+
                 </div>
             </div>
 
@@ -280,36 +389,65 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
             <div class="tab-pane fade" id="editar-pane" role="tabpanel" aria-labelledby="editar-tab">
                 <div class="d-flex flex-column gap-3">
 
-                    <!-- Búsqueda -->
-                    <div class="card-modern">
-                        <div class="card-body py-3">
-                            <form id="formBuscarEdicion" class="row g-2 align-items-end">
-                                <div class="col-auto">
-                                    <label for="edicion_talon" class="form-label form-label-modern">Talón</label>
-                                    <input type="text" inputmode="numeric" class="form-control form-control-modern" id="edicion_talon" placeholder="Ej: 97" style="width: 100px;">
+                    <div class="row g-3">
+                        <!-- Búsqueda Individual -->
+                        <div class="col-lg-7">
+                            <div class="card-modern h-100">
+                                <div class="card-header">
+                                    <i class="bi bi-search"></i>
+                                    <span>Buscar y Editar Pedido Individual</span>
+                                    <div class="ms-auto d-flex align-items-center gap-3">
+                                        <button type="button" class="btn btn-modern btn-modern-link" id="btn-toggle-historial">
+                                            <i class="bi bi-clock-history"></i> Historial de ediciones
+                                        </button>
+                                        <span class="form-text m-0">País: <span id="pais-label-edicion" class="text-primary">AR</span></span>
+                                    </div>
                                 </div>
-                                <div class="col-auto">
-                                    <label for="edicion_nro_pedido" class="form-label form-label-modern">Nro. Pedido</label>
-                                    <input type="text" class="form-control form-control-modern" id="edicion_nro_pedido" placeholder="Ej: 0000300097307" style="width: 180px;">
+                                <div class="card-body py-3">
+                                    <form id="formBuscarEdicion" class="row g-2 align-items-end">
+                                        <div class="col-auto">
+                                            <label for="edicion_talon" class="form-label form-label-modern">Talón</label>
+                                            <input type="text" inputmode="numeric" class="form-control form-control-modern" id="edicion_talon" placeholder="Ej: 97" style="width: 100px;">
+                                        </div>
+                                        <div class="col-auto">
+                                            <label for="edicion_nro_pedido" class="form-label form-label-modern">Nro. Pedido</label>
+                                            <input type="text" class="form-control form-control-modern" id="edicion_nro_pedido" placeholder="Ej: 0000300097307" style="width: 180px;">
+                                        </div>
+                                        <div class="col-auto">
+                                            <button type="submit" class="btn btn-modern btn-modern-primary">
+                                                <i class="bi bi-search"></i> Buscar
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
-                                <div class="col-auto">
-                                    <button type="submit" class="btn btn-modern btn-modern-primary">
-                                        <i class="bi bi-search"></i> Buscar
-                                    </button>
+                            </div>
+                        </div>
+
+                        <!-- Edición Masiva por Excel -->
+                        <div class="col-lg-5">
+                            <div class="card-modern h-100">
+                                <div class="card-header">
+                                    <i class="bi bi-file-earmark-excel"></i>
+                                    <span>Edición Masiva por Excel</span>
                                 </div>
-                                <div class="col-auto ms-auto align-self-center d-flex align-items-center gap-3">
-                                    <button type="button" class="btn btn-modern btn-modern-link" id="btn-toggle-historial">
-                                        <i class="bi bi-clock-history"></i> Historial de ediciones
-                                    </button>
-                                    <span class="form-text m-0">País: <span id="pais-label-edicion" class="text-primary">AR</span></span>
+                                <div class="card-body d-flex flex-column gap-2 py-3">
+                                    <div class="d-flex gap-2 align-items-center">
+                                        <a href="assets/PlantillaEdicion.xlsx" download="PlantillaEdicion.xlsx" class="btn btn-modern btn-modern-outline flex-shrink-0" title="Descargar plantilla Excel limpia">
+                                            <i class="bi bi-download"></i> Plantilla
+                                        </a>
+                                        <input type="file" id="edicion_fileupload" class="form-control form-control-modern" accept=".xlsx, .xls">
+                                    </div>
+                                    <div class="form-text">
+                                        <i class="bi bi-info-circle"></i> Columnas: <code>TALON_PED</code>, <code>NRO_PEDIDO</code>, <code>COD_ARTICU</code>, <code>NUEVA_CANTIDAD</code> (0 para quitar).
+                                    </div>
                                 </div>
-                            </form>
+                            </div>
                         </div>
                     </div>
 
                     <div id="edicion-vacio" class="empty-state">
                         <i class="bi bi-search d-block mb-1"></i>
-                        Busque un pedido por talón y número para ver sus renglones.
+                        Busque un pedido por talón y número o cargue un Excel masivo para editar.
                     </div>
 
                     <!-- Encabezado del pedido -->
@@ -378,14 +516,21 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
 
                     <!-- Historial de ediciones -->
                     <div id="edicion-historial" class="card-modern d-none">
-                        <div class="card-header flex-wrap">
-                            <i class="bi bi-clock-history"></i>
-                            <span>Historial de ediciones</span>
-                            <div class="quick-search ms-auto">
-                                <i class="bi bi-search"></i>
-                                <input type="search" id="historial-busqueda" class="form-control form-control-modern" placeholder="Buscar artículo o descripción" autocomplete="off">
+                        <div class="card-header flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-clock-history"></i>
+                                <span>Historial de ediciones</span>
                             </div>
-                            <button type="button" class="btn-close" id="btn-cerrar-historial" aria-label="Cerrar historial" style="font-size: 10px;"></button>
+                            <div class="d-flex align-items-center gap-2 ms-auto">
+                                <div class="quick-search">
+                                    <i class="bi bi-search"></i>
+                                    <input type="search" id="historial-busqueda" class="form-control form-control-modern" placeholder="Buscar artículo, pedido, cliente..." autocomplete="off">
+                                </div>
+                                <button type="button" class="btn btn-modern btn-modern-outline btn-modern-sm" id="btn-descargar-historial-edicion" title="Descargar a Excel">
+                                    <i class="bi bi-file-earmark-arrow-down"></i> Descargar Excel
+                                </button>
+                                <button type="button" class="btn-close" id="btn-cerrar-historial" aria-label="Cerrar historial" style="font-size: 10px;"></button>
+                            </div>
                         </div>
                         <div class="card-body py-2 border-bottom">
                             <form id="formHistorial" class="row g-2 align-items-end">
@@ -399,7 +544,7 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
                                 </div>
                                 <div class="col-auto">
                                     <label for="historial_usuario" class="form-label form-label-modern">Usuario</label>
-                                    <input type="text" class="form-control form-control-modern" id="historial_usuario" placeholder="Todos" style="width: 140px;">
+                                    <input type="text" class="form-control form-control-modern" id="historial_usuario" placeholder="Todos" style="width: 130px;">
                                 </div>
                                 <div class="col-auto">
                                     <label for="historial_talon" class="form-label form-label-modern">Talón</label>
@@ -407,7 +552,11 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
                                 </div>
                                 <div class="col-auto">
                                     <label for="historial_nro" class="form-label form-label-modern">Nro. Pedido</label>
-                                    <input type="text" class="form-control form-control-modern" id="historial_nro" placeholder="Todos" style="width: 150px;">
+                                    <input type="text" class="form-control form-control-modern" id="historial_nro" placeholder="Todos" style="width: 140px;">
+                                </div>
+                                <div class="col-auto">
+                                    <label for="historial_cliente" class="form-label form-label-modern">Cliente</label>
+                                    <input type="text" class="form-control form-control-modern" id="historial_cliente" placeholder="Código / Razón" style="width: 150px;">
                                 </div>
                                 <div class="col-auto d-flex gap-2">
                                     <button type="submit" class="btn btn-modern btn-modern-primary">
@@ -426,6 +575,7 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
                                         <th>Usuario</th>
                                         <th>Talón</th>
                                         <th>Nro. Pedido</th>
+                                        <th>Cliente</th>
                                         <th class="num">Quitados</th>
                                         <th class="num">Modificados</th>
                                         <th class="num">Total anterior → nuevo</th>
@@ -488,6 +638,9 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
                                 <li>El sistema marcará cuáles registros son aptos (Válidos) y cuáles no (Inválidos).</li>
                                 <li>Marque individualmente las filas o haga clic en anular todos los válidos para procesar.</li>
                             </ol>
+
+                            <h6>Historial de anulaciones</h6>
+                            <p class="mb-1">Haga clic en <strong>Historial de anulaciones</strong> para consultar todos los pedidos cancelados con filtros por fecha, usuario, pedido o cliente, y descargue el reporte en Excel con un solo clic.</p>
                         </div>
 
                         <!-- Ayuda: Inhabilitar artículos -->
@@ -509,7 +662,7 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
 
                         <!-- Ayuda: Editar pedido -->
                         <div class="tab-pane fade help-pane" id="ayuda-editar" role="tabpanel">
-                            <h6>Pasos</h6>
+                            <h6>Edición individual</h6>
                             <ol>
                                 <li>Busque el pedido por <strong>Talón</strong> y <strong>Nro. Pedido</strong>.</li>
                                 <li>Marque los artículos a <strong>quitar</strong> o indique la <strong>nueva cantidad</strong>.</li>
@@ -517,22 +670,28 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
                                 <li><strong>Confirme</strong> los cambios.</li>
                             </ol>
 
-                            <h6>Reglas</h6>
+                            <h6>Edición masiva por Excel</h6>
+                            <ol>
+                                <li>Descargue la <strong>plantilla Excel de edición</strong>.</li>
+                                <li>Complete las columnas: <code>TALON_PED</code>, <code>NRO_PEDIDO</code>, <code>COD_ARTICU</code> y <code>NUEVA_CANTIDAD</code> (coloque <code>0</code> para quitar el artículo o un valor menor a la cantidad actual).</li>
+                                <li>Suba el archivo Excel. El sistema validará cada pedido y artículo en lote.</li>
+                                <li>Revise la grilla de previsualización y confirme la aplicación masiva.</li>
+                            </ol>
+
+                            <h6>Reglas de negocio</h6>
                             <ul>
                                 <li>Solo se editan pedidos <strong>pendientes (estado 2)</strong> y sin facturación.</li>
                                 <li>Un renglón con remito no se puede editar.</li>
                                 <li>Solo se puede <strong>disminuir</strong> la cantidad, con números enteros.</li>
                                 <li>Los kits se editan desde el renglón del kit: sus componentes se ajustan o se eliminan solos.</li>
                                 <li>No se pueden quitar todos los renglones (para eso está <strong>Anular Pedidos</strong>).</li>
-                                <li>Los cambios se aplican <strong>todos juntos o ninguno</strong>.</li>
+                                <li>Los cambios se aplican <strong>todos juntos o ninguno</strong> por cada pedido.</li>
                                 <li>Al quitar o reducir, se libera el stock comprometido y se recalcula el total del pedido.</li>
                             </ul>
 
-                            <h6>Búsqueda e historial</h6>
+                            <h6>Historial y Excel</h6>
                             <ul>
-                                <li>Use <strong>Buscar artículo o descripción</strong> para filtrar los renglones del pedido. La búsqueda solo cambia la vista: los cambios pendientes se mantienen.</li>
-                                <li><strong>Historial de ediciones</strong> muestra cada edición confirmada con usuario, fecha y hora, y el total anterior y nuevo. Haga clic en una fila para ver el detalle de los artículos quitados o modificados y la variación del stock comprometido.</li>
-                                <li>Desde un pedido cargado, <strong>Ver historial del pedido</strong> muestra solo las ediciones de ese pedido.</li>
+                                <li>Consulte el historial de ediciones con filtros avanzados (incluyendo cliente) y expórtelo a Excel fácilmente.</li>
                             </ul>
                         </div>
                     </div>
@@ -544,13 +703,13 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
         </div>
     </div>
 
-    <!-- Pedidos Preview Modal -->
+    <!-- Pedidos Preview Modal (Anulación Masiva) -->
     <div class="modal fade modal-modern" id="modalPrevious" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="bi bi-eye"></i> Previsualización - Pedidos Cargados
+                        <i class="bi bi-eye"></i> Previsualización - Pedidos a Anular
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -588,6 +747,7 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
                                     </th>
                                     <th>Nro. Pedido</th>
                                     <th>Talón</th>
+                                    <th>Cliente</th>
                                     <th>Resultado Validación</th>
                                 </tr>
                             </thead>
@@ -704,7 +864,7 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
         </div>
     </div>
 
-    <!-- Confirmar Edición Modal -->
+    <!-- Confirmar Edición Modal (Individual) -->
     <div class="modal fade modal-modern" id="modalConfirmarEdicion" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
@@ -792,6 +952,97 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
         </div>
     </div>
 
+    <!-- Previsualización Edición Masiva por Excel Modal -->
+    <div class="modal fade modal-modern" id="modalPreviousEdicion" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-pencil-square"></i> Previsualización - Edición Masiva de Pedidos
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+
+                    <!-- Stats Grid -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <div class="stat-card success">
+                                <div>
+                                    <span class="stat-label">Pedidos Válidos</span>
+                                    <span class="stat-value" id="edicion_modal_pedidos_validos">0</span>
+                                </div>
+                                <i class="bi bi-check-circle"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card danger">
+                                <div>
+                                    <span class="stat-label">Pedidos Inválidos</span>
+                                    <span class="stat-value" id="edicion_modal_pedidos_invalidos">0</span>
+                                </div>
+                                <i class="bi bi-x-circle"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card success">
+                                <div>
+                                    <span class="stat-label">Renglones Válidos</span>
+                                    <span class="stat-value" id="edicion_modal_filas_validas">0</span>
+                                </div>
+                                <i class="bi bi-list-check"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card danger">
+                                <div>
+                                    <span class="stat-label">Renglones con Error</span>
+                                    <span class="stat-value" id="edicion_modal_filas_invalidas">0</span>
+                                </div>
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Table Container -->
+                    <div class="table-container-modern mb-3" style="max-height: 380px; overflow-y: auto;">
+                        <table class="table table-modern table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Talón</th>
+                                    <th>Nro. Pedido</th>
+                                    <th>Artículo</th>
+                                    <th>Descripción</th>
+                                    <th class="num">Cant. Actual</th>
+                                    <th class="num">Nueva Cant.</th>
+                                    <th>Acción</th>
+                                    <th>Resultado Validación</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modal_tbody_edicion_filas">
+                                <!-- Loaded via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="alert-modern alert-modern-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <div>Se procesarán únicamente los <strong>pedidos cuyos renglones resultaron 100% válidos</strong>. Los pedidos con algún error no serán modificados.</div>
+                    </div>
+
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-modern btn-modern-outline" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-modern btn-modern-primary" id="btnAplicarEdicionMasiva">
+                        <i class="bi bi-check-lg"></i> Confirmar y Aplicar Edición Masiva (<span id="edicion_modal_btn_validos">0</span> pedidos)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -801,7 +1052,7 @@ $userName = isset($_GET['userName']) ? $_GET['userName'] : "";
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- SheetJS (Excel Parser) -->
+    <!-- SheetJS (Excel Parser & Generator) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- App Logic -->
     <script src="js/anulador.js"></script>

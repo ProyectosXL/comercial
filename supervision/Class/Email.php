@@ -36,10 +36,56 @@ class EmailNew {
     }
     
     /**
+     * Formatea el número de semana incluyendo el rango de fechas completas (desde - hasta)
+     */
+    private function formatearSemanaConFechas($semana, $anio = null) {
+        if (empty($semana)) {
+            return $semana;
+        }
+
+        // Si ya contiene paréntesis con fechas, no duplicar
+        if (strpos($semana, '(') !== false && strpos($semana, ')') !== false) {
+            return $semana;
+        }
+
+        $semanaNum = intval(trim($semana));
+        $anioNum = $anio ? intval($anio) : intval(date('Y'));
+
+        try {
+            require_once __DIR__ . '/Gasto.php';
+            $gasto = new Gasto();
+            $semanasRetail = $gasto->traerSemanasRetail();
+
+            if (!empty($semanasRetail)) {
+                // Buscar por semana y año
+                foreach ($semanasRetail as $item) {
+                    if (intval($item['SEMANA']) === $semanaNum && intval($item['ANIO']) === $anioNum) {
+                        $desde = ($item['DESDE'] instanceof DateTime) ? $item['DESDE']->format('d/m/Y') : date('d/m/Y', strtotime($item['DESDE']));
+                        $hasta = ($item['HASTA'] instanceof DateTime) ? $item['HASTA']->format('d/m/Y') : date('d/m/Y', strtotime($item['HASTA']));
+                        return "{$semanaNum} ({$desde} al {$hasta})";
+                    }
+                }
+                // Buscar solo por semana si no coincide el año
+                foreach ($semanasRetail as $item) {
+                    if (intval($item['SEMANA']) === $semanaNum) {
+                        $desde = ($item['DESDE'] instanceof DateTime) ? $item['DESDE']->format('d/m/Y') : date('d/m/Y', strtotime($item['DESDE']));
+                        $hasta = ($item['HASTA'] instanceof DateTime) ? $item['HASTA']->format('d/m/Y') : date('d/m/Y', strtotime($item['HASTA']));
+                        return "{$semanaNum} ({$desde} al {$hasta})";
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error obteniendo fechas de semana: " . $e->getMessage());
+        }
+
+        return $semana;
+    }
+
+    /**
      * Envía notificación de autorización de gastos en efectivo
      * Solo se envía cuando hay gastos en efectivo
      */
-    public function enviarNotificacionEfectivo($supervisora, $semana, $totalEfectivo, $adelanto = 0) {
+    public function enviarNotificacionEfectivo($supervisora, $semana, $totalEfectivo, $adelanto = 0, $anio = null) {
         try {
             if ($totalEfectivo <= 0) {
                 return false; // No enviar si no hay gastos en efectivo
@@ -50,8 +96,10 @@ class EmailNew {
             $destinatarios = ['rodrigo.alganaraz@xl.com.ar','julieta.bianculli@xl.com.ar','tesoreria@xl.com.ar','diego.szmulewicz@xl.com.ar'];
             // $destinatarios = ['ramiro.orozco@xl.com.ar'];
 
-            $asunto = "Reintegro de Gastos en Efectivo - {$supervisora} - Semana {$semana}";
-            $htmlBody = $this->generarHtmlReintegroEfectivo($supervisora, $semana, $totalEfectivo, $adelanto, $reintegro);
+            $semanaFormateada = $this->formatearSemanaConFechas($semana, $anio);
+
+            $asunto = "Reintegro de Gastos en Efectivo - {$supervisora} - Semana {$semanaFormateada}";
+            $htmlBody = $this->generarHtmlReintegroEfectivo($supervisora, $semanaFormateada, $totalEfectivo, $adelanto, $reintegro);
 
             foreach ($destinatarios as $email) {
                 $this->mail->clearAddresses();
@@ -74,7 +122,7 @@ class EmailNew {
      * Envía notificación de exceso de presupuesto
      * Se envía cuando hay gastos que exceden el presupuesto
      */
-    public function enviarNotificacionExcesoPresupuesto($supervisora, $semana, $conceptosExcedidos) {
+    public function enviarNotificacionExcesoPresupuesto($supervisora, $semana, $conceptosExcedidos, $anio = null) {
         try {
             if (empty($conceptosExcedidos)) {
                 return false; // No enviar si no hay excesos
@@ -83,8 +131,10 @@ class EmailNew {
             $destinatarios = ['rodrigo.alganaraz@xl.com.ar','julieta.bianculli@xl.com.ar','tesoreria@xl.com.ar','johanna.bolig@xl.com.ar','diego.szmulewicz@xl.com.ar'];
             // $destinatarios = ['ramiro.orozco@xl.com.ar'];
 
-            $asunto = "Exceso de Presupuesto - {$supervisora} - Semana {$semana}";
-            $htmlBody = $this->generarHtmlExcesoPresupuesto($supervisora, $semana, $conceptosExcedidos);
+            $semanaFormateada = $this->formatearSemanaConFechas($semana, $anio);
+
+            $asunto = "Exceso de Presupuesto - {$supervisora} - Semana {$semanaFormateada}";
+            $htmlBody = $this->generarHtmlExcesoPresupuesto($supervisora, $semanaFormateada, $conceptosExcedidos);
 
             foreach ($destinatarios as $email) {
                 $this->mail->clearAddresses();

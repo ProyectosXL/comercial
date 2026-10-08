@@ -26,6 +26,14 @@ switch ($action) {
         historialEdiciones($edicionHandler, $pais);
         break;
 
+    case 'validar_lote':
+        validarLoteEdicion($edicionHandler, $pais);
+        break;
+
+    case 'aplicar_lote':
+        aplicarLoteEdicion($edicionHandler, $pais);
+        break;
+
     default:
         echo json_encode(['success' => false, 'message' => 'Acción no permitida']);
         break;
@@ -109,7 +117,7 @@ function editarPedido($handler, $pais, $test) {
     if ($cambiosJson === null) {
         return;
     }
-    $usuario = isset($_POST['usuario']) ? trim($_POST['usuario']) : '';
+    $usuario = obtenerUsuarioActual();
 
     try {
         $resultado = $handler->editar($pais, $pedido[0], $pedido[1], $cambiosJson, $usuario, $test);
@@ -123,7 +131,7 @@ function editarPedido($handler, $pais, $test) {
         echo json_encode(['success' => false, 'message' => $e->getMessage(), 'codigo' => $e->getCode()]);
     } catch (Throwable $e) {
         error_log('EdicionPedidoController ' . ($test ? 'simular' : 'aplicar') . ': ' . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Error al procesar la edición del pedido']);
+        echo json_encode(['success' => false, 'message' => 'Error al procesar la edición del pedido: ' . $e->getMessage()]);
     }
 }
 
@@ -138,7 +146,8 @@ function historialEdiciones($handler, $pais) {
         'hasta' => isset($_POST['hasta']) ? trim($_POST['hasta']) : '',
         'usuario' => isset($_POST['usuario_filtro']) ? trim($_POST['usuario_filtro']) : '',
         'talon_ped' => isset($_POST['talon_ped']) ? trim($_POST['talon_ped']) : '',
-        'nro_pedido' => isset($_POST['nro_pedido']) ? trim($_POST['nro_pedido']) : ''
+        'nro_pedido' => isset($_POST['nro_pedido']) ? trim($_POST['nro_pedido']) : '',
+        'cliente' => isset($_POST['cliente']) ? trim($_POST['cliente']) : ''
     ];
 
     if (!fechaValida($filtros['desde']) || !fechaValida($filtros['hasta'])) {
@@ -158,6 +167,7 @@ function historialEdiciones($handler, $pais) {
         return;
     }
     $filtros['usuario'] = mb_substr($filtros['usuario'], 0, 50);
+    $filtros['cliente'] = mb_substr($filtros['cliente'], 0, 100);
 
     try {
         $resultado = $handler->historial($pais, $filtros);
@@ -168,6 +178,85 @@ function historialEdiciones($handler, $pais) {
         ]);
     } catch (Throwable $e) {
         error_log('EdicionPedidoController historial: ' . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Error al consultar el historial de ediciones']);
+        echo json_encode(['success' => false, 'message' => 'Error al consultar el historial de ediciones: ' . $e->getMessage()]);
     }
+}
+
+function validarLoteEdicion($handler, $pais) {
+    $filasRaw = isset($_POST['filas']) ? $_POST['filas'] : '[]';
+    $filas = json_decode($filasRaw, true);
+
+    if (!is_array($filas) || count($filas) === 0) {
+        echo json_encode(['success' => false, 'message' => 'El archivo no contiene filas válidas.']);
+        return;
+    }
+
+    try {
+        $resultado = $handler->validarLoteEdicion($pais, $filas);
+        echo json_encode([
+            'success' => true,
+            'filas_data' => $resultado['filas_data'],
+            'pedidos_validos' => $resultado['pedidos_validos'],
+            'cant_pedidos_validos' => $resultado['cant_pedidos_validos'],
+            'cant_pedidos_invalidos' => $resultado['cant_pedidos_invalidos'],
+            'cant_filas_validas' => $resultado['cant_filas_validas'],
+            'cant_filas_invalidas' => $resultado['cant_filas_invalidas']
+        ]);
+    } catch (Throwable $e) {
+        error_log('EdicionPedidoController validarLote: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Error al validar el archivo de edición: ' . $e->getMessage()]);
+    }
+}
+
+function aplicarLoteEdicion($handler, $pais) {
+    $pedidosRaw = isset($_POST['pedidos']) ? $_POST['pedidos'] : '[]';
+    $pedidos = json_decode($pedidosRaw, true);
+    $usuario = obtenerUsuarioActual();
+
+    if (!is_array($pedidos) || count($pedidos) === 0) {
+        echo json_encode(['success' => false, 'message' => 'No hay pedidos válidos para procesar.']);
+        return;
+    }
+
+    try {
+        $resultado = $handler->aplicarLoteEdicion($pais, $pedidos, $usuario);
+        echo json_encode([
+            'success' => true,
+            'total' => $resultado['total'],
+            'exitosos' => $resultado['exitosos'],
+            'fallidos' => $resultado['fallidos'],
+            'detalles' => $resultado['detalles']
+        ]);
+    } catch (Throwable $e) {
+        error_log('EdicionPedidoController aplicarLote: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Error al procesar la edición masiva: ' . $e->getMessage()]);
+    }
+}
+
+function obtenerUsuarioActual() {
+    $usuario = isset($_POST['usuario']) ? trim($_POST['usuario']) : '';
+    if (!empty($usuario)) {
+        return $usuario;
+    }
+
+    if (file_exists($_SERVER['DOCUMENT_ROOT'] . '/sistemas/hub/Class/bootstrap.php')) {
+        require_once $_SERVER['DOCUMENT_ROOT'] . '/sistemas/hub/Class/bootstrap.php';
+    } elseif (file_exists(__DIR__ . '/../../../../sistemas/hub/Class/bootstrap.php')) {
+        require_once __DIR__ . '/../../../../sistemas/hub/Class/bootstrap.php';
+    } elseif (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (class_exists('Auth') && Auth::check()) {
+        $u = Auth::username() ?? Auth::nombre();
+        if (!empty($u)) {
+            return $u;
+        }
+    }
+
+    return $_SESSION['nodo_usuario_activo'] 
+        ?? $_SESSION['fp_auth_user']['username'] 
+        ?? $_SESSION['username'] 
+        ?? $_SESSION['usuario'] 
+        ?? '';
 }

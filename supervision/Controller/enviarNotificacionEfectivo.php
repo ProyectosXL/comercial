@@ -10,6 +10,7 @@ try {
     
     $supervisora = $data['supervisora'] ?? null;
     $semana = $data['semana'] ?? null;
+    $anio = $data['anio'] ?? null;
     $totalEfectivo = $data['totalEfectivo'] ?? 0;
     $adelanto = $data['adelanto'] ?? 0;
 
@@ -22,7 +23,7 @@ try {
     }
 
     $email = new EmailNew();
-    $resultado = $email->enviarNotificacionEfectivo($supervisora, $semana, $totalEfectivo, $adelanto);
+    $resultado = $email->enviarNotificacionEfectivo($supervisora, $semana, $totalEfectivo, $adelanto, $anio);
 
     if ($resultado) {
         echo json_encode([

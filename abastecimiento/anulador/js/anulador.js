@@ -3,6 +3,10 @@ let paisSeleccionado = 'AR';
 let pedidosCargados = [];
 let articulosCargados = [];
 let sugerenciasCargadas = [];
+let edicionMasivaCargada = {
+    pedidosValidos: [],
+    filasData: []
+};
 
 $(document).ready(function() {
     // Configuración global de Toastr
@@ -35,6 +39,7 @@ $(document).ready(function() {
             cargarRubros();
             limpiarEdicion();
             refrescarHistorialSiVisible();
+            refrescarHistorialAnulacionesSiVisible();
 
             toastr.info(`Base de datos cambiada a: ${paisSeleccionado === 'AR' ? 'Argentina (LAKER_SA)' : 'Uruguay (TASKY_SA)'}`);
         });
@@ -91,7 +96,6 @@ $(document).ready(function() {
         }
 
         try {
-            // Preparar datos para el Excel
             const excelData = sugerenciasCargadas.map(s => {
                 let fechaAlta = '---';
                 if (s.FECHA_ALTA) {
@@ -105,12 +109,10 @@ $(document).ready(function() {
                 };
             });
 
-            // Crear libro y hoja
             const worksheet = XLSX.utils.json_to_sheet(excelData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, 'Sugerencias');
 
-            // Guardar archivo
             XLSX.writeFile(workbook, 'Sugerencias_Inhabilitacion.xlsx');
             toastr.success('Archivo Excel descargado exitosamente.');
         } catch (err) {
@@ -134,7 +136,6 @@ $(document).ready(function() {
 
         mostrarLoader('Validando pedido...');
 
-        // AJAX para validar individual
         $.ajax({
             url: 'Controller/PedidoController.php?action=validar_individual',
             type: 'POST',
@@ -148,10 +149,9 @@ $(document).ready(function() {
                 ocultarLoader();
                 if (response.success) {
                     if (response.valido) {
-                        // Confirmar anulación
                         Swal.fire({
                             title: '¿Anular Pedido?',
-                            html: `<strong>${response.message}</strong><br><br>Esta acción es irreversible.`,
+                            html: `<strong>${response.message}</strong><br><br>Esta acción es irreversible y liberará el stock comprometido.`,
                             icon: 'warning',
                             showCancelButton: true,
                             confirmButtonColor: '#ef4444',
@@ -183,7 +183,6 @@ $(document).ready(function() {
     });
 
     // ===== ANULACIÓN MASIVA (EXCEL) =====
-    // Escuchar selección de archivo
     $('#fileupload').on('change', function(e) {
         const file = e.target.files[0];
         if (file) {
@@ -201,7 +200,6 @@ $(document).ready(function() {
     // Cambio en checkbox individual de la tabla preview
     $(document).on('change', '.check-pedido-valido', function() {
         actualizarContadorSeleccionados();
-        // Si se desmarca alguno, desmarcar el select all
         if (!$(this).is(':checked')) {
             $('#select_all_valid').prop('checked', false);
         }
@@ -268,7 +266,6 @@ $(document).ready(function() {
 
 
     // ===== INHABILITACIÓN MASIVA DE ARTÍCULOS =====
-    // Escuchar selección de archivo para artículos
     $('#articulo_fileupload').on('change', function(e) {
         const file = e.target.files[0];
         if (file) {
@@ -276,7 +273,6 @@ $(document).ready(function() {
         }
     });
 
-    // Confirmar Inhabilitación de Artículos Válidos
     $('#btnInhabilitarValidos').on('click', function() {
         const validos = articulosCargados.filter(a => a.valido);
 
@@ -301,6 +297,7 @@ $(document).ready(function() {
         });
     });
 
+    initHistorialAnulaciones();
     initEdicionPedido();
 });
 
@@ -337,7 +334,6 @@ function renderizarTablaSugerencias(sugerencias) {
     $('#container-tabla-sugerencias').removeClass('d-none');
     $('#btn-descargar-sugerencias').prop('disabled', false);
     
-    // Mostrar contador
     $('#contador-sugerencias-num').text(sugerencias.length);
     $('#card-contador-sugerencias').removeClass('d-none');
     
@@ -349,7 +345,6 @@ function actualizarVisibilidadSugerencias() {
     $('#btn-cargar-sugerencias').prop('disabled', false);
     const paisNombre = (paisSeleccionado === 'AR') ? 'Argentina' : 'Uruguay';
     
-    // Al cambiar de país, reiniciar la tabla y las sugerencias cargadas
     $('#tabla-sugerencias tbody').empty();
     $('#container-tabla-sugerencias').addClass('d-none');
     $('#btn-descargar-sugerencias').prop('disabled', true);
@@ -382,7 +377,6 @@ function procesarExcel(file) {
             const worksheet = workbook.Sheets[firstSheet];
             const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-            // Validar columnas
             if (jsonData.length > 0) {
                 const firstRow = jsonData[0];
                 if (!firstRow.hasOwnProperty('NRO_PEDIDO') || !firstRow.hasOwnProperty('TALON_PED')) {
@@ -441,7 +435,6 @@ function mostrarPreviewTable(data) {
     $('#modal_pedidos_validos').text(data.pedidos_validos);
     $('#modal_pedidos_invalidos').text(data.pedidos_invalidos);
     $('#modal_total_validos').text(data.pedidos_validos);
-    $('#modal_total_validos_text').text(data.pedidos_validos);
 
     $('#select_all_valid').prop('checked', false);
     $('#contador_seleccionados').text('0');
@@ -452,10 +445,13 @@ function mostrarPreviewTable(data) {
             ? `<input type="checkbox" class="form-check-input check-pedido-valido" data-nro="${p.nro_pedido}" data-talon="${p.talon_ped}">`
             : `<input type="checkbox" class="form-check-input" disabled>`;
 
+        const cliente = p.cod_client ? `${escapeHtml(p.cod_client)} ${p.razon_soci ? '- ' + escapeHtml(p.razon_soci) : ''}` : '---';
+
         const row = `<tr>
             <td class="text-center">${checkbox}</td>
-            <td><strong>${p.nro_pedido}</strong></td>
-            <td>${p.talon_ped}</td>
+            <td><strong>${escapeHtml(p.nro_pedido)}</strong></td>
+            <td>${escapeHtml(p.talon_ped)}</td>
+            <td><span class="text-secondary">${cliente}</span></td>
             <td><span class="badge-modern ${badgeClass}">${p.estado}</span></td>
         </tr>`;
         tbody.append(row);
@@ -471,7 +467,7 @@ function mostrarPreviewTable(data) {
         $('#select_all_valid').prop('disabled', true);
     }
 
-    const myModal = new bootstrap.Modal(document.getElementById('modalPrevious'));
+    const myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPrevious'));
     myModal.show();
 }
 
@@ -483,7 +479,9 @@ function ejecutarAnulacion(pedidos, esIndividual) {
         dataType: 'json',
         data: {
             pedidos: JSON.stringify(pedidos),
-            pais: paisSeleccionado
+            pais: paisSeleccionado,
+            usuario: $('body').attr('data-username') || '',
+            origen: esIndividual ? 'INDIVIDUAL' : 'MASIVO'
         },
         success: function(response) {
             ocultarLoader();
@@ -503,6 +501,7 @@ function ejecutarAnulacion(pedidos, esIndividual) {
                         if (modalInstance) { modalInstance.hide(); }
                         $('#fileupload').val('');
                     }
+                    refrescarHistorialAnulacionesSiVisible();
                 });
             } else {
                 Swal.fire('Ocurrió un Problema', response.message, 'warning');
@@ -540,7 +539,6 @@ function procesarExcelArticulos(file) {
             const worksheet = workbook.Sheets[firstSheet];
             const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-            // Validar columna COD_ARTICU
             if (jsonData.length > 0) {
                 const firstRow = jsonData[0];
                 if (!firstRow.hasOwnProperty('COD_ARTICU')) {
@@ -609,8 +607,8 @@ function mostrarPreviewTableArticulos(data) {
         }
 
         const row = `<tr>
-            <td><strong>${a.cod_articu}</strong></td>
-            <td>${a.descripcion}</td>
+            <td><strong>${escapeHtml(a.cod_articu)}</strong></td>
+            <td>${escapeHtml(a.descripcion)}</td>
             <td><span class="badge-modern ${badgeClass}">${a.estado}</span></td>
         </tr>`;
         tbody.append(row);
@@ -622,7 +620,7 @@ function mostrarPreviewTableArticulos(data) {
         $('#btnInhabilitarValidos').prop('disabled', true);
     }
 
-    const myModal = new bootstrap.Modal(document.getElementById('modalPreviousArticulos'));
+    const myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPreviousArticulos'));
     myModal.show();
 }
 
@@ -639,12 +637,10 @@ function ejecutarInhabilitacion(articulos) {
         success: function(response) {
             ocultarLoader();
             if (response.success) {
-                // Cerrar modal
                 const modalEl = document.getElementById('modalPreviousArticulos');
                 const modalInstance = bootstrap.Modal.getInstance(modalEl);
                 if (modalInstance) { modalInstance.hide(); }
 
-                // Mostrar SweetAlert2 con resumen del proceso
                 Swal.fire({
                     title: 'Proceso de Inhabilitación Completado',
                     html: `
@@ -682,7 +678,6 @@ function mostrarLoader(mensaje) {
     $('#loading-overlay').css('display', 'flex');
 }
 
-// Ocultar Loader
 function ocultarLoader() {
     $('#loading-overlay').css('display', 'none');
 }
@@ -715,24 +710,218 @@ function cargarRubros() {
 }
 
 
-// ===== EDITAR PEDIDO =====
-// Estado de la pestaña: pedido cargado, todos sus renglones y cambios pendientes (n_renglon -> cambio)
+// ==========================================
+// ===== HISTORIAL DE ANULACIÓN DE PEDIDOS =====
+// ==========================================
+const historialAnulacion = {
+    anulaciones: []
+};
+
+function initHistorialAnulaciones() {
+    $('#btn-toggle-historial-anulaciones').on('click', function() {
+        if ($('#anulacion-historial').hasClass('d-none')) {
+            abrirHistorialAnulaciones({});
+        } else {
+            $('#anulacion-historial').addClass('d-none');
+        }
+    });
+
+    $('#btn-cerrar-historial-anulacion').on('click', function() {
+        $('#anulacion-historial').addClass('d-none');
+    });
+
+    $('#formHistorialAnulacion').on('submit', function(e) {
+        e.preventDefault();
+        cargarHistorialAnulaciones();
+    });
+
+    $('#btn-limpiar-historial-anul').on('click', function() {
+        setFiltrosHistorialAnulacion({});
+        cargarHistorialAnulaciones();
+    });
+
+    $('#historial-anulacion-busqueda').on('input', aplicarBusquedaHistorialAnulacion);
+
+    $('#btn-descargar-historial-anulacion').on('click', descargarExcelHistorialAnulaciones);
+}
+
+function setFiltrosHistorialAnulacion(filtros) {
+    $('#historial_anul_desde').val(filtros.desde || fechaISO(sumarDias(new Date(), -30)));
+    $('#historial_anul_hasta').val(filtros.hasta || fechaISO(new Date()));
+    $('#historial_anul_usuario').val(filtros.usuario || '');
+    $('#historial_anul_talon').val(filtros.talon || '');
+    $('#historial_anul_nro').val(filtros.nro || '');
+    $('#historial_anul_cliente').val(filtros.cliente || '');
+}
+
+function abrirHistorialAnulaciones(filtros) {
+    setFiltrosHistorialAnulacion(filtros);
+    $('#historial-anulacion-busqueda').val('');
+    $('#anulacion-historial').removeClass('d-none');
+    cargarHistorialAnulaciones(function() {
+        document.getElementById('anulacion-historial').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+}
+
+function refrescarHistorialAnulacionesSiVisible() {
+    if (!$('#anulacion-historial').hasClass('d-none')) {
+        cargarHistorialAnulaciones();
+    }
+}
+
+function cargarHistorialAnulaciones(onLoad) {
+    const desde = $('#historial_anul_desde').val();
+    const hasta = $('#historial_anul_hasta').val();
+    const talon = $('#historial_anul_talon').val().trim();
+
+    if (!desde || !hasta) {
+        toastr.warning('Indique el rango de fechas.');
+        return;
+    }
+    if (talon !== '' && !/^\d+$/.test(talon)) {
+        toastr.warning('El talón debe ser numérico.');
+        return;
+    }
+
+    mostrarLoader('Consultando historial de anulaciones...');
+    $.ajax({
+        url: 'Controller/PedidoController.php?action=historial',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            pais: paisSeleccionado,
+            desde: desde,
+            hasta: hasta,
+            usuario_filtro: $('#historial_anul_usuario').val().trim(),
+            talon_ped: talon,
+            nro_pedido: $('#historial_anul_nro').val().trim(),
+            cliente: $('#historial_anul_cliente').val().trim()
+        },
+        success: function(response) {
+            ocultarLoader();
+            if (response.success) {
+                historialAnulacion.anulaciones = response.anulaciones || [];
+                renderHistorialAnulaciones(response.truncado);
+                if (onLoad) { onLoad(); }
+            } else {
+                Swal.fire('No se pudo consultar el historial', response.message, 'warning');
+            }
+        },
+        error: function() {
+            ocultarLoader();
+            toastr.error('Error de red al consultar el historial de anulaciones.');
+        }
+    });
+}
+
+function renderHistorialAnulaciones(truncado) {
+    const tbody = $('#tbody-historial-anulaciones').empty();
+
+    if (historialAnulacion.anulaciones.length === 0) {
+        tbody.append('<tr class="row-sin-resultados"><td colspan="7" class="text-center text-muted py-3">No hay anulaciones registradas para los filtros indicados.</td></tr>');
+        $('#historial-anul-info').addClass('d-none');
+        return;
+    }
+
+    historialAnulacion.anulaciones.forEach(function(a, i) {
+        const usuario = a.USUARIO ? escapeHtml(a.USUARIO) : '<span class="usuario-vacio">Sin usuario</span>';
+        const clienteDesc = a.COD_CLIENT ? `${escapeHtml(a.COD_CLIENT)} ${a.RAZON_SOCI ? '- ' + escapeHtml(a.RAZON_SOCI) : ''}` : '---';
+        const origenBadge = a.ORIGEN === 'MASIVO' 
+            ? '<span class="badge-modern badge-primary-modern">Masivo</span>' 
+            : '<span class="badge-modern">Individual</span>';
+
+        tbody.append(`<tr class="row-anulacion" data-idx="${i}">
+            <td class="num text-start">${escapeHtml(a.FECHA)}</td>
+            <td>${usuario}</td>
+            <td>${escapeHtml(a.TALON_PED)}</td>
+            <td><strong>${escapeHtml(a.NRO_PEDIDO)}</strong></td>
+            <td>${clienteDesc}</td>
+            <td class="num">$ ${formatearImporte(a.TOTAL_PEDI)}</td>
+            <td>${origenBadge}</td>
+        </tr>`);
+    });
+
+    tbody.append('<tr class="row-sin-resultados-busqueda d-none"><td colspan="7" class="text-center text-muted py-3">No hay anulaciones que coincidan con la búsqueda.</td></tr>');
+
+    const info = $('#historial-anul-info');
+    if (truncado) {
+        info.text(`Se muestran las ${historialAnulacion.anulaciones.length} anulaciones más recientes. Acote los filtros para ver otras.`).removeClass('d-none');
+    } else {
+        info.addClass('d-none');
+    }
+
+    aplicarBusquedaHistorialAnulacion();
+}
+
+function aplicarBusquedaHistorialAnulacion() {
+    const texto = normalizarBusqueda($('#historial-anulacion-busqueda').val());
+    let visibles = 0;
+
+    historialAnulacion.anulaciones.forEach(function(a, i) {
+        const match = texto === ''
+            || normalizarBusqueda(a.NRO_PEDIDO).indexOf(texto) !== -1
+            || normalizarBusqueda(a.TALON_PED).indexOf(texto) !== -1
+            || normalizarBusqueda(a.USUARIO).indexOf(texto) !== -1
+            || normalizarBusqueda(a.COD_CLIENT).indexOf(texto) !== -1
+            || normalizarBusqueda(a.RAZON_SOCI).indexOf(texto) !== -1
+            || normalizarBusqueda(a.ORIGEN).indexOf(texto) !== -1;
+
+        $(`#tbody-historial-anulaciones tr.row-anulacion[data-idx="${i}"]`).toggleClass('d-none', !match);
+        if (match) { visibles++; }
+    });
+
+    $('#tbody-historial-anulaciones tr.row-sin-resultados-busqueda').toggleClass('d-none', visibles > 0 || historialAnulacion.anulaciones.length === 0);
+}
+
+function descargarExcelHistorialAnulaciones() {
+    if (!historialAnulacion.anulaciones || historialAnulacion.anulaciones.length === 0) {
+        toastr.warning('No hay datos en el historial para descargar.');
+        return;
+    }
+
+    try {
+        const data = historialAnulacion.anulaciones.map(a => ({
+            'FECHA': a.FECHA,
+            'USUARIO': a.USUARIO || 'Sin usuario',
+            'TALON': a.TALON_PED,
+            'NRO_PEDIDO': a.NRO_PEDIDO,
+            'COD_CLIENT': a.COD_CLIENT || '',
+            'RAZON_SOCIAL': a.RAZON_SOCI || '',
+            'TOTAL_PEDIDO': Number(a.TOTAL_PEDI) || 0,
+            'ORIGEN': a.ORIGEN || 'INDIVIDUAL'
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Historial_Anulaciones');
+
+        const fechaStr = fechaISO(new Date());
+        XLSX.writeFile(wb, `Historial_Anulaciones_${paisSeleccionado}_${fechaStr}.xlsx`);
+        toastr.success('Historial de anulaciones exportado a Excel.');
+    } catch (e) {
+        console.error(e);
+        toastr.error('Error al generar el archivo Excel.');
+    }
+}
+
+
+// ==========================================
+// ===== EDITAR PEDIDO (INDIVIDUAL Y MASIVO) =====
+// ==========================================
 const edicion = {
     pedido: null,
     renglones: [],
     cambios: {},
-    cambiosSimulados: null, // lote exacto enviado a simular, se reutiliza al aplicar
+    cambiosSimulados: null,
     expandidos: {}
 };
 
 function initEdicionPedido() {
-    // Buscar (Enter en Talón o Nro. Pedido dispara el submit)
     $('#formBuscarEdicion').on('submit', function(e) {
         e.preventDefault();
         buscarPedidoEdicion();
     });
 
-    // Expandir / colapsar componentes de un kit
     $(document).on('click', '#tbody-edicion .btn-expand', function() {
         const nRenglon = $(this).data('renglon');
         edicion.expandidos[nRenglon] = !edicion.expandidos[nRenglon];
@@ -740,12 +929,10 @@ function initEdicionPedido() {
         aplicarBusquedaEdicion();
     });
 
-    // Nueva cantidad: solo se registra si es un entero entre 1 y CANT_PEDID - 1
     $(document).on('input change', '#tbody-edicion .input-cantidad', function() {
         registrarCantidadEdicion($(this));
     });
 
-    // Quitar / Deshacer
     $(document).on('click', '#tbody-edicion .btn-quitar', function() {
         const nRenglon = Number($(this).data('renglon'));
         const r = buscarRenglon(nRenglon);
@@ -765,11 +952,20 @@ function initEdicionPedido() {
         renderGrillaEdicion();
     });
 
-    // Búsqueda rápida por artículo o descripción (solo filtra la vista, no toca los cambios)
     $('#edicion-busqueda').on('input', aplicarBusquedaEdicion);
 
     $('#btn-revisar-edicion').on('click', simularEdicion);
     $('#btn-confirmar-edicion').on('click', aplicarEdicion);
+
+    // Edición masiva por Excel
+    $('#edicion_fileupload').on('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            procesarExcelEdicionMasiva(file);
+        }
+    });
+
+    $('#btnAplicarEdicionMasiva').on('click', aplicarEdicionMasivaConfirmada);
 
     initHistorialEdiciones();
 }
@@ -784,7 +980,6 @@ function registrarCantidadEdicion($input) {
     const el = $input.get(0);
 
     if (texto === '' && !(el.validity && el.validity.badInput)) {
-        // Vacío: sin cambio de cantidad
         $input.removeClass('is-invalid');
         delete edicion.cambios[nRenglon];
     } else {
@@ -800,7 +995,6 @@ function registrarCantidadEdicion($input) {
     actualizarFilaEdicion(nRenglon, true);
 }
 
-// Refresca marcas, input y botón de una fila sin re-renderizar la grilla (no pierde el foco ni lo tipeado)
 function actualizarFilaEdicion(nRenglon, desdeInput) {
     const r = buscarRenglon(nRenglon);
     const cambio = edicion.cambios[nRenglon];
@@ -839,7 +1033,6 @@ function simularEdicion() {
     const cambios = listaCambiosEdicion();
     if (cambios.length === 0) { return; }
 
-    // No se pueden quitar todos los renglones principales
     const principales = renglonesPrincipales();
     const quitados = principales.filter(r => {
         const c = edicion.cambios[r.N_RENGLON];
@@ -850,7 +1043,6 @@ function simularEdicion() {
         return;
     }
 
-    // Se guarda el lote exacto que se simula para aplicar los mismos cambios
     edicion.cambiosSimulados = JSON.stringify(cambios);
     llamarEdicion('simular', edicion.cambiosSimulados, 'Simulando cambios...', function(response) {
         renderVistaPreviaEdicion(response);
@@ -905,7 +1097,6 @@ function cerrarModalEdicion() {
     if (modal) { modal.hide(); }
 }
 
-// Los cambios pendientes se conservan; si el pedido cambió (51004) se ofrece recargarlo
 function mostrarErrorEdicion(response) {
     const pedidoCambio = Number(response.codigo) === 51004;
     Swal.fire({
@@ -925,7 +1116,6 @@ function mostrarErrorEdicion(response) {
     });
 }
 
-// Ordena renglones afectados: cada kit seguido de sus componentes (RENGL_PADR = renglón del kit)
 function ordenarConComponentes(lista) {
     const renglones = (lista || []).slice().sort((a, b) => Number(a.N_RENGLON) - Number(b.N_RENGLON));
     const ordenados = [];
@@ -979,7 +1169,6 @@ function hayCambiosEdicion() {
     return Object.keys(edicion.cambios).length > 0;
 }
 
-// Resuelve true si se puede continuar (no hay cambios o el usuario acepta descartarlos)
 function confirmarDescarteEdicion() {
     if (!hayCambiosEdicion()) {
         return Promise.resolve(true);
@@ -1029,7 +1218,6 @@ function consultarPedidoEdicion(talon, nroPedido) {
         success: function(response) {
             ocultarLoader();
             if (response.success) {
-                // Al recargar el mismo pedido (después de aplicar) se conserva la búsqueda
                 const mismoPedido = edicion.pedido !== null
                     && Number(edicion.pedido.TALON_PED) === Number(response.pedido.TALON_PED)
                     && edicion.pedido.NRO_PEDIDO === response.pedido.NRO_PEDIDO;
@@ -1113,7 +1301,6 @@ function renderGrillaEdicion() {
     const editable = pedidoEditable();
     tbody.empty();
 
-    // En solo lectura no se muestran las columnas de edición
     $('#tabla-edicion .col-edicion').toggleClass('d-none', !editable);
 
     renglonesPrincipales().forEach(function(r) {
@@ -1134,9 +1321,8 @@ function renderGrillaEdicion() {
     $('#edicion-grilla').removeClass('d-none');
 }
 
-// Normaliza para comparar sin mayúsculas ni acentos
 function normalizarBusqueda(texto) {
-    return String(texto || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+    return String(texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 }
 
 function coincideBusqueda(renglon, texto) {
@@ -1144,8 +1330,6 @@ function coincideBusqueda(renglon, texto) {
         || normalizarBusqueda(renglon.DESCRIPCIO).indexOf(texto) !== -1;
 }
 
-// Un renglón principal se ve si coincide él o alguno de sus componentes.
-// Los componentes se ven si el kit está expandido o si ellos mismos coinciden con la búsqueda.
 function aplicarBusquedaEdicion() {
     const texto = normalizarBusqueda($('#edicion-busqueda').val());
     let visibles = 0;
@@ -1218,7 +1402,6 @@ function filaRenglonEdicion(r, editable) {
     </tr>`;
 }
 
-// Componente de kit: solo informativo, sin inputs ni acciones
 function filaComponenteEdicion(c, nPadre, editable) {
     const oculto = edicion.expandidos[nPadre] ? '' : 'd-none';
     const colsEdicion = editable ? '<td class="col-edicion"></td><td class="col-edicion"></td>' : '';
@@ -1258,7 +1441,195 @@ function escapeHtml(texto) {
 }
 
 
-// ----- Historial de ediciones (dentro de Editar Pedido) -----
+// ==========================================
+// ===== EDICIÓN MASIVA POR EXCEL =====
+// ==========================================
+function procesarExcelEdicionMasiva(file) {
+    const extension = file.name.split('.').pop().toLowerCase();
+    if (extension !== 'xlsx' && extension !== 'xls') {
+        toastr.error('El formato del archivo debe ser .xlsx o .xls.');
+        $('#edicion_fileupload').val('');
+        return;
+    }
+
+    mostrarLoader('Leyendo archivo Excel de edición...');
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = e.target.result;
+            const workbook = XLSX.read(data, { type: 'binary' });
+            const firstSheet = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheet];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+            if (jsonData.length > 0) {
+                const firstRow = jsonData[0];
+                const colsReq = ['TALON_PED', 'NRO_PEDIDO', 'COD_ARTICU', 'NUEVA_CANTIDAD'];
+                const faltantes = colsReq.filter(c => !firstRow.hasOwnProperty(c));
+
+                if (faltantes.length > 0) {
+                    ocultarLoader();
+                    Swal.fire('Estructura Incorrecta', `El archivo Excel debe contener las columnas: ${colsReq.join(', ')}. Faltan: ${faltantes.join(', ')}.`, 'error');
+                    $('#edicion_fileupload').val('');
+                    return;
+                }
+                validarLoteEdicionMasiva(jsonData);
+            } else {
+                ocultarLoader();
+                toastr.warning('El archivo Excel está vacío.');
+                $('#edicion_fileupload').val('');
+            }
+        } catch (err) {
+            ocultarLoader();
+            toastr.error('Error al leer el archivo Excel.');
+        }
+    };
+    reader.readAsBinaryString(file);
+}
+
+function validarLoteEdicionMasiva(filas) {
+    mostrarLoader('Validando cambios masivos en pedidos...');
+    $.ajax({
+        url: 'Controller/EdicionPedidoController.php?action=validar_lote',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            filas: JSON.stringify(filas),
+            pais: paisSeleccionado
+        },
+        success: function(response) {
+            ocultarLoader();
+            if (response.success) {
+                edicionMasivaCargada.pedidosValidos = response.pedidos_validos || [];
+                edicionMasivaCargada.filasData = response.filas_data || [];
+                mostrarPreviewTableEdicionMasiva(response);
+            } else {
+                Swal.fire('Error al validar lote', response.message, 'error');
+                $('#edicion_fileupload').val('');
+            }
+        },
+        error: function() {
+            ocultarLoader();
+            toastr.error('Error de red al validar la edición masiva.');
+            $('#edicion_fileupload').val('');
+        }
+    });
+}
+
+function mostrarPreviewTableEdicionMasiva(data) {
+    $('#edicion_modal_pedidos_validos').text(data.cant_pedidos_validos);
+    $('#edicion_modal_pedidos_invalidos').text(data.cant_pedidos_invalidos);
+    $('#edicion_modal_filas_validas').text(data.cant_filas_validas);
+    $('#edicion_modal_filas_invalidas').text(data.cant_filas_invalidas);
+    $('#edicion_modal_btn_validos').text(data.cant_pedidos_validos);
+
+    const tbody = $('#modal_tbody_edicion_filas').empty();
+
+    data.filas_data.forEach(function(f) {
+        const badgeClass = f.valido ? 'badge-success-modern' : 'badge-danger-modern';
+        let badgeAccion = '';
+        if (f.accion === 'ELIMINAR') {
+            badgeAccion = '<span class="badge-modern badge-danger-modern">Quitar</span>';
+        } else if (f.accion === 'MODIFICAR') {
+            badgeAccion = '<span class="badge-modern badge-warning-modern">Modificar</span>';
+        } else {
+            badgeAccion = '<span class="badge-modern badge-neutral-modern">Error</span>';
+        }
+
+        const row = `<tr>
+            <td>${escapeHtml(f.talon_ped)}</td>
+            <td><strong>${escapeHtml(f.nro_pedido)}</strong></td>
+            <td><strong>${escapeHtml(f.cod_articu)}</strong></td>
+            <td>${escapeHtml(f.descripcio || '---')}</td>
+            <td class="num">${formatearCantidad(f.cant_actual)}</td>
+            <td class="num"><strong>${formatearCantidad(f.cant_nueva)}</strong></td>
+            <td>${badgeAccion}</td>
+            <td><span class="badge-modern ${badgeClass}">${escapeHtml(f.mensaje)}</span></td>
+        </tr>`;
+        tbody.append(row);
+    });
+
+    $('#btnAplicarEdicionMasiva').prop('disabled', data.cant_pedidos_validos === 0);
+
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalPreviousEdicion'));
+    modal.show();
+}
+
+function aplicarEdicionMasivaConfirmada() {
+    if (!edicionMasivaCargada.pedidosValidos || edicionMasivaCargada.pedidosValidos.length === 0) {
+        toastr.warning('No hay pedidos válidos para procesar.');
+        return;
+    }
+
+    Swal.fire({
+        title: `¿Aplicar edición a ${edicionMasivaCargada.pedidosValidos.length} pedido(s)?`,
+        text: 'Se modificarán las cantidades y liberará el stock comprometido para los pedidos válidos.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3366ff',
+        cancelButtonColor: '#8c93a8',
+        confirmButtonText: 'Sí, aplicar cambios',
+        cancelButtonText: 'Cancelar'
+    }).then(result => {
+        if (result.isConfirmed) {
+            ejecutarEdicionMasivaLote();
+        }
+    });
+}
+
+function ejecutarEdicionMasivaLote() {
+    mostrarLoader('Aplicando edición masiva en base de datos...');
+    $.ajax({
+        url: 'Controller/EdicionPedidoController.php?action=aplicar_lote',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            pais: paisSeleccionado,
+            pedidos: JSON.stringify(edicionMasivaCargada.pedidosValidos),
+            usuario: $('body').attr('data-username') || ''
+        },
+        success: function(response) {
+            ocultarLoader();
+            if (response.success) {
+                const modalEl = document.getElementById('modalPreviousEdicion');
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) { modalInstance.hide(); }
+
+                Swal.fire({
+                    title: 'Edición Masiva Procesada',
+                    html: `
+                        <div class="text-start">
+                            <p><strong>Resumen de ejecución:</strong></p>
+                            <ul>
+                                <li>Total pedidos procesados: <span class="fw-bold">${response.total}</span></li>
+                                <li>Pedidos editados con éxito: <span class="fw-bold text-success">${response.exitosos}</span></li>
+                                <li>Pedidos fallidos: <span class="fw-bold text-danger">${response.fallidos}</span></li>
+                            </ul>
+                        </div>
+                    `,
+                    icon: response.fallidos === 0 ? 'success' : 'warning',
+                    confirmButtonColor: '#10b981'
+                }).then(() => {
+                    $('#edicion_fileupload').val('');
+                    edicionMasivaCargada = { pedidosValidos: [], filasData: [] };
+                    refrescarHistorialSiVisible();
+                });
+            } else {
+                Swal.fire('Error al procesar lote', response.message, 'error');
+            }
+        },
+        error: function() {
+            ocultarLoader();
+            toastr.error('Error de red al aplicar la edición masiva.');
+        }
+    });
+}
+
+
+// ==========================================
+// ===== HISTORIAL DE EDICIONES =====
+// ==========================================
 const historial = {
     operaciones: [],
     expandidas: {}
@@ -1277,7 +1648,6 @@ function initHistorialEdiciones() {
         $('#edicion-historial').addClass('d-none');
     });
 
-    // Historial del pedido cargado (último año)
     $('#btn-historial-pedido').on('click', function() {
         if (!edicion.pedido) { return; }
         abrirHistorial({
@@ -1297,18 +1667,18 @@ function initHistorialEdiciones() {
         cargarHistorial();
     });
 
-    // Expandir / colapsar el detalle de una edición
     $(document).on('click', '#tbody-historial tr.row-historial', function() {
         const i = $(this).data('op');
         historial.expandidas[i] = !$(this).hasClass('expanded');
         aplicarBusquedaHistorial();
     });
 
-    // Al cambiar la búsqueda, las coincidencias vuelven a mostrarse expandidas
     $('#historial-busqueda').on('input', function() {
         historial.expandidas = {};
         aplicarBusquedaHistorial();
     });
+
+    $('#btn-descargar-historial-edicion').on('click', descargarExcelHistorialEdiciones);
 }
 
 function sumarDias(fecha, dias) {
@@ -1317,20 +1687,19 @@ function sumarDias(fecha, dias) {
     return d;
 }
 
-// Fecha local en formato yyyy-mm-dd (el que usan los input date)
 function fechaISO(fecha) {
     const mm = String(fecha.getMonth() + 1).padStart(2, '0');
     const dd = String(fecha.getDate()).padStart(2, '0');
     return `${fecha.getFullYear()}-${mm}-${dd}`;
 }
 
-// Filtros por defecto: últimos 30 días, sin usuario ni pedido
 function setFiltrosHistorial(filtros) {
     $('#historial_desde').val(filtros.desde || fechaISO(sumarDias(new Date(), -30)));
     $('#historial_hasta').val(filtros.hasta || fechaISO(new Date()));
     $('#historial_usuario').val(filtros.usuario || '');
     $('#historial_talon').val(filtros.talon || '');
     $('#historial_nro').val(filtros.nro || '');
+    $('#historial_cliente').val(filtros.cliente || '');
 }
 
 function abrirHistorial(filtros) {
@@ -1373,7 +1742,8 @@ function cargarHistorial(onLoad) {
             hasta: hasta,
             usuario_filtro: $('#historial_usuario').val().trim(),
             talon_ped: talon,
-            nro_pedido: $('#historial_nro').val().trim()
+            nro_pedido: $('#historial_nro').val().trim(),
+            cliente: $('#historial_cliente').val().trim()
         },
         success: function(response) {
             ocultarLoader();
@@ -1396,10 +1766,19 @@ function cargarHistorial(onLoad) {
 function renderHistorial(truncado) {
     const tbody = $('#tbody-historial').empty();
 
+    if (historial.operaciones.length === 0) {
+        tbody.append('<tr class="row-sin-resultados"><td colspan="9" class="text-center text-muted py-3">No hay ediciones registradas para los filtros indicados.</td></tr>');
+        $('#historial-info').addClass('d-none');
+        return;
+    }
+
     historial.operaciones.forEach(function(op, i) {
         const usuario = op.usuario
             ? escapeHtml(op.usuario)
             : '<span class="usuario-vacio">Sin usuario</span>';
+        const cliente = op.cod_client
+            ? `${escapeHtml(op.cod_client)} ${op.razon_soci ? '- ' + escapeHtml(op.razon_soci) : ''}`
+            : '---';
 
         tbody.append(`<tr class="row-historial" data-op="${i}">
             <td><span class="btn-expand"><i class="bi bi-chevron-right"></i></span></td>
@@ -1407,19 +1786,17 @@ function renderHistorial(truncado) {
             <td>${usuario}</td>
             <td>${escapeHtml(op.talon_ped)}</td>
             <td><strong>${escapeHtml(op.nro_pedido)}</strong></td>
+            <td>${cliente}</td>
             <td class="num">${op.eliminados}</td>
             <td class="num">${op.modificados}</td>
             <td class="num total-cambio">$ ${formatearImporte(op.total_ant)}<span class="arrow">→</span>$ ${formatearImporte(op.total_nuevo)}</td>
         </tr>`);
         tbody.append(`<tr class="row-historial-detalle d-none" data-op="${i}">
-            <td colspan="8">${detalleHistorialHtml(op)}</td>
+            <td colspan="9">${detalleHistorialHtml(op)}</td>
         </tr>`);
     });
 
-    const vacio = historial.operaciones.length === 0
-        ? 'No hay ediciones registradas para los filtros indicados.'
-        : 'No hay ediciones que coincidan con la búsqueda.';
-    tbody.append(`<tr class="row-sin-resultados d-none"><td colspan="8">${vacio}</td></tr>`);
+    tbody.append('<tr class="row-sin-resultados d-none"><td colspan="9" class="text-center text-muted py-3">No hay ediciones que coincidan con la búsqueda.</td></tr>');
 
     const info = $('#historial-info');
     if (truncado) {
@@ -1431,7 +1808,6 @@ function renderHistorial(truncado) {
     aplicarBusquedaHistorial();
 }
 
-// Detalle de una edición: un renglón por artículo afectado, con los componentes de kit indentados
 function detalleHistorialHtml(op) {
     const filas = ordenarConComponentes(op.detalle).map(function(d) {
         const esComponente = Number(d.RENGL_PADR) !== 0;
@@ -1477,17 +1853,21 @@ function detalleHistorialHtml(op) {
     </div>`;
 }
 
-// Filtra las ediciones que afectaron algún artículo que coincide; esas se muestran expandidas
 function aplicarBusquedaHistorial() {
     const texto = normalizarBusqueda($('#historial-busqueda').val());
     let visibles = 0;
 
     historial.operaciones.forEach(function(op, i) {
-        const coincide = texto !== '' && op.detalle.some(d => coincideBusqueda(d, texto));
-        const visible = texto === '' || coincide;
-        // Si el usuario no la abrió/cerró a mano, se expande cuando coincide con la búsqueda
+        const coincideArticulo = op.detalle.some(d => coincideBusqueda(d, texto));
+        const coincideHeader = normalizarBusqueda(op.nro_pedido).indexOf(texto) !== -1
+            || normalizarBusqueda(op.talon_ped).indexOf(texto) !== -1
+            || normalizarBusqueda(op.usuario).indexOf(texto) !== -1
+            || normalizarBusqueda(op.cod_client).indexOf(texto) !== -1
+            || normalizarBusqueda(op.razon_soci).indexOf(texto) !== -1;
+
+        const visible = texto === '' || coincideHeader || coincideArticulo;
         const manual = historial.expandidas[i];
-        const expandida = visible && (manual !== undefined ? manual : coincide);
+        const expandida = visible && (manual !== undefined ? manual : (texto !== '' && coincideArticulo));
 
         $(`#tbody-historial tr.row-historial[data-op="${i}"]`)
             .toggleClass('d-none', !visible)
@@ -1497,5 +1877,69 @@ function aplicarBusquedaHistorial() {
         if (visible) { visibles++; }
     });
 
-    $('#tbody-historial tr.row-sin-resultados').toggleClass('d-none', visibles > 0);
+    $('#tbody-historial tr.row-sin-resultados').toggleClass('d-none', visibles > 0 || historial.operaciones.length === 0);
+}
+
+function descargarExcelHistorialEdiciones() {
+    if (!historial.operaciones || historial.operaciones.length === 0) {
+        toastr.warning('No hay datos en el historial para descargar.');
+        return;
+    }
+
+    try {
+        const resumenRows = historial.operaciones.map(op => ({
+            'OPERACION': op.operacion,
+            'FECHA': op.fecha,
+            'USUARIO': op.usuario || 'Sin usuario',
+            'TALON': op.talon_ped,
+            'NRO_PEDIDO': op.nro_pedido,
+            'COD_CLIENT': op.cod_client || '',
+            'RAZON_SOCIAL': op.razon_soci || '',
+            'RENGLONES_QUITADOS': op.eliminados,
+            'RENGLONES_MODIFICADOS': op.modificados,
+            'TOTAL_ANTERIOR': Number(op.total_ant) || 0,
+            'TOTAL_NUEVO': Number(op.total_nuevo) || 0
+        }));
+
+        const detalleRows = [];
+        historial.operaciones.forEach(op => {
+            (op.detalle || []).forEach(d => {
+                const eliminado = Number(d.CANT_NUEVA) === 0;
+                detalleRows.push({
+                    'OPERACION': op.operacion,
+                    'FECHA': op.fecha,
+                    'USUARIO': op.usuario || 'Sin usuario',
+                    'TALON': op.talon_ped,
+                    'NRO_PEDIDO': op.nro_pedido,
+                    'COD_CLIENT': op.cod_client || '',
+                    'RAZON_SOCIAL': op.razon_soci || '',
+                    'N_RENGLON': d.N_RENGLON,
+                    'ES_COMPONENTE_KIT': Number(d.RENGL_PADR) !== 0 ? 'SI' : 'NO',
+                    'COD_ARTICU': d.COD_ARTICU,
+                    'DESCRIPCIO': d.DESCRIPCIO || '',
+                    'COD_DEPOSI': d.COD_DEPOSI || '',
+                    'CANT_ANTERIOR': Number(d.CANT_PEDID_ANT) || 0,
+                    'CANT_NUEVA': Number(d.CANT_NUEVA) || 0,
+                    'ACCION': eliminado ? 'ELIMINADO' : 'MODIFICADO',
+                    'STOCK_COMP_ANTES': d.COMP_ANTES !== null && d.COMP_ANTES !== undefined ? Number(d.COMP_ANTES) : '',
+                    'DELTA_STOCK': d.DELTA_COMP !== null && d.DELTA_COMP !== undefined ? Number(d.DELTA_COMP) : '',
+                    'STOCK_COMP_DESPUES': d.COMP_DESPUES !== null && d.COMP_DESPUES !== undefined ? Number(d.COMP_DESPUES) : ''
+                });
+            });
+        });
+
+        const wb = XLSX.utils.book_new();
+        const wsResumen = XLSX.utils.json_to_sheet(resumenRows);
+        const wsDetalle = XLSX.utils.json_to_sheet(detalleRows);
+
+        XLSX.utils.book_append_sheet(wb, wsResumen, 'Ediciones_Resumen');
+        XLSX.utils.book_append_sheet(wb, wsDetalle, 'Ediciones_Detalle');
+
+        const fechaStr = fechaISO(new Date());
+        XLSX.writeFile(wb, `Historial_Ediciones_${paisSeleccionado}_${fechaStr}.xlsx`);
+        toastr.success('Historial de ediciones exportado a Excel exitosamente.');
+    } catch (e) {
+        console.error(e);
+        toastr.error('Error al generar el archivo Excel.');
+    }
 }

@@ -1,6 +1,7 @@
 <?php
 
 
+if (!class_exists('DotEnv')) {
 class DotEnv
 {
     /**
@@ -45,7 +46,7 @@ class DotEnv
     }
 
     public function listVars(){
-        (new DotEnv($_SERVER['DOCUMENT_ROOT'] . '/comercial/.env'))->load();
+        $this->load();
 
         $vars = array(
 
@@ -72,4 +73,5 @@ class DotEnv
 
     }
 
+}
 }

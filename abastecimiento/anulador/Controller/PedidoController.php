@@ -5,7 +5,7 @@ require_once '../Class/Pedido.php';
 $pedidoHandler = new Pedido();
 
 $action = isset($_GET['action']) ? $_GET['action'] : '';
-$pais = isset($_POST['pais']) ? $_POST['pais'] : 'AR'; // AR o UY
+$pais = (isset($_POST['pais']) && $_POST['pais'] === 'UY') ? 'UY' : 'AR'; // AR o UY
 
 header('Content-Type: application/json');
 
@@ -20,6 +20,10 @@ switch ($action) {
 
     case 'anular':
         anularPedidos($pedidoHandler, $pais);
+        break;
+
+    case 'historial':
+        historialAnulaciones($pedidoHandler, $pais);
         break;
 
     default:
@@ -41,11 +45,13 @@ function validarIndividual($handler, $pais) {
 
     try {
         $resultado = $handler->validarPedido($nro_pedido, $talon_ped, $pais);
-        if ($resultado > 0) {
+        if ($resultado !== false) {
+            $clienteInfo = !empty($resultado['RAZON_SOCI']) ? " - Cliente: {$resultado['RAZON_SOCI']} ({$resultado['COD_CLIENT']})" : (!empty($resultado['COD_CLIENT']) ? " - Cliente: {$resultado['COD_CLIENT']}" : "");
             echo json_encode([
                 'success' => true,
                 'valido' => true,
-                'message' => "✅ Pedido $nro_pedido (Talón $talon_ped) existe y está en estado PENDIENTE"
+                'pedido' => $resultado,
+                'message' => "✅ Pedido $nro_pedido (Talón $talon_ped)$clienteInfo existe y está en estado PENDIENTE"
             ]);
         } else {
             echo json_encode([
@@ -87,12 +93,16 @@ function validarLote($handler, $pais) {
         }
 
         try {
-            $esValido = $handler->validarPedido($nro_pedido, $talon_ped, $pais) > 0;
+            $datosPedido = $handler->validarPedido($nro_pedido, $talon_ped, $pais);
+            $esValido = ($datosPedido !== false);
             $estado = $esValido ? 'válido' : 'inválido';
             
             $pedidos_data[] = [
                 'nro_pedido' => $nro_pedido,
                 'talon_ped' => $talon_ped,
+                'cod_client' => $esValido ? $datosPedido['COD_CLIENT'] : '',
+                'razon_soci' => $esValido ? $datosPedido['RAZON_SOCI'] : '',
+                'total_pedi' => $esValido ? $datosPedido['TOTAL_PEDI'] : 0,
                 'estado' => $estado,
                 'valido' => $esValido
             ];
@@ -106,6 +116,9 @@ function validarLote($handler, $pais) {
             $pedidos_data[] = [
                 'nro_pedido' => $nro_pedido,
                 'talon_ped' => $talon_ped,
+                'cod_client' => '',
+                'razon_soci' => '',
+                'total_pedi' => 0,
                 'estado' => 'error: ' . $e->getMessage(),
                 'valido' => false
             ];
@@ -137,6 +150,8 @@ function validarLote($handler, $pais) {
 function anularPedidos($handler, $pais) {
     $pedidosRaw = isset($_POST['pedidos']) ? $_POST['pedidos'] : '[]';
     $pedidos = json_decode($pedidosRaw, true);
+    $usuario = obtenerUsuarioActual();
+    $origen = (isset($_POST['origen']) && $_POST['origen'] === 'MASIVO') ? 'MASIVO' : 'INDIVIDUAL';
 
     if (!is_array($pedidos) || count($pedidos) === 0) {
         echo json_encode([
@@ -159,7 +174,7 @@ function anularPedidos($handler, $pais) {
         }
 
         try {
-            $resultado = $handler->anularPedido($nro_pedido, $talon_ped, $pais);
+            $resultado = $handler->anularPedido($nro_pedido, $talon_ped, $pais, $usuario, $origen);
             if ($resultado) {
                 $anulados_exitosos++;
             } else {
@@ -184,4 +199,79 @@ function anularPedidos($handler, $pais) {
         'anulados_exitosos' => $anulados_exitosos,
         'anulados_fallidos' => $anulados_fallidos
     ]);
+}
+
+function fechaValida($fecha) {
+    $d = DateTime::createFromFormat('Y-m-d', $fecha);
+    return $d !== false && $d->format('Y-m-d') === $fecha;
+}
+
+function historialAnulaciones($handler, $pais) {
+    $filtros = [
+        'desde' => isset($_POST['desde']) ? trim($_POST['desde']) : '',
+        'hasta' => isset($_POST['hasta']) ? trim($_POST['hasta']) : '',
+        'usuario' => isset($_POST['usuario_filtro']) ? trim($_POST['usuario_filtro']) : '',
+        'talon_ped' => isset($_POST['talon_ped']) ? trim($_POST['talon_ped']) : '',
+        'nro_pedido' => isset($_POST['nro_pedido']) ? trim($_POST['nro_pedido']) : '',
+        'cliente' => isset($_POST['cliente']) ? trim($_POST['cliente']) : ''
+    ];
+
+    if (!fechaValida($filtros['desde']) || !fechaValida($filtros['hasta'])) {
+        echo json_encode(['success' => false, 'message' => 'Indique un rango de fechas válido.']);
+        return;
+    }
+    if ($filtros['hasta'] < $filtros['desde']) {
+        echo json_encode(['success' => false, 'message' => 'La fecha "hasta" no puede ser anterior a "desde".']);
+        return;
+    }
+    if ((new DateTime($filtros['desde']))->diff(new DateTime($filtros['hasta']))->days > 366) {
+        echo json_encode(['success' => false, 'message' => 'El rango de fechas no puede superar un año.']);
+        return;
+    }
+    if ($filtros['talon_ped'] !== '' && !ctype_digit($filtros['talon_ped'])) {
+        echo json_encode(['success' => false, 'message' => 'El talón debe ser numérico.']);
+        return;
+    }
+    $filtros['usuario'] = mb_substr($filtros['usuario'], 0, 50);
+    $filtros['cliente'] = mb_substr($filtros['cliente'], 0, 100);
+
+    try {
+        $resultado = $handler->historialAnulaciones($pais, $filtros);
+        echo json_encode([
+            'success' => true,
+            'anulaciones' => $resultado['anulaciones'],
+            'truncado' => $resultado['truncado']
+        ]);
+    } catch (Throwable $e) {
+        error_log('PedidoController historial: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Error al consultar el historial de anulaciones: ' . $e->getMessage()]);
+    }
+}
+
+function obtenerUsuarioActual() {
+    $usuario = isset($_POST['usuario']) ? trim($_POST['usuario']) : '';
+    if (!empty($usuario)) {
+        return $usuario;
+    }
+
+    if (file_exists($_SERVER['DOCUMENT_ROOT'] . '/sistemas/hub/Class/bootstrap.php')) {
+        require_once $_SERVER['DOCUMENT_ROOT'] . '/sistemas/hub/Class/bootstrap.php';
+    } elseif (file_exists(__DIR__ . '/../../../../sistemas/hub/Class/bootstrap.php')) {
+        require_once __DIR__ . '/../../../../sistemas/hub/Class/bootstrap.php';
+    } elseif (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (class_exists('Auth') && Auth::check()) {
+        $u = Auth::username() ?? Auth::nombre();
+        if (!empty($u)) {
+            return $u;
+        }
+    }
+
+    return $_SESSION['nodo_usuario_activo'] 
+        ?? $_SESSION['fp_auth_user']['username'] 
+        ?? $_SESSION['username'] 
+        ?? $_SESSION['usuario'] 
+        ?? '';
 }

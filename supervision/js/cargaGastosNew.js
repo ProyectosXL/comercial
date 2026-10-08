@@ -513,7 +513,7 @@ $(document).ready(function() {
         }).then((result) => {
             if (result.isConfirmed) {
                 enviarDatosAlServidorConValidacion(gastos, semana, anio, importeAdelanto, validacion);
-                enviarNotificaciones(gastos, validacion, semana, $('#nombreSupervisora').val());
+                enviarNotificaciones(gastos, validacion, semana, $('#nombreSupervisora').val(), anio);
             }
         });
     }
@@ -606,7 +606,7 @@ $(document).ready(function() {
         console.log("Email de carga eliminado según nueva especificación");
     }
 
-    function enviarNotificaciones(gastos, validacion, semana, supervisora) {
+    function enviarNotificaciones(gastos, validacion, semana, supervisora, anio) {
         // CAMBIO 2: Calcular total efectivo del MES COMPLETO, no solo de esta carga
         let totalEfectivoEstaCarga = 0;
         gastos.forEach(function(gasto) {
@@ -650,6 +650,7 @@ $(document).ready(function() {
                 data: JSON.stringify({
                     supervisora: supervisora,
                     semana: semana,
+                    anio: anio,
                     totalEfectivo: totalEfectivoMes, // CAMBIO 2: Total del mes, no solo esta carga
                     adelanto: adelanto
                 }),
@@ -671,6 +672,7 @@ $(document).ready(function() {
                 data: JSON.stringify({
                     supervisora: supervisora,
                     semana: semana,
+                    anio: anio,
                     conceptosExcedidos: validacion.excedidos
                 }),
                 contentType: 'application/json',
