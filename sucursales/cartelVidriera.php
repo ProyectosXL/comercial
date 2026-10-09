@@ -114,6 +114,7 @@ $esUshuaia = buscarUshuaiaRecursivo($_SESSION) ||
         </div>
     </div>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
     <script src="js/cartelVidriera.js?v=<?php echo time(); ?>"></script>
     <script src="js/etiquetaPequena.js?v=<?php echo time(); ?>"></script>
     <script src="js/tabs.js"></script>

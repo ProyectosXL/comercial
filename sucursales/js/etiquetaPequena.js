@@ -194,10 +194,11 @@ document.addEventListener('DOMContentLoaded', function() {
             smallTag.dataset.codigo = codigo;
             
             // Obtener datos del producto
-            const nombreProducto = producto.PRODUCTO || '';
+            const codigoArticulo = (producto.COD_ARTICU || codigo).trim();
+            const descripcion =(producto.DESCRIPCION || producto.PRODUCTO || '').trim();
             const precioSinIva = formatCurrency(producto.PRECIO_S_IVA);
             const precioFinal = formatCurrency(producto.PRECIO_FINAL, 0);
-            
+
             const precioSinIvaHtml = (typeof USR_USHUAIA !== 'undefined' && USR_USHUAIA)
                 ? ''
                 : `<div class="price-without-tax">
@@ -208,14 +209,32 @@ document.addEventListener('DOMContentLoaded', function() {
             // Añadir contenido a la etiqueta
             smallTag.innerHTML = `
                 <div class="small-tag-header no-print">
-                    <span class="small-tag-code">${codigo}</span>
                     <button type="button" class="remove-tag" title="Eliminar etiqueta">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="final-price">$${precioFinal}</div>
                 ${precioSinIvaHtml}
+                <div class="small-tag-articulo">${codigoArticulo}</div>
+                <div class="small-tag-descripcion">${descripcion}</div>
+                <svg class="small-tag-barcode"></svg>
             `;
+
+            // Generar el código de barras del artículo
+            const barcodeEl = smallTag.querySelector('.small-tag-barcode');
+            try {
+                JsBarcode(barcodeEl, codigoArticulo, {
+                    format: 'CODE128',
+                    displayValue: false,
+                    margin: 0,
+                    width: 1,
+                    height: 40
+                });
+                barcodeEl.setAttribute('preserveAspectRatio', 'none');
+            } catch (e) {
+                console.error('No se pudo generar el código de barras:', e);
+                barcodeEl.remove();
+            }
             
             // Añadir la etiqueta al contenedor
             smallTagsContainer.appendChild(smallTag);

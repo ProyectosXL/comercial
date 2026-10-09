@@ -22,7 +22,7 @@
     background-color: white;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     page-break-inside: avoid;
 }
@@ -33,8 +33,9 @@
     left: 0;
     right: 0;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 0 0.2cm;
+    z-index: 1;
 }
 
 .small-tag-code {
@@ -74,7 +75,7 @@
     font-size: 24px;
     font-weight: bold;
     color: #000;
-    margin-bottom: 0.3cm;
+    margin-bottom: 0.2cm;
     text-align: center;
 }
 
@@ -94,6 +95,32 @@
     display: block;
     text-align: center;
     font-size: 10px;
+}
+
+.small-tag .small-tag-articulo {
+    margin-top: 0.15cm;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.small-tag .small-tag-descripcion {
+    font-size: 10px;
+    text-align: center;
+    width: 100%;
+    line-height: 1.15;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.small-tag .small-tag-barcode {
+    display: block;
+    width: 100%;
+    height: 0.8cm;
+    margin-top: auto;
+    flex-shrink: 0;
 }
 
 /* Estilos para pestañas */
@@ -316,7 +343,7 @@
     .small-tag {
         border: 1px dashed #000; /* más fuerte por si el gris no se ve bien */
         margin: 0.3cm;  /* Aumentado el margen entre etiquetas */
-        padding: 0.4cm;
+        padding: 0.3cm;
     }
 
     @page {

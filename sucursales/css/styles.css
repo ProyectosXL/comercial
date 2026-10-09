@@ -226,7 +226,7 @@ body {
     background-color: white;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     page-break-inside: avoid;
 }
@@ -237,7 +237,7 @@ body {
     left: 0;
     right: 0;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 0 0.2cm;
 }
 
@@ -558,7 +558,7 @@ body {
 
     /* Ajustar espaciado después de eliminar esos elementos */
     .small-tag {
-        padding-top: 0.5cm !important;
+        padding-top: 0.3cm !important;
     }
     
     /* Configuraciones generales de página */
