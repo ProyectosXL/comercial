@@ -219,7 +219,7 @@ $grupos        = $direccionario->getGruposEmpresarios();
           <i class="fas fa-plus"></i> <span>Nueva</span>
         </a>
         <?php endif; ?>
-        <a href="/comer/index.php" class="dir-action-btn" title="Volver a COMER">
+        <a href="/centralizadores/comer/index.php" class="dir-action-btn" title="Volver a COMER">
           <i class="bi bi-arrow-left"></i> <span>Volver a COMER</span>
         </a>
       </div>
@@ -227,8 +227,8 @@ $grupos        = $direccionario->getGruposEmpresarios();
 
     <!-- Breadcrumb -->
     <ol class="breadcrumb dir-breadcrumb">
-      <li class="breadcrumb-item"><a href="/comer/index.php" style="text-decoration:none; color:inherit;">COMER</a></li>
-      <li class="breadcrumb-item"><a href="/comer/index.php#card_recepcion_rrhh" style="text-decoration:none; color:inherit;">Recepción y Personal Comercial</a></li>
+      <li class="breadcrumb-item"><a href="/centralizadores/comer/index.php" style="text-decoration:none; color:inherit;">COMER</a></li>
+      <li class="breadcrumb-item"><a href="/centralizadores/comer/index.php#card_recepcion_rrhh" style="text-decoration:none; color:inherit;">Recepción y Personal Comercial</a></li>
       <li class="breadcrumb-item active text-dark fw-semibold">Direccionario</li>
     </ol>
 

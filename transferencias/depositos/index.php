@@ -177,7 +177,7 @@ $ubicaciones = $service->ubicacionesHabilitadas();
             <div>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb">
-                        <li class="breadcrumb-item"><a href="/comer/" class="text-decoration-none text-muted"><i class="bi bi-grid-fill"></i> COMER</a></li>
+                        <li class="breadcrumb-item"><a href="/centralizadores/comer/index.php" class="text-decoration-none text-muted"><i class="bi bi-grid-fill"></i> COMER</a></li>
                         <li class="breadcrumb-item text-muted">Supervisión y Transferencias</li>
                         <li class="breadcrumb-item active fw-bold text-primary" aria-current="page">Transferencias entre Depósitos</li>
                     </ol>

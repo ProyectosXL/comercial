@@ -149,7 +149,7 @@ foreach ($totalesPorDep as $t) {
             <div>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-1 small">
-                        <li class="breadcrumb-item"><a href="/comer/" class="text-decoration-none text-muted"><i class="bi bi-grid-fill"></i> COMER</a></li>
+                        <li class="breadcrumb-item"><a href="/centralizadores/comer/index.php" class="text-decoration-none text-muted"><i class="bi bi-grid-fill"></i> COMER</a></li>
                         <li class="breadcrumb-item"><a href="index.php" class="text-decoration-none text-muted">Transferencias entre Depósitos</a></li>
                         <li class="breadcrumb-item active fw-bold text-primary" aria-current="page">Historial</li>
                     </ol>

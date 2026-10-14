@@ -284,8 +284,8 @@ $rubros     = $stockObj->getRubros('AR');
         <div>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb dir-breadcrumb mb-1">
-                    <li class="breadcrumb-item"><a href="/comer/index.php" class="text-decoration-none text-muted">COMER</a></li>
-                    <li class="breadcrumb-item"><a href="/comer/index.php#card_locales" class="text-decoration-none text-muted">Sucursales y Franquicias</a></li>
+                    <li class="breadcrumb-item"><a href="/centralizadores/comer/index.php" class="text-decoration-none text-muted">COMER</a></li>
+                    <li class="breadcrumb-item"><a href="/centralizadores/comer/index.php#card_locales" class="text-decoration-none text-muted">Sucursales y Franquicias</a></li>
                     <li class="breadcrumb-item active text-dark fw-bold" aria-current="page">Stock Sucursales</li>
                 </ol>
             </nav>
@@ -298,7 +298,7 @@ $rubros     = $stockObj->getRubros('AR');
                 <button type="button" class="active" data-country="AR">AR</button>
                 <button type="button" data-country="UY">UY</button>
             </div>
-            <a href="/comer/index.php" class="btn btn-outline-secondary btn-sm px-3 rounded-pill">
+            <a href="/centralizadores/comer/index.php" class="btn btn-outline-secondary btn-sm px-3 rounded-pill">
                 <i class="bi bi-arrow-left"></i> Volver a COMER
             </a>
         </div>

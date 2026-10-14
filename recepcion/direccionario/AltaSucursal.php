@@ -117,6 +117,15 @@ $valVtex        = (trim($sucursalData['INTEGRA_VTEX'] ?? '') === 'SI');
 $valRetiroExp   = (trim($sucursalData['RETIRO_EXPRES'] ?? '') === 'SI');
 $valSucMadre    = htmlspecialchars($sucursalData['NRO_SUC_MADRE'] ?? '');
 
+// Días de atención
+$valLunes     = !isset($sucursalData) || !empty($sucursalData['LUNES']);
+$valMartes    = !isset($sucursalData) || !empty($sucursalData['MARTES']);
+$valMiercoles = !isset($sucursalData) || !empty($sucursalData['MIERCOLES']);
+$valJueves    = !isset($sucursalData) || !empty($sucursalData['JUEVES']);
+$valViernes   = !isset($sucursalData) || !empty($sucursalData['VIERNES']);
+$valSabado    = !isset($sucursalData) || !empty($sucursalData['SABADO']);
+$valDomingo   = isset($sucursalData) ? !empty($sucursalData['DOMINGO']) : false;
+
 $tituloPagina = $esEdicion ? "Editar Sucursal #{$valNroSucursal} · Direccionario XL" : "Alta de Sucursal · Direccionario XL";
 $tituloHeader = $esEdicion ? "Editar Sucursal #{$valNroSucursal}" : "Alta de Sucursal";
 $subtituloHeader = $esEdicion ? "Actualizar datos y configuración de la sucursal en el Direccionario" : "Registrar una nueva sucursal o punto de venta en el Direccionario general";
@@ -546,26 +555,26 @@ $subtituloHeader = $esEdicion ? "Actualizar datos y configuración de la sucursa
             <div class="form-section-body">
                 <label class="form-label d-block mb-2">Seleccione los días en que el local se encuentra abierto:</label>
                 <div class="dias-wrap">
-                    <label class="btn-dia active">
-                        <input type="checkbox" name="lunes" value="1" checked> Lunes
+                    <label class="btn-dia <?= $valLunes ? 'active' : '' ?>">
+                        <input type="checkbox" name="lunes" value="1" <?= $valLunes ? 'checked' : '' ?>> Lunes
                     </label>
-                    <label class="btn-dia active">
-                        <input type="checkbox" name="martes" value="1" checked> Martes
+                    <label class="btn-dia <?= $valMartes ? 'active' : '' ?>">
+                        <input type="checkbox" name="martes" value="1" <?= $valMartes ? 'checked' : '' ?>> Martes
                     </label>
-                    <label class="btn-dia active">
-                        <input type="checkbox" name="miercoles" value="1" checked> Miércoles
+                    <label class="btn-dia <?= $valMiercoles ? 'active' : '' ?>">
+                        <input type="checkbox" name="miercoles" value="1" <?= $valMiercoles ? 'checked' : '' ?>> Miércoles
                     </label>
-                    <label class="btn-dia active">
-                        <input type="checkbox" name="jueves" value="1" checked> Jueves
+                    <label class="btn-dia <?= $valJueves ? 'active' : '' ?>">
+                        <input type="checkbox" name="jueves" value="1" <?= $valJueves ? 'checked' : '' ?>> Jueves
                     </label>
-                    <label class="btn-dia active">
-                        <input type="checkbox" name="viernes" value="1" checked> Viernes
+                    <label class="btn-dia <?= $valViernes ? 'active' : '' ?>">
+                        <input type="checkbox" name="viernes" value="1" <?= $valViernes ? 'checked' : '' ?>> Viernes
                     </label>
-                    <label class="btn-dia active">
-                        <input type="checkbox" name="sabado" value="1" checked> Sábado
+                    <label class="btn-dia <?= $valSabado ? 'active' : '' ?>">
+                        <input type="checkbox" name="sabado" value="1" <?= $valSabado ? 'checked' : '' ?>> Sábado
                     </label>
-                    <label class="btn-dia active">
-                        <input type="checkbox" name="domingo" value="1" checked> Domingo
+                    <label class="btn-dia <?= $valDomingo ? 'active' : '' ?>">
+                        <input type="checkbox" name="domingo" value="1" <?= $valDomingo ? 'checked' : '' ?>> Domingo
                     </label>
                 </div>
             </div>

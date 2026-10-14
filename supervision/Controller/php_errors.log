@@ -34,3 +34,473 @@
 [22-Jun-2026 14:07:00 Europe/Berlin] Imagen rotada correctamente según EXIF
 [02-Aug-2026 00:27:28 Europe/Berlin] Orientación EXIF detectada: 0
 [02-Aug-2026 00:27:28 Europe/Berlin] Imagen rotada correctamente según EXIF
+[11-Oct-2026 20:53:13 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:53:13 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[11-Oct-2026 20:53:13 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:53:28 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:53:28 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[11-Oct-2026 20:53:28 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:53:42 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:53:42 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[11-Oct-2026 20:53:42 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:53:53 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:53:53 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[11-Oct-2026 20:53:53 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:54:02 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:54:02 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[11-Oct-2026 20:54:02 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:54:11 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:54:11 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[11-Oct-2026 20:54:11 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:54:28 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:54:28 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[11-Oct-2026 20:54:28 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:54:40 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:54:40 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[11-Oct-2026 20:54:40 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:55:02 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:55:02 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[11-Oct-2026 20:55:02 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:55:11 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:55:11 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[11-Oct-2026 20:55:11 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:55:19 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:55:19 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[11-Oct-2026 20:55:19 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:55:36 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[11-Oct-2026 20:55:36 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[11-Oct-2026 20:55:36 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:13:07 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:13:07 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 01:13:07 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:13:18 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:13:18 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 01:13:18 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:22:08 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:22:08 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 01:22:08 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:22:37 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:22:37 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 01:22:37 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:22:50 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:22:50 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 01:22:50 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:25:32 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:25:32 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 01:25:32 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:26:44 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 01:26:44 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 01:26:44 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 02:16:51 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 02:16:51 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 02:16:51 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 02:18:06 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 02:18:06 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 02:18:06 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 03:17:47 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 03:17:47 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 03:17:47 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 03:17:58 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 03:17:58 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 03:17:58 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 03:18:07 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 03:18:07 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 03:18:07 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 03:18:45 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 03:18:45 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 03:18:45 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 03:18:56 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 03:18:56 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 03:18:56 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 18:01:43 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 18:01:43 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 18:01:43 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 18:02:37 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 18:02:37 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 18:02:37 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 18:02:49 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 18:02:49 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 18:02:49 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 18:03:00 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 18:03:00 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 18:03:00 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 18:04:12 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 18:04:12 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 18:04:12 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[12-Oct-2026 18:04:27 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[12-Oct-2026 18:04:27 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[12-Oct-2026 18:04:27 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 03:53:58 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 03:53:58 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 03:53:58 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 03:54:25 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 03:54:25 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 03:54:25 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 03:54:35 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 03:54:35 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 03:54:35 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:55:54 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:55:54 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 16:55:54 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:56:34 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:56:34 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 16:56:34 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:56:47 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:56:47 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 16:56:47 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:56:59 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:56:59 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 16:56:59 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:57:12 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:57:12 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 16:57:12 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:57:27 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:57:27 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 16:57:27 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:57:40 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:57:40 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 16:57:40 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:57:50 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:57:50 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 16:57:50 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:58:02 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:58:02 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 16:58:02 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:58:13 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:58:13 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 16:58:13 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:58:23 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:58:23 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 16:58:23 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:58:38 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[13-Oct-2026 16:58:38 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[13-Oct-2026 16:58:38 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
