@@ -323,7 +323,7 @@ $rubros     = $stockObj->getRubros('AR');
                     <select class="form-select form-select-sm" id="filtro_deposito" name="deposito">
                         <option value="">Todos los Depósitos</option>
                         <?php foreach ($depositos as $d): ?>
-                            <option value="<?= htmlspecialchars($d['codigo']) ?>" <?= $d['codigo'] === '05' ? 'selected' : '' ?>>
+                            <option value="<?= htmlspecialchars($d['codigo']) ?>" <?= $d['codigo'] === '01' ? 'selected' : '' ?>>
                                 [<?= htmlspecialchars($d['codigo']) ?>] <?= htmlspecialchars($d['nombre']) ?>
                             </option>
                         <?php endforeach; ?>
@@ -510,7 +510,8 @@ $rubros     = $stockObj->getRubros('AR');
                         // Actualizar depósitos
                         let depHtml = '<option value="">Todos los Depósitos</option>';
                         res.depositos.forEach(d => {
-                            depHtml += `<option value="${d.codigo}">[${d.codigo}] ${d.nombre}</option>`;
+                            let selected = (d.codigo === '01') ? ' selected' : '';
+                            depHtml += `<option value="${d.codigo}"${selected}>[${d.codigo}] ${d.nombre}</option>`;
                         });
                         $('#filtro_deposito').html(depHtml);
 
