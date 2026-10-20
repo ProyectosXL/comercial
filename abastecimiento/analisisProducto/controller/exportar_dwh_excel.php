@@ -64,7 +64,7 @@ try {
         $headers = [
             'Rubro', 'Categoria', 'Categoria Padre', 'Temporada', 'Destino', 'Liquidacion', 'Fecha Ingreso', 'Cod. Equiv.', 'Articulo', 'Descripcion', 'Color', 'Precio', 
             'Stock Locales', 'Stock Central', 'Stock Fiscal', 'Stock Total', 'Stock Ecommerce', 'Stock Excluido', 'Cant. Venta', 'Venta Total',
-            'Cant. Ingr. Central', 'Stock FQS', 'Venta FQS', 'Venta May.', 'Venta Ecomm.', 'Venta Propios'
+            'Cant. Ingr. Central', 'Stock FQS', 'Venta FQS', 'Stock Franq. GA', 'Venta Franq. GA', 'Venta May.', 'Venta Ecomm.', 'Venta Propios'
         ];
     } else {
         $headers = [
@@ -88,7 +88,7 @@ try {
                 $row['FECHA_INGRESO_SUC'], $row['COD_EQUIVALENCIA'], $row['ARTICULO'], $row['DESCRIPCIO'], $row['COLOR'],
                 $row['PRECIO'], $row['STOCK_LOCALES'], $row['STOCK_CENTRAL'], $row['STOCK_CENTRAL_FISCAL'],
                 $row['STOCK_TOTAL'], $row['STOCK_RESERVA'], $row['STOCK_EXCLUIDO'], $row['CANT_VENTA'], $row['IMP_VENTA'],
-                $row['CANT_INGRESO_CENTRAL'], $row['STOCK_FQS'], $row['VENTA_FRANQ'], $row['VENTA_MAY'], $row['VENTA_ECOMM'], $row['VENTA_PROPIOS']
+                $row['CANT_INGRESO_CENTRAL'], $row['STOCK_FQS'], $row['VENTA_FRANQ'], $row['STOCK_FRANQ_GA'], $row['VENTA_FRANQ_GA'], $row['VENTA_MAY'], $row['VENTA_ECOMM'], $row['VENTA_PROPIOS']
             ];
         } else {
             $rowData = [

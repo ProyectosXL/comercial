@@ -1042,7 +1042,9 @@ class Articulo
                         A.VentaMay AS VENTA_MAY,
                         A.VentaEcomm AS VENTA_ECOMM,
                         A.VentaPropios AS VENTA_PROPIOS,
-                        A.StockFqs AS STOCK_FQS
+                        A.StockFqs AS STOCK_FQS,
+                        ISNULL(A.StockFranqGa, 0) AS STOCK_FRANQ_GA,
+                        ISNULL(A.VentaFranqGa, 0) AS VENTA_FRANQ_GA
                     FROM 
                         [XL-LAKERBIS].[$base].[dbo].FP_ANALISIS_PRODUCTO_COMERCIAL A
                     LEFT JOIN

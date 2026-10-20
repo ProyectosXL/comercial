@@ -266,6 +266,8 @@ if ($_SESSION['entorno'] == 'central') {
                             <?php if ($_SESSION['entorno'] == 'central'): ?>
                             <th>Stock FQS</th>
                             <th>Venta FQS</th>
+                            <th>Stock Franq. GA</th>
+                            <th>Venta Franq. GA</th>
                             <?php endif; ?>
                             <th>Venta May.</th>
                             <th>Venta Ecomm.</th>
@@ -429,6 +431,8 @@ if ($_SESSION['entorno'] == 'central') {
                     <?php if ($_SESSION['entorno'] == 'central'): ?>
                     { data: 'STOCK_FQS', defaultContent: '0', render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
                     { data: 'VENTA_FRANQ', defaultContent: '0', visible: true, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'STOCK_FRANQ_GA', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
+                    { data: 'VENTA_FRANQ_GA', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
                     <?php endif; ?>
                     { data: 'VENTA_MAY', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
                     { data: 'VENTA_ECOMM', defaultContent: '0', visible: false, render: function (data, type) { if (type !== 'display') return data ? Number(data) : 0; return data ? Number(data).toLocaleString('es-AR') : '0'; } },
