@@ -912,8 +912,17 @@ const edicion = {
     pedido: null,
     renglones: [],
     cambios: {},
+    // Artículos a agregar, por la misma clave que en cambios ('nuevo:COD'): datos del buscador
+    nuevos: {},
     cambiosSimulados: null,
     expandidos: {}
+};
+
+// Buscador "Agregar artículo": resultados actuales y control de respuestas viejas
+const agregarArticulo = {
+    resultados: [],
+    timer: null,
+    seq: 0
 };
 
 function initEdicionPedido() {
@@ -950,11 +959,27 @@ function initEdicionPedido() {
     });
 
     $('#btn-descartar-edicion').on('click', function() {
-        edicion.cambios = {};
+        resetCambiosEdicion();
         renderGrillaEdicion();
     });
 
     $('#edicion-busqueda').on('input', aplicarBusquedaEdicion);
+
+    // Renglones nuevos pendientes
+    $(document).on('input change', '#tbody-edicion .input-cantidad-nuevo', function() {
+        registrarCantidadNuevo($(this));
+    });
+
+    $(document).on('click', '#tbody-edicion .btn-quitar-nuevo', function() {
+        const key = $(this).closest('tr').attr('data-key');
+        delete edicion.cambios[key];
+        delete edicion.nuevos[key];
+        $(this).closest('tr').remove();
+        actualizarBarraEdicion();
+        aplicarBusquedaEdicion();
+    });
+
+    initAgregarArticulo();
 
     $('#btn-revisar-edicion').on('click', simularEdicion);
     $('#btn-confirmar-edicion').on('click', aplicarEdicion);
@@ -1038,20 +1063,47 @@ function actualizarBarraEdicion() {
     $('#btn-descartar-edicion, #btn-revisar-edicion').prop('disabled', cantidad === 0);
 }
 
+// Renglones existentes ordenados por número y, al final, los artículos a agregar (n_renglon null)
 function listaCambiosEdicion() {
-    return Object.values(edicion.cambios).sort((a, b) => a.n_renglon - b.n_renglon);
+    return Object.values(edicion.cambios)
+        .map(c => ({ n_renglon: c.n_renglon, cod_articu: c.cod_articu, cantidad: c.cantidad }))
+        .sort((a, b) => {
+            if (a.n_renglon === null || b.n_renglon === null) {
+                return (a.n_renglon === null) - (b.n_renglon === null);
+            }
+            return a.n_renglon - b.n_renglon;
+        });
+}
+
+function resetCambiosEdicion() {
+    edicion.cambios = {};
+    edicion.nuevos = {};
+}
+
+function claveNuevo(codArticu) {
+    return 'nuevo:' + String(codArticu).toUpperCase();
+}
+
+function cantidadNuevos() {
+    return Object.keys(edicion.nuevos).length;
 }
 
 function simularEdicion() {
     const cambios = listaCambiosEdicion();
     if (cambios.length === 0) { return; }
 
+    if ($('#tbody-edicion .input-cantidad-nuevo.is-invalid').length > 0) {
+        toastr.warning('Corrija la cantidad de los artículos nuevos antes de revisar.');
+        return;
+    }
+
+    // Tiene que quedar al menos un renglón principal: existentes − eliminados + nuevos ≥ 1
     const principales = renglonesPrincipales();
     const quitados = principales.filter(r => {
         const c = edicion.cambios[r.N_RENGLON];
         return c !== undefined && c.cantidad === 0;
     });
-    if (principales.length > 0 && quitados.length === principales.length) {
+    if (principales.length - quitados.length + cantidadNuevos() < 1) {
         Swal.fire('Atención', 'No se pueden quitar todos los renglones. Para eso usá Anular Pedidos.', 'warning');
         return;
     }
@@ -1069,7 +1121,7 @@ function aplicarEdicion() {
     llamarEdicion('aplicar', edicion.cambiosSimulados, 'Aplicando cambios...', function(response) {
         cerrarModalEdicion();
         toastr.success(`Pedido actualizado. Total: $ ${formatearImporte(response.resumen.TOTAL_PEDI_NUEVO)}`);
-        edicion.cambios = {};
+        resetCambiosEdicion();
         edicion.cambiosSimulados = null;
         consultarPedidoEdicion(edicion.pedido.TALON_PED, edicion.pedido.NRO_PEDIDO);
         refrescarHistorialSiVisible();
@@ -1122,7 +1174,7 @@ function mostrarErrorEdicion(response) {
         cancelButtonText: 'Cerrar'
     }).then(result => {
         if (pedidoCambio && result.isConfirmed) {
-            edicion.cambios = {};
+            resetCambiosEdicion();
             edicion.cambiosSimulados = null;
             consultarPedidoEdicion(edicion.pedido.TALON_PED, edicion.pedido.NRO_PEDIDO);
         }
@@ -1238,7 +1290,7 @@ function consultarPedidoEdicion(talon, nroPedido) {
 
                 edicion.pedido = response.pedido;
                 edicion.renglones = response.renglones || [];
-                edicion.cambios = {};
+                resetCambiosEdicion();
                 edicion.cambiosSimulados = null;
                 edicion.expandidos = {};
                 renderEncabezadoEdicion();
@@ -1258,7 +1310,7 @@ function consultarPedidoEdicion(talon, nroPedido) {
 function limpiarEdicion() {
     edicion.pedido = null;
     edicion.renglones = [];
-    edicion.cambios = {};
+    resetCambiosEdicion();
     edicion.cambiosSimulados = null;
     edicion.expandidos = {};
     $('#tbody-edicion').empty();
@@ -1340,8 +1392,13 @@ function renderGrillaEdicion() {
         }
     });
 
+    if (editable) {
+        Object.keys(edicion.nuevos).forEach(key => tbody.append(filaNuevaEdicion(key)));
+    }
+
     tbody.append('<tr class="row-sin-resultados d-none"><td colspan="9">No hay renglones que coincidan con la búsqueda.</td></tr>');
 
+    $('#btn-agregar-articulo').prop('disabled', !editable);
     $('#edicion-actions').toggleClass('d-none', !editable);
     actualizarBarraEdicion();
     aplicarBusquedaEdicion();
@@ -1375,7 +1432,15 @@ function aplicarBusquedaEdicion() {
         if (visible) { visibles++; }
     });
 
-    $('#tbody-edicion tr.row-sin-resultados').toggleClass('d-none', visibles > 0 || renglonesPrincipales().length === 0);
+    $('#tbody-edicion tr.row-nuevo').each(function() {
+        const art = edicion.nuevos[$(this).attr('data-key')];
+        const visible = texto === '' || (art !== undefined && coincideBusqueda(art, texto));
+        $(this).toggleClass('d-none', !visible);
+        if (visible) { visibles++; }
+    });
+
+    const total = renglonesPrincipales().length + $('#tbody-edicion tr.row-nuevo').length;
+    $('#tbody-edicion tr.row-sin-resultados').toggleClass('d-none', visibles > 0 || total === 0);
 }
 
 function filaRenglonEdicion(r, editable) {
@@ -1448,6 +1513,301 @@ function botonAccionEdicion(nRenglon, quitado) {
     return quitado
         ? `<button type="button" class="btn btn-modern btn-modern-outline btn-modern-sm btn-quitar" data-renglon="${nRenglon}"><i class="bi bi-arrow-counterclockwise"></i> Deshacer</button>`
         : `<button type="button" class="btn btn-modern btn-modern-outline-danger btn-modern-sm btn-quitar" data-renglon="${nRenglon}"><i class="bi bi-trash"></i> Quitar</button>`;
+}
+
+// ----- Renglones nuevos pendientes (artículos a agregar) -----
+function filaNuevaEdicion(key) {
+    const art = edicion.nuevos[key];
+    const cambio = edicion.cambios[key];
+    const badgeKit = Number(art.ES_KIT) === 1 ? ' <span class="badge-modern badge-primary-modern ms-1">Kit</span>' : '';
+
+    return `<tr class="row-nuevo" data-key="${escapeHtml(key)}">
+        <td></td>
+        <td><strong>${escapeHtml(art.COD_ARTICU)}</strong>${badgeKit}</td>
+        <td>${escapeHtml(art.DESCRIPCIO || '---')}</td>
+        <td class="num text-muted">—</td>
+        <td class="num">${formatearImporte(art.PRECIO)}</td>
+        <td class="num importe-nuevo" title="Importe estimado">${formatearImporte(cambio.cantidad * Number(art.PRECIO))}</td>
+        <td><span class="badge-modern badge-success-modern">Nuevo</span></td>
+        <td class="col-edicion">
+            <input type="number" class="form-control form-control-modern input-cantidad-nuevo"
+                   min="1" max="${disponibleArticulo(art)}" step="1" value="${cambio.cantidad}">
+        </td>
+        <td class="col-edicion">
+            <button type="button" class="btn btn-modern btn-modern-outline-danger btn-modern-sm btn-quitar-nuevo"><i class="bi bi-trash"></i> Quitar</button>
+        </td>
+    </tr>`;
+}
+
+function filaNuevaPorClave(key) {
+    return $('#tbody-edicion tr.row-nuevo').filter(function() {
+        return $(this).attr('data-key') === key;
+    });
+}
+
+function refrescarFilaNueva(key) {
+    const art = edicion.nuevos[key];
+    const cantidad = edicion.cambios[key].cantidad;
+    const $fila = filaNuevaPorClave(key);
+    $fila.find('.input-cantidad-nuevo').val(cantidad).removeClass('is-invalid');
+    $fila.find('.importe-nuevo').text(formatearImporte(cantidad * Number(art.PRECIO)));
+}
+
+// Entre 1 y el disponible del depósito del pedido. Si no es válida se conserva la última cantidad válida
+function registrarCantidadNuevo($input) {
+    const key = $input.closest('tr').attr('data-key');
+    const art = edicion.nuevos[key];
+    if (!art) { return; }
+
+    const max = disponibleArticulo(art);
+    const texto = String($input.val()).trim();
+    const cantidad = Number(texto);
+    const valida = /^\d+$/.test(texto) && cantidad >= 1 && cantidad <= max;
+
+    $input.toggleClass('is-invalid', !valida).attr('title', valida ? '' : `Entre 1 y ${formatearCantidad(max)}`);
+    if (valida) {
+        edicion.cambios[key].cantidad = cantidad;
+        $input.closest('tr').find('.importe-nuevo').text(formatearImporte(cantidad * Number(art.PRECIO)));
+    }
+}
+
+function resaltarFila($fila) {
+    const el = $fila.get(0);
+    if (!el) { return; }
+    // Reinicia la animación si la fila ya estaba resaltada
+    $fila.removeClass('row-resaltado');
+    void el.offsetWidth;
+    $fila.addClass('row-resaltado');
+    setTimeout(() => $fila.removeClass('row-resaltado'), 1600);
+}
+
+// ----- Buscador "Agregar artículo" -----
+function initAgregarArticulo() {
+    $('#btn-agregar-articulo').on('click', abrirAgregarArticulo);
+
+    $('#agregar-busqueda').on('input', function() {
+        clearTimeout(agregarArticulo.timer);
+        agregarArticulo.timer = setTimeout(buscarArticulosAgregar, 400);
+    }).on('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(agregarArticulo.timer);
+            buscarArticulosAgregar();
+        }
+    });
+
+    $('#modalAgregarArticulo').on('shown.bs.modal', function() {
+        $('#agregar-busqueda').trigger('focus');
+    });
+
+    $(document).on('click', '#agregar-tbody .btn-agregar-art', function() {
+        agregarDesdeBuscador($(this).closest('tr'));
+    });
+
+    $(document).on('keydown', '#agregar-tbody .input-agregar', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            agregarDesdeBuscador($(this).closest('tr'));
+        }
+    });
+}
+
+function abrirAgregarArticulo() {
+    if (!pedidoEditable()) { return; }
+    clearTimeout(agregarArticulo.timer);
+    agregarArticulo.seq++;
+    agregarArticulo.resultados = [];
+    $('#agregar-busqueda').val('');
+    mostrarEstadoAgregar('Escriba al menos 3 caracteres del código o la descripción.');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAgregarArticulo')).show();
+}
+
+function mostrarEstadoAgregar(mensaje) {
+    $('#agregar-tbody').empty();
+    $('#agregar-tabla').addClass('d-none');
+    $('#agregar-estado').text(mensaje).removeClass('d-none');
+}
+
+function buscarArticulosAgregar() {
+    const texto = $('#agregar-busqueda').val().trim();
+    const seq = ++agregarArticulo.seq;
+
+    if (texto.length < 3) {
+        agregarArticulo.resultados = [];
+        mostrarEstadoAgregar('Escriba al menos 3 caracteres del código o la descripción.');
+        return;
+    }
+
+    $('#agregar-estado').text('Buscando...').removeClass('d-none');
+    $.ajax({
+        url: 'Controller/EdicionPedidoController.php?action=buscar_articulos',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            pais: paisSeleccionado,
+            talon_ped: edicion.pedido.TALON_PED,
+            nro_pedido: edicion.pedido.NRO_PEDIDO,
+            texto: texto
+        },
+        success: function(response) {
+            if (seq !== agregarArticulo.seq) { return; }
+            if (response.success) {
+                agregarArticulo.resultados = response.articulos || [];
+                renderResultadosAgregar(texto);
+            } else {
+                agregarArticulo.resultados = [];
+                mostrarEstadoAgregar(response.message);
+            }
+        },
+        error: function() {
+            if (seq !== agregarArticulo.seq) { return; }
+            mostrarEstadoAgregar('Error de red al buscar artículos.');
+        }
+    });
+}
+
+function renderResultadosAgregar(texto) {
+    if (agregarArticulo.resultados.length === 0) {
+        mostrarEstadoAgregar(`No se encontraron artículos para "${texto}".`);
+        return;
+    }
+    const tbody = $('#agregar-tbody').empty();
+    agregarArticulo.resultados.forEach((a, i) => tbody.append(filaResultadoAgregar(a, i)));
+    $('#agregar-estado').addClass('d-none');
+    $('#agregar-tabla').removeClass('d-none');
+}
+
+function enPedido(a) {
+    return a.N_RENGLON_EN_PEDIDO !== null && a.N_RENGLON_EN_PEDIDO !== undefined && a.N_RENGLON_EN_PEDIDO !== '';
+}
+
+function disponibleArticulo(a) {
+    return Math.max(0, Math.floor(Number(a.STOCK_DISPONIBLE) || 0));
+}
+
+// Motivo por el que el resultado no se puede agregar, o null
+function motivoNoAgregable(a) {
+    if (a.PRECIO === null || a.PRECIO === undefined) { return 'Sin precio en la lista del pedido'; }
+    if (Number(a.ES_COMPONENTE_EN_PEDIDO) === 1) { return 'Ya está en el pedido como componente de un kit'; }
+    if (Number(a.RENGLON_CON_REMITO) === 1) { return 'El renglón del pedido tiene remito'; }
+    if (enPedido(a)) {
+        const r = buscarRenglon(a.N_RENGLON_EN_PEDIDO);
+        if (!r) { return 'El renglón del pedido no se puede editar'; }
+        if (tipoCambioRenglon(r) === 'quitado') { return 'El renglón está marcado para quitar; deshacé la acción primero'; }
+        if (!renglonEditable(r)) { return r.MOTIVO_NO_EDITABLE || 'El renglón del pedido no se puede editar'; }
+    }
+    return null;
+}
+
+// Disponible menos lo que ya se sumó en los cambios pendientes de esta sesión
+function maxAgregable(a) {
+    let yaSumado = 0;
+    if (enPedido(a)) {
+        const r = buscarRenglon(a.N_RENGLON_EN_PEDIDO);
+        const cambio = r ? edicion.cambios[r.N_RENGLON] : undefined;
+        if (cambio !== undefined && cambio.cantidad > Number(r.CANT_PEDID)) {
+            yaSumado = cambio.cantidad - Number(r.CANT_PEDID);
+        }
+    } else {
+        const cambio = edicion.cambios[claveNuevo(a.COD_ARTICU)];
+        yaSumado = cambio !== undefined ? cambio.cantidad : 0;
+    }
+    return Math.max(0, disponibleArticulo(a) - yaSumado);
+}
+
+function filaResultadoAgregar(a, i) {
+    const esKit = Number(a.ES_KIT) === 1;
+    const tipo = esKit ? '<span class="badge-modern badge-primary-modern">Kit</span>' : '';
+    const badgeEnPedido = enPedido(a)
+        ? ` <span class="badge-modern badge-neutral-modern ms-1" title="Cantidad en el pedido: ${formatearCantidad(a.CANT_EN_PEDIDO)}">En el pedido</span>`
+        : '';
+    const precio = (a.PRECIO === null || a.PRECIO === undefined) ? '<span class="text-muted">—</span>' : formatearImporte(a.PRECIO);
+    const disponible = formatearCantidad(a.STOCK_DISPONIBLE) + (esKit ? ' kits' : '');
+
+    const motivo = motivoNoAgregable(a);
+    let acciones;
+    if (motivo) {
+        acciones = `<td colspan="2"><span class="motivo-no-agregable">${escapeHtml(motivo)}</span></td>`;
+    } else {
+        const max = maxAgregable(a);
+        if (max === 0) {
+            const titulo = disponibleArticulo(a) > 0 ? 'Ya se agregó todo el disponible' : 'Sin stock disponible en el depósito del pedido';
+            acciones = `<td><input type="number" class="form-control form-control-modern input-agregar" disabled></td>
+                <td><button type="button" class="btn btn-modern btn-modern-outline btn-modern-sm" disabled title="${titulo}">Sin stock</button></td>`;
+        } else {
+            acciones = `<td><input type="number" class="form-control form-control-modern input-agregar" min="1" max="${max}" step="1" value="1" title="Entre 1 y ${formatearCantidad(max)}"></td>
+                <td><button type="button" class="btn btn-modern btn-modern-outline-primary btn-modern-sm btn-agregar-art"><i class="bi bi-plus-lg"></i> Agregar</button></td>`;
+        }
+    }
+
+    return `<tr data-idx="${i}" class="${motivo ? 'row-no-agregable' : ''}">
+        <td><strong>${escapeHtml(a.COD_ARTICU)}</strong>${badgeEnPedido}</td>
+        <td>${escapeHtml(a.DESCRIPCIO || '---')}</td>
+        <td>${tipo}</td>
+        <td class="num">${precio}</td>
+        <td class="num">${disponible}</td>
+        ${acciones}
+    </tr>`;
+}
+
+function agregarDesdeBuscador($tr) {
+    const idx = Number($tr.attr('data-idx'));
+    const a = agregarArticulo.resultados[idx];
+    if (!a || motivoNoAgregable(a)) { return; }
+
+    const max = maxAgregable(a);
+    const $input = $tr.find('.input-agregar');
+    const texto = String($input.val()).trim();
+    const cantidad = Number(texto);
+    if (!/^\d+$/.test(texto) || cantidad < 1 || cantidad > max) {
+        $input.addClass('is-invalid');
+        toastr.warning(`Ingrese una cantidad entera entre 1 y ${formatearCantidad(max)}.`);
+        return;
+    }
+
+    if (enPedido(a)) {
+        // Ya es un renglón del pedido: se registra como aumento de ese renglón
+        const r = buscarRenglon(a.N_RENGLON_EN_PEDIDO);
+        const n = Number(r.N_RENGLON);
+        const actual = Number(r.CANT_PEDID);
+        const cambio = edicion.cambios[n];
+        const nueva = (cambio !== undefined ? cambio.cantidad : actual) + cantidad;
+
+        if (nueva === actual) {
+            delete edicion.cambios[n];
+        } else {
+            edicion.cambios[n] = { n_renglon: n, cod_articu: r.COD_ARTICU, cantidad: nueva };
+        }
+        const $fila = $(`#tbody-edicion tr.row-principal[data-renglon="${n}"]`);
+        $fila.find('.input-cantidad').val(nueva === actual ? '' : nueva).removeClass('is-invalid');
+        actualizarFilaEdicion(n, true);
+        resaltarFila($fila);
+        toastr.success(`Se sumaron ${formatearCantidad(cantidad)} unidades a ${r.COD_ARTICU}`);
+    } else {
+        const key = claveNuevo(a.COD_ARTICU);
+        if (edicion.cambios[key] !== undefined) {
+            edicion.cambios[key].cantidad += cantidad;
+            refrescarFilaNueva(key);
+            toastr.success(`Se sumaron ${formatearCantidad(cantidad)} unidades a ${a.COD_ARTICU}`);
+        } else {
+            edicion.nuevos[key] = {
+                COD_ARTICU: a.COD_ARTICU,
+                DESCRIPCIO: a.DESCRIPCIO,
+                ES_KIT: a.ES_KIT,
+                PRECIO: a.PRECIO,
+                STOCK_DISPONIBLE: a.STOCK_DISPONIBLE
+            };
+            edicion.cambios[key] = { n_renglon: null, cod_articu: a.COD_ARTICU, cantidad: cantidad };
+            $('#tbody-edicion tr.row-sin-resultados').before(filaNuevaEdicion(key));
+            toastr.success(`Se agregó ${a.COD_ARTICU} (${formatearCantidad(cantidad)} u.)`);
+        }
+        resaltarFila(filaNuevaPorClave(key));
+        actualizarBarraEdicion();
+        aplicarBusquedaEdicion();
+    }
+
+    // El máximo cambió: se vuelve a dibujar el resultado
+    $tr.replaceWith(filaResultadoAgregar(a, idx));
 }
 
 function formatearImporte(valor) {

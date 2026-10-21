@@ -481,7 +481,10 @@ if (empty($userName)) {
                         <div class="card-header flex-wrap">
                             <i class="bi bi-list-ul"></i>
                             <span>Renglones del pedido</span>
-                            <div class="quick-search ms-auto">
+                            <button type="button" class="btn btn-modern btn-modern-outline-primary btn-modern-sm ms-auto" id="btn-agregar-articulo" disabled>
+                                <i class="bi bi-plus-lg"></i> Agregar artículo
+                            </button>
+                            <div class="quick-search">
                                 <i class="bi bi-search"></i>
                                 <input type="search" id="edicion-busqueda" class="form-control form-control-modern" placeholder="Buscar artículo o descripción" autocomplete="off">
                             </div>
@@ -952,6 +955,48 @@ if (empty($userName)) {
                     <button type="button" class="btn btn-modern btn-modern-danger" id="btn-confirmar-edicion">
                         <i class="bi bi-check-lg"></i> Confirmar cambios
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agregar artículo al pedido Modal -->
+    <div class="modal fade modal-modern" id="modalAgregarArticulo" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-lg"></i> Agregar artículo al pedido
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="quick-search agregar-search mb-1">
+                        <i class="bi bi-search"></i>
+                        <input type="search" id="agregar-busqueda" class="form-control form-control-modern" placeholder="Código o descripción (mínimo 3 caracteres)" autocomplete="off">
+                    </div>
+                    <div class="form-text mb-2">La cantidad está limitada al stock disponible del depósito del pedido. En los kits, es la cantidad de kits que se pueden armar.</div>
+
+                    <div id="agregar-estado" class="empty-state"></div>
+                    <div id="agregar-tabla" class="table-container-modern d-none" style="max-height: 420px; overflow-y: auto;">
+                        <table class="table table-modern align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Artículo</th>
+                                    <th>Descripción</th>
+                                    <th>Tipo</th>
+                                    <th class="num">Precio</th>
+                                    <th class="num">Disponible</th>
+                                    <th>Cantidad</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="agregar-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-modern btn-modern-primary" data-bs-dismiss="modal">Listo</button>
                 </div>
             </div>
         </div>

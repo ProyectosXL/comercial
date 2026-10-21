@@ -233,6 +233,9 @@ code { font-size: 12px; color: var(--an-danger); }
 .btn-modern-outline-danger { background: var(--an-surface); border-color: var(--an-border); color: var(--an-danger); }
 .btn-modern-outline-danger:hover:not(:disabled) { background: rgba(220, 53, 69, .06); border-color: rgba(220, 53, 69, .35); color: var(--an-danger); }
 
+.btn-modern-outline-primary { background: var(--an-surface); border-color: rgba(51, 102, 255, .35); color: var(--an-primary); }
+.btn-modern-outline-primary:hover:not(:disabled) { background: var(--an-primary-soft); border-color: var(--an-primary); color: var(--an-primary); }
+
 .btn-modern-link { background: transparent; border-color: transparent; color: var(--an-primary); padding-left: 0; padding-right: 0; }
 .btn-modern-link:hover:not(:disabled) { color: var(--an-primary-hover); text-decoration: underline; }
 
@@ -442,7 +445,9 @@ code { font-size: 12px; color: var(--an-danger); }
 .pedido-header .ph-label { font-size: 11px; color: var(--an-muted); }
 .pedido-header .ph-value { font-size: 13px; font-weight: 600; color: var(--an-text); font-variant-numeric: tabular-nums; }
 
-.input-cantidad { width: 84px; text-align: right; display: inline-block; }
+.input-cantidad,
+.input-cantidad-nuevo,
+.input-agregar { width: 84px; text-align: right; display: inline-block; }
 
 /* Contenedor con scroll propio para que el thead sticky quede fijo */
 .table-scroll {
@@ -515,6 +520,18 @@ code { font-size: 12px; color: var(--an-danger); }
 
 .table-modern tr.row-aumentado td { background: var(--an-primary-soft); }
 .table-modern tr.row-aumentado td:first-child { box-shadow: inset 3px 0 0 var(--an-primary); }
+
+.table-modern tr.row-nuevo td { background: rgba(40, 167, 69, .06); }
+.table-modern tr.row-nuevo td:first-child { box-shadow: inset 3px 0 0 var(--an-success); }
+
+/* Fila que recibió unidades desde el buscador */
+.table-modern tr.row-resaltado td { animation: an-resaltar 1.6s ease-out; }
+@keyframes an-resaltar { from { background-color: rgba(51, 102, 255, .22); } }
+
+/* Buscador "Agregar artículo" */
+.agregar-search { width: 100%; }
+.motivo-no-agregable { font-size: 11.5px; color: var(--an-muted); }
+.table-modern tr.row-no-agregable td { color: var(--an-muted); }
 
 .table-modern tr.row-quitado td { background: rgba(220, 53, 69, .06); color: var(--an-muted); }
 .table-modern tr.row-quitado td.tachable { text-decoration: line-through; }
