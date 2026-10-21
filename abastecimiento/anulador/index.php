@@ -885,25 +885,43 @@ if (empty($userName)) {
                 <div class="modal-body">
 
                     <!-- Resumen -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-3">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6 col-md-3">
                             <div class="stat-card danger">
                                 <div>
-                                    <span class="stat-label">Renglones quitados</span>
+                                    <span class="stat-label">Quitados</span>
                                     <span class="stat-value" id="prev-eliminados">0</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-6 col-md-3">
                             <div class="stat-card warning">
                                 <div>
-                                    <span class="stat-label">Renglones modificados</span>
+                                    <span class="stat-label">Reducidos</span>
                                     <span class="stat-value" id="prev-modificados">0</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-6 col-md-3">
                             <div class="stat-card primary">
+                                <div>
+                                    <span class="stat-label">Aumentados</span>
+                                    <span class="stat-value" id="prev-aumentados">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card success">
+                                <div>
+                                    <span class="stat-label">Agregados</span>
+                                    <span class="stat-value" id="prev-agregados">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-12">
+                            <div class="stat-card">
                                 <div>
                                     <span class="stat-label">Total del pedido</span>
                                     <span class="stat-value total-cambio">
@@ -911,6 +929,16 @@ if (empty($userName)) {
                                     </span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Crédito del cliente (solo si el SP controla crédito) -->
+                    <div id="prev-credito" class="panel-alt mb-3 d-none">
+                        <h6 class="mb-2"><i class="bi bi-credit-card"></i> Crédito del cliente</h6>
+                        <div class="credito-grid">
+                            <div><span class="ph-label">Disponible antes</span><span class="ph-value" id="prev-credito-antes"></span></div>
+                            <div><span class="ph-label">Esta edición</span><span class="ph-value" id="prev-credito-consumo"></span></div>
+                            <div><span class="ph-label">Disponible después</span><span class="ph-value" id="prev-credito-despues"></span></div>
                         </div>
                     </div>
 
@@ -923,6 +951,7 @@ if (empty($userName)) {
                                     <th>Artículo</th>
                                     <th class="num">Cant. anterior</th>
                                     <th class="num">Cant. nueva</th>
+                                    <th class="num">Precio</th>
                                     <th>Estado</th>
                                 </tr>
                             </thead>
@@ -941,6 +970,7 @@ if (empty($userName)) {
                                     <th class="num">Comprometido antes</th>
                                     <th class="num">Variación</th>
                                     <th class="num">Comprometido después</th>
+                                    <th class="num">Disponible</th>
                                 </tr>
                             </thead>
                             <tbody id="prev-tbody-stock"></tbody>

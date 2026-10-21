@@ -1162,11 +1162,39 @@ function cerrarModalEdicion() {
     if (modal) { modal.hide(); }
 }
 
+// Separa por ", " o "; " fuera de paréntesis (no corta importes como 1.234,56)
+function partesMensajeError(mensaje) {
+    const partes = [];
+    let actual = '';
+    let nivel = 0;
+    const texto = String(mensaje || '');
+    for (let i = 0; i < texto.length; i++) {
+        const ch = texto[i];
+        if (ch === '(') { nivel++; }
+        if (ch === ')') { nivel = Math.max(0, nivel - 1); }
+        if (nivel === 0 && (ch === ',' || ch === ';') && /\s/.test(texto[i + 1] || '')) {
+            partes.push(actual.trim());
+            actual = '';
+            continue;
+        }
+        actual += ch;
+    }
+    partes.push(actual.trim());
+    return partes.filter(p => p !== '');
+}
+
 function mostrarErrorEdicion(response) {
-    const pedidoCambio = Number(response.codigo) === 51004;
+    const codigo = Number(response.codigo);
+    const pedidoCambio = codigo === 51004;
+    // Stock (51034) y crédito (51041): el detalle del SP se muestra una línea por artículo
+    const partes = (codigo === 51034 || codigo === 51041) ? partesMensajeError(response.message) : [];
+    const contenido = partes.length > 1
+        ? { html: `<div class="swal-detalle-error">${partes.map(p => `<div>${escapeHtml(p)}</div>`).join('')}</div>` }
+        : { text: response.message };
+
     Swal.fire({
-        title: 'No se pudo editar el pedido',
-        text: response.message,
+        title: codigo === 51034 ? 'Stock insuficiente' : (codigo === 51041 ? 'Crédito insuficiente' : 'No se pudo editar el pedido'),
+        ...contenido,
         icon: 'error',
         confirmButtonColor: '#3366ff',
         confirmButtonText: pedidoCambio ? 'Recargar pedido' : 'Entendido',
@@ -1192,25 +1220,71 @@ function ordenarConComponentes(lista) {
     return ordenados;
 }
 
+// Badge de la acción sobre un renglón: ESTADO_RENGLON del SP o ACCION del historial
+function badgeAccionRenglon(accion) {
+    const badges = {
+        ELIMINADO: ['badge-danger-modern', 'Eliminado'],
+        ELIMINAR: ['badge-danger-modern', 'Eliminado'],
+        MODIFICADO: ['badge-warning-modern', 'Reducido'],
+        MODIFICAR: ['badge-warning-modern', 'Reducido'],
+        AUMENTADO: ['badge-primary-modern', 'Aumentado'],
+        AUMENTAR: ['badge-primary-modern', 'Aumentado'],
+        AGREGADO: ['badge-success-modern', 'Agregado'],
+        AGREGAR: ['badge-success-modern', 'Agregado']
+    };
+    const b = badges[String(accion || '').toUpperCase()];
+    return b
+        ? `<span class="badge-modern ${b[0]}">${b[1]}</span>`
+        : `<span class="badge-modern badge-neutral-modern">${escapeHtml(accion || '---')}</span>`;
+}
+
+function esValorNulo(valor) {
+    return valor === null || valor === undefined || valor === '';
+}
+
+function precioRenglonPreview(r) {
+    const ant = esValorNulo(r.PRECIO_ANT) ? null : Number(r.PRECIO_ANT);
+    const nuevo = esValorNulo(r.PRECIO_NUEVO) ? null : Number(r.PRECIO_NUEVO);
+    if (ant !== null && nuevo !== null && ant !== nuevo) {
+        return `<span class="total-cambio">${formatearImporte(ant)}<span class="arrow">→</span>${formatearImporte(nuevo)}</span>`;
+    }
+    const precio = nuevo !== null ? nuevo : ant;
+    return precio !== null ? formatearImporte(precio) : '';
+}
+
+function renderCreditoPreview(resumen) {
+    if (Number(resumen.CONTROLA_CREDITO) !== 1) {
+        $('#prev-credito').addClass('d-none');
+        return;
+    }
+    const consumo = Number(resumen.CONSUMO_CREDITO) || 0;
+    $('#prev-credito-antes').text('$ ' + formatearImporte(resumen.CREDITO_DISPONIBLE_ANTES));
+    $('#prev-credito-consumo')
+        .text(consumo < 0 ? 'Libera $ ' + formatearImporte(-consumo) : 'Consume $ ' + formatearImporte(consumo))
+        .toggleClass('text-success', consumo < 0);
+    $('#prev-credito-despues').text('$ ' + formatearImporte(resumen.CREDITO_DISPONIBLE_DESPUES));
+    $('#prev-credito').removeClass('d-none');
+}
+
 function renderVistaPreviaEdicion(data) {
     const resumen = data.resumen;
-    $('#prev-eliminados').text(resumen.ELIMINADOS);
-    $('#prev-modificados').text(resumen.MODIFICADOS);
+    $('#prev-eliminados').text(Number(resumen.ELIMINADOS) || 0);
+    $('#prev-modificados').text(Number(resumen.MODIFICADOS) || 0);
+    $('#prev-aumentados').text(Number(resumen.AUMENTADOS) || 0);
+    $('#prev-agregados').text(Number(resumen.AGREGADOS) || 0);
     $('#prev-total-ant').text('$ ' + formatearImporte(resumen.TOTAL_PEDI_ANT));
     $('#prev-total-nuevo').text('$ ' + formatearImporte(resumen.TOTAL_PEDI_NUEVO));
+    renderCreditoPreview(resumen);
 
     const tbodyRenglones = $('#prev-tbody-renglones').empty();
     ordenarConComponentes(data.renglones).forEach(r => {
         const esComponente = Number(r.RENGL_PADR) !== 0;
-        const eliminado = r.ESTADO_RENGLON === 'ELIMINADO';
-        const badge = eliminado
-            ? '<span class="badge-modern badge-danger-modern">Eliminado</span>'
-            : '<span class="badge-modern badge-warning-modern">Modificado</span>';
         tbodyRenglones.append(`<tr class="${esComponente ? 'row-componente' : ''}">
             <td class="col-articulo">${esComponente ? '' : '<strong>'}${escapeHtml(r.COD_ARTICU)}${esComponente ? '' : '</strong>'}</td>
             <td class="num">${formatearCantidad(r.CANT_PEDID_ANT)}</td>
             <td class="num">${formatearCantidad(r.CANT_NUEVA)}</td>
-            <td>${badge}</td>
+            <td class="num">${precioRenglonPreview(r)}</td>
+            <td>${badgeAccionRenglon(r.ESTADO_RENGLON)}</td>
         </tr>`);
     });
 
@@ -1223,10 +1297,11 @@ function renderVistaPreviaEdicion(data) {
             <td class="num">${formatearCantidad(s.COMP_ANTES)}</td>
             <td class="num">${delta > 0 ? '+' : ''}${formatearCantidad(delta)}</td>
             <td class="num">${formatearCantidad(s.COMP_DESPUES)}</td>
+            <td class="num">${esValorNulo(s.STOCK_DISPONIBLE) ? '' : formatearCantidad(s.STOCK_DISPONIBLE)}</td>
         </tr>`);
     });
     if (!data.stock || data.stock.length === 0) {
-        tbodyStock.append('<tr><td colspan="5" class="text-muted text-center">Sin variaciones de stock</td></tr>');
+        tbodyStock.append('<tr><td colspan="6" class="text-muted text-center">Sin variaciones de stock</td></tr>');
     }
 }
 
