@@ -1162,17 +1162,40 @@ function cerrarModalEdicion() {
     if (modal) { modal.hide(); }
 }
 
-// Separa por ", " o "; " fuera de paréntesis (no corta importes como 1.234,56)
-function partesMensajeError(mensaje) {
+function quitarPuntoFinal(texto) {
+    return String(texto).trim().replace(/\.$/, '');
+}
+
+// Líneas del mensaje de error del SP para mostrarlo en el SweetAlert
+function partesMensajeError(codigo, mensaje) {
+    const texto = String(mensaje || '').trim();
+
+    // 51034: "Stock insuficiente en el depósito 01 para: ART: requerido 5, disponible 2; ART2 (kit X): ..."
+    if (codigo === 51034) {
+        const i = texto.indexOf('para:');
+        if (i === -1) { return [texto]; }
+        const items = texto.slice(i + 'para:'.length).split('; ').map(quitarPuntoFinal).filter(p => p !== '');
+        return [texto.slice(0, i).trim()].concat(items);
+    }
+
+    // 51041: "Crédito insuficiente. Disponible: $ X · Requerido: $ Y."
+    if (codigo === 51041) {
+        return texto.split(' · ').map(quitarPuntoFinal).filter(p => p !== '');
+    }
+
+    return partesPorComa(texto);
+}
+
+// Separa por ", " fuera de paréntesis (no corta importes como 1.234,56)
+function partesPorComa(texto) {
     const partes = [];
     let actual = '';
     let nivel = 0;
-    const texto = String(mensaje || '');
     for (let i = 0; i < texto.length; i++) {
         const ch = texto[i];
         if (ch === '(') { nivel++; }
         if (ch === ')') { nivel = Math.max(0, nivel - 1); }
-        if (nivel === 0 && (ch === ',' || ch === ';') && /\s/.test(texto[i + 1] || '')) {
+        if (nivel === 0 && ch === ',' && texto[i + 1] === ' ') {
             partes.push(actual.trim());
             actual = '';
             continue;
@@ -1186,10 +1209,11 @@ function partesMensajeError(mensaje) {
 function mostrarErrorEdicion(response) {
     const codigo = Number(response.codigo);
     const pedidoCambio = codigo === 51004;
-    // Stock (51034) y crédito (51041): el detalle del SP se muestra una línea por artículo
-    const partes = (codigo === 51034 || codigo === 51041) ? partesMensajeError(response.message) : [];
+    // Errores de negocio con listas (stock, crédito, artículos): una línea por artículo
+    const esNegocio = codigo >= 51000 && codigo <= 51099;
+    const partes = esNegocio ? partesMensajeError(codigo, response.message) : [];
     const contenido = partes.length > 1
-        ? { html: `<div class="swal-detalle-error">${partes.map(p => `<div>${escapeHtml(p)}</div>`).join('')}</div>` }
+        ? { html: `<div class="swal-detalle-error">${partes.map((p, i) => `<div>${i === 0 && codigo === 51034 ? `<strong>${escapeHtml(p)}</strong>` : escapeHtml(p)}</div>`).join('')}</div>` }
         : { text: response.message };
 
     Swal.fire({
