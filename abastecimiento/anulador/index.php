@@ -691,8 +691,12 @@ if (empty($userName)) {
                                 <li>Complete una fila por artículo y pedido: <code>TALON_PED</code>, <code>NRO_PEDIDO</code>, <code>COD_ARTICU</code> y <code>NUEVA_CANTIDAD</code>.</li>
                                 <li><code>NUEVA_CANTIDAD</code> es la <strong>cantidad total final</strong>: <code>0</code> quita el artículo, un valor menor reduce y uno mayor aumenta. Los artículos que no están en el pedido se <strong>agregan</strong> con esa cantidad.</li>
                                 <li>Suba el archivo. Cada pedido se valida completo, incluyendo stock y crédito, antes de aplicar.</li>
-                                <li>Revise la previsualización y confirme la aplicación masiva.</li>
+                                <li>Revise la previsualización y confirme la aplicación masiva. Si algún pedido no se puede aplicar, el resultado indica el motivo.</li>
                             </ol>
+                            <div class="alert-modern alert-modern-warning mb-3">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <div>La validación es <strong>por pedido</strong>. Si un mismo artículo (en el mismo depósito) o un mismo cliente con control de crédito aparece en varios pedidos del archivo, la previsualización lo avisa: si el stock o el crédito no alcanzan para todos, algunos pedidos pueden fallar al aplicar.</div>
+                            </div>
 
                             <h6>Reglas de negocio</h6>
                             <ul>

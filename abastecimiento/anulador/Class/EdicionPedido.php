@@ -335,7 +335,9 @@ class EdicionPedido
                 'controla_credito' => 0,
                 'consumo_credito' => null,
                 'credito_antes' => null,
-                'credito_despues' => null
+                'credito_despues' => null,
+                'cod_client' => '',
+                'deposito' => ''
             );
 
             if ($talon === '' || !ctype_digit($talon) || $nro === '') {
@@ -349,6 +351,9 @@ class EdicionPedido
                     $pedido = $consulta['pedido'];
                     $renglones = $consulta['renglones'];
                     $resumen['total_ant'] = $pedido['TOTAL_PEDI'];
+                    // Para avisar cuando varios pedidos compiten por el mismo stock o crédito
+                    $resumen['cod_client'] = isset($pedido['COD_CLIENT']) ? $pedido['COD_CLIENT'] : '';
+                    $resumen['deposito'] = isset($pedido['DEPOSITO']) ? $pedido['DEPOSITO'] : '';
 
                     if (intval($pedido['EDITABLE']) !== 1) {
                         $motivo = !empty($pedido['MOTIVO_NO_EDITABLE']) ? $pedido['MOTIVO_NO_EDITABLE'] : 'El pedido no es editable';
@@ -600,7 +605,8 @@ class EdicionPedido
                     'talon_ped' => $talon,
                     'nro_pedido' => $nro,
                     'success' => false,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
+                    'codigo' => ($e instanceof EdicionPedidoException) ? $e->getCode() : 0
                 );
             }
         }

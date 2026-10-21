@@ -1836,9 +1836,11 @@ function filaResultadoAgregar(a, i) {
     } else {
         const max = maxAgregable(a);
         if (max === 0) {
-            const titulo = disponibleArticulo(a) > 0 ? 'Ya se agregó todo el disponible' : 'Sin stock disponible en el depósito del pedido';
+            // Disponible real en 0: "Sin stock". Si ya se agregó todo lo disponible en la sesión: "Sin disponible"
+            const agotadoEnSesion = disponibleArticulo(a) > 0;
+            const titulo = agotadoEnSesion ? 'Ya se agregó todo el disponible' : 'Sin stock disponible en el depósito del pedido';
             acciones = `<td><input type="number" class="form-control form-control-modern input-agregar" disabled></td>
-                <td><button type="button" class="btn btn-modern btn-modern-outline btn-modern-sm" disabled title="${titulo}">Sin stock</button></td>`;
+                <td><button type="button" class="btn btn-modern btn-modern-outline btn-modern-sm" disabled title="${titulo}">${agotadoEnSesion ? 'Sin disponible' : 'Sin stock'}</button></td>`;
         } else {
             acciones = `<td><input type="number" class="form-control form-control-modern input-agregar" min="1" max="${max}" step="1" value="1" title="Entre 1 y ${formatearCantidad(max)}"></td>
                 <td><button type="button" class="btn btn-modern btn-modern-outline-primary btn-modern-sm btn-agregar-art"><i class="bi bi-plus-lg"></i> Agregar</button></td>`;
@@ -2019,6 +2021,7 @@ function mostrarPreviewTableEdicionMasiva(data) {
     const tbody = $('#modal_tbody_edicion_filas').empty();
     const resumenes = {};
     (data.pedidos_resumen || []).forEach(p => { resumenes[`${p.talon_ped}|${p.nro_pedido}`] = p; });
+    const avisos = avisosCompetenciaLote(data.filas_data, resumenes);
     let pedidoActual = null;
 
     data.filas_data.forEach(function(f) {
@@ -2026,11 +2029,12 @@ function mostrarPreviewTableEdicionMasiva(data) {
         const clave = `${f.talon_ped}|${f.nro_pedido}`;
         if (clave !== pedidoActual) {
             pedidoActual = clave;
-            tbody.append(filaCabeceraPedidoLote(f, resumenes[clave]));
+            tbody.append(filaCabeceraPedidoLote(f, resumenes[clave], avisos.clientes.has(clave)));
         }
 
         const badgeClass = f.valido ? 'badge-success-modern' : 'badge-danger-modern';
         const badgeAccion = badgeAccionLote(f);
+        const aviso = avisos.filas.has(`${clave}|${f.cod_articu}`) ? avisoCompetenciaHtml('artículo') : '';
 
         const row = `<tr>
             <td>${escapeHtml(f.talon_ped)}</td>
@@ -2040,7 +2044,7 @@ function mostrarPreviewTableEdicionMasiva(data) {
             <td class="num">${formatearCantidad(f.cant_actual)}</td>
             <td class="num"><strong>${formatearCantidad(f.cant_nueva)}</strong></td>
             <td>${badgeAccion}</td>
-            <td><span class="badge-modern badge-wrap ${badgeClass}">${escapeHtml(f.mensaje)}</span></td>
+            <td><span class="badge-modern badge-wrap ${badgeClass}">${escapeHtml(f.mensaje)}</span>${aviso}</td>
         </tr>`;
         tbody.append(row);
     });
@@ -2064,7 +2068,52 @@ function badgeAccionLote(f) {
     return `<span class="badge-modern ${b[0]}">${escapeHtml(b[1])}</span>`;
 }
 
-function filaCabeceraPedidoLote(f, resumen) {
+// La simulación es por pedido: entre los pedidos válidos, detecta los que compiten por el mismo
+// stock (mismo artículo y depósito, al aumentar o agregar) o por el crédito del mismo cliente
+function avisosCompetenciaLote(filas, resumenes) {
+    const pedidosPorArticulo = {};
+    const pedidosPorCliente = {};
+    const agregar = (mapa, clave, pedido) => {
+        if (!mapa[clave]) { mapa[clave] = new Set(); }
+        mapa[clave].add(pedido);
+    };
+
+    filas.forEach(f => {
+        const pedido = `${f.talon_ped}|${f.nro_pedido}`;
+        const r = resumenes[pedido];
+        if (!r || !r.valido || (f.accion !== 'AUMENTAR' && f.accion !== 'AGREGAR')) { return; }
+        agregar(pedidosPorArticulo, `${r.deposito}|${f.cod_articu}`, pedido);
+    });
+    Object.keys(resumenes).forEach(pedido => {
+        const r = resumenes[pedido];
+        if (r.valido && Number(r.controla_credito) === 1 && r.cod_client) {
+            agregar(pedidosPorCliente, r.cod_client, pedido);
+        }
+    });
+
+    const filasAviso = new Set();
+    filas.forEach(f => {
+        const pedido = `${f.talon_ped}|${f.nro_pedido}`;
+        const r = resumenes[pedido];
+        const set = r ? pedidosPorArticulo[`${r.deposito}|${f.cod_articu}`] : null;
+        if (set && set.size > 1 && set.has(pedido) && (f.accion === 'AUMENTAR' || f.accion === 'AGREGAR')) {
+            filasAviso.add(`${pedido}|${f.cod_articu}`);
+        }
+    });
+    const clientesAviso = new Set();
+    Object.values(pedidosPorCliente).forEach(set => {
+        if (set.size > 1) { set.forEach(p => clientesAviso.add(p)); }
+    });
+
+    return { filas: filasAviso, clientes: clientesAviso };
+}
+
+function avisoCompetenciaHtml(sujeto) {
+    return `<div class="lote-aviso"><i class="bi bi-exclamation-triangle"></i>
+        Este ${sujeto} aparece en varios pedidos. La validación es por pedido: si el stock o el crédito no alcanzan para todos, algunos pueden fallar al aplicar.</div>`;
+}
+
+function filaCabeceraPedidoLote(f, resumen, avisoCliente) {
     let detalle = '';
     if (resumen && resumen.valido) {
         detalle = `<span class="total-cambio">Total $ ${formatearImporte(resumen.total_ant)}<span class="arrow">→</span>$ ${formatearImporte(resumen.total_nuevo)}</span>`;
@@ -2080,8 +2129,25 @@ function filaCabeceraPedidoLote(f, resumen) {
         <td colspan="8">
             <strong>Talón ${escapeHtml(f.talon_ped)} · Pedido ${escapeHtml(f.nro_pedido)}</strong>
             <span class="lote-detalle">${detalle}</span>
+            ${avisoCliente ? avisoCompetenciaHtml('cliente') : ''}
         </td>
     </tr>`;
+}
+
+// Pedidos que fallaron al aplicar, con el motivo del SP separado en líneas
+function detalleFallidosLote(detalles) {
+    const fallidos = (detalles || []).filter(d => !d.success);
+    if (fallidos.length === 0) { return ''; }
+    const items = fallidos.map(d => {
+        const lineas = partesMensajeError(Number(d.codigo) || 0, d.error)
+            .map(p => `<div>${escapeHtml(p)}</div>`).join('');
+        return `<div class="lote-fallido">
+            <strong>Talón ${escapeHtml(d.talon_ped)} · Pedido ${escapeHtml(d.nro_pedido)}</strong>
+            ${lineas}
+        </div>`;
+    }).join('');
+    return `<p class="mb-1"><strong>Pedidos que no se aplicaron:</strong></p>
+        <div class="swal-detalle-error">${items}</div>`;
 }
 
 function aplicarEdicionMasivaConfirmada() {
@@ -2134,6 +2200,7 @@ function ejecutarEdicionMasivaLote() {
                                 <li>Pedidos editados con éxito: <span class="fw-bold text-success">${response.exitosos}</span></li>
                                 <li>Pedidos fallidos: <span class="fw-bold text-danger">${response.fallidos}</span></li>
                             </ul>
+                            ${detalleFallidosLote(response.detalles)}
                         </div>
                     `,
                     icon: response.fallidos === 0 ? 'success' : 'warning',
