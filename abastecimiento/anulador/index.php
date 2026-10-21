@@ -413,9 +413,12 @@ if (empty($userName)) {
                                             <label for="edicion_nro_pedido" class="form-label form-label-modern">Nro. Pedido</label>
                                             <input type="text" class="form-control form-control-modern" id="edicion_nro_pedido" placeholder="Ej: 0000300097307" style="width: 180px;">
                                         </div>
-                                        <div class="col-auto">
+                                        <div class="col-auto d-flex align-items-center gap-2">
                                             <button type="submit" class="btn btn-modern btn-modern-primary">
                                                 <i class="bi bi-search"></i> Buscar
+                                            </button>
+                                            <button type="button" class="btn btn-modern btn-modern-outline btn-modern-sm" id="btn-limpiar-edicion" title="Limpiar y buscar otro pedido">
+                                                <i class="bi bi-eraser"></i> Limpiar
                                             </button>
                                         </div>
                                     </form>
@@ -438,7 +441,10 @@ if (empty($userName)) {
                                         <input type="file" id="edicion_fileupload" class="form-control form-control-modern" accept=".xlsx, .xls">
                                     </div>
                                     <div class="form-text">
-                                        <i class="bi bi-info-circle"></i> Columnas: <code>TALON_PED</code>, <code>NRO_PEDIDO</code>, <code>COD_ARTICU</code>, <code>NUEVA_CANTIDAD</code> (0 para quitar).
+                                        <i class="bi bi-info-circle"></i> Columnas: <code>TALON_PED</code>, <code>NRO_PEDIDO</code>, <code>COD_ARTICU</code>, <code>NUEVA_CANTIDAD</code>.
+                                    </div>
+                                    <div class="form-text mt-0">
+                                        Una fila por artículo y pedido. <code>NUEVA_CANTIDAD</code> es la cantidad total final: <code>0</code> quita y, si el artículo no está en el pedido, se agrega. Se valida el stock y, para franquicias y mayoristas, el crédito.
                                     </div>
                                 </div>
                             </div>
@@ -459,6 +465,8 @@ if (empty($userName)) {
                                 <div class="ph-item"><span class="ph-label">Fecha</span><span class="ph-value" id="ph-fecha"></span></div>
                                 <div class="ph-item"><span class="ph-label">Cliente</span><span class="ph-value" id="ph-cliente"></span></div>
                                 <div class="ph-item"><span class="ph-label">Estado</span><span class="ph-value" id="ph-estado"></span></div>
+                                <div class="ph-item"><span class="ph-label">Depósito</span><span class="ph-value" id="ph-deposito"></span></div>
+                                <div class="ph-item"><span class="ph-label">Lista</span><span class="ph-value" id="ph-lista"></span></div>
                                 <div class="ph-item"><span class="ph-label">Total del pedido</span><span class="ph-value" id="ph-total"></span></div>
                                 <button type="button" class="btn btn-modern btn-modern-link ms-auto" id="btn-historial-pedido">
                                     <i class="bi bi-clock-history"></i> Ver historial del pedido
@@ -476,7 +484,10 @@ if (empty($userName)) {
                         <div class="card-header flex-wrap">
                             <i class="bi bi-list-ul"></i>
                             <span>Renglones del pedido</span>
-                            <div class="quick-search ms-auto">
+                            <button type="button" class="btn btn-modern btn-modern-outline-primary btn-modern-sm ms-auto" id="btn-agregar-articulo" disabled>
+                                <i class="bi bi-plus-lg"></i> Agregar artículo
+                            </button>
+                            <div class="quick-search">
                                 <i class="bi bi-search"></i>
                                 <input type="search" id="edicion-busqueda" class="form-control form-control-modern" placeholder="Buscar artículo o descripción" autocomplete="off">
                             </div>
@@ -577,7 +588,9 @@ if (empty($userName)) {
                                         <th>Nro. Pedido</th>
                                         <th>Cliente</th>
                                         <th class="num">Quitados</th>
-                                        <th class="num">Modificados</th>
+                                        <th class="num">Reducidos</th>
+                                        <th class="num">Aumentados</th>
+                                        <th class="num">Agregados</th>
                                         <th class="num">Total anterior → nuevo</th>
                                     </tr>
                                 </thead>
@@ -664,29 +677,40 @@ if (empty($userName)) {
                         <div class="tab-pane fade help-pane" id="ayuda-editar" role="tabpanel">
                             <h6>Edición individual</h6>
                             <ol>
-                                <li>Busque el pedido por <strong>Talón</strong> y <strong>Nro. Pedido</strong>.</li>
-                                <li>Marque los artículos a <strong>quitar</strong> o indique la <strong>nueva cantidad</strong>.</li>
-                                <li>Revise la <strong>vista previa</strong> con los renglones afectados, el stock y el total.</li>
+                                <li>Busque el pedido por <strong>Talón</strong> y <strong>Nro. Pedido</strong>. El encabezado muestra el estado, el depósito y la lista de precios.</li>
+                                <li>Para <strong>quitar</strong> un artículo use el botón Quitar. Para <strong>reducir o aumentar</strong>, indique la <strong>nueva cantidad</strong> en la grilla.</li>
+                                <li>Para <strong>agregar artículos o kits</strong>, use <strong>Agregar artículo</strong>: busque por código o descripción (mínimo 3 caracteres) e indique la cantidad. Si el artículo ya está en el pedido, se suma a su renglón.</li>
+                                <li>Revise la <strong>vista previa</strong> con los renglones afectados, los precios, el stock, el total y, si corresponde, el crédito del cliente.</li>
                                 <li><strong>Confirme</strong> los cambios.</li>
+                                <li>Con <strong>Limpiar</strong> puede pasar a otro pedido sin recargar la página.</li>
                             </ol>
 
                             <h6>Edición masiva por Excel</h6>
                             <ol>
-                                <li>Descargue la <strong>plantilla Excel de edición</strong>.</li>
-                                <li>Complete las columnas: <code>TALON_PED</code>, <code>NRO_PEDIDO</code>, <code>COD_ARTICU</code> y <code>NUEVA_CANTIDAD</code> (coloque <code>0</code> para quitar el artículo o un valor menor a la cantidad actual).</li>
-                                <li>Suba el archivo Excel. El sistema validará cada pedido y artículo en lote.</li>
-                                <li>Revise la grilla de previsualización y confirme la aplicación masiva.</li>
+                                <li>Descargue la <strong>plantilla Excel de edición</strong> (incluye una hoja de instrucciones).</li>
+                                <li>Complete una fila por artículo y pedido: <code>TALON_PED</code>, <code>NRO_PEDIDO</code>, <code>COD_ARTICU</code> y <code>NUEVA_CANTIDAD</code>.</li>
+                                <li><code>NUEVA_CANTIDAD</code> es la <strong>cantidad total final</strong>: <code>0</code> quita el artículo, un valor menor reduce y uno mayor aumenta. Los artículos que no están en el pedido se <strong>agregan</strong> con esa cantidad.</li>
+                                <li>Suba el archivo. Cada pedido se valida completo, incluyendo stock y crédito, antes de aplicar.</li>
+                                <li>Revise la previsualización y confirme la aplicación masiva. Si algún pedido no se puede aplicar, el resultado indica el motivo.</li>
                             </ol>
+                            <div class="alert-modern alert-modern-warning mb-3">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <div>La validación es <strong>por pedido</strong>. Si un mismo artículo (en el mismo depósito) o un mismo cliente con control de crédito aparece en varios pedidos del archivo, la previsualización lo avisa: si el stock o el crédito no alcanzan para todos, algunos pedidos pueden fallar al aplicar.</div>
+                            </div>
 
                             <h6>Reglas de negocio</h6>
                             <ul>
                                 <li>Solo se editan pedidos <strong>pendientes (estado 2)</strong> y sin facturación.</li>
                                 <li>Un renglón con remito no se puede editar.</li>
-                                <li>Solo se puede <strong>disminuir</strong> la cantidad, con números enteros.</li>
-                                <li>Los kits se editan desde el renglón del kit: sus componentes se ajustan o se eliminan solos.</li>
-                                <li>No se pueden quitar todos los renglones (para eso está <strong>Anular Pedidos</strong>).</li>
-                                <li>Los cambios se aplican <strong>todos juntos o ninguno</strong> por cada pedido.</li>
-                                <li>Al quitar o reducir, se libera el stock comprometido y se recalcula el total del pedido.</li>
+                                <li>Las cantidades son números enteros.</li>
+                                <li>En el buscador, la cantidad a agregar está limitada al <strong>stock disponible del depósito del pedido</strong>.</li>
+                                <li>Un kit solo se puede agregar si <strong>todos sus componentes</strong> tienen stock.</li>
+                                <li>Los kits se editan desde el renglón del kit: sus componentes se ajustan solos.</li>
+                                <li>Al aumentar o agregar se toma el <strong>precio actual de la lista del pedido</strong>.</li>
+                                <li>Para <strong>franquicias y mayoristas de Argentina</strong> se controla el crédito disponible del cliente.</li>
+                                <li>Tiene que quedar al menos un renglón en el pedido (para quitarlos todos está <strong>Anular Pedidos</strong>).</li>
+                                <li>Si algo no cumple, <strong>no se aplica ningún cambio</strong> en ese pedido.</li>
+                                <li>Se recalculan el stock comprometido y el total del pedido.</li>
                             </ul>
 
                             <h6>Historial y Excel</h6>
@@ -877,25 +901,43 @@ if (empty($userName)) {
                 <div class="modal-body">
 
                     <!-- Resumen -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-3">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6 col-md-3">
                             <div class="stat-card danger">
                                 <div>
-                                    <span class="stat-label">Renglones quitados</span>
+                                    <span class="stat-label">Quitados</span>
                                     <span class="stat-value" id="prev-eliminados">0</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-6 col-md-3">
                             <div class="stat-card warning">
                                 <div>
-                                    <span class="stat-label">Renglones modificados</span>
+                                    <span class="stat-label">Reducidos</span>
                                     <span class="stat-value" id="prev-modificados">0</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-6 col-md-3">
                             <div class="stat-card primary">
+                                <div>
+                                    <span class="stat-label">Aumentados</span>
+                                    <span class="stat-value" id="prev-aumentados">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="stat-card success">
+                                <div>
+                                    <span class="stat-label">Agregados</span>
+                                    <span class="stat-value" id="prev-agregados">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-12">
+                            <div class="stat-card">
                                 <div>
                                     <span class="stat-label">Total del pedido</span>
                                     <span class="stat-value total-cambio">
@@ -903,6 +945,16 @@ if (empty($userName)) {
                                     </span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Crédito del cliente (solo si el SP controla crédito) -->
+                    <div id="prev-credito" class="panel-alt mb-3 d-none">
+                        <h6 class="mb-2"><i class="bi bi-credit-card"></i> Crédito del cliente</h6>
+                        <div class="credito-grid">
+                            <div><span class="ph-label">Disponible antes</span><span class="ph-value" id="prev-credito-antes"></span></div>
+                            <div><span class="ph-label">Esta edición</span><span class="ph-value" id="prev-credito-consumo"></span></div>
+                            <div><span class="ph-label">Disponible después</span><span class="ph-value" id="prev-credito-despues"></span></div>
                         </div>
                     </div>
 
@@ -915,6 +967,7 @@ if (empty($userName)) {
                                     <th>Artículo</th>
                                     <th class="num">Cant. anterior</th>
                                     <th class="num">Cant. nueva</th>
+                                    <th class="num">Precio</th>
                                     <th>Estado</th>
                                 </tr>
                             </thead>
@@ -933,6 +986,7 @@ if (empty($userName)) {
                                     <th class="num">Comprometido antes</th>
                                     <th class="num">Variación</th>
                                     <th class="num">Comprometido después</th>
+                                    <th class="num">Disponible</th>
                                 </tr>
                             </thead>
                             <tbody id="prev-tbody-stock"></tbody>
@@ -947,6 +1001,48 @@ if (empty($userName)) {
                     <button type="button" class="btn btn-modern btn-modern-danger" id="btn-confirmar-edicion">
                         <i class="bi bi-check-lg"></i> Confirmar cambios
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agregar artículo al pedido Modal -->
+    <div class="modal fade modal-modern" id="modalAgregarArticulo" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-lg"></i> Agregar artículo al pedido
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="quick-search agregar-search mb-1">
+                        <i class="bi bi-search"></i>
+                        <input type="search" id="agregar-busqueda" class="form-control form-control-modern" placeholder="Código o descripción (mínimo 3 caracteres)" autocomplete="off">
+                    </div>
+                    <div class="form-text mb-2">La cantidad está limitada al stock disponible del depósito del pedido. En los kits, es la cantidad de kits que se pueden armar.</div>
+
+                    <div id="agregar-estado" class="empty-state"></div>
+                    <div id="agregar-tabla" class="table-container-modern d-none" style="max-height: 420px; overflow-y: auto;">
+                        <table class="table table-modern align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Artículo</th>
+                                    <th>Descripción</th>
+                                    <th>Tipo</th>
+                                    <th class="num">Precio</th>
+                                    <th class="num">Disponible</th>
+                                    <th>Cantidad</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="agregar-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-modern btn-modern-primary" data-bs-dismiss="modal">Listo</button>
                 </div>
             </div>
         </div>

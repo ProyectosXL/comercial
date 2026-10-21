@@ -22,6 +22,10 @@ switch ($action) {
         editarPedido($edicionHandler, $pais, false);
         break;
 
+    case 'buscar_articulos':
+        buscarArticulos($edicionHandler, $pais);
+        break;
+
     case 'historial':
         historialEdiciones($edicionHandler, $pais);
         break;
@@ -65,15 +69,32 @@ function leerCambios() {
         return null;
     }
 
+    $normalizados = normalizarCambios($cambios);
+    if ($normalizados === null) {
+        echo json_encode(['success' => false, 'message' => 'El formato de los cambios es inválido.']);
+        return null;
+    }
+
+    return json_encode($normalizados, JSON_UNESCAPED_UNICODE);
+}
+
+// Renglón existente: {"n_renglon":5,"cod_articu":"...","cantidad":N} (N = cantidad final, 0 elimina)
+// Artículo a agregar: {"n_renglon":null,"cod_articu":"...","cantidad":N} (N = unidades a agregar, > 0)
+// Devuelve la lista normalizada o null si algún cambio no cumple el formato
+function normalizarCambios($cambios) {
+    if (!is_array($cambios) || count($cambios) === 0 || array_keys($cambios) !== range(0, count($cambios) - 1)) {
+        return null;
+    }
+
     $normalizados = [];
     foreach ($cambios as $c) {
         $valido = is_array($c)
-            && isset($c['n_renglon']) && is_int($c['n_renglon'])
+            && array_key_exists('n_renglon', $c) && ($c['n_renglon'] === null || is_int($c['n_renglon']))
             && isset($c['cod_articu']) && is_string($c['cod_articu']) && trim($c['cod_articu']) !== ''
-            && isset($c['cantidad']) && is_int($c['cantidad']) && $c['cantidad'] >= 0;
+            && isset($c['cantidad']) && is_int($c['cantidad']) && $c['cantidad'] >= 0
+            && ($c['n_renglon'] !== null || $c['cantidad'] > 0);
 
         if (!$valido) {
-            echo json_encode(['success' => false, 'message' => 'El formato de los cambios es inválido.']);
             return null;
         }
 
@@ -83,8 +104,7 @@ function leerCambios() {
             'cantidad' => $c['cantidad']
         ];
     }
-
-    return json_encode($normalizados, JSON_UNESCAPED_UNICODE);
+    return $normalizados;
 }
 
 function consultarPedido($handler, $pais) {
@@ -132,6 +152,28 @@ function editarPedido($handler, $pais, $test) {
     } catch (Throwable $e) {
         error_log('EdicionPedidoController ' . ($test ? 'simular' : 'aplicar') . ': ' . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Error al procesar la edición del pedido: ' . $e->getMessage()]);
+    }
+}
+
+function buscarArticulos($handler, $pais) {
+    $pedido = leerPedido();
+    if ($pedido === null) {
+        return;
+    }
+    $texto = isset($_POST['texto']) ? trim($_POST['texto']) : '';
+    if (mb_strlen($texto) < 3) {
+        echo json_encode(['success' => false, 'message' => 'Ingrese al menos 3 caracteres para buscar.']);
+        return;
+    }
+
+    try {
+        $articulos = $handler->buscarArticulos($pais, $pedido[0], $pedido[1], $texto);
+        echo json_encode(['success' => true, 'articulos' => $articulos]);
+    } catch (EdicionPedidoException $e) {
+        echo json_encode(['success' => false, 'message' => $e->getMessage(), 'codigo' => $e->getCode()]);
+    } catch (Throwable $e) {
+        error_log('EdicionPedidoController buscar_articulos: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Error al buscar artículos']);
     }
 }
 
@@ -197,6 +239,7 @@ function validarLoteEdicion($handler, $pais) {
             'success' => true,
             'filas_data' => $resultado['filas_data'],
             'pedidos_validos' => $resultado['pedidos_validos'],
+            'pedidos_resumen' => $resultado['pedidos_resumen'],
             'cant_pedidos_validos' => $resultado['cant_pedidos_validos'],
             'cant_pedidos_invalidos' => $resultado['cant_pedidos_invalidos'],
             'cant_filas_validas' => $resultado['cant_filas_validas'],
@@ -218,8 +261,22 @@ function aplicarLoteEdicion($handler, $pais) {
         return;
     }
 
+    // El lote vuelve desde el navegador: se revalida el formato antes de enviarlo al SP
+    $lote = [];
+    foreach ($pedidos as $p) {
+        $talon = is_array($p) && isset($p['talon_ped']) ? trim(strval($p['talon_ped'])) : '';
+        $nro = is_array($p) && isset($p['nro_pedido']) ? trim(strval($p['nro_pedido'])) : '';
+        $cambios = is_array($p) && isset($p['cambios']) ? normalizarCambios($p['cambios']) : null;
+
+        if ($talon === '' || !ctype_digit($talon) || $nro === '' || $cambios === null) {
+            echo json_encode(['success' => false, 'message' => 'El formato de los cambios es inválido.']);
+            return;
+        }
+        $lote[] = ['talon_ped' => $talon, 'nro_pedido' => $nro, 'cambios' => $cambios];
+    }
+
     try {
-        $resultado = $handler->aplicarLoteEdicion($pais, $pedidos, $usuario);
+        $resultado = $handler->aplicarLoteEdicion($pais, $lote, $usuario);
         echo json_encode([
             'success' => true,
             'total' => $resultado['total'],

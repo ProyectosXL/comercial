@@ -912,8 +912,17 @@ const edicion = {
     pedido: null,
     renglones: [],
     cambios: {},
+    // Artículos a agregar, por la misma clave que en cambios ('nuevo:COD'): datos del buscador
+    nuevos: {},
     cambiosSimulados: null,
     expandidos: {}
+};
+
+// Buscador "Agregar artículo": resultados actuales y control de respuestas viejas
+const agregarArticulo = {
+    resultados: [],
+    timer: null,
+    seq: 0
 };
 
 function initEdicionPedido() {
@@ -921,6 +930,8 @@ function initEdicionPedido() {
         e.preventDefault();
         buscarPedidoEdicion();
     });
+
+    $('#btn-limpiar-edicion').on('click', limpiarPantallaEdicion);
 
     $(document).on('click', '#tbody-edicion .btn-expand', function() {
         const nRenglon = $(this).data('renglon');
@@ -948,11 +959,27 @@ function initEdicionPedido() {
     });
 
     $('#btn-descartar-edicion').on('click', function() {
-        edicion.cambios = {};
+        resetCambiosEdicion();
         renderGrillaEdicion();
     });
 
     $('#edicion-busqueda').on('input', aplicarBusquedaEdicion);
+
+    // Renglones nuevos pendientes
+    $(document).on('input change', '#tbody-edicion .input-cantidad-nuevo', function() {
+        registrarCantidadNuevo($(this));
+    });
+
+    $(document).on('click', '#tbody-edicion .btn-quitar-nuevo', function() {
+        const key = $(this).closest('tr').attr('data-key');
+        delete edicion.cambios[key];
+        delete edicion.nuevos[key];
+        $(this).closest('tr').remove();
+        actualizarBarraEdicion();
+        aplicarBusquedaEdicion();
+    });
+
+    initAgregarArticulo();
 
     $('#btn-revisar-edicion').on('click', simularEdicion);
     $('#btn-confirmar-edicion').on('click', aplicarEdicion);
@@ -983,9 +1010,11 @@ function registrarCantidadEdicion($input) {
         $input.removeClass('is-invalid');
         delete edicion.cambios[nRenglon];
     } else {
+        // Enteros >= 1: menor a la actual reduce, mayor aumenta. Igual a la actual no es un cambio
         const cantidad = Number(texto);
-        const valida = /^\d+$/.test(texto) && cantidad >= 1 && cantidad <= actual - 1;
-        $input.toggleClass('is-invalid', !valida);
+        const entera = /^\d+$/.test(texto) && cantidad >= 1;
+        const valida = entera && cantidad !== actual;
+        $input.toggleClass('is-invalid', !entera);
         if (valida) {
             edicion.cambios[nRenglon] = { n_renglon: nRenglon, cod_articu: r.COD_ARTICU, cantidad: cantidad };
         } else {
@@ -997,24 +1026,33 @@ function registrarCantidadEdicion($input) {
 
 function actualizarFilaEdicion(nRenglon, desdeInput) {
     const r = buscarRenglon(nRenglon);
-    const cambio = edicion.cambios[nRenglon];
-    const quitado = cambio !== undefined && cambio.cantidad === 0;
-    const modificado = cambio !== undefined && cambio.cantidad > 0;
+    const tipo = tipoCambioRenglon(r);
     const $fila = $(`#tbody-edicion tr.row-principal[data-renglon="${nRenglon}"]`);
 
-    $fila.toggleClass('row-quitado', quitado).toggleClass('row-modificado', modificado);
+    $fila.toggleClass('row-quitado', tipo === 'quitado')
+        .toggleClass('row-modificado', tipo === 'reducido')
+        .toggleClass('row-aumentado', tipo === 'aumentado');
+    $fila.find('.badge-aumento').toggleClass('d-none', tipo !== 'aumentado');
 
     if (!desdeInput) {
         const $input = $fila.find('.input-cantidad');
-        if (quitado) {
+        if (tipo === 'quitado') {
             $input.val('').removeClass('is-invalid').prop('disabled', true);
         } else {
-            $input.prop('disabled', Number(r.CANT_PEDID) <= 1);
+            $input.prop('disabled', false);
         }
-        $fila.find('.btn-quitar').replaceWith(botonAccionEdicion(nRenglon, quitado));
+        $fila.find('.btn-quitar').replaceWith(botonAccionEdicion(nRenglon, tipo === 'quitado'));
     }
 
     actualizarBarraEdicion();
+}
+
+// 'quitado' | 'reducido' | 'aumentado' | null según el cambio pendiente del renglón
+function tipoCambioRenglon(r) {
+    const cambio = edicion.cambios[r.N_RENGLON];
+    if (cambio === undefined) { return null; }
+    if (cambio.cantidad === 0) { return 'quitado'; }
+    return cambio.cantidad > Number(r.CANT_PEDID) ? 'aumentado' : 'reducido';
 }
 
 function actualizarBarraEdicion() {
@@ -1025,20 +1063,47 @@ function actualizarBarraEdicion() {
     $('#btn-descartar-edicion, #btn-revisar-edicion').prop('disabled', cantidad === 0);
 }
 
+// Renglones existentes ordenados por número y, al final, los artículos a agregar (n_renglon null)
 function listaCambiosEdicion() {
-    return Object.values(edicion.cambios).sort((a, b) => a.n_renglon - b.n_renglon);
+    return Object.values(edicion.cambios)
+        .map(c => ({ n_renglon: c.n_renglon, cod_articu: c.cod_articu, cantidad: c.cantidad }))
+        .sort((a, b) => {
+            if (a.n_renglon === null || b.n_renglon === null) {
+                return (a.n_renglon === null) - (b.n_renglon === null);
+            }
+            return a.n_renglon - b.n_renglon;
+        });
+}
+
+function resetCambiosEdicion() {
+    edicion.cambios = {};
+    edicion.nuevos = {};
+}
+
+function claveNuevo(codArticu) {
+    return 'nuevo:' + String(codArticu).toUpperCase();
+}
+
+function cantidadNuevos() {
+    return Object.keys(edicion.nuevos).length;
 }
 
 function simularEdicion() {
     const cambios = listaCambiosEdicion();
     if (cambios.length === 0) { return; }
 
+    if ($('#tbody-edicion .input-cantidad-nuevo.is-invalid').length > 0) {
+        toastr.warning('Corrija la cantidad de los artículos nuevos antes de revisar.');
+        return;
+    }
+
+    // Tiene que quedar al menos un renglón principal: existentes − eliminados + nuevos ≥ 1
     const principales = renglonesPrincipales();
     const quitados = principales.filter(r => {
         const c = edicion.cambios[r.N_RENGLON];
         return c !== undefined && c.cantidad === 0;
     });
-    if (principales.length > 0 && quitados.length === principales.length) {
+    if (principales.length - quitados.length + cantidadNuevos() < 1) {
         Swal.fire('Atención', 'No se pueden quitar todos los renglones. Para eso usá Anular Pedidos.', 'warning');
         return;
     }
@@ -1056,7 +1121,7 @@ function aplicarEdicion() {
     llamarEdicion('aplicar', edicion.cambiosSimulados, 'Aplicando cambios...', function(response) {
         cerrarModalEdicion();
         toastr.success(`Pedido actualizado. Total: $ ${formatearImporte(response.resumen.TOTAL_PEDI_NUEVO)}`);
-        edicion.cambios = {};
+        resetCambiosEdicion();
         edicion.cambiosSimulados = null;
         consultarPedidoEdicion(edicion.pedido.TALON_PED, edicion.pedido.NRO_PEDIDO);
         refrescarHistorialSiVisible();
@@ -1097,11 +1162,63 @@ function cerrarModalEdicion() {
     if (modal) { modal.hide(); }
 }
 
+function quitarPuntoFinal(texto) {
+    return String(texto).trim().replace(/\.$/, '');
+}
+
+// Líneas del mensaje de error del SP para mostrarlo en el SweetAlert
+function partesMensajeError(codigo, mensaje) {
+    const texto = String(mensaje || '').trim();
+
+    // 51034: "Stock insuficiente en el depósito 01 para: ART: requerido 5, disponible 2; ART2 (kit X): ..."
+    if (codigo === 51034) {
+        const i = texto.indexOf('para:');
+        if (i === -1) { return [texto]; }
+        const items = texto.slice(i + 'para:'.length).split('; ').map(quitarPuntoFinal).filter(p => p !== '');
+        return [texto.slice(0, i).trim()].concat(items);
+    }
+
+    // 51041: "Crédito insuficiente. Disponible: $ X · Requerido: $ Y."
+    if (codigo === 51041) {
+        return texto.split(' · ').map(quitarPuntoFinal).filter(p => p !== '');
+    }
+
+    return partesPorComa(texto);
+}
+
+// Separa por ", " fuera de paréntesis (no corta importes como 1.234,56)
+function partesPorComa(texto) {
+    const partes = [];
+    let actual = '';
+    let nivel = 0;
+    for (let i = 0; i < texto.length; i++) {
+        const ch = texto[i];
+        if (ch === '(') { nivel++; }
+        if (ch === ')') { nivel = Math.max(0, nivel - 1); }
+        if (nivel === 0 && ch === ',' && texto[i + 1] === ' ') {
+            partes.push(actual.trim());
+            actual = '';
+            continue;
+        }
+        actual += ch;
+    }
+    partes.push(actual.trim());
+    return partes.filter(p => p !== '');
+}
+
 function mostrarErrorEdicion(response) {
-    const pedidoCambio = Number(response.codigo) === 51004;
+    const codigo = Number(response.codigo);
+    const pedidoCambio = codigo === 51004;
+    // Errores de negocio con listas (stock, crédito, artículos): una línea por artículo
+    const esNegocio = codigo >= 51000 && codigo <= 51099;
+    const partes = esNegocio ? partesMensajeError(codigo, response.message) : [];
+    const contenido = partes.length > 1
+        ? { html: `<div class="swal-detalle-error">${partes.map((p, i) => `<div>${i === 0 && codigo === 51034 ? `<strong>${escapeHtml(p)}</strong>` : escapeHtml(p)}</div>`).join('')}</div>` }
+        : { text: response.message };
+
     Swal.fire({
-        title: 'No se pudo editar el pedido',
-        text: response.message,
+        title: codigo === 51034 ? 'Stock insuficiente' : (codigo === 51041 ? 'Crédito insuficiente' : 'No se pudo editar el pedido'),
+        ...contenido,
         icon: 'error',
         confirmButtonColor: '#3366ff',
         confirmButtonText: pedidoCambio ? 'Recargar pedido' : 'Entendido',
@@ -1109,7 +1226,7 @@ function mostrarErrorEdicion(response) {
         cancelButtonText: 'Cerrar'
     }).then(result => {
         if (pedidoCambio && result.isConfirmed) {
-            edicion.cambios = {};
+            resetCambiosEdicion();
             edicion.cambiosSimulados = null;
             consultarPedidoEdicion(edicion.pedido.TALON_PED, edicion.pedido.NRO_PEDIDO);
         }
@@ -1127,25 +1244,77 @@ function ordenarConComponentes(lista) {
     return ordenados;
 }
 
+// Acción sobre un renglón: ESTADO_RENGLON del SP (ELIMINADO...) o ACCION del historial (ELIMINAR...)
+const ACCIONES_RENGLON = {
+    ELIMINADO: ['badge-danger-modern', 'Eliminado'],
+    ELIMINAR: ['badge-danger-modern', 'Eliminado'],
+    MODIFICADO: ['badge-warning-modern', 'Reducido'],
+    MODIFICAR: ['badge-warning-modern', 'Reducido'],
+    AUMENTADO: ['badge-primary-modern', 'Aumentado'],
+    AUMENTAR: ['badge-primary-modern', 'Aumentado'],
+    AGREGADO: ['badge-success-modern', 'Agregado'],
+    AGREGAR: ['badge-success-modern', 'Agregado']
+};
+
+function etiquetaAccionRenglon(accion) {
+    const b = ACCIONES_RENGLON[String(accion || '').toUpperCase()];
+    return b ? b[1] : String(accion || '');
+}
+
+function badgeAccionRenglon(accion) {
+    const b = ACCIONES_RENGLON[String(accion || '').toUpperCase()];
+    return b
+        ? `<span class="badge-modern ${b[0]}">${b[1]}</span>`
+        : `<span class="badge-modern badge-neutral-modern">${escapeHtml(accion || '---')}</span>`;
+}
+
+function esValorNulo(valor) {
+    return valor === null || valor === undefined || valor === '';
+}
+
+function precioRenglonPreview(r) {
+    const ant = esValorNulo(r.PRECIO_ANT) ? null : Number(r.PRECIO_ANT);
+    const nuevo = esValorNulo(r.PRECIO_NUEVO) ? null : Number(r.PRECIO_NUEVO);
+    if (ant !== null && nuevo !== null && ant !== nuevo) {
+        return `<span class="total-cambio">${formatearImporte(ant)}<span class="arrow">→</span>${formatearImporte(nuevo)}</span>`;
+    }
+    const precio = nuevo !== null ? nuevo : ant;
+    return precio !== null ? formatearImporte(precio) : '';
+}
+
+function renderCreditoPreview(resumen) {
+    if (Number(resumen.CONTROLA_CREDITO) !== 1) {
+        $('#prev-credito').addClass('d-none');
+        return;
+    }
+    const consumo = Number(resumen.CONSUMO_CREDITO) || 0;
+    $('#prev-credito-antes').text('$ ' + formatearImporte(resumen.CREDITO_DISPONIBLE_ANTES));
+    $('#prev-credito-consumo')
+        .text(consumo < 0 ? 'Libera $ ' + formatearImporte(-consumo) : 'Consume $ ' + formatearImporte(consumo))
+        .toggleClass('text-success', consumo < 0);
+    $('#prev-credito-despues').text('$ ' + formatearImporte(resumen.CREDITO_DISPONIBLE_DESPUES));
+    $('#prev-credito').removeClass('d-none');
+}
+
 function renderVistaPreviaEdicion(data) {
     const resumen = data.resumen;
-    $('#prev-eliminados').text(resumen.ELIMINADOS);
-    $('#prev-modificados').text(resumen.MODIFICADOS);
+    $('#prev-eliminados').text(Number(resumen.ELIMINADOS) || 0);
+    $('#prev-modificados').text(Number(resumen.MODIFICADOS) || 0);
+    $('#prev-aumentados').text(Number(resumen.AUMENTADOS) || 0);
+    $('#prev-agregados').text(Number(resumen.AGREGADOS) || 0);
     $('#prev-total-ant').text('$ ' + formatearImporte(resumen.TOTAL_PEDI_ANT));
     $('#prev-total-nuevo').text('$ ' + formatearImporte(resumen.TOTAL_PEDI_NUEVO));
+    renderCreditoPreview(resumen);
 
     const tbodyRenglones = $('#prev-tbody-renglones').empty();
     ordenarConComponentes(data.renglones).forEach(r => {
         const esComponente = Number(r.RENGL_PADR) !== 0;
-        const eliminado = r.ESTADO_RENGLON === 'ELIMINADO';
-        const badge = eliminado
-            ? '<span class="badge-modern badge-danger-modern">Eliminado</span>'
-            : '<span class="badge-modern badge-warning-modern">Modificado</span>';
         tbodyRenglones.append(`<tr class="${esComponente ? 'row-componente' : ''}">
             <td class="col-articulo">${esComponente ? '' : '<strong>'}${escapeHtml(r.COD_ARTICU)}${esComponente ? '' : '</strong>'}</td>
             <td class="num">${formatearCantidad(r.CANT_PEDID_ANT)}</td>
             <td class="num">${formatearCantidad(r.CANT_NUEVA)}</td>
-            <td>${badge}</td>
+            <td class="num">${precioRenglonPreview(r)}</td>
+            <td>${badgeAccionRenglon(r.ESTADO_RENGLON)}</td>
         </tr>`);
     });
 
@@ -1158,10 +1327,11 @@ function renderVistaPreviaEdicion(data) {
             <td class="num">${formatearCantidad(s.COMP_ANTES)}</td>
             <td class="num">${delta > 0 ? '+' : ''}${formatearCantidad(delta)}</td>
             <td class="num">${formatearCantidad(s.COMP_DESPUES)}</td>
+            <td class="num">${esValorNulo(s.STOCK_DISPONIBLE) ? '' : formatearCantidad(s.STOCK_DISPONIBLE)}</td>
         </tr>`);
     });
     if (!data.stock || data.stock.length === 0) {
-        tbodyStock.append('<tr><td colspan="5" class="text-muted text-center">Sin variaciones de stock</td></tr>');
+        tbodyStock.append('<tr><td colspan="6" class="text-muted text-center">Sin variaciones de stock</td></tr>');
     }
 }
 
@@ -1225,7 +1395,7 @@ function consultarPedidoEdicion(talon, nroPedido) {
 
                 edicion.pedido = response.pedido;
                 edicion.renglones = response.renglones || [];
-                edicion.cambios = {};
+                resetCambiosEdicion();
                 edicion.cambiosSimulados = null;
                 edicion.expandidos = {};
                 renderEncabezadoEdicion();
@@ -1245,13 +1415,24 @@ function consultarPedidoEdicion(talon, nroPedido) {
 function limpiarEdicion() {
     edicion.pedido = null;
     edicion.renglones = [];
-    edicion.cambios = {};
+    resetCambiosEdicion();
     edicion.cambiosSimulados = null;
     edicion.expandidos = {};
     $('#tbody-edicion').empty();
     $('#edicion-busqueda').val('');
     $('#edicion-encabezado, #edicion-grilla').addClass('d-none');
     $('#edicion-vacio').removeClass('d-none');
+}
+
+// Botón Limpiar: deja la pantalla lista para buscar otro pedido
+function limpiarPantallaEdicion() {
+    confirmarDescarteEdicion().then(function(continuar) {
+        if (!continuar) { return; }
+        limpiarEdicion();
+        $('#edicion_talon, #edicion_nro_pedido').val('');
+        $('#edicion-historial').addClass('d-none');
+        $('#edicion_talon').trigger('focus');
+    });
 }
 
 function pedidoEditable() {
@@ -1276,13 +1457,16 @@ function buscarRenglon(nRenglon) {
 
 function renderEncabezadoEdicion() {
     const p = edicion.pedido;
-    const estado = Number(p.ESTADO) === 2 ? '2 · Pendiente' : `Estado ${p.ESTADO}`;
+    const pendiente = Number(p.ESTADO) === 2;
+    const estado = p.ESTADO_DESC ? `${p.ESTADO} · ${p.ESTADO_DESC}` : `Estado ${p.ESTADO}`;
 
     $('#ph-talon').text(p.TALON_PED);
     $('#ph-nro').text(p.NRO_PEDIDO);
     $('#ph-fecha').text(p.FECHA_PEDI || '---');
     $('#ph-cliente').text(p.COD_CLIENT || '---');
-    $('#ph-estado').text(estado);
+    $('#ph-estado').html(`<span class="badge-modern ${pendiente ? 'badge-success-modern' : 'badge-neutral-modern'}">${escapeHtml(estado)}</span>`);
+    $('#ph-deposito').text(p.DEPOSITO || '---');
+    $('#ph-lista').text(p.N_LISTA !== null && p.N_LISTA !== undefined && p.N_LISTA !== '' ? p.N_LISTA : '---');
     $('#ph-total').text('$ ' + formatearImporte(p.TOTAL_PEDI));
 
     if (pedidoEditable()) {
@@ -1313,8 +1497,13 @@ function renderGrillaEdicion() {
         }
     });
 
+    if (editable) {
+        Object.keys(edicion.nuevos).forEach(key => tbody.append(filaNuevaEdicion(key)));
+    }
+
     tbody.append('<tr class="row-sin-resultados d-none"><td colspan="9">No hay renglones que coincidan con la búsqueda.</td></tr>');
 
+    $('#btn-agregar-articulo').prop('disabled', !editable);
     $('#edicion-actions').toggleClass('d-none', !editable);
     actualizarBarraEdicion();
     aplicarBusquedaEdicion();
@@ -1348,16 +1537,23 @@ function aplicarBusquedaEdicion() {
         if (visible) { visibles++; }
     });
 
-    $('#tbody-edicion tr.row-sin-resultados').toggleClass('d-none', visibles > 0 || renglonesPrincipales().length === 0);
+    $('#tbody-edicion tr.row-nuevo').each(function() {
+        const art = edicion.nuevos[$(this).attr('data-key')];
+        const visible = texto === '' || (art !== undefined && coincideBusqueda(art, texto));
+        $(this).toggleClass('d-none', !visible);
+        if (visible) { visibles++; }
+    });
+
+    const total = renglonesPrincipales().length + $('#tbody-edicion tr.row-nuevo').length;
+    $('#tbody-edicion tr.row-sin-resultados').toggleClass('d-none', visibles > 0 || total === 0);
 }
 
 function filaRenglonEdicion(r, editable) {
     const n = r.N_RENGLON;
     const esKit = Number(r.ES_KIT) === 1;
-    const cantidad = Number(r.CANT_PEDID);
     const cambio = edicion.cambios[n];
-    const quitado = cambio !== undefined && cambio.cantidad === 0;
-    const modificado = cambio !== undefined && cambio.cantidad > 0;
+    const tipo = tipoCambioRenglon(r);
+    const quitado = tipo === 'quitado';
 
     const expand = esKit
         ? `<button type="button" class="btn-expand ${edicion.expandidos[n] ? 'expanded' : ''}" data-renglon="${n}" title="Ver componentes"><i class="bi bi-chevron-right"></i></button>`
@@ -1378,17 +1574,18 @@ function filaRenglonEdicion(r, editable) {
         let input = '';
         let accion = '';
         if (renglonEditable(r)) {
-            const deshabilitado = (cantidad <= 1 || quitado) ? 'disabled' : '';
             input = `<input type="number" class="form-control form-control-modern input-cantidad" data-renglon="${n}"
-                        min="1" max="${cantidad - 1}" step="1" value="${modificado ? cambio.cantidad : ''}" ${deshabilitado}>`;
+                        min="1" step="1" value="${cambio !== undefined && !quitado ? cambio.cantidad : ''}" ${quitado ? 'disabled' : ''}>
+                     <span class="badge-modern badge-primary-modern badge-aumento ms-1 ${tipo === 'aumentado' ? '' : 'd-none'}">Aumento</span>`;
             accion = botonAccionEdicion(n, quitado);
         }
-        colsEdicion = `<td class="col-edicion">${input}</td><td class="col-edicion">${accion}</td>`;
+        colsEdicion = `<td class="col-edicion text-nowrap">${input}</td><td class="col-edicion">${accion}</td>`;
     }
 
     const clases = ['row-principal'];
     if (quitado) { clases.push('row-quitado'); }
-    if (modificado) { clases.push('row-modificado'); }
+    if (tipo === 'reducido') { clases.push('row-modificado'); }
+    if (tipo === 'aumentado') { clases.push('row-aumentado'); }
 
     return `<tr class="${clases.join(' ')}" data-renglon="${n}">
         <td>${expand}</td>
@@ -1421,6 +1618,303 @@ function botonAccionEdicion(nRenglon, quitado) {
     return quitado
         ? `<button type="button" class="btn btn-modern btn-modern-outline btn-modern-sm btn-quitar" data-renglon="${nRenglon}"><i class="bi bi-arrow-counterclockwise"></i> Deshacer</button>`
         : `<button type="button" class="btn btn-modern btn-modern-outline-danger btn-modern-sm btn-quitar" data-renglon="${nRenglon}"><i class="bi bi-trash"></i> Quitar</button>`;
+}
+
+// ----- Renglones nuevos pendientes (artículos a agregar) -----
+function filaNuevaEdicion(key) {
+    const art = edicion.nuevos[key];
+    const cambio = edicion.cambios[key];
+    const badgeKit = Number(art.ES_KIT) === 1 ? ' <span class="badge-modern badge-primary-modern ms-1">Kit</span>' : '';
+
+    return `<tr class="row-nuevo" data-key="${escapeHtml(key)}">
+        <td></td>
+        <td><strong>${escapeHtml(art.COD_ARTICU)}</strong>${badgeKit}</td>
+        <td>${escapeHtml(art.DESCRIPCIO || '---')}</td>
+        <td class="num text-muted">—</td>
+        <td class="num">${formatearImporte(art.PRECIO)}</td>
+        <td class="num importe-nuevo" title="Importe estimado">${formatearImporte(cambio.cantidad * Number(art.PRECIO))}</td>
+        <td><span class="badge-modern badge-success-modern">Nuevo</span></td>
+        <td class="col-edicion">
+            <input type="number" class="form-control form-control-modern input-cantidad-nuevo"
+                   min="1" max="${disponibleArticulo(art)}" step="1" value="${cambio.cantidad}">
+        </td>
+        <td class="col-edicion">
+            <button type="button" class="btn btn-modern btn-modern-outline-danger btn-modern-sm btn-quitar-nuevo"><i class="bi bi-trash"></i> Quitar</button>
+        </td>
+    </tr>`;
+}
+
+function filaNuevaPorClave(key) {
+    return $('#tbody-edicion tr.row-nuevo').filter(function() {
+        return $(this).attr('data-key') === key;
+    });
+}
+
+function refrescarFilaNueva(key) {
+    const art = edicion.nuevos[key];
+    const cantidad = edicion.cambios[key].cantidad;
+    const $fila = filaNuevaPorClave(key);
+    $fila.find('.input-cantidad-nuevo').val(cantidad).removeClass('is-invalid');
+    $fila.find('.importe-nuevo').text(formatearImporte(cantidad * Number(art.PRECIO)));
+}
+
+// Entre 1 y el disponible del depósito del pedido. Si no es válida se conserva la última cantidad válida
+function registrarCantidadNuevo($input) {
+    const key = $input.closest('tr').attr('data-key');
+    const art = edicion.nuevos[key];
+    if (!art) { return; }
+
+    const max = disponibleArticulo(art);
+    const texto = String($input.val()).trim();
+    const cantidad = Number(texto);
+    const valida = /^\d+$/.test(texto) && cantidad >= 1 && cantidad <= max;
+
+    $input.toggleClass('is-invalid', !valida).attr('title', valida ? '' : `Entre 1 y ${formatearCantidad(max)}`);
+    if (valida) {
+        edicion.cambios[key].cantidad = cantidad;
+        $input.closest('tr').find('.importe-nuevo').text(formatearImporte(cantidad * Number(art.PRECIO)));
+    }
+}
+
+function resaltarFila($fila) {
+    const el = $fila.get(0);
+    if (!el) { return; }
+    // Reinicia la animación si la fila ya estaba resaltada
+    $fila.removeClass('row-resaltado');
+    void el.offsetWidth;
+    $fila.addClass('row-resaltado');
+    setTimeout(() => $fila.removeClass('row-resaltado'), 1600);
+}
+
+// ----- Buscador "Agregar artículo" -----
+function initAgregarArticulo() {
+    $('#btn-agregar-articulo').on('click', abrirAgregarArticulo);
+
+    $('#agregar-busqueda').on('input', function() {
+        clearTimeout(agregarArticulo.timer);
+        agregarArticulo.timer = setTimeout(buscarArticulosAgregar, 400);
+    }).on('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(agregarArticulo.timer);
+            buscarArticulosAgregar();
+        }
+    });
+
+    $('#modalAgregarArticulo').on('shown.bs.modal', function() {
+        $('#agregar-busqueda').trigger('focus');
+    });
+
+    $(document).on('click', '#agregar-tbody .btn-agregar-art', function() {
+        agregarDesdeBuscador($(this).closest('tr'));
+    });
+
+    $(document).on('keydown', '#agregar-tbody .input-agregar', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            agregarDesdeBuscador($(this).closest('tr'));
+        }
+    });
+}
+
+function abrirAgregarArticulo() {
+    if (!pedidoEditable()) { return; }
+    clearTimeout(agregarArticulo.timer);
+    agregarArticulo.seq++;
+    agregarArticulo.resultados = [];
+    $('#agregar-busqueda').val('');
+    mostrarEstadoAgregar('Escriba al menos 3 caracteres del código o la descripción.');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAgregarArticulo')).show();
+}
+
+function mostrarEstadoAgregar(mensaje) {
+    $('#agregar-tbody').empty();
+    $('#agregar-tabla').addClass('d-none');
+    $('#agregar-estado').text(mensaje).removeClass('d-none');
+}
+
+function buscarArticulosAgregar() {
+    const texto = $('#agregar-busqueda').val().trim();
+    const seq = ++agregarArticulo.seq;
+
+    if (texto.length < 3) {
+        agregarArticulo.resultados = [];
+        mostrarEstadoAgregar('Escriba al menos 3 caracteres del código o la descripción.');
+        return;
+    }
+
+    $('#agregar-estado').text('Buscando...').removeClass('d-none');
+    $.ajax({
+        url: 'Controller/EdicionPedidoController.php?action=buscar_articulos',
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            pais: paisSeleccionado,
+            talon_ped: edicion.pedido.TALON_PED,
+            nro_pedido: edicion.pedido.NRO_PEDIDO,
+            texto: texto
+        },
+        success: function(response) {
+            if (seq !== agregarArticulo.seq) { return; }
+            if (response.success) {
+                agregarArticulo.resultados = response.articulos || [];
+                renderResultadosAgregar(texto);
+            } else {
+                agregarArticulo.resultados = [];
+                mostrarEstadoAgregar(response.message);
+            }
+        },
+        error: function() {
+            if (seq !== agregarArticulo.seq) { return; }
+            mostrarEstadoAgregar('Error de red al buscar artículos.');
+        }
+    });
+}
+
+function renderResultadosAgregar(texto) {
+    if (agregarArticulo.resultados.length === 0) {
+        mostrarEstadoAgregar(`No se encontraron artículos para "${texto}".`);
+        return;
+    }
+    const tbody = $('#agregar-tbody').empty();
+    agregarArticulo.resultados.forEach((a, i) => tbody.append(filaResultadoAgregar(a, i)));
+    $('#agregar-estado').addClass('d-none');
+    $('#agregar-tabla').removeClass('d-none');
+}
+
+function enPedido(a) {
+    return a.N_RENGLON_EN_PEDIDO !== null && a.N_RENGLON_EN_PEDIDO !== undefined && a.N_RENGLON_EN_PEDIDO !== '';
+}
+
+function disponibleArticulo(a) {
+    return Math.max(0, Math.floor(Number(a.STOCK_DISPONIBLE) || 0));
+}
+
+// Motivo por el que el resultado no se puede agregar, o null
+function motivoNoAgregable(a) {
+    if (a.PRECIO === null || a.PRECIO === undefined) { return 'Sin precio en la lista del pedido'; }
+    if (Number(a.ES_COMPONENTE_EN_PEDIDO) === 1) { return 'Ya está en el pedido como componente de un kit'; }
+    if (Number(a.RENGLON_CON_REMITO) === 1) { return 'El renglón del pedido tiene remito'; }
+    if (enPedido(a)) {
+        const r = buscarRenglon(a.N_RENGLON_EN_PEDIDO);
+        if (!r) { return 'El renglón del pedido no se puede editar'; }
+        if (tipoCambioRenglon(r) === 'quitado') { return 'El renglón está marcado para quitar; deshacé la acción primero'; }
+        if (!renglonEditable(r)) { return r.MOTIVO_NO_EDITABLE || 'El renglón del pedido no se puede editar'; }
+    }
+    return null;
+}
+
+// Disponible menos lo que ya se sumó en los cambios pendientes de esta sesión
+function maxAgregable(a) {
+    let yaSumado = 0;
+    if (enPedido(a)) {
+        const r = buscarRenglon(a.N_RENGLON_EN_PEDIDO);
+        const cambio = r ? edicion.cambios[r.N_RENGLON] : undefined;
+        if (cambio !== undefined && cambio.cantidad > Number(r.CANT_PEDID)) {
+            yaSumado = cambio.cantidad - Number(r.CANT_PEDID);
+        }
+    } else {
+        const cambio = edicion.cambios[claveNuevo(a.COD_ARTICU)];
+        yaSumado = cambio !== undefined ? cambio.cantidad : 0;
+    }
+    return Math.max(0, disponibleArticulo(a) - yaSumado);
+}
+
+function filaResultadoAgregar(a, i) {
+    const esKit = Number(a.ES_KIT) === 1;
+    const tipo = esKit ? '<span class="badge-modern badge-primary-modern">Kit</span>' : '';
+    const badgeEnPedido = enPedido(a)
+        ? ` <span class="badge-modern badge-neutral-modern ms-1" title="Cantidad en el pedido: ${formatearCantidad(a.CANT_EN_PEDIDO)}">En el pedido</span>`
+        : '';
+    const precio = (a.PRECIO === null || a.PRECIO === undefined) ? '<span class="text-muted">—</span>' : formatearImporte(a.PRECIO);
+    const disponible = formatearCantidad(a.STOCK_DISPONIBLE) + (esKit ? ' kits' : '');
+
+    const motivo = motivoNoAgregable(a);
+    let acciones;
+    if (motivo) {
+        acciones = `<td colspan="2"><span class="motivo-no-agregable">${escapeHtml(motivo)}</span></td>`;
+    } else {
+        const max = maxAgregable(a);
+        if (max === 0) {
+            // Disponible real en 0: "Sin stock". Si ya se agregó todo lo disponible en la sesión: "Sin disponible"
+            const agotadoEnSesion = disponibleArticulo(a) > 0;
+            const titulo = agotadoEnSesion ? 'Ya se agregó todo el disponible' : 'Sin stock disponible en el depósito del pedido';
+            acciones = `<td><input type="number" class="form-control form-control-modern input-agregar" disabled></td>
+                <td><button type="button" class="btn btn-modern btn-modern-outline btn-modern-sm" disabled title="${titulo}">${agotadoEnSesion ? 'Sin disponible' : 'Sin stock'}</button></td>`;
+        } else {
+            acciones = `<td><input type="number" class="form-control form-control-modern input-agregar" min="1" max="${max}" step="1" value="1" title="Entre 1 y ${formatearCantidad(max)}"></td>
+                <td><button type="button" class="btn btn-modern btn-modern-outline-primary btn-modern-sm btn-agregar-art"><i class="bi bi-plus-lg"></i> Agregar</button></td>`;
+        }
+    }
+
+    return `<tr data-idx="${i}" class="${motivo ? 'row-no-agregable' : ''}">
+        <td><strong>${escapeHtml(a.COD_ARTICU)}</strong>${badgeEnPedido}</td>
+        <td>${escapeHtml(a.DESCRIPCIO || '---')}</td>
+        <td>${tipo}</td>
+        <td class="num">${precio}</td>
+        <td class="num">${disponible}</td>
+        ${acciones}
+    </tr>`;
+}
+
+function agregarDesdeBuscador($tr) {
+    const idx = Number($tr.attr('data-idx'));
+    const a = agregarArticulo.resultados[idx];
+    if (!a || motivoNoAgregable(a)) { return; }
+
+    const max = maxAgregable(a);
+    const $input = $tr.find('.input-agregar');
+    const texto = String($input.val()).trim();
+    const cantidad = Number(texto);
+    if (!/^\d+$/.test(texto) || cantidad < 1 || cantidad > max) {
+        $input.addClass('is-invalid');
+        toastr.warning(`Ingrese una cantidad entera entre 1 y ${formatearCantidad(max)}.`);
+        return;
+    }
+
+    if (enPedido(a)) {
+        // Ya es un renglón del pedido: se registra como aumento de ese renglón
+        const r = buscarRenglon(a.N_RENGLON_EN_PEDIDO);
+        const n = Number(r.N_RENGLON);
+        const actual = Number(r.CANT_PEDID);
+        const cambio = edicion.cambios[n];
+        const nueva = (cambio !== undefined ? cambio.cantidad : actual) + cantidad;
+
+        if (nueva === actual) {
+            delete edicion.cambios[n];
+        } else {
+            edicion.cambios[n] = { n_renglon: n, cod_articu: r.COD_ARTICU, cantidad: nueva };
+        }
+        const $fila = $(`#tbody-edicion tr.row-principal[data-renglon="${n}"]`);
+        $fila.find('.input-cantidad').val(nueva === actual ? '' : nueva).removeClass('is-invalid');
+        actualizarFilaEdicion(n, true);
+        resaltarFila($fila);
+        toastr.success(`Se sumaron ${formatearCantidad(cantidad)} unidades a ${r.COD_ARTICU}`);
+    } else {
+        const key = claveNuevo(a.COD_ARTICU);
+        if (edicion.cambios[key] !== undefined) {
+            edicion.cambios[key].cantidad += cantidad;
+            refrescarFilaNueva(key);
+            toastr.success(`Se sumaron ${formatearCantidad(cantidad)} unidades a ${a.COD_ARTICU}`);
+        } else {
+            edicion.nuevos[key] = {
+                COD_ARTICU: a.COD_ARTICU,
+                DESCRIPCIO: a.DESCRIPCIO,
+                ES_KIT: a.ES_KIT,
+                PRECIO: a.PRECIO,
+                STOCK_DISPONIBLE: a.STOCK_DISPONIBLE
+            };
+            edicion.cambios[key] = { n_renglon: null, cod_articu: a.COD_ARTICU, cantidad: cantidad };
+            $('#tbody-edicion tr.row-sin-resultados').before(filaNuevaEdicion(key));
+            toastr.success(`Se agregó ${a.COD_ARTICU} (${formatearCantidad(cantidad)} u.)`);
+        }
+        resaltarFila(filaNuevaPorClave(key));
+        actualizarBarraEdicion();
+        aplicarBusquedaEdicion();
+    }
+
+    // El máximo cambió: se vuelve a dibujar el resultado
+    $tr.replaceWith(filaResultadoAgregar(a, idx));
 }
 
 function formatearImporte(valor) {
@@ -1525,17 +2019,22 @@ function mostrarPreviewTableEdicionMasiva(data) {
     $('#edicion_modal_btn_validos').text(data.cant_pedidos_validos);
 
     const tbody = $('#modal_tbody_edicion_filas').empty();
+    const resumenes = {};
+    (data.pedidos_resumen || []).forEach(p => { resumenes[`${p.talon_ped}|${p.nro_pedido}`] = p; });
+    const avisos = avisosCompetenciaLote(data.filas_data, resumenes);
+    let pedidoActual = null;
 
     data.filas_data.forEach(function(f) {
-        const badgeClass = f.valido ? 'badge-success-modern' : 'badge-danger-modern';
-        let badgeAccion = '';
-        if (f.accion === 'ELIMINAR') {
-            badgeAccion = '<span class="badge-modern badge-danger-modern">Quitar</span>';
-        } else if (f.accion === 'MODIFICAR') {
-            badgeAccion = '<span class="badge-modern badge-warning-modern">Modificar</span>';
-        } else {
-            badgeAccion = '<span class="badge-modern badge-neutral-modern">Error</span>';
+        // Las filas vienen agrupadas por pedido: una cabecera con el total y el crédito de cada uno
+        const clave = `${f.talon_ped}|${f.nro_pedido}`;
+        if (clave !== pedidoActual) {
+            pedidoActual = clave;
+            tbody.append(filaCabeceraPedidoLote(f, resumenes[clave], avisos.clientes.has(clave)));
         }
+
+        const badgeClass = f.valido ? 'badge-success-modern' : 'badge-danger-modern';
+        const badgeAccion = badgeAccionLote(f);
+        const aviso = avisos.filas.has(`${clave}|${f.cod_articu}`) ? avisoCompetenciaHtml('artículo') : '';
 
         const row = `<tr>
             <td>${escapeHtml(f.talon_ped)}</td>
@@ -1545,7 +2044,7 @@ function mostrarPreviewTableEdicionMasiva(data) {
             <td class="num">${formatearCantidad(f.cant_actual)}</td>
             <td class="num"><strong>${formatearCantidad(f.cant_nueva)}</strong></td>
             <td>${badgeAccion}</td>
-            <td><span class="badge-modern ${badgeClass}">${escapeHtml(f.mensaje)}</span></td>
+            <td><span class="badge-modern badge-wrap ${badgeClass}">${escapeHtml(f.mensaje)}</span>${aviso}</td>
         </tr>`;
         tbody.append(row);
     });
@@ -1556,6 +2055,101 @@ function mostrarPreviewTableEdicionMasiva(data) {
     modal.show();
 }
 
+// Quitar, Reducir a N, Aumentar a N o Agregar N, con los colores de la vista previa individual
+function badgeAccionLote(f) {
+    const cant = formatearCantidad(f.cant_nueva);
+    const badges = {
+        ELIMINAR: ['badge-danger-modern', 'Quitar'],
+        MODIFICAR: ['badge-warning-modern', `Reducir a ${cant}`],
+        AUMENTAR: ['badge-primary-modern', `Aumentar a ${cant}`],
+        AGREGAR: ['badge-success-modern', `Agregar ${cant}`]
+    };
+    const b = badges[f.accion] || ['badge-neutral-modern', 'Error'];
+    return `<span class="badge-modern ${b[0]}">${escapeHtml(b[1])}</span>`;
+}
+
+// La simulación es por pedido: entre los pedidos válidos, detecta los que compiten por el mismo
+// stock (mismo artículo y depósito, al aumentar o agregar) o por el crédito del mismo cliente
+function avisosCompetenciaLote(filas, resumenes) {
+    const pedidosPorArticulo = {};
+    const pedidosPorCliente = {};
+    const agregar = (mapa, clave, pedido) => {
+        if (!mapa[clave]) { mapa[clave] = new Set(); }
+        mapa[clave].add(pedido);
+    };
+
+    filas.forEach(f => {
+        const pedido = `${f.talon_ped}|${f.nro_pedido}`;
+        const r = resumenes[pedido];
+        if (!r || !r.valido || (f.accion !== 'AUMENTAR' && f.accion !== 'AGREGAR')) { return; }
+        agregar(pedidosPorArticulo, `${r.deposito}|${f.cod_articu}`, pedido);
+    });
+    Object.keys(resumenes).forEach(pedido => {
+        const r = resumenes[pedido];
+        if (r.valido && Number(r.controla_credito) === 1 && r.cod_client) {
+            agregar(pedidosPorCliente, r.cod_client, pedido);
+        }
+    });
+
+    const filasAviso = new Set();
+    filas.forEach(f => {
+        const pedido = `${f.talon_ped}|${f.nro_pedido}`;
+        const r = resumenes[pedido];
+        const set = r ? pedidosPorArticulo[`${r.deposito}|${f.cod_articu}`] : null;
+        if (set && set.size > 1 && set.has(pedido) && (f.accion === 'AUMENTAR' || f.accion === 'AGREGAR')) {
+            filasAviso.add(`${pedido}|${f.cod_articu}`);
+        }
+    });
+    const clientesAviso = new Set();
+    Object.values(pedidosPorCliente).forEach(set => {
+        if (set.size > 1) { set.forEach(p => clientesAviso.add(p)); }
+    });
+
+    return { filas: filasAviso, clientes: clientesAviso };
+}
+
+function avisoCompetenciaHtml(sujeto) {
+    return `<div class="lote-aviso"><i class="bi bi-exclamation-triangle"></i>
+        Este ${sujeto} aparece en varios pedidos. La validación es por pedido: si el stock o el crédito no alcanzan para todos, algunos pueden fallar al aplicar.</div>`;
+}
+
+function filaCabeceraPedidoLote(f, resumen, avisoCliente) {
+    let detalle = '';
+    if (resumen && resumen.valido) {
+        detalle = `<span class="total-cambio">Total $ ${formatearImporte(resumen.total_ant)}<span class="arrow">→</span>$ ${formatearImporte(resumen.total_nuevo)}</span>`;
+        if (Number(resumen.controla_credito) === 1) {
+            const consumo = Number(resumen.consumo_credito) || 0;
+            const texto = consumo < 0 ? `libera $ ${formatearImporte(-consumo)}` : `consume $ ${formatearImporte(consumo)}`;
+            detalle += `<span class="lote-credito">Crédito: ${texto} · disponible después $ ${formatearImporte(resumen.credito_despues)}</span>`;
+        }
+    } else {
+        detalle = '<span class="badge-modern badge-danger-modern">No se aplica</span>';
+    }
+    return `<tr class="row-lote-pedido">
+        <td colspan="8">
+            <strong>Talón ${escapeHtml(f.talon_ped)} · Pedido ${escapeHtml(f.nro_pedido)}</strong>
+            <span class="lote-detalle">${detalle}</span>
+            ${avisoCliente ? avisoCompetenciaHtml('cliente') : ''}
+        </td>
+    </tr>`;
+}
+
+// Pedidos que fallaron al aplicar, con el motivo del SP separado en líneas
+function detalleFallidosLote(detalles) {
+    const fallidos = (detalles || []).filter(d => !d.success);
+    if (fallidos.length === 0) { return ''; }
+    const items = fallidos.map(d => {
+        const lineas = partesMensajeError(Number(d.codigo) || 0, d.error)
+            .map(p => `<div>${escapeHtml(p)}</div>`).join('');
+        return `<div class="lote-fallido">
+            <strong>Talón ${escapeHtml(d.talon_ped)} · Pedido ${escapeHtml(d.nro_pedido)}</strong>
+            ${lineas}
+        </div>`;
+    }).join('');
+    return `<p class="mb-1"><strong>Pedidos que no se aplicaron:</strong></p>
+        <div class="swal-detalle-error">${items}</div>`;
+}
+
 function aplicarEdicionMasivaConfirmada() {
     if (!edicionMasivaCargada.pedidosValidos || edicionMasivaCargada.pedidosValidos.length === 0) {
         toastr.warning('No hay pedidos válidos para procesar.');
@@ -1564,7 +2158,7 @@ function aplicarEdicionMasivaConfirmada() {
 
     Swal.fire({
         title: `¿Aplicar edición a ${edicionMasivaCargada.pedidosValidos.length} pedido(s)?`,
-        text: 'Se modificarán las cantidades y liberará el stock comprometido para los pedidos válidos.',
+        text: 'Se aplicarán las cantidades y los artículos agregados, y se actualizará el stock comprometido de los pedidos válidos.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#3366ff',
@@ -1606,6 +2200,7 @@ function ejecutarEdicionMasivaLote() {
                                 <li>Pedidos editados con éxito: <span class="fw-bold text-success">${response.exitosos}</span></li>
                                 <li>Pedidos fallidos: <span class="fw-bold text-danger">${response.fallidos}</span></li>
                             </ul>
+                            ${detalleFallidosLote(response.detalles)}
                         </div>
                     `,
                     icon: response.fallidos === 0 ? 'success' : 'warning',
@@ -1767,7 +2362,7 @@ function renderHistorial(truncado) {
     const tbody = $('#tbody-historial').empty();
 
     if (historial.operaciones.length === 0) {
-        tbody.append('<tr class="row-sin-resultados"><td colspan="9" class="text-center text-muted py-3">No hay ediciones registradas para los filtros indicados.</td></tr>');
+        tbody.append('<tr class="row-sin-resultados"><td colspan="11" class="text-center text-muted py-3">No hay ediciones registradas para los filtros indicados.</td></tr>');
         $('#historial-info').addClass('d-none');
         return;
     }
@@ -1789,14 +2384,16 @@ function renderHistorial(truncado) {
             <td>${cliente}</td>
             <td class="num">${op.eliminados}</td>
             <td class="num">${op.modificados}</td>
+            <td class="num">${op.aumentados || 0}</td>
+            <td class="num">${op.agregados || 0}</td>
             <td class="num total-cambio">$ ${formatearImporte(op.total_ant)}<span class="arrow">→</span>$ ${formatearImporte(op.total_nuevo)}</td>
         </tr>`);
         tbody.append(`<tr class="row-historial-detalle d-none" data-op="${i}">
-            <td colspan="9">${detalleHistorialHtml(op)}</td>
+            <td colspan="11">${detalleHistorialHtml(op)}</td>
         </tr>`);
     });
 
-    tbody.append('<tr class="row-sin-resultados d-none"><td colspan="9" class="text-center text-muted py-3">No hay ediciones que coincidan con la búsqueda.</td></tr>');
+    tbody.append('<tr class="row-sin-resultados d-none"><td colspan="11" class="text-center text-muted py-3">No hay ediciones que coincidan con la búsqueda.</td></tr>');
 
     const info = $('#historial-info');
     if (truncado) {
@@ -1808,13 +2405,16 @@ function renderHistorial(truncado) {
     aplicarBusquedaHistorial();
 }
 
+// ACCION del log (ELIMINAR, MODIFICAR, AUMENTAR, AGREGAR); si faltara se deduce de la cantidad
+function accionHistorial(d) {
+    if (d.ACCION) { return d.ACCION; }
+    return Number(d.CANT_NUEVA) === 0 ? 'ELIMINAR' : 'MODIFICAR';
+}
+
 function detalleHistorialHtml(op) {
     const filas = ordenarConComponentes(op.detalle).map(function(d) {
         const esComponente = Number(d.RENGL_PADR) !== 0;
-        const eliminado = Number(d.CANT_NUEVA) === 0;
-        const badge = eliminado
-            ? '<span class="badge-modern badge-danger-modern">Eliminado</span>'
-            : '<span class="badge-modern badge-warning-modern">Modificado</span>';
+        const badge = badgeAccionRenglon(accionHistorial(d));
         const delta = Number(d.DELTA_COMP) || 0;
         const tieneStock = d.DELTA_COMP !== null && d.DELTA_COMP !== undefined;
 
@@ -1896,7 +2496,9 @@ function descargarExcelHistorialEdiciones() {
             'COD_CLIENT': op.cod_client || '',
             'RAZON_SOCIAL': op.razon_soci || '',
             'RENGLONES_QUITADOS': op.eliminados,
-            'RENGLONES_MODIFICADOS': op.modificados,
+            'RENGLONES_REDUCIDOS': op.modificados,
+            'RENGLONES_AUMENTADOS': op.aumentados || 0,
+            'RENGLONES_AGREGADOS': op.agregados || 0,
             'TOTAL_ANTERIOR': Number(op.total_ant) || 0,
             'TOTAL_NUEVO': Number(op.total_nuevo) || 0
         }));
@@ -1904,7 +2506,6 @@ function descargarExcelHistorialEdiciones() {
         const detalleRows = [];
         historial.operaciones.forEach(op => {
             (op.detalle || []).forEach(d => {
-                const eliminado = Number(d.CANT_NUEVA) === 0;
                 detalleRows.push({
                     'OPERACION': op.operacion,
                     'FECHA': op.fecha,
@@ -1920,7 +2521,7 @@ function descargarExcelHistorialEdiciones() {
                     'COD_DEPOSI': d.COD_DEPOSI || '',
                     'CANT_ANTERIOR': Number(d.CANT_PEDID_ANT) || 0,
                     'CANT_NUEVA': Number(d.CANT_NUEVA) || 0,
-                    'ACCION': eliminado ? 'ELIMINADO' : 'MODIFICADO',
+                    'ACCION': etiquetaAccionRenglon(accionHistorial(d)).toUpperCase(),
                     'STOCK_COMP_ANTES': d.COMP_ANTES !== null && d.COMP_ANTES !== undefined ? Number(d.COMP_ANTES) : '',
                     'DELTA_STOCK': d.DELTA_COMP !== null && d.DELTA_COMP !== undefined ? Number(d.DELTA_COMP) : '',
                     'STOCK_COMP_DESPUES': d.COMP_DESPUES !== null && d.COMP_DESPUES !== undefined ? Number(d.COMP_DESPUES) : ''
