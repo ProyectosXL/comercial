@@ -110,6 +110,26 @@ class EdicionPedido
         );
     }
 
+    // Artículos y kits que se pueden agregar al pedido (precio de su lista y disponible en su depósito)
+    public function buscarArticulos($pais, $talon_ped, $nro_pedido, $texto)
+    {
+        $params = array(
+            array(intval($talon_ped), SQLSRV_PARAM_IN, null, SQLSRV_SQLTYPE_INT),
+            array(FormatoPedido::nroPedido($nro_pedido), SQLSRV_PARAM_IN, null, SQLSRV_SQLTYPE_VARCHAR(14)),
+            array(mb_substr($texto, 0, 50), SQLSRV_PARAM_IN, SQLSRV_PHPTYPE_STRING('UTF-8'), SQLSRV_SQLTYPE_VARCHAR(50)),
+        );
+        $sets = $this->ejecutar($pais, '{CALL dbo.RO_Pedido_Buscar_Articulos(?, ?, ?)}', $params);
+
+        // Simples y kits pueden venir en uno o más result sets: se unifican
+        $articulos = array();
+        foreach ($sets as $rows) {
+            foreach ($rows as $row) {
+                $articulos[] = $row;
+            }
+        }
+        return $articulos;
+    }
+
     // $cambiosJson: JSON array ya validado [{"n_renglon":5,"cod_articu":"...","cantidad":0}, ...]
     public function editar($pais, $talon_ped, $nro_pedido, $cambiosJson, $usuario, $test)
     {
