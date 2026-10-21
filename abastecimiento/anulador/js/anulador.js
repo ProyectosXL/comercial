@@ -1244,19 +1244,25 @@ function ordenarConComponentes(lista) {
     return ordenados;
 }
 
-// Badge de la acción sobre un renglón: ESTADO_RENGLON del SP o ACCION del historial
+// Acción sobre un renglón: ESTADO_RENGLON del SP (ELIMINADO...) o ACCION del historial (ELIMINAR...)
+const ACCIONES_RENGLON = {
+    ELIMINADO: ['badge-danger-modern', 'Eliminado'],
+    ELIMINAR: ['badge-danger-modern', 'Eliminado'],
+    MODIFICADO: ['badge-warning-modern', 'Reducido'],
+    MODIFICAR: ['badge-warning-modern', 'Reducido'],
+    AUMENTADO: ['badge-primary-modern', 'Aumentado'],
+    AUMENTAR: ['badge-primary-modern', 'Aumentado'],
+    AGREGADO: ['badge-success-modern', 'Agregado'],
+    AGREGAR: ['badge-success-modern', 'Agregado']
+};
+
+function etiquetaAccionRenglon(accion) {
+    const b = ACCIONES_RENGLON[String(accion || '').toUpperCase()];
+    return b ? b[1] : String(accion || '');
+}
+
 function badgeAccionRenglon(accion) {
-    const badges = {
-        ELIMINADO: ['badge-danger-modern', 'Eliminado'],
-        ELIMINAR: ['badge-danger-modern', 'Eliminado'],
-        MODIFICADO: ['badge-warning-modern', 'Reducido'],
-        MODIFICAR: ['badge-warning-modern', 'Reducido'],
-        AUMENTADO: ['badge-primary-modern', 'Aumentado'],
-        AUMENTAR: ['badge-primary-modern', 'Aumentado'],
-        AGREGADO: ['badge-success-modern', 'Agregado'],
-        AGREGAR: ['badge-success-modern', 'Agregado']
-    };
-    const b = badges[String(accion || '').toUpperCase()];
+    const b = ACCIONES_RENGLON[String(accion || '').toUpperCase()];
     return b
         ? `<span class="badge-modern ${b[0]}">${b[1]}</span>`
         : `<span class="badge-modern badge-neutral-modern">${escapeHtml(accion || '---')}</span>`;
@@ -2289,7 +2295,7 @@ function renderHistorial(truncado) {
     const tbody = $('#tbody-historial').empty();
 
     if (historial.operaciones.length === 0) {
-        tbody.append('<tr class="row-sin-resultados"><td colspan="9" class="text-center text-muted py-3">No hay ediciones registradas para los filtros indicados.</td></tr>');
+        tbody.append('<tr class="row-sin-resultados"><td colspan="11" class="text-center text-muted py-3">No hay ediciones registradas para los filtros indicados.</td></tr>');
         $('#historial-info').addClass('d-none');
         return;
     }
@@ -2311,14 +2317,16 @@ function renderHistorial(truncado) {
             <td>${cliente}</td>
             <td class="num">${op.eliminados}</td>
             <td class="num">${op.modificados}</td>
+            <td class="num">${op.aumentados || 0}</td>
+            <td class="num">${op.agregados || 0}</td>
             <td class="num total-cambio">$ ${formatearImporte(op.total_ant)}<span class="arrow">→</span>$ ${formatearImporte(op.total_nuevo)}</td>
         </tr>`);
         tbody.append(`<tr class="row-historial-detalle d-none" data-op="${i}">
-            <td colspan="9">${detalleHistorialHtml(op)}</td>
+            <td colspan="11">${detalleHistorialHtml(op)}</td>
         </tr>`);
     });
 
-    tbody.append('<tr class="row-sin-resultados d-none"><td colspan="9" class="text-center text-muted py-3">No hay ediciones que coincidan con la búsqueda.</td></tr>');
+    tbody.append('<tr class="row-sin-resultados d-none"><td colspan="11" class="text-center text-muted py-3">No hay ediciones que coincidan con la búsqueda.</td></tr>');
 
     const info = $('#historial-info');
     if (truncado) {
@@ -2330,13 +2338,16 @@ function renderHistorial(truncado) {
     aplicarBusquedaHistorial();
 }
 
+// ACCION del log (ELIMINAR, MODIFICAR, AUMENTAR, AGREGAR); si faltara se deduce de la cantidad
+function accionHistorial(d) {
+    if (d.ACCION) { return d.ACCION; }
+    return Number(d.CANT_NUEVA) === 0 ? 'ELIMINAR' : 'MODIFICAR';
+}
+
 function detalleHistorialHtml(op) {
     const filas = ordenarConComponentes(op.detalle).map(function(d) {
         const esComponente = Number(d.RENGL_PADR) !== 0;
-        const eliminado = Number(d.CANT_NUEVA) === 0;
-        const badge = eliminado
-            ? '<span class="badge-modern badge-danger-modern">Eliminado</span>'
-            : '<span class="badge-modern badge-warning-modern">Modificado</span>';
+        const badge = badgeAccionRenglon(accionHistorial(d));
         const delta = Number(d.DELTA_COMP) || 0;
         const tieneStock = d.DELTA_COMP !== null && d.DELTA_COMP !== undefined;
 
@@ -2418,7 +2429,9 @@ function descargarExcelHistorialEdiciones() {
             'COD_CLIENT': op.cod_client || '',
             'RAZON_SOCIAL': op.razon_soci || '',
             'RENGLONES_QUITADOS': op.eliminados,
-            'RENGLONES_MODIFICADOS': op.modificados,
+            'RENGLONES_REDUCIDOS': op.modificados,
+            'RENGLONES_AUMENTADOS': op.aumentados || 0,
+            'RENGLONES_AGREGADOS': op.agregados || 0,
             'TOTAL_ANTERIOR': Number(op.total_ant) || 0,
             'TOTAL_NUEVO': Number(op.total_nuevo) || 0
         }));
@@ -2426,7 +2439,6 @@ function descargarExcelHistorialEdiciones() {
         const detalleRows = [];
         historial.operaciones.forEach(op => {
             (op.detalle || []).forEach(d => {
-                const eliminado = Number(d.CANT_NUEVA) === 0;
                 detalleRows.push({
                     'OPERACION': op.operacion,
                     'FECHA': op.fecha,
@@ -2442,7 +2454,7 @@ function descargarExcelHistorialEdiciones() {
                     'COD_DEPOSI': d.COD_DEPOSI || '',
                     'CANT_ANTERIOR': Number(d.CANT_PEDID_ANT) || 0,
                     'CANT_NUEVA': Number(d.CANT_NUEVA) || 0,
-                    'ACCION': eliminado ? 'ELIMINADO' : 'MODIFICADO',
+                    'ACCION': etiquetaAccionRenglon(accionHistorial(d)).toUpperCase(),
                     'STOCK_COMP_ANTES': d.COMP_ANTES !== null && d.COMP_ANTES !== undefined ? Number(d.COMP_ANTES) : '',
                     'DELTA_STOCK': d.DELTA_COMP !== null && d.DELTA_COMP !== undefined ? Number(d.DELTA_COMP) : '',
                     'STOCK_COMP_DESPUES': d.COMP_DESPUES !== null && d.COMP_DESPUES !== undefined ? Number(d.COMP_DESPUES) : ''

@@ -588,7 +588,9 @@ if (empty($userName)) {
                                         <th>Nro. Pedido</th>
                                         <th>Cliente</th>
                                         <th class="num">Quitados</th>
-                                        <th class="num">Modificados</th>
+                                        <th class="num">Reducidos</th>
+                                        <th class="num">Aumentados</th>
+                                        <th class="num">Agregados</th>
                                         <th class="num">Total anterior → nuevo</th>
                                     </tr>
                                 </thead>
@@ -675,29 +677,36 @@ if (empty($userName)) {
                         <div class="tab-pane fade help-pane" id="ayuda-editar" role="tabpanel">
                             <h6>Edición individual</h6>
                             <ol>
-                                <li>Busque el pedido por <strong>Talón</strong> y <strong>Nro. Pedido</strong>.</li>
-                                <li>Marque los artículos a <strong>quitar</strong> o indique la <strong>nueva cantidad</strong>.</li>
-                                <li>Revise la <strong>vista previa</strong> con los renglones afectados, el stock y el total.</li>
+                                <li>Busque el pedido por <strong>Talón</strong> y <strong>Nro. Pedido</strong>. El encabezado muestra el estado, el depósito y la lista de precios.</li>
+                                <li>Para <strong>quitar</strong> un artículo use el botón Quitar. Para <strong>reducir o aumentar</strong>, indique la <strong>nueva cantidad</strong> en la grilla.</li>
+                                <li>Para <strong>agregar artículos o kits</strong>, use <strong>Agregar artículo</strong>: busque por código o descripción (mínimo 3 caracteres) e indique la cantidad. Si el artículo ya está en el pedido, se suma a su renglón.</li>
+                                <li>Revise la <strong>vista previa</strong> con los renglones afectados, los precios, el stock, el total y, si corresponde, el crédito del cliente.</li>
                                 <li><strong>Confirme</strong> los cambios.</li>
+                                <li>Con <strong>Limpiar</strong> puede pasar a otro pedido sin recargar la página.</li>
                             </ol>
 
                             <h6>Edición masiva por Excel</h6>
                             <ol>
-                                <li>Descargue la <strong>plantilla Excel de edición</strong>.</li>
-                                <li>Complete las columnas: <code>TALON_PED</code>, <code>NRO_PEDIDO</code>, <code>COD_ARTICU</code> y <code>NUEVA_CANTIDAD</code> (coloque <code>0</code> para quitar el artículo o un valor menor a la cantidad actual).</li>
-                                <li>Suba el archivo Excel. El sistema validará cada pedido y artículo en lote.</li>
-                                <li>Revise la grilla de previsualización y confirme la aplicación masiva.</li>
+                                <li>Descargue la <strong>plantilla Excel de edición</strong> (incluye una hoja de instrucciones).</li>
+                                <li>Complete una fila por artículo y pedido: <code>TALON_PED</code>, <code>NRO_PEDIDO</code>, <code>COD_ARTICU</code> y <code>NUEVA_CANTIDAD</code>.</li>
+                                <li><code>NUEVA_CANTIDAD</code> es la <strong>cantidad total final</strong>: <code>0</code> quita el artículo, un valor menor reduce y uno mayor aumenta. Los artículos que no están en el pedido se <strong>agregan</strong> con esa cantidad.</li>
+                                <li>Suba el archivo. Cada pedido se valida completo, incluyendo stock y crédito, antes de aplicar.</li>
+                                <li>Revise la previsualización y confirme la aplicación masiva.</li>
                             </ol>
 
                             <h6>Reglas de negocio</h6>
                             <ul>
                                 <li>Solo se editan pedidos <strong>pendientes (estado 2)</strong> y sin facturación.</li>
                                 <li>Un renglón con remito no se puede editar.</li>
-                                <li>Solo se puede <strong>disminuir</strong> la cantidad, con números enteros.</li>
-                                <li>Los kits se editan desde el renglón del kit: sus componentes se ajustan o se eliminan solos.</li>
-                                <li>No se pueden quitar todos los renglones (para eso está <strong>Anular Pedidos</strong>).</li>
-                                <li>Los cambios se aplican <strong>todos juntos o ninguno</strong> por cada pedido.</li>
-                                <li>Al quitar o reducir, se libera el stock comprometido y se recalcula el total del pedido.</li>
+                                <li>Las cantidades son números enteros.</li>
+                                <li>En el buscador, la cantidad a agregar está limitada al <strong>stock disponible del depósito del pedido</strong>.</li>
+                                <li>Un kit solo se puede agregar si <strong>todos sus componentes</strong> tienen stock.</li>
+                                <li>Los kits se editan desde el renglón del kit: sus componentes se ajustan solos.</li>
+                                <li>Al aumentar o agregar se toma el <strong>precio actual de la lista del pedido</strong>.</li>
+                                <li>Para <strong>franquicias y mayoristas de Argentina</strong> se controla el crédito disponible del cliente.</li>
+                                <li>Tiene que quedar al menos un renglón en el pedido (para quitarlos todos está <strong>Anular Pedidos</strong>).</li>
+                                <li>Si algo no cumple, <strong>no se aplica ningún cambio</strong> en ese pedido.</li>
+                                <li>Se recalculan el stock comprometido y el total del pedido.</li>
                             </ul>
 
                             <h6>Historial y Excel</h6>

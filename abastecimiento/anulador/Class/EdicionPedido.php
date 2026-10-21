@@ -189,7 +189,7 @@ class EdicionPedido
         // Se limitan las operaciones (no las filas) para no cortar el detalle de una edición
         $sql = "SELECT L.OPERACION, L.FECHA, L.USUARIO, L.TALON_PED, L.NRO_PEDIDO, 
                        G.COD_CLIENT, C.RAZON_SOCI,
-                       L.N_RENGLON, L.RENGL_PADR,
+                       L.N_RENGLON, L.RENGL_PADR, L.ACCION,
                        L.COD_ARTICU, A.DESCRIPCIO, L.COD_DEPOSI, L.CANT_PEDID_ANT, L.CANT_PEDID_NUEVA,
                        L.DELTA_COMP, L.COMP_ANTES, L.COMP_DESPUES, L.TOTAL_PEDI_ANT, L.TOTAL_PEDI_NUEVO
                 FROM RO_LOG_EDICION_PEDIDO L
@@ -226,22 +226,31 @@ class EdicionPedido
                     'total_nuevo' => $f['TOTAL_PEDI_NUEVO'],
                     'eliminados' => 0,
                     'modificados' => 0,
+                    'aumentados' => 0,
+                    'agregados' => 0,
                     'detalle' => array(),
                 );
             }
 
+            // ACCION: ELIMINAR, MODIFICAR (reducción), AUMENTAR o AGREGAR.
+            // Si viniera vacía se deduce de la cantidad, como antes (solo había eliminar o reducir)
+            $accion = strtoupper(trim(strval(isset($f['ACCION']) ? $f['ACCION'] : '')));
+            if ($accion === '') {
+                $accion = (floatval($f['CANT_PEDID_NUEVA']) == 0) ? 'ELIMINAR' : 'MODIFICAR';
+            }
+
             // El conteo es sobre renglones principales; los componentes de kit van solo en el detalle
             if (intval($f['RENGL_PADR']) === 0) {
-                if (floatval($f['CANT_PEDID_NUEVA']) == 0) {
-                    $operaciones[$id]['eliminados']++;
-                } else {
-                    $operaciones[$id]['modificados']++;
+                $contadores = array('ELIMINAR' => 'eliminados', 'MODIFICAR' => 'modificados', 'AUMENTAR' => 'aumentados', 'AGREGAR' => 'agregados');
+                if (isset($contadores[$accion])) {
+                    $operaciones[$id][$contadores[$accion]]++;
                 }
             }
 
             $operaciones[$id]['detalle'][] = array(
                 'N_RENGLON' => $f['N_RENGLON'],
                 'RENGL_PADR' => $f['RENGL_PADR'],
+                'ACCION' => $accion,
                 'COD_ARTICU' => $f['COD_ARTICU'],
                 'DESCRIPCIO' => $f['DESCRIPCIO'],
                 'COD_DEPOSI' => $f['COD_DEPOSI'],
