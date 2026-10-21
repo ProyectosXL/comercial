@@ -922,6 +922,8 @@ function initEdicionPedido() {
         buscarPedidoEdicion();
     });
 
+    $('#btn-limpiar-edicion').on('click', limpiarPantallaEdicion);
+
     $(document).on('click', '#tbody-edicion .btn-expand', function() {
         const nRenglon = $(this).data('renglon');
         edicion.expandidos[nRenglon] = !edicion.expandidos[nRenglon];
@@ -1254,6 +1256,17 @@ function limpiarEdicion() {
     $('#edicion-vacio').removeClass('d-none');
 }
 
+// Botón Limpiar: deja la pantalla lista para buscar otro pedido
+function limpiarPantallaEdicion() {
+    confirmarDescarteEdicion().then(function(continuar) {
+        if (!continuar) { return; }
+        limpiarEdicion();
+        $('#edicion_talon, #edicion_nro_pedido').val('');
+        $('#edicion-historial').addClass('d-none');
+        $('#edicion_talon').trigger('focus');
+    });
+}
+
 function pedidoEditable() {
     return edicion.pedido !== null && Number(edicion.pedido.EDITABLE) === 1;
 }
@@ -1276,13 +1289,16 @@ function buscarRenglon(nRenglon) {
 
 function renderEncabezadoEdicion() {
     const p = edicion.pedido;
-    const estado = Number(p.ESTADO) === 2 ? '2 · Pendiente' : `Estado ${p.ESTADO}`;
+    const pendiente = Number(p.ESTADO) === 2;
+    const estado = p.ESTADO_DESC ? `${p.ESTADO} · ${p.ESTADO_DESC}` : `Estado ${p.ESTADO}`;
 
     $('#ph-talon').text(p.TALON_PED);
     $('#ph-nro').text(p.NRO_PEDIDO);
     $('#ph-fecha').text(p.FECHA_PEDI || '---');
     $('#ph-cliente').text(p.COD_CLIENT || '---');
-    $('#ph-estado').text(estado);
+    $('#ph-estado').html(`<span class="badge-modern ${pendiente ? 'badge-success-modern' : 'badge-neutral-modern'}">${escapeHtml(estado)}</span>`);
+    $('#ph-deposito').text(p.DEPOSITO || '---');
+    $('#ph-lista').text(p.N_LISTA !== null && p.N_LISTA !== undefined && p.N_LISTA !== '' ? p.N_LISTA : '---');
     $('#ph-total').text('$ ' + formatearImporte(p.TOTAL_PEDI));
 
     if (pedidoEditable()) {

@@ -413,9 +413,12 @@ if (empty($userName)) {
                                             <label for="edicion_nro_pedido" class="form-label form-label-modern">Nro. Pedido</label>
                                             <input type="text" class="form-control form-control-modern" id="edicion_nro_pedido" placeholder="Ej: 0000300097307" style="width: 180px;">
                                         </div>
-                                        <div class="col-auto">
+                                        <div class="col-auto d-flex align-items-center gap-2">
                                             <button type="submit" class="btn btn-modern btn-modern-primary">
                                                 <i class="bi bi-search"></i> Buscar
+                                            </button>
+                                            <button type="button" class="btn btn-modern btn-modern-outline btn-modern-sm" id="btn-limpiar-edicion" title="Limpiar y buscar otro pedido">
+                                                <i class="bi bi-eraser"></i> Limpiar
                                             </button>
                                         </div>
                                     </form>
@@ -459,6 +462,8 @@ if (empty($userName)) {
                                 <div class="ph-item"><span class="ph-label">Fecha</span><span class="ph-value" id="ph-fecha"></span></div>
                                 <div class="ph-item"><span class="ph-label">Cliente</span><span class="ph-value" id="ph-cliente"></span></div>
                                 <div class="ph-item"><span class="ph-label">Estado</span><span class="ph-value" id="ph-estado"></span></div>
+                                <div class="ph-item"><span class="ph-label">Depósito</span><span class="ph-value" id="ph-deposito"></span></div>
+                                <div class="ph-item"><span class="ph-label">Lista</span><span class="ph-value" id="ph-lista"></span></div>
                                 <div class="ph-item"><span class="ph-label">Total del pedido</span><span class="ph-value" id="ph-total"></span></div>
                                 <button type="button" class="btn btn-modern btn-modern-link ms-auto" id="btn-historial-pedido">
                                     <i class="bi bi-clock-history"></i> Ver historial del pedido
