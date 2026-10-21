@@ -239,6 +239,7 @@ function validarLoteEdicion($handler, $pais) {
             'success' => true,
             'filas_data' => $resultado['filas_data'],
             'pedidos_validos' => $resultado['pedidos_validos'],
+            'pedidos_resumen' => $resultado['pedidos_resumen'],
             'cant_pedidos_validos' => $resultado['cant_pedidos_validos'],
             'cant_pedidos_invalidos' => $resultado['cant_pedidos_invalidos'],
             'cant_filas_validas' => $resultado['cant_filas_validas'],

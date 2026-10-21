@@ -441,7 +441,10 @@ if (empty($userName)) {
                                         <input type="file" id="edicion_fileupload" class="form-control form-control-modern" accept=".xlsx, .xls">
                                     </div>
                                     <div class="form-text">
-                                        <i class="bi bi-info-circle"></i> Columnas: <code>TALON_PED</code>, <code>NRO_PEDIDO</code>, <code>COD_ARTICU</code>, <code>NUEVA_CANTIDAD</code> (0 para quitar).
+                                        <i class="bi bi-info-circle"></i> Columnas: <code>TALON_PED</code>, <code>NRO_PEDIDO</code>, <code>COD_ARTICU</code>, <code>NUEVA_CANTIDAD</code>.
+                                    </div>
+                                    <div class="form-text mt-0">
+                                        Una fila por artículo y pedido. <code>NUEVA_CANTIDAD</code> es la cantidad total final: <code>0</code> quita y, si el artículo no está en el pedido, se agrega. Se valida el stock y, para franquicias y mayoristas, el crédito.
                                     </div>
                                 </div>
                             </div>

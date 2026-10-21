@@ -2011,17 +2011,20 @@ function mostrarPreviewTableEdicionMasiva(data) {
     $('#edicion_modal_btn_validos').text(data.cant_pedidos_validos);
 
     const tbody = $('#modal_tbody_edicion_filas').empty();
+    const resumenes = {};
+    (data.pedidos_resumen || []).forEach(p => { resumenes[`${p.talon_ped}|${p.nro_pedido}`] = p; });
+    let pedidoActual = null;
 
     data.filas_data.forEach(function(f) {
-        const badgeClass = f.valido ? 'badge-success-modern' : 'badge-danger-modern';
-        let badgeAccion = '';
-        if (f.accion === 'ELIMINAR') {
-            badgeAccion = '<span class="badge-modern badge-danger-modern">Quitar</span>';
-        } else if (f.accion === 'MODIFICAR') {
-            badgeAccion = '<span class="badge-modern badge-warning-modern">Modificar</span>';
-        } else {
-            badgeAccion = '<span class="badge-modern badge-neutral-modern">Error</span>';
+        // Las filas vienen agrupadas por pedido: una cabecera con el total y el crédito de cada uno
+        const clave = `${f.talon_ped}|${f.nro_pedido}`;
+        if (clave !== pedidoActual) {
+            pedidoActual = clave;
+            tbody.append(filaCabeceraPedidoLote(f, resumenes[clave]));
         }
+
+        const badgeClass = f.valido ? 'badge-success-modern' : 'badge-danger-modern';
+        const badgeAccion = badgeAccionLote(f);
 
         const row = `<tr>
             <td>${escapeHtml(f.talon_ped)}</td>
@@ -2031,7 +2034,7 @@ function mostrarPreviewTableEdicionMasiva(data) {
             <td class="num">${formatearCantidad(f.cant_actual)}</td>
             <td class="num"><strong>${formatearCantidad(f.cant_nueva)}</strong></td>
             <td>${badgeAccion}</td>
-            <td><span class="badge-modern ${badgeClass}">${escapeHtml(f.mensaje)}</span></td>
+            <td><span class="badge-modern badge-wrap ${badgeClass}">${escapeHtml(f.mensaje)}</span></td>
         </tr>`;
         tbody.append(row);
     });
@@ -2042,6 +2045,39 @@ function mostrarPreviewTableEdicionMasiva(data) {
     modal.show();
 }
 
+// Quitar, Reducir a N, Aumentar a N o Agregar N, con los colores de la vista previa individual
+function badgeAccionLote(f) {
+    const cant = formatearCantidad(f.cant_nueva);
+    const badges = {
+        ELIMINAR: ['badge-danger-modern', 'Quitar'],
+        MODIFICAR: ['badge-warning-modern', `Reducir a ${cant}`],
+        AUMENTAR: ['badge-primary-modern', `Aumentar a ${cant}`],
+        AGREGAR: ['badge-success-modern', `Agregar ${cant}`]
+    };
+    const b = badges[f.accion] || ['badge-neutral-modern', 'Error'];
+    return `<span class="badge-modern ${b[0]}">${escapeHtml(b[1])}</span>`;
+}
+
+function filaCabeceraPedidoLote(f, resumen) {
+    let detalle = '';
+    if (resumen && resumen.valido) {
+        detalle = `<span class="total-cambio">Total $ ${formatearImporte(resumen.total_ant)}<span class="arrow">→</span>$ ${formatearImporte(resumen.total_nuevo)}</span>`;
+        if (Number(resumen.controla_credito) === 1) {
+            const consumo = Number(resumen.consumo_credito) || 0;
+            const texto = consumo < 0 ? `libera $ ${formatearImporte(-consumo)}` : `consume $ ${formatearImporte(consumo)}`;
+            detalle += `<span class="lote-credito">Crédito: ${texto} · disponible después $ ${formatearImporte(resumen.credito_despues)}</span>`;
+        }
+    } else {
+        detalle = '<span class="badge-modern badge-danger-modern">No se aplica</span>';
+    }
+    return `<tr class="row-lote-pedido">
+        <td colspan="8">
+            <strong>Talón ${escapeHtml(f.talon_ped)} · Pedido ${escapeHtml(f.nro_pedido)}</strong>
+            <span class="lote-detalle">${detalle}</span>
+        </td>
+    </tr>`;
+}
+
 function aplicarEdicionMasivaConfirmada() {
     if (!edicionMasivaCargada.pedidosValidos || edicionMasivaCargada.pedidosValidos.length === 0) {
         toastr.warning('No hay pedidos válidos para procesar.');
@@ -2050,7 +2086,7 @@ function aplicarEdicionMasivaConfirmada() {
 
     Swal.fire({
         title: `¿Aplicar edición a ${edicionMasivaCargada.pedidosValidos.length} pedido(s)?`,
-        text: 'Se modificarán las cantidades y liberará el stock comprometido para los pedidos válidos.',
+        text: 'Se aplicarán las cantidades y los artículos agregados, y se actualizará el stock comprometido de los pedidos válidos.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#3366ff',
