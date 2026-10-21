@@ -284,7 +284,8 @@ class EdicionPedido
         foreach ($filasExcel as $idx => $f) {
             $talon = isset($f['TALON_PED']) ? trim(strval($f['TALON_PED'])) : '';
             $nro = isset($f['NRO_PEDIDO']) ? trim(strval($f['NRO_PEDIDO'])) : '';
-            $art = isset($f['COD_ARTICU']) ? trim(strval($f['COD_ARTICU'])) : '';
+            // El código se normaliza (mayúsculas, sin espacios) antes de compararlo con el pedido y de enviarlo al SP
+            $art = isset($f['COD_ARTICU']) ? strtoupper(trim(strval($f['COD_ARTICU']))) : '';
             $cantNueva = isset($f['NUEVA_CANTIDAD']) ? trim(strval($f['NUEVA_CANTIDAD'])) : '';
 
             $key = "{$talon}|{$nro}";
@@ -410,9 +411,8 @@ class EdicionPedido
 
         foreach ($filasGrupo as $fg) {
             $art = $fg['cod_articu'];
-            $artUpper = strtoupper($art);
             $cantStr = $fg['nueva_cantidad'];
-            $renglon = isset($mapPrincipales[$artUpper]) ? $mapPrincipales[$artUpper] : null;
+            $renglon = isset($mapPrincipales[$art]) ? $mapPrincipales[$art] : null;
             $descripcio = $renglon !== null ? $renglon['DESCRIPCIO'] : '---';
             $cantActual = $renglon !== null ? floatval($renglon['CANT_PEDID']) : 0;
 
@@ -463,8 +463,8 @@ class EdicionPedido
                 continue;
             }
 
-            if (isset($mapComponentes[$artUpper])) {
-                $comp = $mapComponentes[$artUpper];
+            if (isset($mapComponentes[$art])) {
+                $comp = $mapComponentes[$art];
                 $filasGrupoResultado[] = $this->filaLote($talon, $nro, $comp['COD_ARTICU'], $comp['DESCRIPCIO'], floatval($comp['CANT_PEDID']), $cantNuevaInt, 'ERROR', false, 'El artículo está en el pedido como componente de un kit');
                 $pedidoTieneError = true;
                 continue;
