@@ -513,6 +513,9 @@ code { font-size: 12px; color: var(--an-danger); }
 .table-modern tr.row-modificado td { background: rgba(240, 173, 78, .08); }
 .table-modern tr.row-modificado td:first-child { box-shadow: inset 3px 0 0 var(--an-warning); }
 
+.table-modern tr.row-aumentado td { background: var(--an-primary-soft); }
+.table-modern tr.row-aumentado td:first-child { box-shadow: inset 3px 0 0 var(--an-primary); }
+
 .table-modern tr.row-quitado td { background: rgba(220, 53, 69, .06); color: var(--an-muted); }
 .table-modern tr.row-quitado td.tachable { text-decoration: line-through; }
 

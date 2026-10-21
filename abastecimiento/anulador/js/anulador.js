@@ -985,9 +985,11 @@ function registrarCantidadEdicion($input) {
         $input.removeClass('is-invalid');
         delete edicion.cambios[nRenglon];
     } else {
+        // Enteros >= 1: menor a la actual reduce, mayor aumenta. Igual a la actual no es un cambio
         const cantidad = Number(texto);
-        const valida = /^\d+$/.test(texto) && cantidad >= 1 && cantidad <= actual - 1;
-        $input.toggleClass('is-invalid', !valida);
+        const entera = /^\d+$/.test(texto) && cantidad >= 1;
+        const valida = entera && cantidad !== actual;
+        $input.toggleClass('is-invalid', !entera);
         if (valida) {
             edicion.cambios[nRenglon] = { n_renglon: nRenglon, cod_articu: r.COD_ARTICU, cantidad: cantidad };
         } else {
@@ -999,24 +1001,33 @@ function registrarCantidadEdicion($input) {
 
 function actualizarFilaEdicion(nRenglon, desdeInput) {
     const r = buscarRenglon(nRenglon);
-    const cambio = edicion.cambios[nRenglon];
-    const quitado = cambio !== undefined && cambio.cantidad === 0;
-    const modificado = cambio !== undefined && cambio.cantidad > 0;
+    const tipo = tipoCambioRenglon(r);
     const $fila = $(`#tbody-edicion tr.row-principal[data-renglon="${nRenglon}"]`);
 
-    $fila.toggleClass('row-quitado', quitado).toggleClass('row-modificado', modificado);
+    $fila.toggleClass('row-quitado', tipo === 'quitado')
+        .toggleClass('row-modificado', tipo === 'reducido')
+        .toggleClass('row-aumentado', tipo === 'aumentado');
+    $fila.find('.badge-aumento').toggleClass('d-none', tipo !== 'aumentado');
 
     if (!desdeInput) {
         const $input = $fila.find('.input-cantidad');
-        if (quitado) {
+        if (tipo === 'quitado') {
             $input.val('').removeClass('is-invalid').prop('disabled', true);
         } else {
-            $input.prop('disabled', Number(r.CANT_PEDID) <= 1);
+            $input.prop('disabled', false);
         }
-        $fila.find('.btn-quitar').replaceWith(botonAccionEdicion(nRenglon, quitado));
+        $fila.find('.btn-quitar').replaceWith(botonAccionEdicion(nRenglon, tipo === 'quitado'));
     }
 
     actualizarBarraEdicion();
+}
+
+// 'quitado' | 'reducido' | 'aumentado' | null según el cambio pendiente del renglón
+function tipoCambioRenglon(r) {
+    const cambio = edicion.cambios[r.N_RENGLON];
+    if (cambio === undefined) { return null; }
+    if (cambio.cantidad === 0) { return 'quitado'; }
+    return cambio.cantidad > Number(r.CANT_PEDID) ? 'aumentado' : 'reducido';
 }
 
 function actualizarBarraEdicion() {
@@ -1370,10 +1381,9 @@ function aplicarBusquedaEdicion() {
 function filaRenglonEdicion(r, editable) {
     const n = r.N_RENGLON;
     const esKit = Number(r.ES_KIT) === 1;
-    const cantidad = Number(r.CANT_PEDID);
     const cambio = edicion.cambios[n];
-    const quitado = cambio !== undefined && cambio.cantidad === 0;
-    const modificado = cambio !== undefined && cambio.cantidad > 0;
+    const tipo = tipoCambioRenglon(r);
+    const quitado = tipo === 'quitado';
 
     const expand = esKit
         ? `<button type="button" class="btn-expand ${edicion.expandidos[n] ? 'expanded' : ''}" data-renglon="${n}" title="Ver componentes"><i class="bi bi-chevron-right"></i></button>`
@@ -1394,17 +1404,18 @@ function filaRenglonEdicion(r, editable) {
         let input = '';
         let accion = '';
         if (renglonEditable(r)) {
-            const deshabilitado = (cantidad <= 1 || quitado) ? 'disabled' : '';
             input = `<input type="number" class="form-control form-control-modern input-cantidad" data-renglon="${n}"
-                        min="1" max="${cantidad - 1}" step="1" value="${modificado ? cambio.cantidad : ''}" ${deshabilitado}>`;
+                        min="1" step="1" value="${cambio !== undefined && !quitado ? cambio.cantidad : ''}" ${quitado ? 'disabled' : ''}>
+                     <span class="badge-modern badge-primary-modern badge-aumento ms-1 ${tipo === 'aumentado' ? '' : 'd-none'}">Aumento</span>`;
             accion = botonAccionEdicion(n, quitado);
         }
-        colsEdicion = `<td class="col-edicion">${input}</td><td class="col-edicion">${accion}</td>`;
+        colsEdicion = `<td class="col-edicion text-nowrap">${input}</td><td class="col-edicion">${accion}</td>`;
     }
 
     const clases = ['row-principal'];
     if (quitado) { clases.push('row-quitado'); }
-    if (modificado) { clases.push('row-modificado'); }
+    if (tipo === 'reducido') { clases.push('row-modificado'); }
+    if (tipo === 'aumentado') { clases.push('row-aumentado'); }
 
     return `<tr class="${clases.join(' ')}" data-renglon="${n}">
         <td>${expand}</td>
