@@ -1121,6 +1121,7 @@ function aplicarEdicion() {
     llamarEdicion('aplicar', edicion.cambiosSimulados, 'Aplicando cambios...', function(response) {
         cerrarModalEdicion();
         toastr.success(`Pedido actualizado. Total: $ ${formatearImporte(response.resumen.TOTAL_PEDI_NUEVO)}`);
+        if (response.resumen.AVISO) { toastr.warning(response.resumen.AVISO); }
         resetCambiosEdicion();
         edicion.cambiosSimulados = null;
         consultarPedidoEdicion(edicion.pedido.TALON_PED, edicion.pedido.NRO_PEDIDO);
@@ -1304,6 +1305,8 @@ function renderVistaPreviaEdicion(data) {
     $('#prev-agregados').text(Number(resumen.AGREGADOS) || 0);
     $('#prev-total-ant').text('$ ' + formatearImporte(resumen.TOTAL_PEDI_ANT));
     $('#prev-total-nuevo').text('$ ' + formatearImporte(resumen.TOTAL_PEDI_NUEVO));
+    $('#prev-aviso-texto').text(resumen.AVISO || '');
+    $('#prev-aviso').toggleClass('d-none', !resumen.AVISO);
     renderCreditoPreview(resumen);
 
     const tbodyRenglones = $('#prev-tbody-renglones').empty();
@@ -1790,9 +1793,18 @@ function disponibleArticulo(a) {
     return Math.max(0, Math.floor(Number(a.STOCK_DISPONIBLE) || 0));
 }
 
+function sinPrecio(a) {
+    return a.PRECIO === null || a.PRECIO === undefined;
+}
+
+// Los artículos OU sin precio en la lista se pueden agregar (van con precio 0 y el SP avisa)
+function esOutletSinPrecio(a) {
+    return sinPrecio(a) && String(a.COD_ARTICU).toUpperCase().startsWith('OU');
+}
+
 // Motivo por el que el resultado no se puede agregar, o null
 function motivoNoAgregable(a) {
-    if (a.PRECIO === null || a.PRECIO === undefined) { return 'Sin precio en la lista del pedido'; }
+    if (sinPrecio(a) && !esOutletSinPrecio(a)) { return 'Sin precio en la lista del pedido'; }
     if (Number(a.ES_COMPONENTE_EN_PEDIDO) === 1) { return 'Ya está en el pedido como componente de un kit'; }
     if (Number(a.RENGLON_CON_REMITO) === 1) { return 'El renglón del pedido tiene remito'; }
     if (enPedido(a)) {
@@ -1826,7 +1838,9 @@ function filaResultadoAgregar(a, i) {
     const badgeEnPedido = enPedido(a)
         ? ` <span class="badge-modern badge-neutral-modern ms-1" title="Cantidad en el pedido: ${formatearCantidad(a.CANT_EN_PEDIDO)}">En el pedido</span>`
         : '';
-    const precio = (a.PRECIO === null || a.PRECIO === undefined) ? '<span class="text-muted">—</span>' : formatearImporte(a.PRECIO);
+    const precio = esOutletSinPrecio(a)
+        ? '<span class="text-warning" title="Artículo OU sin precio en la lista del pedido: se agrega con precio 0">Sin precio</span>'
+        : (sinPrecio(a) ? '<span class="text-muted">—</span>' : formatearImporte(a.PRECIO));
     const disponible = formatearCantidad(a.STOCK_DISPONIBLE) + (esKit ? ' kits' : '');
 
     const motivo = motivoNoAgregable(a);
@@ -2129,6 +2143,7 @@ function filaCabeceraPedidoLote(f, resumen, avisoCliente) {
         <td colspan="8">
             <strong>Talón ${escapeHtml(f.talon_ped)} · Pedido ${escapeHtml(f.nro_pedido)}</strong>
             <span class="lote-detalle">${detalle}</span>
+            ${resumen && resumen.valido && resumen.aviso ? `<div class="lote-aviso"><i class="bi bi-exclamation-triangle"></i> ${escapeHtml(resumen.aviso)}</div>` : ''}
             ${avisoCliente ? avisoCompetenciaHtml('cliente') : ''}
         </td>
     </tr>`;

@@ -948,6 +948,11 @@ if (empty($userName)) {
                         </div>
                     </div>
 
+                    <!-- Aviso del SP que no bloquea la edición (artículos OU sin precio en la lista) -->
+                    <div id="prev-aviso" class="lote-aviso mb-3 d-none">
+                        <i class="bi bi-exclamation-triangle"></i><span id="prev-aviso-texto"></span>
+                    </div>
+
                     <!-- Crédito del cliente (solo si el SP controla crédito) -->
                     <div id="prev-credito" class="panel-alt mb-3 d-none">
                         <h6 class="mb-2"><i class="bi bi-credit-card"></i> Crédito del cliente</h6>

@@ -13,6 +13,7 @@ class AjusteStockDeposito {
     public static $DEPOSITOS_HABILITADOS = [
         '01' => 'PRINCIPAL',
         '05' => 'DIFERENCIAS',
+        '11' => 'DEPÓSITO 11',
     ];
 
     const ESTADO_OK          = 'OK';

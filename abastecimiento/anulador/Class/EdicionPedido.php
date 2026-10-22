@@ -337,7 +337,8 @@ class EdicionPedido
                 'credito_antes' => null,
                 'credito_despues' => null,
                 'cod_client' => '',
-                'deposito' => ''
+                'deposito' => '',
+                'aviso' => null
             );
 
             if ($talon === '' || !ctype_digit($talon) || $nro === '') {
@@ -549,6 +550,8 @@ class EdicionPedido
         $resumen['total_ant'] = $simResumen['TOTAL_PEDI_ANT'];
         $resumen['total_nuevo'] = $simResumen['TOTAL_PEDI_NUEVO'];
         $resumen['controla_credito'] = $controla;
+        // Aviso que no bloquea (artículos OU sin precio en la lista)
+        $resumen['aviso'] = !empty($simResumen['AVISO']) ? $simResumen['AVISO'] : null;
         if ($controla === 1) {
             $resumen['consumo_credito'] = $simResumen['CONSUMO_CREDITO'];
             $resumen['credito_antes'] = $simResumen['CREDITO_DISPONIBLE_ANTES'];
@@ -597,7 +600,8 @@ class EdicionPedido
                     'talon_ped' => $talon,
                     'nro_pedido' => $nro,
                     'success' => true,
-                    'total_nuevo' => $res['resumen']['TOTAL_PEDI_NUEVO']
+                    'total_nuevo' => $res['resumen']['TOTAL_PEDI_NUEVO'],
+                    'aviso' => !empty($res['resumen']['AVISO']) ? $res['resumen']['AVISO'] : null
                 );
             } catch (Throwable $e) {
                 $fallidos++;
