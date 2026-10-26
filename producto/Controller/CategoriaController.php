@@ -25,6 +25,14 @@ switch ($accion) {
     actualizarEstado();
     break;
 
+    case 'validarImportacion':
+        validarImportacion();
+        break;
+
+    case 'aplicarImportacion':
+        aplicarImportacion();
+        break;
+
     default:
         echo json_encode(['error' => 'Acción no válida']);
         break;
@@ -94,5 +102,37 @@ function actualizarEstado() {
     $result = $categoria->actualizarEstadoCategoria($siglaRubro, $codCategoria, $nuevoEstado);
     
     echo $result ? 1 : 0;
+}
+
+// Reasignación masiva de categorías por Excel: el body es JSON {filas: [{fila, COD_ARTICU, CATEGORIA, CATEGORIA_PADRE}]}
+function leerFilasImportacion() {
+    $body = json_decode(file_get_contents('php://input'), true);
+    return (is_array($body) && isset($body['filas']) && is_array($body['filas'])) ? $body['filas'] : [];
+}
+
+function validarImportacion() {
+    require_once __DIR__.'/../Class/Categoria.php';
+    set_time_limit(300);
+    header('Content-Type: application/json; charset=utf-8');
+
+    $categoria = new Categoria();
+
+    echo json_encode($categoria->validarImportacionCategorias(leerFilasImportacion()));
+}
+
+function aplicarImportacion() {
+    require_once __DIR__.'/../Class/Categoria.php';
+    set_time_limit(300);
+    header('Content-Type: application/json; charset=utf-8');
+
+    $categoria = new Categoria(); // abre la sesión (Conexion::conectar)
+    // Mismas claves de sesión que usa Auth del hub (sistemas/hub/Class/Auth.php)
+    $usuario = $_SESSION['nodo_usuario_activo']
+        ?? $_SESSION['fp_auth_user']['username']
+        ?? $_SESSION['username']
+        ?? $_SESSION['usuario']
+        ?? 'WEB_USER';
+
+    echo json_encode($categoria->aplicarImportacionCategorias(leerFilasImportacion(), $usuario));
 }
 ?>

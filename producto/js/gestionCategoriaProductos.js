@@ -745,6 +745,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Escape') {
             cerrarModalCategoria();
             cerrarModalRubro();
+            cerrarModalImportacion();
         }
     });
     
@@ -832,3 +833,274 @@ function updateStatsAfterFilter() {
     // Opcional: Mostrar información de filtrado en consola
     console.log(`Filtro aplicado - Mostrando: ${totalCount} total, ${activasCount} activas`);
 }
+
+// ===== Reasignación masiva de categorías por Excel =====
+// Lee el Excel en el navegador (SheetJS), valida en el servidor y, al confirmar,
+// actualiza SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA_AUX.
+
+let filasImportacion = [];      // filas leídas del Excel
+let previewImportacion = [];    // resultado de la validación del servidor
+
+// Encabezados aceptados (normalizados: mayúsculas, sin tildes, separadores como "_")
+const COLUMNAS_IMPORTACION = {
+    COD_ARTICU: ['COD_ARTICU', 'CODIGO', 'COD_ARTICULO', 'CODIGO_ARTICULO', 'ARTICULO'],
+    CATEGORIA: ['CATEGORIA', 'CATEGORIA_NUEVA'],
+    CATEGORIA_PADRE: ['CATEGORIA_PADRE', 'PADRE', 'CATEGORIA_PADRE_NUEVA']
+};
+
+function abrirModalImportacion() {
+    limpiarImportacion();
+    document.getElementById('archivoImportacion').value = '';
+    document.getElementById('modalImportacion').classList.remove('hidden');
+}
+
+function cerrarModalImportacion() {
+    const modal = document.getElementById('modalImportacion');
+    if (modal) modal.classList.add('hidden');
+}
+
+function limpiarImportacion() {
+    filasImportacion = [];
+    previewImportacion = [];
+    document.getElementById('resumenImportacion').classList.add('hidden');
+    document.getElementById('previewImportacion').classList.add('hidden');
+    document.getElementById('previewImportacion').innerHTML = '';
+    document.getElementById('btnErroresImportacion').classList.add('hidden');
+    document.getElementById('btnAplicarImportacion').disabled = true;
+}
+
+function normalizarEncabezado(texto) {
+    return String(texto ?? '').trim().toUpperCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[\s.\-]+/g, '_');
+}
+
+function escaparHtml(texto) {
+    const mapa = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return String(texto ?? '').replace(/[&<>"']/g, c => mapa[c]);
+}
+
+function descargarPlantillaImportacion() {
+    const ws = XLSX.utils.aoa_to_sheet([
+        ['COD_ARTICU', 'CATEGORIA', 'CATEGORIA_PADRE'],
+        ['XA0SLV07L0101', 'LENTES', 'LENTES']
+    ]);
+    ws['!cols'] = [{ wch: 18 }, { wch: 25 }, { wch: 25 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Categorias');
+    XLSX.writeFile(wb, 'PlantillaReasignacionCategorias.xlsx');
+}
+
+function leerExcelImportacion(file) {
+    limpiarImportacion();
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const filas = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+
+            if (filas.length < 2) {
+                Swal.fire('Archivo vacío', 'El Excel no tiene filas debajo de los encabezados.', 'warning');
+                return;
+            }
+
+            // Ubicar cada columna por su encabezado
+            const encabezados = filas[0].map(normalizarEncabezado);
+            const indices = {};
+            for (const [col, alias] of Object.entries(COLUMNAS_IMPORTACION)) {
+                indices[col] = encabezados.findIndex(h => alias.includes(h));
+            }
+            const faltantes = ['COD_ARTICU', 'CATEGORIA'].filter(c => indices[c] === -1);
+            if (faltantes.length) {
+                Swal.fire('Faltan columnas', `No se encontró: ${faltantes.join(', ')}. Usá la plantilla como referencia.`, 'error');
+                return;
+            }
+
+            filasImportacion = filas.slice(1)
+                .map((cols, i) => ({
+                    fila: i + 2,
+                    COD_ARTICU: String(cols[indices.COD_ARTICU] ?? '').trim().toUpperCase(),
+                    CATEGORIA: String(cols[indices.CATEGORIA] ?? '').trim().toUpperCase(),
+                    CATEGORIA_PADRE: indices.CATEGORIA_PADRE === -1 ? '' : String(cols[indices.CATEGORIA_PADRE] ?? '').trim().toUpperCase()
+                }))
+                .filter(f => f.COD_ARTICU || f.CATEGORIA || f.CATEGORIA_PADRE);
+
+            if (!filasImportacion.length) {
+                Swal.fire('Archivo vacío', 'No se encontraron filas con datos.', 'warning');
+                return;
+            }
+
+            validarImportacion();
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'No se pudo leer el archivo. Verificá que sea un Excel válido.', 'error');
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+async function llamarImportacion(accion, filas) {
+    const resp = await fetch(`Controller/CategoriaController.php?accion=${accion}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filas })
+    });
+    const texto = await resp.text();
+    try {
+        return JSON.parse(texto);
+    } catch (e) {
+        console.error('Respuesta no válida:', texto);
+        throw new Error('El servidor devolvió una respuesta no válida.');
+    }
+}
+
+async function validarImportacion() {
+    showLoading();
+    try {
+        const res = await llamarImportacion('validarImportacion', filasImportacion);
+        if (!res.ok) {
+            Swal.fire('No se pudo validar', res.mensaje || 'Error desconocido', 'error');
+            return;
+        }
+        previewImportacion = res.filas;
+        renderPreviewImportacion(res.resumen);
+    } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+function renderPreviewImportacion(resumen) {
+    const badges = {
+        OK: '<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">OK</span>',
+        SIN_CAMBIOS: '<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700">Sin cambios</span>',
+        ERROR: '<span class="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Error</span>'
+    };
+
+    const resumenEl = document.getElementById('resumenImportacion');
+    resumenEl.innerHTML = `
+        <span class="px-3 py-1 rounded-lg bg-green-100 text-green-800"><i class="fas fa-check-circle mr-1"></i>${resumen.ok} para actualizar</span>
+        <span class="px-3 py-1 rounded-lg bg-gray-200 text-gray-700"><i class="fas fa-minus-circle mr-1"></i>${resumen.sin_cambios} sin cambios</span>
+        <span class="px-3 py-1 rounded-lg bg-red-100 text-red-800"><i class="fas fa-times-circle mr-1"></i>${resumen.error} con error</span>`;
+    resumenEl.classList.remove('hidden');
+
+    // Primero los errores, después los OK y al final los sin cambios
+    const orden = { ERROR: 0, OK: 1, SIN_CAMBIOS: 2 };
+    const filas = [...previewImportacion].sort((a, b) => orden[a.estado] - orden[b.estado] || a.fila - b.fila);
+
+    const cuerpo = filas.map(r => `
+        <tr class="${r.estado === 'ERROR' ? 'bg-red-50' : ''}">
+            <td class="px-3 py-2 text-gray-500">${r.fila}</td>
+            <td class="px-3 py-2 font-mono">${escaparHtml(r.COD_ARTICU)}</td>
+            <td class="px-3 py-2">${escaparHtml(r.DESCRIPCIO)}</td>
+            <td class="px-3 py-2">${escaparHtml(r.RUBRO)}</td>
+            <td class="px-3 py-2">${escaparHtml(r.CATEGORIA_ACTUAL)}<div class="text-xs text-gray-500">${escaparHtml(r.CATEGORIA_PADRE_ACTUAL)}</div></td>
+            <td class="px-3 py-2 font-medium">${escaparHtml(r.CATEGORIA_NUEVA || r.CATEGORIA_EXCEL)}<div class="text-xs text-gray-500">${escaparHtml(r.CATEGORIA_PADRE_NUEVA || r.CATEGORIA_PADRE_EXCEL)}</div></td>
+            <td class="px-3 py-2">${badges[r.estado]}</td>
+            <td class="px-3 py-2 text-xs">${escaparHtml(r.mensaje)}</td>
+        </tr>`).join('');
+
+    const preview = document.getElementById('previewImportacion');
+    preview.innerHTML = `
+        <table class="w-full text-left text-sm">
+            <thead class="sticky top-0 bg-gray-100">
+                <tr>
+                    <th class="px-3 py-2">Fila</th>
+                    <th class="px-3 py-2">Código</th>
+                    <th class="px-3 py-2">Descripción</th>
+                    <th class="px-3 py-2">Rubro</th>
+                    <th class="px-3 py-2">Categoría / Padre actual</th>
+                    <th class="px-3 py-2">Categoría / Padre nueva</th>
+                    <th class="px-3 py-2">Estado</th>
+                    <th class="px-3 py-2">Detalle</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">${cuerpo}</tbody>
+        </table>`;
+    preview.classList.remove('hidden');
+
+    document.getElementById('btnErroresImportacion').classList.toggle('hidden', resumen.error === 0);
+    document.getElementById('btnAplicarImportacion').disabled = resumen.ok === 0;
+}
+
+async function aplicarImportacion() {
+    const aActualizar = previewImportacion.filter(r => r.estado === 'OK');
+    if (!aActualizar.length) return;
+
+    const confirmacion = await Swal.fire({
+        title: '¿Aplicar cambios?',
+        html: `Se va a cambiar la categoría de <b>${aActualizar.length}</b> artículo(s).` +
+              (previewImportacion.length > aActualizar.length ? '<br>Las filas con error o sin cambios no se tocan.' : ''),
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, aplicar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#047857'
+    });
+    if (!confirmacion.isConfirmed) return;
+
+    // Se reenvían los datos originales del Excel: el servidor vuelve a validar todo
+    const filas = aActualizar.map(r => ({
+        fila: r.fila,
+        COD_ARTICU: r.COD_ARTICU,
+        CATEGORIA: r.CATEGORIA_EXCEL,
+        CATEGORIA_PADRE: r.CATEGORIA_PADRE_EXCEL
+    }));
+
+    showLoading();
+    try {
+        const res = await llamarImportacion('aplicarImportacion', filas);
+        hideLoading();
+
+        if (!res.ok) {
+            Swal.fire('No se aplicaron cambios', res.mensaje || 'Error desconocido', 'error');
+            return;
+        }
+
+        const rechazadas = (res.errores || []).length;
+        await Swal.fire({
+            title: 'Categorías actualizadas',
+            html: `Se actualizaron <b>${res.actualizados}</b> artículo(s).` +
+                  (rechazadas ? `<br>${rechazadas} fila(s) no pasaron la validación final y no se modificaron.` : '') +
+                  (res.maestro_actualizado
+                      ? '<br><br>El maestro de categorías ya está actualizado. Las demás bases se actualizan con la próxima corrida de maestros.'
+                      : '<br><br><b>Los cambios quedaron grabados</b>, pero no se pudo regenerar el maestro: se van a ver cuando corra la próxima actualización de maestros.'),
+            icon: res.maestro_actualizado ? 'success' : 'warning'
+        });
+        cerrarModalImportacion();
+    } catch (err) {
+        hideLoading();
+        Swal.fire('Error', err.message, 'error');
+    }
+}
+
+function descargarErroresImportacion() {
+    const errores = previewImportacion.filter(r => r.estado === 'ERROR');
+    if (!errores.length) return;
+
+    const ws = XLSX.utils.aoa_to_sheet([
+        ['FILA', 'COD_ARTICU', 'CATEGORIA', 'CATEGORIA_PADRE', 'RUBRO', 'CATEGORIA_ACTUAL', 'ERROR'],
+        ...errores.map(r => [r.fila, r.COD_ARTICU, r.CATEGORIA_EXCEL, r.CATEGORIA_PADRE_EXCEL, r.RUBRO, r.CATEGORIA_ACTUAL, r.mensaje])
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Errores');
+    XLSX.writeFile(wb, 'ErroresReasignacionCategorias.xlsx');
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('archivoImportacion');
+    if (input) {
+        input.addEventListener('change', e => leerExcelImportacion(e.target.files[0]));
+    }
+
+    const modal = document.getElementById('modalImportacion');
+    if (modal) {
+        modal.addEventListener('click', function (e) {
+            if (e.target === this) cerrarModalImportacion();
+        });
+    }
+});

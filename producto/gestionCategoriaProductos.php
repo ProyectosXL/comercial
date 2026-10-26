@@ -58,7 +58,10 @@
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-    
+
+    <!-- SheetJS (lectura del Excel de reasignación de categorías) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
     <!-- Bootstrap for tooltips -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -136,6 +139,11 @@
                             <button onclick="abrirModalCategoria()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 hover-lift flex items-center gap-2">
                                 <i class="fas fa-plus"></i>
                                 Agregar Nueva Categoría
+                            </button>
+
+                            <button onclick="abrirModalImportacion()" class="px-6 py-3 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-all duration-200 hover-lift flex items-center gap-2">
+                                <i class="fas fa-file-excel"></i>
+                                Reasignar Categorías (Excel)
                             </button>
                         </div>
                     </div>
@@ -370,6 +378,54 @@
                 <button onclick="agregarRubro()" class="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 hover-lift">
                     <i class="fas fa-plus mr-2"></i>
                     Agregar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Reasignación de Categorías por Excel -->
+    <div id="modalImportacion" class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl p-8 w-full max-w-6xl mx-4 shadow-2xl flex flex-col" style="max-height: 90vh;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                    <i class="fas fa-file-excel text-emerald-700"></i>
+                    Reasignar Categorías de Artículos
+                </h3>
+                <button onclick="cerrarModalImportacion()" class="text-gray-400 hover:text-gray-600 hover:scale-110 transition-all">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="bg-gray-50 border rounded-lg p-4 text-sm text-gray-700 mb-4">
+                Subí un Excel con las columnas <b>COD_ARTICU</b>, <b>CATEGORIA</b> y <b>CATEGORIA_PADRE</b>.
+                La categoría tiene que existir y estar activa en el rubro del artículo. Si dejás vacía la categoría padre, se toma la de la codificación.
+                Solo aplica a códigos de la codificación nueva (sin guion). Los cambios quedan como corrección y se regenera el maestro de categorías al aplicar.
+                <a href="#" onclick="descargarPlantillaImportacion(); return false;" class="text-blue-600 hover:underline ml-1">
+                    <i class="fas fa-download"></i> Descargar plantilla
+                </a>
+            </div>
+
+            <div class="mb-4">
+                <input type="file" id="archivoImportacion" accept=".xlsx,.xls,.csv"
+                    class="block w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-emerald-700 file:text-white hover:file:bg-emerald-800">
+            </div>
+
+            <div id="resumenImportacion" class="hidden flex flex-wrap gap-3 mb-3 text-sm"></div>
+
+            <div id="previewImportacion" class="hidden flex-1 min-h-0 overflow-auto border rounded-lg custom-scrollbar" style="min-height: 120px;"></div>
+
+            <div class="flex flex-wrap gap-3 mt-6 justify-end">
+                <button onclick="cerrarModalImportacion()" class="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all duration-200">
+                    <i class="fas fa-times mr-2"></i>
+                    Cancelar
+                </button>
+                <button id="btnErroresImportacion" onclick="descargarErroresImportacion()" class="px-4 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-200 hidden">
+                    <i class="fas fa-file-download mr-2"></i>
+                    Descargar errores
+                </button>
+                <button id="btnAplicarImportacion" onclick="aplicarImportacion()" disabled class="px-4 py-3 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-check mr-2"></i>
+                    Aplicar cambios
                 </button>
             </div>
         </div>
