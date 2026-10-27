@@ -399,7 +399,7 @@
             <div class="bg-gray-50 border rounded-lg p-4 text-sm text-gray-700 mb-4">
                 Subí un Excel con las columnas <b>COD_ARTICU</b>, <b>CATEGORIA</b> y <b>CATEGORIA_PADRE</b>.
                 La categoría tiene que existir y estar activa en el rubro del artículo. Si dejás vacía la categoría padre, se toma la de la codificación.
-                Solo aplica a códigos de la codificación nueva (sin guion). Los cambios quedan como corrección y se regenera el maestro de categorías al aplicar.
+                Solo aplica a códigos de la codificación nueva (sin guion). Los cambios quedan como corrección para Argentina y Uruguay, y se regeneran los maestros de categorías al aplicar.
                 <a href="#" onclick="descargarPlantillaImportacion(); return false;" class="text-blue-600 hover:underline ml-1">
                     <i class="fas fa-download"></i> Descargar plantilla
                 </a>

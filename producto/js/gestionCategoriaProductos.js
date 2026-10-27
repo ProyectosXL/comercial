@@ -1062,14 +1062,16 @@ async function aplicarImportacion() {
         }
 
         const rechazadas = (res.errores || []).length;
+        const maestros = res.maestro_actualizado || {};
+        const pendientes = [['AR', 'Argentina'], ['UY', 'Uruguay']].filter(([k]) => !maestros[k]).map(([, pais]) => pais);
         await Swal.fire({
             title: 'Categorías actualizadas',
-            html: `Se actualizaron <b>${res.actualizados}</b> artículo(s).` +
+            html: `Se actualizaron <b>${res.actualizados}</b> artículo(s) para Argentina y Uruguay.` +
                   (rechazadas ? `<br>${rechazadas} fila(s) no pasaron la validación final y no se modificaron.` : '') +
-                  (res.maestro_actualizado
-                      ? '<br><br>El maestro de categorías ya está actualizado. Las demás bases se actualizan con la próxima corrida de maestros.'
-                      : '<br><br><b>Los cambios quedaron grabados</b>, pero no se pudo regenerar el maestro: se van a ver cuando corra la próxima actualización de maestros.'),
-            icon: res.maestro_actualizado ? 'success' : 'warning'
+                  (pendientes.length === 0
+                      ? '<br><br>Los maestros de categorías ya están actualizados. Las demás bases se actualizan con la próxima corrida de maestros.'
+                      : `<br><br><b>Los cambios quedaron grabados</b>, pero no se pudo regenerar el maestro de ${pendientes.join(' y ')}: se va a ver cuando corra la próxima actualización de maestros.`),
+            icon: pendientes.length === 0 ? 'success' : 'warning'
         });
         cerrarModalImportacion();
     } catch (err) {

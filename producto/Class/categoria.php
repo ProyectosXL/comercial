@@ -484,15 +484,19 @@ class Categoria
             'actualizados'        => count($aActualizar),
             'sin_cambios'         => $validacion['resumen']['sin_cambios'],
             'errores'             => $rechazadas,
-            'maestro_actualizado' => $this->regenerarMaestroCategorias()
+            'maestro_actualizado' => [
+                'AR' => $this->regenerarMaestroCategorias('LAKER_SA'),
+                'UY' => $this->regenerarMaestroCategorias('TASKY_SA')
+            ]
         ];
     }
 
-    // Regenera SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA en LAKER_SA para que el cambio se vea enseguida.
-    // Las demás bases las actualiza el job "PROY - ACTUALIZAR MAESTROS". Si falla, la corrección ya quedó grabada.
-    private function regenerarMaestroCategorias() {
+    // Regenera SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA de Argentina (LAKER_SA) o Uruguay (TASKY_SA, cuya vista
+    // también lee la AUX de LAKER_SA) para que el cambio se vea enseguida. Las demás bases las actualiza el job
+    // "PROY - ACTUALIZAR MAESTROS". Si falla, la corrección ya quedó grabada.
+    private function regenerarMaestroCategorias($base) {
         try {
-            $stmt = $this->ejecutar("EXEC RO_SP_SOF_MAESTRO_ARTICULOS_RUBRO_CATEGORIA", []);
+            $stmt = $this->ejecutar("EXEC $base.dbo.RO_SP_SOF_MAESTRO_ARTICULOS_RUBRO_CATEGORIA", []);
             // Recorrer todos los resultados para que el SP termine y aparezcan sus errores
             while (($siguiente = sqlsrv_next_result($stmt)) === true);
             if ($siguiente === false) {
@@ -500,7 +504,7 @@ class Categoria
             }
             return true;
         } catch (\Throwable $th) {
-            error_log("Error en regenerarMaestroCategorias: " . print_r($th, true));
+            error_log("Error en regenerarMaestroCategorias($base): " . print_r($th, true));
             return false;
         }
     }
