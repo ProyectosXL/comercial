@@ -90,6 +90,7 @@ function obtenerNombreYLegajoDistExp($codVendedor, $connCentral, $connCorp) {
         $legajo = $extractedLegajo;
     }
 
+    // 2. Intentar en RRHH (RO_LEGAJOS_PERSONAL_ALL para incluir también personal administrativo/refuerzos)
     if ($connCorp) {
         $numVendedor = $codVendedor;
         if (strpos($codVendedor, 'L') === 0 && is_numeric(substr($codVendedor, 1))) {
@@ -99,7 +100,7 @@ function obtenerNombreYLegajoDistExp($codVendedor, $connCentral, $connCorp) {
         $searchLegajo = is_numeric($extractedLegajo) ? intval($extractedLegajo) : (is_numeric($numVendedor) ? intval($numVendedor) : -1);
 
         $sqlCorp = "SELECT TOP 1 NRO_LEGAJO, APELLIDO, NOMBRE, BLOQUE
-                    FROM RO_LEGAJOS_PERSONAL
+                    FROM RO_LEGAJOS_PERSONAL_ALL
                     WHERE NRO_LEGAJO = ? 
                        OR BLOQUE = ? 
                        OR 'L' + CAST(NRO_LEGAJO AS VARCHAR) = ? 
