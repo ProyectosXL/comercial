@@ -92,9 +92,19 @@ class Pedido
             SELECT p.*, ISNULL(cl.GRUPO_EMPR, '') AS GRUPO_EMPR
             FROM RO_V_EFICIENCIA_PEDIDOS p
             LEFT JOIN GVA14 cl ON p.COD_CLIENT = cl.COD_CLIENT
-            WHERE p.ESTADO LIKE '%$estado%'
-            AND p.TIPO LIKE '%$tipo%'
+            WHERE 1 = 1
         ";
+
+        // Solo se filtra por estado/tipo si se eligió un valor concreto ("Todos" = '%').
+        // Así no se descartan filas con ESTADO/TIPO en NULL (NULL LIKE '%' no da verdadero).
+        $estado = str_replace("'", "''", (string)$estado);
+        $tipo = str_replace("'", "''", (string)$tipo);
+        if ($estado !== '' && $estado !== '%') {
+            $sql .= " AND p.ESTADO = '$estado'";
+        }
+        if ($tipo !== '' && $tipo !== '%') {
+            $sql .= " AND p.TIPO = '$tipo'";
+        }
 
         // Si se busca por nro de pedido se ignora el rango de fechas
         if ($nroPedido !== '') {

@@ -180,6 +180,11 @@ if ($isARG && file_exists($accesoRastreo)) {
                                         <option value="%" <?= ($tipo == '%') ? 'selected' : '' ?>>Todos</option>
                                         <option value="REPOSICION" <?= ($tipo == 'REPOSICION') ? 'selected' : '' ?>>Reposición</option>
                                         <option value="DISTRIBUCION" <?= ($tipo == 'DISTRIBUCION') ? 'selected' : '' ?>>Distribución</option>
+                                        <option value="RECODIFICACIONES" <?= ($tipo == 'RECODIFICACIONES') ? 'selected' : '' ?>>Recodificaciones</option>
+                                        <option value="ECOMMERCE" <?= ($tipo == 'ECOMMERCE') ? 'selected' : '' ?>>Ecommerce</option>
+                                        <option value="DEVOLUCIONES" <?= ($tipo == 'DEVOLUCIONES') ? 'selected' : '' ?>>Devoluciones</option>
+                                        <option value="FABRICA" <?= ($tipo == 'FABRICA') ? 'selected' : '' ?>>Fábrica</option>
+                                        <option value="OTROS"<?= ($tipo == 'OTROS') ? 'selected' : '' ?>>Otros</option>
                                     </select>
                                 </div>
                                 <div class="col-lg-2 col-md-6">
