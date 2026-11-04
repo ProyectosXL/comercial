@@ -1,0 +1,198 @@
+/* ==========================================================================
+   Stock por Rubro - XL Gestión
+   Diseño moderno, limpio y profesional
+   ========================================================================== */
+
+:root {
+    --primary-color: #0d6efd;
+    --primary-hover: #0b5ed7;
+    --surface-bg: #f8fafc;
+    --card-border: #e2e8f0;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+}
+
+body {
+    background-color: var(--surface-bg);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--text-main);
+}
+
+.main-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Page Header */
+.page-header {
+    border-color: var(--card-border) !important;
+}
+
+.header-icon-box {
+    width: 52px;
+    height: 52px;
+    background-color: #eff6ff;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Control Card */
+.control-card {
+    border-radius: 14px;
+    border: 1px solid var(--card-border) !important;
+}
+
+.custom-select {
+    border-radius: 10px;
+    border-color: #cbd5e1;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.custom-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+
+.custom-switch .form-check-input {
+    width: 2.75rem;
+    height: 1.4rem;
+    cursor: pointer;
+}
+
+.custom-switch .form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+
+/* KPI Cards */
+.kpi-card {
+    border-radius: 12px;
+    border: 1px solid var(--card-border) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05) !important;
+}
+
+.kpi-icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+/* Table Card */
+#tableCard {
+    border-radius: 14px;
+    border: 1px solid var(--card-border) !important;
+    overflow: hidden;
+}
+
+.search-table-box {
+    min-width: 260px;
+}
+
+.custom-table {
+    margin-bottom: 0;
+}
+
+.custom-table thead th {
+    background-color: #f1f5f9;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--card-border);
+    user-select: none;
+}
+
+.custom-table tbody td {
+    padding: 12px 14px;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.custom-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+/* Badges */
+.badge-stock {
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 8px;
+    min-width: 42px;
+    display: inline-block;
+}
+
+.badge-stock-positive {
+    background-color: #dcfce7;
+    color: #15803d;
+}
+
+.badge-stock-zero {
+    background-color: #f1f5f9;
+    color: #94a3b8;
+}
+
+.badge-sale {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 3px 6px;
+    border-radius: 4px;
+}
+
+.badge-destino {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.precio-anterior {
+    text-decoration: line-through;
+    color: #94a3b8;
+    font-size: 0.78rem;
+    display: block;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.sort-icon {
+    font-size: 0.75rem;
+}
+
+.empty-icon {
+    animation: floatIcon 3s ease-in-out infinite;
+}
+
+@keyframes floatIcon {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+@media (max-width: 768px) {
+    .search-table-box {
+        width: 100%;
+    }
+}

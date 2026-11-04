@@ -1,0 +1,133 @@
+
+body {
+    background-color: #f8f9fa;
+}
+@media (min-width: 768px) {
+    .container {
+        max-width: 500px;
+        max-height: 650px;
+        margin: 0 auto;
+    }
+}
+.card {
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 10px;
+}
+.form-control, .btn {
+    border-radius: 10px;
+}
+.navbar {
+    background-color: #007bff;
+    color: white;
+}
+.input-group-text {
+    background-color: transparent;
+    border: none;
+    position: absolute;
+    right: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    cursor: pointer;
+}
+.input-group {
+    position: relative;
+}
+.list-group-item{
+    font-size:14px;
+    padding: 0.5rem 1rem;
+}
+.thead{
+    font-size: 13px;
+}
+#tbodyStockPrecio {
+    font-size: 11px;
+}
+.estado-badge {
+    font-size: 0.8em;
+    padding: 0.4em 0.4em;
+    position: absolute;
+    top: 4.4rem;
+    right: 1rem;
+    z-index: 10;
+    background-color: #dc3545;
+}
+
+/* Nuevos estilos para las etiquetas de precio */
+.precio-label {
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.form-control-plaintext {
+    min-width: 100px;
+    max-width: 70%;
+    width: auto;
+    padding: 0;
+    text-overflow: ellipsis;
+    white-space: normal;
+}
+
+#descripcion {
+    max-width: 75%;
+    white-space: normal;
+    text-align: right;
+    height: auto;
+    font-size: 13px;
+}
+
+/* Ajustar el tamaño del texto en la tabla para que quepa mejor */
+table.table th, table.table td {
+    padding: 0.4rem;
+    white-space: nowrap;
+}
+
+/* Se usa en vez de style="display:none" porque .d-flex de Bootstrap trae !important
+   y pisaría un display inline normal */
+.oculto {
+    display: none !important;
+}
+
+/* Jerarquía: el precio final es el dato más importante de la tarjeta */
+#filaPrecioFinal input#precio {
+    font-size: 16px;
+    font-weight: 600;
+    color: #212529;
+}
+
+/* En rebaja se pinta toda la fila: la etiqueta (texto suelto del li) y el valor.
+   El input necesita su propia regla porque no hereda el color del contenedor. */
+#filaPrecioFinal.en-liquidacion,
+#filaPrecioFinal.en-liquidacion input#precio {
+    color: #dc3545;
+}
+
+/* Precio anterior tachado. La negrita va tanto en la etiqueta (texto suelto del li)
+   como en el valor, porque el input no hereda el font-weight del contenedor. */
+#filaPrecioAnterior,
+.precio-anterior {
+    font-weight: 700;
+}
+
+.precio-anterior {
+    text-decoration: line-through;
+    color: #6c757d;
+    font-size: 12px;
+}
+
+/* Fila de variante en liquidación: tinte sutil, sin abusar de color */
+#tbodyStockPrecio tr.fila-liquidacion {
+    background-color: rgba(220, 53, 69, 0.06);
+}
+
+#tbodyStockPrecio tr.fila-liquidacion td:last-child .en-liquidacion {
+    color: #dc3545;
+    font-weight: 600;
+    display: block;
+}
+
+/* Variantes sin stock: atenuadas para que resalten las que sí tienen */
+#tbodyStockPrecio tr.fila-sin-stock {
+    color: #adb5bd;
+}
