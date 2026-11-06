@@ -895,6 +895,98 @@ class Articulo
     }
 
     /**
+     * Obtener categorías padre para filtro
+     */
+    public function obtenerCategoriasPadre()
+    {
+        try {
+            $base = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy') ? 'SUCURSALES_URUGUAY' : 'LOCALES_LAKERS';
+
+            if ($base == 'SUCURSALES_URUGUAY') {
+                return [];
+            }
+
+            $sql = "SELECT DISTINCT(CATEGORIA_PADRE) AS CATEGORIA_PADRE 
+                    FROM [XL-LAKERBIS].$base.DBO.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
+                    WHERE CATEGORIA_PADRE IS NOT NULL
+                    AND CATEGORIA_PADRE != ''
+                    ORDER BY CATEGORIA_PADRE";
+
+            error_log("SQL categorías padre: " . $sql);
+
+            $resultados = $this->retornarArray($sql);
+
+            error_log("Categorías padre encontradas: " . count($resultados));
+
+            return $resultados;
+
+        } catch (Exception $e) {
+            error_log("Error en obtenerCategoriasPadre: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Obtener categorías padre filtradas por rubro(s)
+     */
+    public function obtenerCategoriasPadrePorRubro($rubros = [])
+    {
+        try {
+            error_log("=== obtenerCategoriasPadrePorRubro INICIADO ===");
+            error_log("Rubros recibidos: " . json_encode($rubros));
+
+            if (!$this->cid_central) {
+                error_log("ERROR: Conexión cid_central es NULL");
+                return [];
+            }
+
+            $base = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy') ? 'SUCURSALES_URUGUAY' : 'LOCALES_LAKERS';
+
+            if ($base == 'SUCURSALES_URUGUAY') {
+                return [];
+            }
+
+            if (empty($rubros) || in_array('%', $rubros) || in_array('', $rubros)) {
+                return $this->obtenerCategoriasPadre();
+            }
+
+            $rubroConditions = [];
+            foreach ($rubros as $rubro) {
+                if (!empty($rubro) && $rubro !== '%') {
+                    $rubroEscapado = $this->escapeSqlString($rubro);
+                    $rubroConditions[] = "RUBRO = '$rubroEscapado'";
+                }
+            }
+
+            if (empty($rubroConditions)) {
+                return $this->obtenerCategoriasPadre();
+            }
+
+            $rubroWhere = "(" . implode(" OR ", $rubroConditions) . ")";
+
+            $sql = "SELECT DISTINCT(CATEGORIA_PADRE) AS CATEGORIA_PADRE 
+                    FROM [XL-LAKERBIS].$base.DBO.SOF_T_MAESTRO_ARTICULOS_RUBRO_CATEGORIA
+                    WHERE CATEGORIA_PADRE IS NOT NULL
+                    AND CATEGORIA_PADRE != ''
+                    AND $rubroWhere
+                    ORDER BY CATEGORIA_PADRE";
+
+            error_log("SQL categorías padre por rubro: " . $sql);
+
+            $resultados = $this->retornarArray($sql);
+
+            error_log("Categorías padre por rubro encontradas: " . count($resultados));
+
+            return $resultados;
+
+        } catch (Exception $e) {
+            error_log("EXCEPCIÓN en obtenerCategoriasPadrePorRubro: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
+            return [];
+        }
+    }
+
+    /**
      * Metodo optimizado para DataTables Server-Side
      */
     public function traerProductosPaginados($whereFilters, $globalSearch, $orderCol, $orderDir, $start, $length)

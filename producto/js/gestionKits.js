@@ -1,4 +1,3 @@
-
 // ===== VARIABLES GLOBALES =====
 let articulosTemporales = [];
 let dataTableKits = null;
@@ -147,10 +146,28 @@ function inicializarEventos() {
         toggleKit(id, inhabilitar);
     });
 
+    // Event delegation para botón de modificar en DataTable
+    $('#tableKits').on('click', '.btn-modificar-kit', function(e) {
+        e.preventDefault();
+        $('[data-bs-toggle="tooltip"]').tooltip('hide');
+        const rowData = dataTableKits.row($(this).closest('tr')).data();
+        if (rowData) {
+            abrirModalModificar(rowData);
+        }
+    });
+
+    // Cerrar modal al hacer clic en el backdrop
+    $('#modalModificarKit').on('click', function(e) {
+        if (e.target === this) {
+            cerrarModalModificar();
+        }
+    });
+
     // Escape para cerrar modales
     $(document).on('keydown', function(e) {
         if (e.key === 'Escape') {
             cerrarModalLoading();
+            cerrarModalModificar();
         }
     });
 }
@@ -525,12 +542,19 @@ function inicializarDataTable() {
                     const inhabilitar = !esHabilitado ? 0 : 1;
 
                     return `
-                        <button class="btn-action ${btnClass} text-white btn-toggle-kit" 
-                                data-id="${row.ID}" 
-                                data-inhabilitar="${inhabilitar}"
-                                data-bs-toggle="tooltip" title="${btnTitle}">
-                            <i class="fas ${btnIcon}"></i>
-                        </button>
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button class="btn-action bg-blue-600 hover:bg-blue-700 text-white btn-modificar-kit" 
+                                    data-id="${row.ID}"
+                                    data-bs-toggle="tooltip" title="Modificar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-action ${btnClass} text-white btn-toggle-kit" 
+                                    data-id="${row.ID}" 
+                                    data-inhabilitar="${inhabilitar}"
+                                    data-bs-toggle="tooltip" title="${btnTitle}">
+                                <i class="fas ${btnIcon}"></i>
+                            </button>
+                        </div>
                     `;
                 }
             }
@@ -647,6 +671,167 @@ function actualizarEstadisticas(data, total) {
     $('#statHabilitados').text(habilitados);
     $('#statInhabilitados').text(inhabilitados);
     $('#statKitsUnicos').text(kitsUnicos.size);
+}
+
+// ===== GESTIÓN DE MODIFICACIÓN DE KIT =====
+let idKitModificando = null;
+
+function inicializarSelect2Modificar() {
+    if ($('#modalSelectArticulo').hasClass('select2-hidden-accessible')) {
+        return;
+    }
+
+    $('#modalSelectArticulo').select2({
+        dropdownParent: $('#modalModificarKit'),
+        placeholder: 'Buscar artículo por código o descripción...',
+        allowClear: false,
+        minimumInputLength: 1,
+        ajax: {
+            url: 'Controller/KitsController.php?accion=search-articulos',
+            dataType: 'json',
+            delay: 300,
+            data: function (params) {
+                return {
+                    q: params.term
+                };
+            },
+            processResults: function (data) {
+                return {
+                    results: data.results
+                };
+            },
+            cache: true
+        },
+        language: {
+            inputTooShort: function() {
+                return 'Ingrese al menos 1 carácter';
+            },
+            searching: function() {
+                return 'Buscando...';
+            },
+            noResults: function() {
+                return 'No se encontraron resultados';
+            }
+        }
+    });
+
+    $('#modalSelectArticulo').on('select2:select', function(e) {
+        const text = e.params.data.text || '';
+        let desc = text;
+        if (text.includes(' — ')) {
+            desc = text.split(' — ').slice(1).join(' — ');
+        }
+        $('#modalDescripcioDisplay').text(desc);
+    });
+}
+
+function abrirModalModificar(rowData) {
+    idKitModificando = rowData.ID;
+
+    // Poblar datos en el modal
+    $('#modalKitId').val(rowData.ID);
+    $('#modalIdBadge').text('#' + rowData.ID);
+    $('#modalCodKit').val(rowData.COD_KIT);
+    $('#modalMultiplo').val(rowData.MULTIPLO);
+    $('#modalEstado').val(rowData.INHABILITADO);
+    $('#modalDescripcioDisplay').text(rowData.DESCRIPCIO || 'Sin descripción');
+
+    // Mostrar modal
+    $('#modalModificarKit').removeClass('hidden');
+
+    // Inicializar Select2 en caso de no haberlo hecho
+    inicializarSelect2Modificar();
+
+    // Establecer el artículo actual en el Select2
+    const currentOption = new Option(
+        `${rowData.COD_ARTICU} — ${rowData.DESCRIPCIO}`,
+        rowData.COD_ARTICU,
+        true,
+        true
+    );
+    $('#modalSelectArticulo').empty().append(currentOption).trigger('change');
+
+    // Foco en el campo múltiplo para rapidez de edición
+    setTimeout(() => {
+        $('#modalMultiplo').focus().select();
+    }, 150);
+}
+
+function cerrarModalModificar() {
+    $('#modalModificarKit').addClass('hidden');
+    idKitModificando = null;
+}
+
+function guardarModificacionKit() {
+    if (!idKitModificando) {
+        mostrarError('No se ha seleccionado ningún registro para modificar');
+        return;
+    }
+
+    const codKit = $('#modalCodKit').val().trim().toUpperCase();
+    const codArticu = $('#modalSelectArticulo').val();
+    const multiplo = parseInt($('#modalMultiplo').val());
+    const estado = parseInt($('#modalEstado').val());
+
+    if (!codKit) {
+        mostrarError('El código de Kit es obligatorio');
+        $('#modalCodKit').focus();
+        return;
+    }
+
+    if (codKit.length > 15) {
+        mostrarError('El código de Kit no puede superar 15 caracteres');
+        $('#modalCodKit').focus();
+        return;
+    }
+
+    if (!codArticu) {
+        mostrarError('Debe seleccionar un artículo');
+        return;
+    }
+
+    if (!multiplo || multiplo < 1) {
+        mostrarError('El múltiplo debe ser mayor o igual a 1');
+        $('#modalMultiplo').focus();
+        return;
+    }
+
+    mostrarLoading();
+
+    const data = {
+        id: idKitModificando,
+        codKit: codKit,
+        codArticu: codArticu,
+        multiplo: multiplo,
+        inhabilitado: estado
+    };
+
+    fetch('Controller/KitsController.php?accion=update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(res => {
+        cerrarModalLoading();
+
+        if (res.ok) {
+            cerrarModalModificar();
+            mostrarToast(res.message || 'Kit modificado correctamente', 'success');
+            if (dataTableKits) {
+                dataTableKits.ajax.reload(null, false); // Preserva la página actual
+            }
+        } else {
+            mostrarError(res.message || 'Error al modificar kit');
+        }
+    })
+    .catch(error => {
+        cerrarModalLoading();
+        console.error('Error en guardarModificacionKit:', error);
+        mostrarError('Error de comunicación con el servidor: ' + error.message);
+    });
 }
 
 // ===== HELPERS - LOADING =====

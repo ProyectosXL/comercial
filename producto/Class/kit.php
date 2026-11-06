@@ -1,4 +1,3 @@
-
 <?php
 
 class Kit
@@ -513,6 +512,179 @@ class Kit
         } catch (Exception $e) {
             error_log("Error en toggle: " . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Obtener un registro de kit por su ID
+     * @param int $id
+     * @return array|null
+     */
+    public function getById($id) {
+        $sql = "SELECT ID, COD_KIT, COD_ARTICU, DESCRIPCIO, MULTIPLO, INHABILITADO, FECHA_INHA 
+                FROM {$this->nombreTabla} 
+                WHERE ID = ?";
+        
+        try {
+            $stmt = sqlsrv_prepare($this->cid_central, $sql, [(int)$id]);
+            if (!$stmt || !sqlsrv_execute($stmt)) {
+                return null;
+            }
+            
+            $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
+            if (!$row) {
+                return null;
+            }
+            
+            $fechaInha = '';
+            if ($row['FECHA_INHA'] instanceof DateTime) {
+                $fechaInha = $row['FECHA_INHA']->format('d/m/Y H:i');
+            }
+            
+            return [
+                'ID' => (int)$row['ID'],
+                'COD_KIT' => trim($row['COD_KIT']),
+                'COD_ARTICU' => trim($row['COD_ARTICU']),
+                'DESCRIPCIO' => trim($row['DESCRIPCIO']),
+                'MULTIPLO' => (int)$row['MULTIPLO'],
+                'INHABILITADO' => (int)($row['INHABILITADO'] ?? 0),
+                'FECHA_INHA' => $fechaInha
+            ];
+        } catch (Exception $e) {
+            error_log("Error en getById: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Modificar un registro de kit existente
+     * @param int $id
+     * @param string $codKit
+     * @param string $codArticu
+     * @param int $multiplo
+     * @param int|null $inhabilitado
+     * @return array
+     */
+    public function update($id, $codKit, $codArticu, $multiplo, $inhabilitado = null) {
+        $id = (int)$id;
+        $codKit = strtoupper(trim($codKit));
+        $codArticu = strtoupper(trim($codArticu));
+        $multiplo = (int)$multiplo;
+        
+        if ($id <= 0) {
+            return ['ok' => false, 'message' => 'ID de registro inválido'];
+        }
+        if (empty($codKit)) {
+            return ['ok' => false, 'message' => 'El código de Kit es obligatorio'];
+        }
+        if (mb_strlen($codKit) > 15) {
+            return ['ok' => false, 'message' => 'El código de Kit no puede superar 15 caracteres'];
+        }
+        if (empty($codArticu)) {
+            return ['ok' => false, 'message' => 'El código de Artículo es obligatorio'];
+        }
+        if (mb_strlen($codArticu) > 15) {
+            return ['ok' => false, 'message' => 'El código de Artículo no puede superar 15 caracteres'];
+        }
+        if ($multiplo < 1) {
+            return ['ok' => false, 'message' => 'El múltiplo debe ser mayor o igual a 1'];
+        }
+
+        try {
+            // 1. Verificar si el registro existe
+            $sqlExiste = "SELECT ID, COD_KIT, COD_ARTICU, DESCRIPCIO, INHABILITADO, FECHA_INHA 
+                          FROM {$this->nombreTabla} 
+                          WHERE ID = ?";
+            $stmtExiste = sqlsrv_prepare($this->cid_central, $sqlExiste, [$id]);
+            if (!$stmtExiste || !sqlsrv_execute($stmtExiste)) {
+                throw new Exception("Error al verificar existencia del registro");
+            }
+            $actual = sqlsrv_fetch_array($stmtExiste, SQLSRV_FETCH_ASSOC);
+            if (!$actual) {
+                return ['ok' => false, 'message' => 'El registro a modificar no fue encontrado'];
+            }
+
+            // 2. Verificar que no se duplique con otro registro (mismo COD_KIT y COD_ARTICU en ID distinto)
+            $sqlDup = "SELECT COUNT(*) AS TOTAL 
+                       FROM {$this->nombreTabla} 
+                       WHERE COD_KIT = ? AND COD_ARTICU = ? AND ID <> ?";
+            $stmtDup = sqlsrv_prepare($this->cid_central, $sqlDup, [$codKit, $codArticu, $id]);
+            if ($stmtDup && sqlsrv_execute($stmtDup)) {
+                $rowDup = sqlsrv_fetch_array($stmtDup, SQLSRV_FETCH_ASSOC);
+                if ($rowDup && $rowDup['TOTAL'] > 0) {
+                    return [
+                        'ok' => false,
+                        'message' => "Ya existe otro registro con el Kit '{$codKit}' y el Artículo '{$codArticu}'"
+                    ];
+                }
+            }
+
+            // 3. Obtener descripción actualizada de STA11
+            $descripcion = $this->getDescripcionArticulo($codArticu);
+            if (empty($descripcion)) {
+                // Si no se encuentra en STA11, conservar la que ya tenía si el artículo no cambió
+                if ($actual['COD_ARTICU'] === $codArticu && !empty($actual['DESCRIPCIO'])) {
+                    $descripcion = $actual['DESCRIPCIO'];
+                }
+            }
+            if (mb_strlen($descripcion) > 30) {
+                $descripcion = mb_substr($descripcion, 0, 30);
+            }
+
+            // 4. Determinar sentencia UPDATE según estado
+            if ($inhabilitado !== null) {
+                $nuevoInhabilitado = ((int)$inhabilitado === 1) ? 1 : 0;
+                if ($nuevoInhabilitado === 1) {
+                    $sqlUpdate = "UPDATE {$this->nombreTabla} 
+                                  SET COD_KIT = ?, 
+                                      COD_ARTICU = ?, 
+                                      DESCRIPCIO = ?, 
+                                      MULTIPLO = ?, 
+                                      INHABILITADO = 1, 
+                                      FECHA_INHA = ISNULL(FECHA_INHA, GETDATE()) 
+                                  WHERE ID = ?";
+                } else {
+                    $sqlUpdate = "UPDATE {$this->nombreTabla} 
+                                  SET COD_KIT = ?, 
+                                      COD_ARTICU = ?, 
+                                      DESCRIPCIO = ?, 
+                                      MULTIPLO = ?, 
+                                      INHABILITADO = 0, 
+                                      FECHA_INHA = NULL 
+                                  WHERE ID = ?";
+                }
+                $params = [$codKit, $codArticu, $descripcion, $multiplo, $id];
+            } else {
+                $sqlUpdate = "UPDATE {$this->nombreTabla} 
+                              SET COD_KIT = ?, 
+                                  COD_ARTICU = ?, 
+                                  DESCRIPCIO = ?, 
+                                  MULTIPLO = ? 
+                              WHERE ID = ?";
+                $params = [$codKit, $codArticu, $descripcion, $multiplo, $id];
+            }
+
+            $stmtUpdate = sqlsrv_prepare($this->cid_central, $sqlUpdate, $params);
+            if (!$stmtUpdate) {
+                throw new Exception("Error al preparar la actualización: " . print_r(sqlsrv_errors(), true));
+            }
+
+            $result = sqlsrv_execute($stmtUpdate);
+            if (!$result) {
+                throw new Exception("Error al ejecutar la actualización: " . print_r(sqlsrv_errors(), true));
+            }
+
+            return [
+                'ok' => true,
+                'message' => 'Kit modificado correctamente'
+            ];
+
+        } catch (Exception $e) {
+            error_log("Error en update: " . $e->getMessage());
+            return [
+                'ok' => false,
+                'message' => 'Error al modificar kit: ' . $e->getMessage()
+            ];
         }
     }
 }

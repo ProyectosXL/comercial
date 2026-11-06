@@ -31,16 +31,9 @@ function buildCondition($values, $fieldName)
 try {
     $rubros = isset($_POST['rubro']) ? $_POST['rubro'] : [];
     $categorias = isset($_POST['categoria']) ? $_POST['categoria'] : [];
+    $categoriaPadre = isset($_POST['categoria_padre']) ? $_POST['categoria_padre'] : [];
     $temporadas = isset($_POST['temporada']) ? $_POST['temporada'] : [];
     $destinos = isset($_POST['destino']) ? $_POST['destino'] : [];
-
-    $conds = [];
-    $conds[] = buildCondition($rubros, 'A.Rubro');
-    $conds[] = buildCondition($categorias, 'A.Categoria');
-    $conds[] = buildCondition($temporadas, 'A.Temporada');
-    $conds[] = buildCondition($destinos, 'A.Destino');
-    $where = implode(" AND ", $conds);
-
 
     // Iniciar sesión si no está iniciada para leer la variable de entorno
     if (session_status() === PHP_SESSION_NONE) {
@@ -49,6 +42,16 @@ try {
 
     // Determinar la base de datos según el entorno
     $base = (isset($_SESSION['entorno']) && $_SESSION['entorno'] == 'uy') ? 'SUCURSALES_URUGUAY' : 'LOCALES_LAKERS';
+
+    $conds = [];
+    $conds[] = buildCondition($rubros, 'A.Rubro');
+    $conds[] = buildCondition($categorias, 'A.Categoria');
+    if ($base !== 'SUCURSALES_URUGUAY') {
+        $conds[] = buildCondition($categoriaPadre, 'B.CATEGORIA_PADRE');
+    }
+    $conds[] = buildCondition($temporadas, 'A.Temporada');
+    $conds[] = buildCondition($destinos, 'A.Destino');
+    $where = implode(" AND ", $conds);
 
     // ==============================================================================
     // ¡AQUÍ ESTÁ LA CORRECCIÓN!

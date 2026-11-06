@@ -1,4 +1,3 @@
-
 <?php
     require_once "Class/Kit.php";
 
@@ -132,7 +131,7 @@
                                         <th class="px-4 py-3 text-center">Múltiplo</th>
                                         <th class="px-4 py-3 text-center">Estado</th>
                                         <th class="px-4 py-3 text-center">Fecha Inhab.</th>
-                                        <th class="px-4 py-3 text-center">Acciones</th>
+                                        <th class="px-4 py-3 text-center" style="min-width: 110px;">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -251,6 +250,112 @@
                 </div>
 
             </div>
+        </div>
+    </div>
+
+    <!-- Modal Modificar Kit -->
+    <div id="modalModificarKit" class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden animate-slide-in">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between text-white">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                        <i class="fas fa-edit text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold">Modificar Kit</h3>
+                        <p class="text-xs text-blue-100">ID de registro: <span id="modalIdBadge" class="font-mono font-bold bg-white/20 px-2 py-0.5 rounded">#</span></p>
+                    </div>
+                </div>
+                <button type="button" onclick="cerrarModalModificar()" class="text-white/80 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10" title="Cerrar">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <form id="formModificarKit" onsubmit="event.preventDefault(); guardarModificacionKit();" class="p-6 space-y-4">
+                <input type="hidden" id="modalKitId" value="">
+
+                <!-- Kit (COD_KIT) -->
+                <div>
+                    <label for="modalCodKit" class="block text-sm font-semibold text-gray-700 mb-1">
+                        Código de Kit <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fas fa-box"></i>
+                        </span>
+                        <input type="text" id="modalCodKit" maxlength="15" required
+                               class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm font-mono uppercase focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                               placeholder="Ej: HI VER 26-01B">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Identificador del kit (máximo 15 caracteres)</p>
+                </div>
+
+                <!-- Artículo (Select2) -->
+                <div>
+                    <label for="modalSelectArticulo" class="block text-sm font-semibold text-gray-700 mb-1">
+                        Artículo <span class="text-red-500">*</span>
+                    </label>
+                    <select id="modalSelectArticulo" class="w-full" style="width: 100%">
+                        <!-- Opciones cargadas dinámicamente -->
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Buscar artículo por código o descripción en STA11</p>
+                </div>
+
+                <!-- Descripción del Artículo -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">
+                        Descripción del Artículo
+                    </label>
+                    <div id="modalDescripcioDisplay" class="w-full px-3 py-2.5 rounded-lg bg-gray-100 border border-gray-200 text-gray-700 text-sm flex items-center min-h-[42px]">
+                        <span class="text-gray-400 italic">Sin descripción</span>
+                    </div>
+                </div>
+
+                <!-- Grid: Múltiplo y Estado -->
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Múltiplo -->
+                    <div>
+                        <label for="modalMultiplo" class="block text-sm font-semibold text-gray-700 mb-1">
+                            Múltiplo <span class="text-red-500">*</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                <i class="fas fa-layer-group"></i>
+                            </span>
+                            <input type="number" id="modalMultiplo" min="1" step="1" required
+                                   class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm font-semibold text-center focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                                   placeholder="1">
+                        </div>
+                    </div>
+
+                    <!-- Estado -->
+                    <div>
+                        <label for="modalEstado" class="block text-sm font-semibold text-gray-700 mb-1">
+                            Estado <span class="text-red-500">*</span>
+                        </label>
+                        <select id="modalEstado"
+                                class="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
+                            <option value="0">Habilitado</option>
+                            <option value="1">Inhabilitado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="flex items-center justify-end gap-3 pt-4 border-t mt-6">
+                    <button type="button" onclick="cerrarModalModificar()"
+                            class="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 font-medium text-sm transition-all">
+                        Cancelar
+                    </button>
+                    <button type="submit" id="btnGuardarModificacion"
+                            class="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition-all">
+                        <i class="fas fa-save"></i>
+                        <span>Guardar Cambios</span>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

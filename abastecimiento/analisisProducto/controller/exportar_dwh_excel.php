@@ -32,14 +32,20 @@ try {
     // 1. Recoger los filtros desde GET (la descarga se inicia desde la URL)
     $rubros = isset($_GET['rubro']) ? $_GET['rubro'] : [];
     $categorias = isset($_GET['categoria']) ? $_GET['categoria'] : [];
+    $categoriaPadre = isset($_GET['categoria_padre']) ? $_GET['categoria_padre'] : [];
     $temporadas = isset($_GET['temporada']) ? $_GET['temporada'] : [];
     $destinos = isset($_GET['destino']) ? $_GET['destino'] : [];
     $globalSearch = isset($_GET['search']) ? $_GET['search'] : '';
+
+    $isCentral = (!isset($_SESSION['entorno']) || $_SESSION['entorno'] === 'central');
 
     // 2. Construir la cláusula WHERE
     $conds = [];
     $conds[] = buildCondition($rubros, 'A.Rubro');
     $conds[] = buildCondition($categorias, 'A.Categoria');
+    if ($isCentral) {
+        $conds[] = buildCondition($categoriaPadre, 'B.CATEGORIA_PADRE');
+    }
     $conds[] = buildCondition($temporadas, 'A.Temporada');
     $conds[] = buildCondition($destinos, 'A.Destino');
     if (!empty($globalSearch)) {

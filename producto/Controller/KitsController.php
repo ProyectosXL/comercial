@@ -1,4 +1,3 @@
-
 <?php
 
 // Controller/KitsController.php
@@ -34,6 +33,14 @@ switch ($accion) {
 
     case 'toggle':
         toggleKit();
+        break;
+
+    case 'get-kit-item':
+        getKitItem();
+        break;
+
+    case 'update':
+        updateKit();
         break;
 
     default:
@@ -303,6 +310,91 @@ function toggleKit() {
         echo json_encode([
             'ok' => false,
             'message' => 'Error al actualizar: ' . $e->getMessage()
+        ]);
+    }
+}
+
+/**
+ * Obtener un registro de kit por ID
+ * GET /kits/get-kit-item?id=
+ */
+function getKitItem() {
+    require_once __DIR__.'/../Class/Kit.php';
+    
+    $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+    
+    if ($id <= 0) {
+        echo json_encode(['ok' => false, 'message' => 'ID inválido']);
+        return;
+    }
+    
+    $kit = new Kit();
+    
+    try {
+        $item = $kit->getById($id);
+        if ($item) {
+            echo json_encode(['ok' => true, 'data' => $item]);
+        } else {
+            echo json_encode(['ok' => false, 'message' => 'Registro no encontrado']);
+        }
+    } catch (Exception $e) {
+        error_log("Error en getKitItem: " . $e->getMessage());
+        echo json_encode(['ok' => false, 'message' => $e->getMessage()]);
+    }
+}
+
+/**
+ * Modificar un kit existente
+ * POST /kits/update
+ * Body: { id, codKit, codArticu, multiplo, inhabilitado }
+ */
+function updateKit() {
+    require_once __DIR__.'/../Class/Kit.php';
+    
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+    
+    if (!$data || !isset($data['id'])) {
+        echo json_encode([
+            'ok' => false,
+            'message' => 'Datos inválidos o ID no especificado'
+        ]);
+        return;
+    }
+    
+    $id = (int)$data['id'];
+    $codKit = $data['codKit'] ?? '';
+    $codArticu = $data['codArticu'] ?? '';
+    $multiplo = isset($data['multiplo']) ? (int)$data['multiplo'] : 1;
+    $inhabilitado = isset($data['inhabilitado']) ? (int)$data['inhabilitado'] : null;
+    
+    if ($id <= 0) {
+        echo json_encode(['ok' => false, 'message' => 'ID inválido']);
+        return;
+    }
+    if (empty(trim($codKit))) {
+        echo json_encode(['ok' => false, 'message' => 'El código de kit no puede estar vacío']);
+        return;
+    }
+    if (empty(trim($codArticu))) {
+        echo json_encode(['ok' => false, 'message' => 'El código de artículo no puede estar vacío']);
+        return;
+    }
+    if ($multiplo < 1) {
+        echo json_encode(['ok' => false, 'message' => 'El múltiplo debe ser mayor o igual a 1']);
+        return;
+    }
+    
+    $kit = new Kit();
+    
+    try {
+        $result = $kit->update($id, $codKit, $codArticu, $multiplo, $inhabilitado);
+        echo json_encode($result);
+    } catch (Exception $e) {
+        error_log("Error en updateKit: " . $e->getMessage());
+        echo json_encode([
+            'ok' => false,
+            'message' => 'Error al modificar: ' . $e->getMessage()
         ]);
     }
 }

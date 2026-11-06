@@ -50,6 +50,13 @@ try {
         case 'obtener_categorias_por_rubro':
             obtenerCategoriasPorRubro();
             break;
+        case 'obtener_categorias_padre':
+            obtenerCategoriasPadre();
+            break;
+
+        case 'obtener_categorias_padre_por_rubro':
+            obtenerCategoriasPadrePorRubro();
+            break;
 
         case 'obtener_grupo':
             obtenerGrupo();
@@ -509,6 +516,52 @@ function obtenerCategoriasPorRubro() {
     } catch (Exception $e) {
         error_log("ERROR en controller obtenerCategoriasPorRubro: " . $e->getMessage());
         throw new Exception("Error al obtener categorías por rubro: " . $e->getMessage());
+    }
+}
+
+function obtenerCategoriasPadre() {
+    try {
+        $articulo = new Articulo();
+        $categoriasPadre = $articulo->obtenerCategoriasPadre();
+        
+        echo json_encode([
+            'success' => true,
+            'data' => $categoriasPadre
+        ], JSON_UNESCAPED_UNICODE);
+        
+    } catch (Exception $e) {
+        throw new Exception("Error al obtener categorías padre: " . $e->getMessage());
+    }
+}
+
+function obtenerCategoriasPadrePorRubro() {
+    try {
+        error_log("=== Controller obtenerCategoriasPadrePorRubro INICIADO ===");
+        
+        $rubros = isset($_GET['rubros']) && is_array($_GET['rubros']) ? $_GET['rubros'] : [];
+        
+        error_log("Rubros recibidos en controller: " . json_encode($rubros));
+        
+        $articulo = new Articulo();
+        
+        if (!method_exists($articulo, 'obtenerCategoriasPadrePorRubro')) {
+            error_log("ERROR: Método obtenerCategoriasPadrePorRubro NO existe en clase Articulo");
+            throw new Exception("Método obtenerCategoriasPadrePorRubro no implementado");
+        }
+        
+        $categoriasPadre = $articulo->obtenerCategoriasPadrePorRubro($rubros);
+        
+        error_log("Categorías padre filtradas obtenidas: " . count($categoriasPadre));
+        
+        echo json_encode([
+            'success' => true,
+            'data' => $categoriasPadre,
+            'count' => count($categoriasPadre)
+        ], JSON_UNESCAPED_UNICODE);
+        
+    } catch (Exception $e) {
+        error_log("ERROR en controller obtenerCategoriasPadrePorRubro: " . $e->getMessage());
+        throw new Exception("Error al obtener categorías padre por rubro: " . $e->getMessage());
     }
 }
 

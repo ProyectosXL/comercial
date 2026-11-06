@@ -87,8 +87,13 @@ if ($_SESSION['entorno'] == 'central') {
             min-width: 120px !important;
         }
 
+        #categoria_padre+.select2-container {
+            min-width: 140px !important;
+        }
+
         #temporada+.select2-container .select2-selection--multiple,
-        #destino+.select2-container .select2-selection--multiple {
+        #destino+.select2-container .select2-selection--multiple,
+        #categoria_padre+.select2-container .select2-selection--multiple {
             min-height: 38px;
         }
 
@@ -171,7 +176,7 @@ if ($_SESSION['entorno'] == 'central') {
 
                 <form id="filtroForm" class="row g-3">
                     <!-- Modificar los selectores para incluir opción de NULL -->
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Rubro</label>
                         <select class="form-select" name="rubro[]" id="rubro" multiple="multiple">
                             <option value="NULL">Sin Rubro</option>
@@ -183,10 +188,18 @@ if ($_SESSION['entorno'] == 'central') {
                         </select>
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Categoría</label>
                         <select class="form-select" name="categoria[]" id="categoria" multiple="multiple">
                             <option value="NULL">Sin Categoría</option>
+                            <!-- Se carga dinámicamente -->
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Categoría Padre</label>
+                        <select class="form-select" name="categoria_padre[]" id="categoria_padre" multiple="multiple">
+                            <option value="NULL">Sin Categoría Padre</option>
                             <!-- Se carga dinámicamente -->
                         </select>
                     </div>
@@ -297,7 +310,7 @@ if ($_SESSION['entorno'] == 'central') {
     <script>
         $(document).ready(function () {
             // Inicializar Select2 en los selectores
-            $('#rubro, #categoria, #temporada, #destino').select2({
+            $('#rubro, #categoria, #categoria_padre, #temporada, #destino').select2({
                 theme: 'bootstrap-5',
                 width: '100%',
                 placeholder: 'Seleccionar...',
@@ -312,11 +325,16 @@ if ($_SESSION['entorno'] == 'central') {
             // Cargar todas las categorías inicialmente
             cargarCategorias();
 
+            // Cargar todas las categorías padre inicialmente
+            cargarCategoriasPadre();
+
             // Event listener para cambio en rubro
             $('#rubro').on('change', function () {
                 const rubrosSeleccionados = $(this).val() || [];
                 $('#categoria').val(null).trigger('change');
+                $('#categoria_padre').val(null).trigger('change');
                 cargarCategoriasPorRubro(rubrosSeleccionados);
+                cargarCategoriasPadrePorRubro(rubrosSeleccionados);
             });
 
         });
@@ -337,6 +355,7 @@ if ($_SESSION['entorno'] == 'central') {
             const params = {
                 rubro: $('#rubro').val() || [],
                 categoria: $('#categoria').val() || [],
+                categoria_padre: $('#categoria_padre').val() || [],
                 temporada: $('#temporada').val() || [],
                 destino: $('#destino').val() || [],
                 search: dataTable ? dataTable.search() : '' // Incluye la búsqueda de la tabla
@@ -559,6 +578,94 @@ if ($_SESSION['entorno'] == 'central') {
             // alert(mensaje);
         }
 
+        function cargarCategoriasPadre() {
+            console.log('=== Cargando todas las categorías padre ===');
+
+            $.ajax({
+                url: 'controller/equivalencias_controller.php',
+                method: 'GET',
+                data: { accion: 'obtener_categorias_padre' },
+                dataType: 'json',
+                timeout: 10000,
+                success: function (response) {
+                    console.log('Respuesta categorías padre recibida:', response);
+
+                    if (response.success && response.data) {
+                        actualizarSelectCategoriasPadre(response.data, 'Todas las categorías padre cargadas');
+                    } else {
+                        console.error('Error en respuesta de categorías padre:', response.message || 'Sin mensaje de error');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error al cargar categorías padre:', { xhr, status, error });
+                    mostrarErrorCategoriaPadre('Error al cargar categorías padre');
+                }
+            });
+        }
+
+        function cargarCategoriasPadrePorRubro(rubros) {
+            console.log('=== Cargando categorías padre por rubro ===', rubros);
+
+            if (!rubros || rubros.length === 0) {
+                cargarCategoriasPadre();
+                return;
+            }
+
+            $.ajax({
+                url: 'controller/equivalencias_controller.php',
+                method: 'GET',
+                data: {
+                    accion: 'obtener_categorias_padre_por_rubro',
+                    rubros: rubros
+                },
+                dataType: 'json',
+                timeout: 10000,
+                success: function (response) {
+                    console.log('Respuesta categorías padre por rubro:', response);
+
+                    if (response.success && response.data) {
+                        const mensaje = `Categorías padre filtradas para ${rubros.length} rubro(s)`;
+                        actualizarSelectCategoriasPadre(response.data, mensaje);
+                    } else {
+                        console.error('Error en respuesta de categorías padre por rubro:', response.message);
+                        mostrarErrorCategoriaPadre('Error al filtrar categorías padre');
+                    }
+                },
+                error: function (xhr, status, error) {
+                    console.error('Error al cargar categorías padre por rubro:', { xhr, status, error });
+                    mostrarErrorCategoriaPadre('Error al filtrar categorías padre por rubro');
+                }
+            });
+        }
+
+        function actualizarSelectCategoriasPadre(categoriasPadre, mensaje) {
+            const selectCategoriaPadre = $('#categoria_padre');
+
+            // Limpiar opciones existentes (excepto la primera)
+            selectCategoriaPadre.find('option:not(:first)').remove();
+
+            console.log(mensaje + ':', categoriasPadre.length);
+
+            // Agregar nuevas opciones
+            categoriasPadre.forEach(function (item) {
+                if (item.CATEGORIA_PADRE) {
+                    selectCategoriaPadre.append(`<option value="${item.CATEGORIA_PADRE}">${item.CATEGORIA_PADRE}</option>`);
+                }
+            });
+
+            // Actualizar Select2
+            selectCategoriaPadre.trigger('change');
+
+            // Mostrar mensaje informativo si no hay categorías padre
+            if (categoriasPadre.length === 0) {
+                selectCategoriaPadre.append('<option disabled>No hay categorías padre para los rubros seleccionados</option>');
+            }
+        }
+
+        function mostrarErrorCategoriaPadre(mensaje) {
+            console.error(mensaje);
+        }
+
         let pollingInterval;
 
         // ==============================================================================
@@ -573,6 +680,7 @@ if ($_SESSION['entorno'] == 'central') {
             const postData = {
                 rubro: $('#rubro').val(),
                 categoria: $('#categoria').val(),
+                categoria_padre: $('#categoria_padre').val(),
                 temporada: $('#temporada').val(),
                 destino: $('#destino').val()
             };

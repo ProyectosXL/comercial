@@ -1,11 +1,19 @@
 <?php
-// Personal interno: sesión del hub (centralizadores COMER / ECOMM).
-// Locales: permiso de XL Gestión.
+// Acceso para cualquier usuario con sesión iniciada (personal interno del hub
+// o locales de XL Gestión). Sin sesión, Auth::exigir() manda al login con
+// ?next= para volver a esta herramienta después de ingresar (antes se usaba el
+// bootstrap de XL Gestión, que redirigía al login sin "next" y el usuario
+// terminaba en su pantalla de inicio en lugar de acá).
 require_once __DIR__ . '/../../../sistemas/hub/Class/bootstrap.php';
-if (!Auth::check()) {
-    require_once __DIR__ . '/../../../sistemas/xlgestion/bootstrap.php';
-    Permisos::requiere('consultas.stock_articulo');
-}
+
+// La intranet (intranet.xl.com.ar) embebe esta herramienta en un iframe.
+// El bootstrap del hub manda X-Frame-Options: SAMEORIGIN, que hace que el
+// navegador rechace la conexión desde otro subdominio: se reemplaza por una
+// política que permite solo este sitio y la intranet.
+header_remove('X-Frame-Options');
+header("Content-Security-Policy: frame-ancestors 'self' https://intranet.xl.com.ar");
+
+Auth::exigir();
 ?>
 <!DOCTYPE html>
 <html lang="es">
