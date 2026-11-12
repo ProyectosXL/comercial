@@ -56,8 +56,12 @@ function guardarDatos($usuario)
         die(json_encode(['status' => 'error', 'message' => 'Error al conectar con la base de datos de Sistemas al guardar.']));
     }
 
-    // --- 1. VALIDACIÓN DE CRUCE DE HORARIOS (Punto 4) --- (Mantenido)
-    $vendedoresInvolucrados = array_unique(array_column($horarios, 'codVended'));
+    // --- 1. VALIDACIÓN DE CRUCE DE HORARIOS Y FRANCOS (Punto 4) --- (Mantenido y ampliado)
+    $vendedoresHorarios = array_unique(array_filter(array_column($horarios, 'codVended')));
+    $vendedoresFrancos = array_unique(array_filter(array_column($francos, 'codVended')));
+    $vendedoresInvolucrados = array_values(array_unique(array_merge($vendedoresHorarios, $vendedoresFrancos)));
+    $ocupacionExterna = [];
+
     if (!empty($vendedoresInvolucrados)) {
         $placeholders = implode(',', array_fill(0, count($vendedoresInvolucrados), '?'));
         $sqlCheck = "SELECT COD_VENDED, FECHA, HORA, NRO_SUCURSAL 
@@ -68,7 +72,6 @@ function guardarDatos($usuario)
         $paramsCheck = array_merge([$fechaInicio, $fechaFin, $nroSucursal], $vendedoresInvolucrados);
         $stmtCheck = sqlsrv_query($conn, $sqlCheck, $paramsCheck);
 
-        $ocupacionExterna = [];
         if ($stmtCheck) {
             while ($row = sqlsrv_fetch_array($stmtCheck, SQLSRV_FETCH_ASSOC)) {
                 $lid = trim($row['COD_VENDED']);
@@ -84,6 +87,7 @@ function guardarDatos($usuario)
             sqlsrv_free_stmt($stmtCheck);
         }
 
+        // 1.A Validación de horas contra otra sucursal
         foreach ($horarios as $h) {
             $nuevoLegajo = trim($h['codVended']);
             $nuevaFecha = $h['fecha'];
@@ -95,6 +99,22 @@ function guardarDatos($usuario)
                 die(json_encode([
                     'status' => 'error',
                     'message' => "ERROR CRÍTICO: El vendedor $nuevoLegajo ya tiene ocupada la hora $nuevaHora:00 del día $fechaFormateada en la sucursal $sucursalConflicto."
+                ]));
+            }
+        }
+
+        // 1.B Validación de francos contra horarios en otra sucursal
+        foreach ($francos as $f) {
+            $fCod = trim($f['codVended'] ?? '');
+            $fFecha = trim($f['fechaFranco'] ?? '');
+            if ($fCod !== '' && $fFecha !== '' && isset($ocupacionExterna[$fCod][$fFecha]) && !empty($ocupacionExterna[$fCod][$fFecha])) {
+                $sucursalConflicto = reset($ocupacionExterna[$fCod][$fFecha]);
+                $fechaFormateada = date('d/m/Y', strtotime($fFecha));
+                $nomVend = !empty($f['nombreVendedor']) ? trim($f['nombreVendedor']) : $fCod;
+                sqlsrv_close($conn);
+                die(json_encode([
+                    'status' => 'error',
+                    'message' => "ERROR CRÍTICO: No se puede guardar franco para $nomVend el día $fechaFormateada porque ya tiene horarios asignados en la sucursal $sucursalConflicto."
                 ]));
             }
         }
@@ -230,34 +250,46 @@ function guardarDatos($usuario)
         }
 
         if (!empty($francos)) {
-            $baseSql = "INSERT INTO FP_GESTION_FRANCOS (NRO_SUCURSAL, COD_VENDED, FECHA_FRANCO, MODIFICADO_POR) VALUES ";
-            $chunks = array_chunk($francos, 100);
+            // Filtrar cualquier franco con colisión externa como salvaguarda adicional
+            $francosValidos = [];
+            foreach ($francos as $f) {
+                $fCod = trim($f['codVended'] ?? '');
+                $fFecha = trim($f['fechaFranco'] ?? '');
+                if ($fCod !== '' && $fFecha !== '' && (!isset($ocupacionExterna[$fCod][$fFecha]) || empty($ocupacionExterna[$fCod][$fFecha]))) {
+                    $francosValidos[] = $f;
+                }
+            }
 
-            foreach ($chunks as $chunk) {
-                $placeholders = [];
-                $params = [];
-                foreach ($chunk as $f) {
-                    $placeholders[] = "(?, ?, ?, ?)";
-                    $params[] = $nroSucursal;
-                    $params[] = $f['codVended'] ?? '';
-                    $params[] = $f['fechaFranco'] ?? '';
-                    $params[] = $usuario;
-                }
-                $sqlInsertFrancos = $baseSql . implode(', ', $placeholders);
-                $stmtInsertFrancos = sqlsrv_query($conn, $sqlInsertFrancos, $params);
-                
-                if ($stmtInsertFrancos === false) {
-                    $errors = sqlsrv_errors();
-                    $msg = "";
-                    if ($errors != null) {
-                        foreach ($errors as $error) {
-                            $msg .= "SQLSTATE: " . $error['SQLSTATE'] . " Code: " . $error['code'] . " Message: " . $error['message'] . " | ";
-                        }
+            if (!empty($francosValidos)) {
+                $baseSql = "INSERT INTO FP_GESTION_FRANCOS (NRO_SUCURSAL, COD_VENDED, FECHA_FRANCO, MODIFICADO_POR) VALUES ";
+                $chunks = array_chunk($francosValidos, 100);
+
+                foreach ($chunks as $chunk) {
+                    $placeholders = [];
+                    $params = [];
+                    foreach ($chunk as $f) {
+                        $placeholders[] = "(?, ?, ?, ?)";
+                        $params[] = $nroSucursal;
+                        $params[] = $f['codVended'] ?? '';
+                        $params[] = $f['fechaFranco'] ?? '';
+                        $params[] = $usuario;
                     }
-                    sqlsrv_rollback($conn);
-                    die(json_encode(['status' => 'error', 'message' => 'Error al insertar lote de francos: ' . $msg]));
+                    $sqlInsertFrancos = $baseSql . implode(', ', $placeholders);
+                    $stmtInsertFrancos = sqlsrv_query($conn, $sqlInsertFrancos, $params);
+                    
+                    if ($stmtInsertFrancos === false) {
+                        $errors = sqlsrv_errors();
+                        $msg = "";
+                        if ($errors != null) {
+                            foreach ($errors as $error) {
+                                $msg .= "SQLSTATE: " . $error['SQLSTATE'] . " Code: " . $error['code'] . " Message: " . $error['message'] . " | ";
+                            }
+                        }
+                        sqlsrv_rollback($conn);
+                        die(json_encode(['status' => 'error', 'message' => 'Error al insertar lote de francos: ' . $msg]));
+                    }
+                    $debugFrancos['inserts'][] = ['result' => 'LOTE OK', 'affected_rows' => sqlsrv_rows_affected($stmtInsertFrancos)];
                 }
-                $debugFrancos['inserts'][] = ['result' => 'LOTE OK', 'affected_rows' => sqlsrv_rows_affected($stmtInsertFrancos)];
             }
         }
         $debugInfo['francos_operations'] = $debugFrancos; // Añadir toda la info de francos al debug general

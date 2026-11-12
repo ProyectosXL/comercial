@@ -704,3 +704,63 @@
 )
 
 [02-Nov-2026 19:09:50 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[07-Nov-2026 18:41:10 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[07-Nov-2026 18:41:10 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[07-Nov-2026 18:41:10 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[07-Nov-2026 18:41:55 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[07-Nov-2026 18:41:55 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[07-Nov-2026 18:41:55 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[08-Nov-2026 20:22:31 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[08-Nov-2026 20:22:31 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[08-Nov-2026 20:22:31 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[08-Nov-2026 20:22:41 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[08-Nov-2026 20:22:41 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[08-Nov-2026 20:22:41 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[08-Nov-2026 20:22:51 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[08-Nov-2026 20:22:51 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[08-Nov-2026 20:22:51 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA
+[08-Nov-2026 20:23:02 Europe/Berlin] Intentando conectar a: XL-TANGO - LAKER_SA
+[08-Nov-2026 20:23:02 Europe/Berlin] Parámetros de conexión: Array
+(
+    [Database] => LAKER_SA
+    [UID] => sa
+    [PWD] => ***hidden***
+    [CharacterSet] => UTF-8
+)
+
+[08-Nov-2026 20:23:02 Europe/Berlin] Conexión exitosa a: XL-TANGO - LAKER_SA

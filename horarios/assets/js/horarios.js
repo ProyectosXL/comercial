@@ -539,6 +539,11 @@ $(document).ready(function () {
         // Carga de Francos
         if (data.francos) {
             data.francos.forEach(franco => {
+                // Validación: Si el vendedor ya tiene horas asignadas en otra sucursal en esta fecha, no cargar ni tildar franco
+                if (data.bloqueosExternos && data.bloqueosExternos[franco.COD_VENDED] && data.bloqueosExternos[franco.COD_VENDED][franco.FECHA_FRANCO]) {
+                    return;
+                }
+
                 const fila = $(`#tablaHorariosContainer tr[data-vendedor-id="${franco.COD_VENDED}"]`);
                 // Cambiamos el selector a 'franco-checkbox'
                 const checkbox = fila.find(`input.franco-checkbox[value="${franco.FECHA_FRANCO}"]`);
@@ -609,6 +614,14 @@ $(document).ready(function () {
                             .attr('data-tipo-externo', tipoBloqueo) // Guardamos el tipo para el cálculo
                             .attr('title', `Ocupado en ${nombreSucursal} (${tipoBloqueo.toUpperCase()})`)
                             .text('Ø');
+                    }
+
+                    // Validación: Si tiene horas asignadas en otra sucursal, no puede tener franco en esta sucursal ese día
+                    if (horasOcupadas && Object.keys(horasOcupadas).length > 0) {
+                        const chkFranco = fila.find(`input.franco-checkbox[value="${fecha}"]`);
+                        chkFranco.prop('checked', false).prop('disabled', true);
+                        chkFranco.closest('td').removeClass('franco-activo').attr('title', 'No disponible: tiene horarios asignados en otra sucursal');
+                        fila.find(`.hora-celda[data-fecha="${fecha}"]:not(.bloqueo-externo)`).removeClass('dia-franco');
                     }
                 }
             }
@@ -779,21 +792,30 @@ $(document).ready(function () {
     $('#tablaHorariosContainer').on('mousedown', '.franco-radio', function () {
         wasChecked = $(this).prop('checked');
     });
-    $('#tablaHorariosContainer').on('click', '.franco-checkbox', function () {
+    $('#tablaHorariosContainer').on('click', '.franco-checkbox', function (e) {
         const fila = $(this).closest('tr');
         const fecha = $(this).val();
 
+        // Validación: Si la persona tiene horas asignadas en otra sucursal para este día, bloquear franco
+        if (fila.find(`.hora-celda[data-fecha="${fecha}"].bloqueo-externo`).length > 0) {
+            e.preventDefault();
+            $(this).prop('checked', false).prop('disabled', true);
+            $(this).closest('td').removeClass('franco-activo');
+            mostrarModalConTitulo('Operación no permitida', 'No se puede asignar franco a esta persona en este día porque ya tiene horarios asignados en otra sucursal.', 'error');
+            return false;
+        }
+
         // Si lo tildo -> Poner franco
         if ($(this).is(':checked')) {
-            $(this).parent().addClass('franco-activo');
-            fila.find(`.hora-celda[data-fecha="${fecha}"]`)
-                .removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja')
+            $(this).closest('td').addClass('franco-activo');
+            fila.find(`.hora-celda[data-fecha="${fecha}"]:not(.bloqueo-externo)`)
+                .removeClass('marcado hora-extra hora-devuelve hora-permiso hora-caja hora-vacaciones hora-ausencia media-hora')
                 .text('')
                 .addClass('dia-franco');
         }
         // Si lo destildo -> Quitar franco
         else {
-            $(this).parent().removeClass('franco-activo');
+            $(this).closest('td').removeClass('franco-activo');
             fila.find(`.hora-celda[data-fecha="${fecha}"]`).removeClass('dia-franco');
         }
 
@@ -1087,7 +1109,7 @@ $(document).ready(function () {
     });
 
     $('#tablaHorariosContainer').on('mouseover', '.hora-celda', function () {
-        if ($(this).hasClass('dia-franco')) return;
+        if ($(this).hasClass('dia-franco') || $(this).hasClass('bloqueo-externo')) return;
         if (isMouseDown) {
             toggleCelda($(this));
         }
@@ -1174,10 +1196,16 @@ $(document).ready(function () {
         // B. Recolectar Francos
         $('#tablaHorariosContainer tbody tr').each(function () {
             const vid = String($(this).data('vendedor-id'));
+            let nombreVend = $(this).data('nombre');
+            if (!nombreVend || nombreVend === "undefined") {
+                nombreVend = $(this).find('td:first .text-truncate > div').first().text().trim();
+            }
             vendedoresEnGrilla.push(vid);
-            $(this).find('.franco-checkbox:checked').each(function () {
-                if (!$(this).prop('disabled')) {
-                    francos.push({ codVended: vid, fechaFranco: $(this).val() });
+            const fila = $(this);
+            fila.find('.franco-checkbox:checked').each(function () {
+                const fecha = $(this).val();
+                if (!$(this).prop('disabled') && fila.find(`.hora-celda[data-fecha="${fecha}"].bloqueo-externo`).length === 0) {
+                    francos.push({ codVended: vid, fechaFranco: fecha, nombreVendedor: nombreVend });
                 }
             });
         });
@@ -1272,6 +1300,15 @@ $(document).ready(function () {
             for (const [dia, cant] of Object.entries(horasPorDia)) {
                 if (cant > 12) advertencias.push(`<b>${nombre}</b> excede 12hs el día ${dia} (Acumulado: ${cant} hs).`);
             }
+
+            // Regla C: Validación crítica de Francos vs Horarios en otra sucursal
+            const fila = $(this);
+            fila.find('.franco-checkbox:checked').each(function () {
+                const fecha = $(this).val();
+                if (fila.find(`.hora-celda[data-fecha="${fecha}"].bloqueo-externo`).length > 0) {
+                    erroresCriticos.push(`<b>${nombre}</b> tiene marcado Franco el día ${fecha}, pero ya tiene horarios asignados en otra sucursal.`);
+                }
+            });
         });
 
         // ERROR CRÍTICO: Bloquear
@@ -1407,9 +1444,13 @@ $(document).ready(function () {
                                     .text('Ø');
                             }
 
-                            // NOTA: Ya NO bloqueamos el radio de franco ni el botón de nota
-                            // porque puede que trabaje a la mañana en un lado y tenga franco a la tarde (raro, pero posible)
-                            // o que queramos ponerle una nota igual.
+                            // Si tiene horas en otra sucursal, no puede tener franco en esta sucursal ese día
+                            if (horasOcupadas && Object.keys(horasOcupadas).length > 0) {
+                                const chkFranco = fila.find(`input.franco-checkbox[value="${fecha}"]`);
+                                chkFranco.prop('checked', false).prop('disabled', true);
+                                chkFranco.closest('td').removeClass('franco-activo').attr('title', 'No disponible: tiene horarios asignados en otra sucursal');
+                                fila.find(`.hora-celda[data-fecha="${fecha}"]:not(.bloqueo-externo)`).removeClass('dia-franco');
+                            }
                         }
                     }
                 }
