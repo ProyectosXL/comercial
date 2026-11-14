@@ -1,5 +1,6 @@
 <?php
-require_once __DIR__ . '/../../../nodo/Class/bootstrap.php';
+// Nodo vive en htdocs/nodo; el módulo está en htdocs/comercial/direccionario (antes en recepcion/direccionario), por eso sube dos niveles.
+require_once __DIR__ . '/../../nodo/Class/bootstrap.php';
 require_once __DIR__ . '/class/Direccionario.php';
 
 // Exige sesión activa y válida (de lo contrario redirige automáticamente a /sistemas/login.php)

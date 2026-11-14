@@ -1,5 +1,6 @@
 <?php
-require_once __DIR__ . '/../../../../nodo/Class/bootstrap.php';
+// Desde controller/ se sube un nivel más que en index.php: comercial/direccionario/controller -> htdocs/nodo.
+require_once __DIR__ . '/../../../nodo/Class/bootstrap.php';
 require_once __DIR__ . '/../class/Direccionario.php';
 
 header('Content-Type: application/json; charset=utf-8');
