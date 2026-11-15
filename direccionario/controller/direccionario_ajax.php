@@ -36,9 +36,9 @@ try {
 
     $puede_ver_todo    = $es_admin_sistemas;
     $puede_ver_tecnico = $es_admin_sistemas;
-    $puede_crear       = $es_admin_sistemas;
-    $puede_editar      = $es_admin_sistemas || $es_recepcionista;
-    $puede_eliminar    = $es_admin_sistemas || $es_recepcionista;
+    $puede_crear       = $es_admin_sistemas || Auth::puede('direccionario.crear');
+    $puede_editar      = $es_admin_sistemas || $es_recepcionista || Auth::puede('direccionario.editar');
+    $puede_eliminar    = $es_admin_sistemas || $es_recepcionista || Auth::puede('direccionario.eliminar');
 
     switch ($action) {
         case 'buscar':

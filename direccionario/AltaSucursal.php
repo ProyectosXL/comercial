@@ -24,8 +24,8 @@ $es_admin_sistemas = $esAdmin
 $es_recepcionista = ($rolNom === 'RECEPCIONISTA' || ($user['rol_id'] ?? 0) == 18)
                  || ($sectorNom === 'COMERCIAL Y VENTAS' && $subsectorNom === 'ANALISTAS' && $rolNom === 'RECEPCIONISTA');
 
-$puede_crear  = $es_admin_sistemas;
-$puede_editar = $es_admin_sistemas || $es_recepcionista;
+$puede_crear  = $es_admin_sistemas || Auth::puede('direccionario.crear');
+$puede_editar = $es_admin_sistemas || $es_recepcionista || Auth::puede('direccionario.editar');
 
 $idSucursal = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $clonarId   = isset($_GET['clonar']) ? (int)$_GET['clonar'] : 0;

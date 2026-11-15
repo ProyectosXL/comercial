@@ -169,7 +169,7 @@ if (empty($userName)) {
                                     </p>
 
                                     <div>
-                                        <a href="assets/PlantillaAnulacion.xlsx" download="PlantillaAnulacion.xlsx" class="btn btn-modern btn-modern-outline">
+                                        <a href="assets/PlantillaAnulacion.xlsx?v=<?php echo filemtime(__DIR__ . '/assets/PlantillaAnulacion.xlsx'); ?>" download="PlantillaAnulacion.xlsx" class="btn btn-modern btn-modern-outline">
                                             <i class="bi bi-download"></i>
                                             Descargar plantilla Excel
                                         </a>
@@ -181,7 +181,7 @@ if (empty($userName)) {
                                         </label>
                                         <input type="file" name="excel_file" class="form-control form-control-modern" id="fileupload" accept=".xlsx, .xls">
                                         <div class="form-text mt-1">
-                                            <i class="bi bi-info-circle"></i> El archivo debe contener los encabezados NRO_PEDIDO y TALON_PED.
+                                            <i class="bi bi-info-circle"></i> El archivo debe contener los encabezados NRO_PEDIDO y TALON_PED (admite números con o sin ceros adelante).
                                         </div>
                                     </div>
                                 </div>
@@ -1156,6 +1156,6 @@ if (empty($userName)) {
     <!-- SheetJS (Excel Parser & Generator) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- App Logic -->
-    <script src="js/anulador.js"></script>
+    <script src="js/anulador.js?v=<?php echo filemtime(__DIR__ . '/js/anulador.js'); ?>"></script>
 </body>
 </html>

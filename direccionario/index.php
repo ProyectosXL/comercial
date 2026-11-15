@@ -27,9 +27,9 @@ $es_recepcionista = ($rolNom === 'RECEPCIONISTA' || ($user['rol_id'] ?? 0) == 18
                  || ($sectorNom === 'COMERCIAL Y VENTAS' && $subsectorNom === 'ANALISTAS' && $rolNom === 'RECEPCIONISTA');
 
 $puede_ver_tecnico = $es_admin_sistemas;
-$puede_crear       = $es_admin_sistemas;                         // NO crear
-$puede_editar      = $es_admin_sistemas || $es_recepcionista;     // PUEDE editar
-$puede_eliminar    = $es_admin_sistemas || $es_recepcionista;     // PUEDE borrar
+$puede_crear       = $es_admin_sistemas || Auth::puede('direccionario.crear');
+$puede_editar      = $es_admin_sistemas || $es_recepcionista || Auth::puede('direccionario.editar');
+$puede_eliminar    = $es_admin_sistemas || $es_recepcionista || Auth::puede('direccionario.eliminar');
 
 $direccionario = new Direccionario();
 $canales       = $direccionario->getCanales();

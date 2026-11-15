@@ -85,10 +85,24 @@ function validarLote($handler, $pais) {
     $pedidos_invalidos = 0;
 
     foreach ($pedidos as $p) {
-        $nro_pedido = isset($p['NRO_PEDIDO']) ? trim($p['NRO_PEDIDO']) : '';
-        $talon_ped = isset($p['TALON_PED']) ? trim($p['TALON_PED']) : '';
+        $nro_pedido = isset($p['NRO_PEDIDO']) ? trim(strval($p['NRO_PEDIDO'])) : '';
+        $talon_ped = isset($p['TALON_PED']) ? trim(strval($p['TALON_PED'])) : '';
 
-        if ($nro_pedido === '' || $talon_ped === '') {
+        if ($nro_pedido === '' && $talon_ped === '') {
+            continue;
+        }
+
+        if ($nro_pedido === '' || $talon_ped === '' || !ctype_digit($talon_ped)) {
+            $pedidos_data[] = [
+                'nro_pedido' => $nro_pedido,
+                'talon_ped' => $talon_ped,
+                'cod_client' => '',
+                'razon_soci' => '',
+                'total_pedi' => 0,
+                'estado' => 'inválido (datos incompletos o talón no numérico)',
+                'valido' => false
+            ];
+            $pedidos_invalidos++;
             continue;
         }
 
@@ -98,8 +112,8 @@ function validarLote($handler, $pais) {
             $estado = $esValido ? 'válido' : 'inválido';
             
             $pedidos_data[] = [
-                'nro_pedido' => $nro_pedido,
-                'talon_ped' => $talon_ped,
+                'nro_pedido' => $esValido ? ltrim($datosPedido['NRO_PEDIDO']) : $nro_pedido,
+                'talon_ped' => $esValido ? strval($datosPedido['TALON_PED']) : $talon_ped,
                 'cod_client' => $esValido ? $datosPedido['COD_CLIENT'] : '',
                 'razon_soci' => $esValido ? $datosPedido['RAZON_SOCI'] : '',
                 'total_pedi' => $esValido ? $datosPedido['TOTAL_PEDI'] : 0,
@@ -165,10 +179,10 @@ function anularPedidos($handler, $pais) {
     $anulados_fallidos = 0;
 
     foreach ($pedidos as $p) {
-        $nro_pedido = isset($p['nro_pedido']) ? trim($p['nro_pedido']) : '';
-        $talon_ped = isset($p['talon_ped']) ? trim($p['talon_ped']) : '';
+        $nro_pedido = isset($p['nro_pedido']) ? trim(strval($p['nro_pedido'])) : '';
+        $talon_ped = isset($p['talon_ped']) ? trim(strval($p['talon_ped'])) : '';
 
-        if (empty($nro_pedido) || empty($talon_ped)) {
+        if ($nro_pedido === '' || $talon_ped === '' || !ctype_digit($talon_ped)) {
             $anulados_fallidos++;
             continue;
         }

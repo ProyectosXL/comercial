@@ -190,6 +190,11 @@ $(document).ready(function() {
         }
     });
 
+    // Limpiar el input de archivo al cerrar el modal para permitir recargar el mismo archivo tras editarlo
+    $('#modalPrevious').on('hidden.bs.modal', function() {
+        $('#fileupload').val('');
+    });
+
     // Seleccionar Todos los Válidos
     $(document).on('change', '#select_all_valid', function() {
         const isChecked = $(this).is(':checked');
@@ -210,8 +215,8 @@ $(document).ready(function() {
         const seleccionados = [];
         $('.check-pedido-valido:checked').each(function() {
             seleccionados.push({
-                nro_pedido: $(this).data('nro'),
-                talon_ped: $(this).data('talon')
+                nro_pedido: $(this).attr('data-nro'),
+                talon_ped: $(this).attr('data-talon')
             });
         });
 
@@ -375,9 +380,17 @@ function procesarExcel(file) {
             const workbook = XLSX.read(data, { type: 'binary' });
             const firstSheet = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheet];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+            const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
-            if (jsonData.length > 0) {
+            if (rawData.length > 0) {
+                const jsonData = rawData.map(row => {
+                    const normalized = {};
+                    Object.keys(row).forEach(k => {
+                        normalized[String(k).trim().toUpperCase()] = row[k];
+                    });
+                    return normalized;
+                });
+
                 const firstRow = jsonData[0];
                 if (!firstRow.hasOwnProperty('NRO_PEDIDO') || !firstRow.hasOwnProperty('TALON_PED')) {
                     ocultarLoader();
@@ -385,7 +398,22 @@ function procesarExcel(file) {
                     $('#fileupload').val('');
                     return;
                 }
-                validarLotePedidos(jsonData);
+
+                const filasConDatos = jsonData
+                    .map(r => ({
+                        NRO_PEDIDO: String(r.NRO_PEDIDO === null || r.NRO_PEDIDO === undefined ? '' : r.NRO_PEDIDO).trim(),
+                        TALON_PED: String(r.TALON_PED === null || r.TALON_PED === undefined ? '' : r.TALON_PED).trim()
+                    }))
+                    .filter(r => r.NRO_PEDIDO !== '' || r.TALON_PED !== '');
+
+                if (filasConDatos.length === 0) {
+                    ocultarLoader();
+                    toastr.warning('El archivo Excel no contiene filas con datos.');
+                    $('#fileupload').val('');
+                    return;
+                }
+
+                validarLotePedidos(filasConDatos);
             } else {
                 ocultarLoader();
                 toastr.warning('El archivo Excel está vacío.');
@@ -394,6 +422,7 @@ function procesarExcel(file) {
         } catch (err) {
             ocultarLoader();
             toastr.error('Error al leer el archivo Excel.');
+            $('#fileupload').val('');
         }
     };
     reader.readAsBinaryString(file);
@@ -442,7 +471,7 @@ function mostrarPreviewTable(data) {
     data.pedidos_data.forEach(function(p) {
         const badgeClass = p.valido ? 'badge-success-modern' : 'badge-danger-modern';
         const checkbox = p.valido 
-            ? `<input type="checkbox" class="form-check-input check-pedido-valido" data-nro="${p.nro_pedido}" data-talon="${p.talon_ped}">`
+            ? `<input type="checkbox" class="form-check-input check-pedido-valido" data-nro="${escapeHtml(p.nro_pedido)}" data-talon="${escapeHtml(p.talon_ped)}">`
             : `<input type="checkbox" class="form-check-input" disabled>`;
 
         const cliente = p.cod_client ? `${escapeHtml(p.cod_client)} ${p.razon_soci ? '- ' + escapeHtml(p.razon_soci) : ''}` : '---';
