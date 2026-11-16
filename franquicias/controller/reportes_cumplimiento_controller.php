@@ -138,8 +138,8 @@ class ReportesCumplimientoController {
     }
     
     /**
-     * Obtener TODAS las franquicias del sistema desde SOF_USUARIOS
-     * Modificado para hacer dos consultas separadas como se solicitó
+     * Obtener TODAS las sucursales reales de franquicias directamente desde SUCURSALES_LAKERS
+     * (1 fila única por NRO_SUCURSAL habilitada, evitando duplicados de SOF_USUARIOS)
      */
     private function obtenerTodasLasFranquicias() {
         try {
@@ -147,109 +147,48 @@ class ReportesCumplimientoController {
                 throw new Exception('No hay conexión a la base LAKER_SA');
             }
             
-            // PRIMERA CONSULTA: Obtener las sucursales reales de franquicias
-            $sqlSucursalesReales = "SELECT NRO_SUCURSAL
+            $sqlSucursalesReales = "SELECT DISTINCT
+                                        NRO_SUCURSAL,
+                                        LTRIM(RTRIM(DESC_SUCURSAL)) AS DESC_SUCURSAL
                                    FROM [XL-LAKERBIS].LOCALES_LAKERS.DBO.SUCURSALES_LAKERS
                                    WHERE HABILITADO = 1
                                    AND (CANAL = 'FRANQUICIAS' OR CANAL = 'FRANQUICIAS GA')
-                                   AND NRO_SUC_MADRE IS NULL AND NRO_SUCURSAL NOT IN (812, 912)";
+                                   AND NRO_SUC_MADRE IS NULL
+                                   AND NRO_SUCURSAL NOT IN (812, 912)
+                                   ORDER BY LTRIM(RTRIM(DESC_SUCURSAL)), NRO_SUCURSAL";
             
-            error_log("DEBUG REPORTES: Ejecutando PRIMERA consulta para obtener sucursales reales: " . $sqlSucursalesReales);
+            error_log("DEBUG REPORTES: Obteniendo sucursales reales desde SUCURSALES_LAKERS: " . $sqlSucursalesReales);
             
             $stmtSucursales = sqlsrv_query($this->laker_conn, $sqlSucursalesReales);
-            $sucursalesValidas = [];
-            
-            if ($stmtSucursales) {
-                while ($row = sqlsrv_fetch_array($stmtSucursales, SQLSRV_FETCH_ASSOC)) {
-                    $sucursalesValidas[] = intval($row['NRO_SUCURSAL']);
-                }
-                sqlsrv_free_stmt($stmtSucursales);
-            } else {
+            if (!$stmtSucursales) {
                 error_log("Error SQL obtener sucursales válidas: " . print_r(sqlsrv_errors(), true));
                 throw new Exception("No se pudieron obtener las sucursales válidas");
             }
             
-            error_log("DEBUG REPORTES: Primera consulta devuelve " . count($sucursalesValidas) . " sucursales válidas");
-            error_log("DEBUG REPORTES: Sucursales válidas: " . implode(', ', array_slice($sucursalesValidas, 0, 10)) . (count($sucursalesValidas) > 10 ? '...' : ''));
-            
-            // Verificar si sucursales específicas están incluidas
-            if (in_array(812, $sucursalesValidas)) {
-                error_log("DEBUG REPORTES: ¡La sucursal 812 SÍ está en la lista de sucursales válidas!");
-            } else {
-                error_log("DEBUG REPORTES: La sucursal 812 NO está en la lista de sucursales válidas");
-            }
-            
-            // Si no hay sucursales válidas, retornar array vacío
-            if (empty($sucursalesValidas)) {
-                error_log("DEBUG REPORTES: No se encontraron sucursales válidas, retornando array vacío");
-                return [];
-            }
-            
-            // SEGUNDA CONSULTA: Obtener todas las franquicias de SOF_USUARIOS
-            $sqlTodasFranquicias = "SELECT 
-                                       u.NOMBRE as codigo,
-                                       u.DESCRIPCION as nombre,
-                                       u.NRO_SUCURS as nro_sucurs
-                                   FROM SOF_USUARIOS u
-                                   WHERE (u.TIPO = 'FRANQUICIA' OR u.TIPO = 'FRANQUICIA_GA')
-                                   AND u.NRO_SUCURS IS NOT NULL
-                                   ORDER BY u.DESCRIPCION";
-            
-            error_log("DEBUG REPORTES: Ejecutando SEGUNDA consulta para obtener todas las franquicias: " . $sqlTodasFranquicias);
-            
-            $stmtFranquicias = sqlsrv_query($this->laker_conn, $sqlTodasFranquicias);
-            $todasLasFranquicias = [];
-            
-            if ($stmtFranquicias) {
-                while ($row = sqlsrv_fetch_array($stmtFranquicias, SQLSRV_FETCH_ASSOC)) {
-                    $todasLasFranquicias[] = [
-                        'codigo' => $row['codigo'],
-                        'nombre' => $row['nombre'],
-                        'nro_sucurs' => intval($row['nro_sucurs'])
-                    ];
+            $franquicias = [];
+            $sucursalesAgregadas = [];
+            while ($row = sqlsrv_fetch_array($stmtSucursales, SQLSRV_FETCH_ASSOC)) {
+                $nroSucursal = intval($row['NRO_SUCURSAL']);
+                if (isset($sucursalesAgregadas[$nroSucursal])) {
+                    continue;
                 }
-                sqlsrv_free_stmt($stmtFranquicias);
-            } else {
-                error_log("Error SQL obtener todas las franquicias: " . print_r(sqlsrv_errors(), true));
-                throw new Exception("No se pudieron obtener las franquicias de SOF_USUARIOS");
+                $sucursalesAgregadas[$nroSucursal] = true;
+                $franquicias[] = [
+                    'id' => $nroSucursal, // Coincide con franquicia_historial_stock.franquicia_id
+                    'codigo' => (string)$nroSucursal,
+                    'nombre' => $row['DESC_SUCURSAL'],
+                    'nro_sucurs' => $nroSucursal,
+                    'activa' => 1
+                ];
             }
+            sqlsrv_free_stmt($stmtSucursales);
             
-            error_log("DEBUG REPORTES: Segunda consulta devuelve " . count($todasLasFranquicias) . " franquicias totales de SOF_USUARIOS");
+            error_log("DEBUG REPORTES: Obtenidas " . count($franquicias) . " sucursales reales únicas desde SUCURSALES_LAKERS");
             
-            // FILTRADO: Conservar solo las franquicias cuyo nro_sucurs esté en la lista de sucursales válidas
-            $franquiciasFiltradas = [];
-            foreach ($todasLasFranquicias as $franquicia) {
-                if (in_array($franquicia['nro_sucurs'], $sucursalesValidas)) {
-                    $franquiciasFiltradas[] = [
-                        'id' => $franquicia['nro_sucurs'], // Usamos NRO_SUCURS como ID para que coincida con franquicia_historial_stock
-                        'codigo' => $franquicia['codigo'],
-                        'nombre' => $franquicia['nombre'],
-                        'nro_sucurs' => $franquicia['nro_sucurs']
-                    ];
-                    error_log("DEBUG REPORTES: Franquicia INCLUIDA - ID: " . $franquicia['nro_sucurs'] . " - " . $franquicia['nombre']);
-                } else {
-                    error_log("DEBUG REPORTES: Franquicia EXCLUIDA (no es franquicia real) - ID: " . $franquicia['nro_sucurs'] . " - " . $franquicia['nombre']);
-                }
-            }
-            
-            error_log("DEBUG REPORTES: Filtrado completado - " . count($franquiciasFiltradas) . " franquicias reales de " . count($todasLasFranquicias) . " usuarios tipo FRANQUICIA");
-            
-            // Debug específico: verificar si franquicias específicas están en la lista final
-            $encontrada812 = false;
-            foreach ($franquiciasFiltradas as $f) {
-                if ($f['id'] == 812) {
-                    $encontrada812 = true;
-                    error_log("DEBUG REPORTES: ¡ENCONTRADA! Franquicia 812 está en la lista final: " . $f['nombre']);
-                }
-            }
-            if (!$encontrada812) {
-                error_log("DEBUG REPORTES: Franquicia 812 NO está en la lista final");
-            }
-            
-            return $franquiciasFiltradas;
+            return $franquicias;
             
         } catch (Exception $e) {
-            error_log("Error obtener franquicias desde SOF_USUARIOS con filtrado por sucursales reales: " . $e->getMessage());
+            error_log("Error obtener sucursales reales desde SUCURSALES_LAKERS: " . $e->getMessage());
             return [];
         }
     }

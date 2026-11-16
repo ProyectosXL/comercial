@@ -30,22 +30,78 @@ const cambiarEntorno = (t) => {
 })
 
 
+let ultimaConsultaFiltros = null;
+
+const obtenerFiltrosConsulta = () => {
+  const desde = document.querySelector("#desde").value;
+  const hasta = document.querySelector("#hasta").value;
+  const temporada = document.querySelector("#temporada").value;
+
+  const rubrosVals = $('#rubro').val() || [];
+  const destinosVals = $('#destino').val() || [];
+  const tipoSucursalVals = $('#tipoSucursal').val() || [];
+
+  return {
+    rubros: rubrosVals.map(v => "'" + v + "'").join(','),
+    desde: desde,
+    hasta: hasta,
+    destino: destinosVals.map(v => "'" + v + "'").join(','),
+    temporada: temporada,
+    tipoSucursal: tipoSucursalVals.map(v => "'" + v + "'").join(',')
+  };
+};
+
+const exportarExcelDiaPorDia = (dt) => {
+  const spinner = document.querySelector('.boxLoading');
+  spinner.classList.add('loading');
+
+  const filtros = ultimaConsultaFiltros || obtenerFiltrosConsulta();
+  const formData = new FormData();
+  formData.append('desde', filtros.desde);
+  formData.append('hasta', filtros.hasta);
+  formData.append('destino', filtros.destino);
+  formData.append('temporada', filtros.temporada);
+  formData.append('rubros', filtros.rubros);
+  formData.append('tipoSucursal', filtros.tipoSucursal);
+  formData.append('search', dt ? dt.search() : '');
+
+  fetch('Controller/exportarExcelDiaPorDiaController.php', {
+    method: 'POST',
+    body: formData
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        const msg = await response.text();
+        throw new Error(msg || 'Error al exportar Excel Dia x Dia');
+      }
+      return response.blob();
+    })
+    .then((blob) => {
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'Excel Dia x Dia.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    })
+    .catch((error) => {
+      console.error('Error al exportar Excel Dia x Dia:', error);
+      alert('Error al exportar Excel Dia x Dia. Ver consola para detalles.');
+    })
+    .finally(() => {
+      spinner.classList.remove('loading');
+    });
+};
+
 const buscar = () =>{
 
   let spinner = document.querySelector('.boxLoading')
   spinner.classList.add('loading')
 
-  let desde = document.querySelector("#desde").value;
-  let hasta = document.querySelector("#hasta").value;
-  let temporada = document.querySelector("#temporada").value;
-  
-  let rubrosVals = $('#rubro').val() || [];
-  let destinosVals = $('#destino').val() || [];
-  let tipoSucursalVals = $('#tipoSucursal').val() || [];
-
-  let rubrosParaSql = rubrosVals.map(v => "'" + v + "'").join(',');
-  let destinosParaSql = destinosVals.map(v => "'" + v + "'").join(',');
-  let tipoSucursalParaSql = tipoSucursalVals.map(v => "'" + v + "'").join(',');
+  const filtros = obtenerFiltrosConsulta();
+  ultimaConsultaFiltros = filtros;
 
   var dt = $('#mytable').DataTable();
   dt.destroy();
@@ -53,14 +109,7 @@ const buscar = () =>{
   $.ajax({
     url: "Controller/ventasController.php",
     method: "POST",
-    data: { 
-      rubros: rubrosParaSql,
-      desde: desde,
-      hasta: hasta,
-      destino: destinosParaSql,
-      temporada: temporada,
-      tipoSucursal: tipoSucursalParaSql
-     },
+    data: filtros,
     success: function (data) {
       document.querySelector("#tbody").innerHTML = '';
 
@@ -187,6 +236,16 @@ const buscar = () =>{
         title: 'Venta locales',
         filename: 'Ventas',
         text: '<button class="btn btn-success ">Excel <i class="fa fa-file-excel-o"></i></button>'
+      }
+            
+            ,
+
+      {
+        //Botón para Excel Día x Día
+        text: '<button class="btn btn-success ">Excel Dia x Dia <i class="fa fa-file-excel-o"></i></button>',
+        action: function (e, dt) {
+          exportarExcelDiaPorDia(dt);
+        }
       }
             
             , 

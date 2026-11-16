@@ -366,6 +366,20 @@ if (!class_exists('FranquiciaStockController')) {
                 }
                 
                 if (!empty($categorias)) {
+                    // SUECO figura en el maestro como CATEGORIA con CATEGORIA_PADRE = 'ZAPATO';
+                    // se agrega aquí para que esté disponible en la carga de stock sin alterar el maestro global.
+                    if (strtoupper(trim($rubro)) === 'CALZADOS') {
+                        $nombresExistentes = array_map(function($cat) {
+                            return strtoupper(trim($cat['nombre']));
+                        }, $categorias);
+                        if (!in_array('SUECO', $nombresExistentes, true)) {
+                            $categorias[] = ['nombre' => 'SUECO'];
+                            usort($categorias, function($a, $b) {
+                                return strcmp($a['nombre'], $b['nombre']);
+                            });
+                        }
+                    }
+
                     return [
                         'success' => true,
                         'categorias' => $categorias,
