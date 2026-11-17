@@ -58,6 +58,8 @@ if ($idSucursal > 0) {
     if ($sucursalData) {
         $sucursalData['NRO_SUCURSAL'] = '';
         $sucursalData['DESC_SUCURSAL'] = trim($sucursalData['DESC_SUCURSAL'] ?? '') . ' (COPIA)';
+        // Una sucursal nueva siempre arranca habilitada para contabilidad
+        $sucursalData['HABILITADO_CONT'] = 1;
     }
 }
 
@@ -117,6 +119,8 @@ $valTienda      = (trim($sucursalData['TIENDA'] ?? '') === 'SI' || !isset($sucur
 $valVtex        = (trim($sucursalData['INTEGRA_VTEX'] ?? '') === 'SI');
 $valRetiroExp   = (trim($sucursalData['RETIRO_EXPRES'] ?? '') === 'SI');
 $valSucMadre    = htmlspecialchars($sucursalData['NRO_SUC_MADRE'] ?? '');
+// Habilitado Contabilidad: por defecto activo (alta o sin dato)
+$valHabCont     = !isset($sucursalData['HABILITADO_CONT']) || !empty($sucursalData['HABILITADO_CONT']);
 
 // Días de atención
 $valLunes     = !isset($sucursalData) || !empty($sucursalData['LUNES']);
@@ -630,6 +634,18 @@ $subtituloHeader = $esEdicion ? "Actualizar datos y configuración de la sucursa
                             </div>
                             <div class="form-check form-switch mb-0">
                                 <input class="form-check-input" type="checkbox" id="retiro_expres" name="retiro_expres" value="1" <?= $valRetiroExp ? 'checked' : '' ?>>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="switch-group">
+                            <div class="switch-label-wrap">
+                                <span class="switch-title">Habilitado Contabilidad</span>
+                                <span class="switch-desc">Visible en Control de Sucursales aunque el local esté deshabilitado</span>
+                            </div>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="habilitado_cont" name="habilitado_cont" value="1" <?= $valHabCont ? 'checked' : '' ?>>
                             </div>
                         </div>
                     </div>

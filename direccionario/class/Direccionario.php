@@ -333,7 +333,8 @@ class Direccionario {
     public function getSucursalById($nro) {
         try {
             $query = "SELECT TOP 1 d.*, 
-                             s.LUNES, s.MARTES, s.MIERCOLES, s.JUEVES, s.VIERNES, s.SABADO, s.DOMINGO
+                             s.LUNES, s.MARTES, s.MIERCOLES, s.JUEVES, s.VIERNES, s.SABADO, s.DOMINGO,
+                             s.HABILITADO_CONT
                       FROM DIRECCIONARIO d
                       LEFT JOIN SUCURSALES_LAKERS s ON d.NRO_SUCURSAL = s.NRO_SUCURSAL
                       WHERE d.NRO_SUCURSAL = ?";
@@ -385,6 +386,8 @@ class Direccionario {
             $vtex = !empty($d['integra_vtex']) ? 1 : 0;
             $retiroExp = !empty($d['retiro_expres']) ? 1 : 0;
             $nroSucMadre = !empty($d['nro_suc_madre']) ? (int)$d['nro_suc_madre'] : null;
+            // Visibilidad en Control de Sucursales (independiente de HABILITADO)
+            $habilitadoCont = !empty($d['habilitado_cont']) ? 1 : 0;
 
             // Días de apertura
             $lunes = !empty($d['lunes']) ? 1 : 0;
@@ -400,13 +403,15 @@ class Direccionario {
                         COD_CLIENT = ?, DESC_SUCURSAL = ?, CANAL = ?, TIPO_LOCAL = ?,
                         DIRECCION = ?, LOCALIDAD = ?, PROVINCIA = ?, TELEFONO = ?, MAIL = ?, HORARIO = ?,
                         COD_DEPOSI = ?, MAIL_GRUP_EMP = ?, TANGO = ?, INTEGRA_VTEX = ?, RETIRO_EXPRES = ?,
-                        NRO_SUC_MADRE = ?, LUNES = ?, MARTES = ?, MIERCOLES = ?, JUEVES = ?, VIERNES = ?, SABADO = ?, DOMINGO = ?
+                        NRO_SUC_MADRE = ?, LUNES = ?, MARTES = ?, MIERCOLES = ?, JUEVES = ?, VIERNES = ?, SABADO = ?, DOMINGO = ?,
+                        HABILITADO_CONT = ?
                         WHERE NRO_SUCURSAL = ?";
                 $params = [
                     $codClient, $descSucursal, $canal, $tipoLocal,
                     $direccion, $localidad, $provincia, $telefono, $mail, $horario,
                     $codDeposi, $mailGrupEmp, $tango, $vtex, $retiroExp,
                     $nroSucMadre, $lunes, $martes, $miercoles, $jueves, $viernes, $sabado, $domingo,
+                    $habilitadoCont,
                     $nro
                 ];
                 $stmt = sqlsrv_query($this->cid_locales, $sql, $params);
@@ -418,13 +423,15 @@ class Direccionario {
                         NRO_SUCURSAL, COD_CLIENT, DESC_SUCURSAL, CANAL, TIPO_LOCAL,
                         DIRECCION, LOCALIDAD, PROVINCIA, TELEFONO, MAIL, HORARIO,
                         COD_DEPOSI, MAIL_GRUP_EMP, TANGO, INTEGRA_VTEX, RETIRO_EXPRES,
-                        NRO_SUC_MADRE, HABILITADO, LUNES, MARTES, MIERCOLES, JUEVES, VIERNES, SABADO, DOMINGO
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)";
+                        NRO_SUC_MADRE, HABILITADO, LUNES, MARTES, MIERCOLES, JUEVES, VIERNES, SABADO, DOMINGO,
+                        HABILITADO_CONT
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)";
                 $params = [
                     $nro, $codClient, $descSucursal, $canal, $tipoLocal,
                     $direccion, $localidad, $provincia, $telefono, $mail, $horario,
                     $codDeposi, $mailGrupEmp, $tango, $vtex, $retiroExp,
-                    $nroSucMadre, $lunes, $martes, $miercoles, $jueves, $viernes, $sabado, $domingo
+                    $nroSucMadre, $lunes, $martes, $miercoles, $jueves, $viernes, $sabado, $domingo,
+                    $habilitadoCont
                 ];
                 $stmt = sqlsrv_query($this->cid_locales, $sql, $params);
                 if ($stmt === false) {
