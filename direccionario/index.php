@@ -274,7 +274,7 @@ $grupos        = $direccionario->getGruposEmpresarios();
                 <th>Teléfono</th>
                 <th>Email</th>
                 <th>Horario</th>
-                <th class="text-center">Maps</th>
+                <th class="text-center">Acciones</th>
               </tr>
             </thead>
             <tbody id="dir-list-tbody"></tbody>
@@ -297,8 +297,10 @@ $grupos        = $direccionario->getGruposEmpresarios();
   window.DIRECCIONARIO_CONFIG = {
     ajaxUrl: 'controller/direccionario_ajax.php',
     canVerTecnico: <?= $puede_ver_tecnico ? 'true' : 'false' ?>,
+    canCreate: <?= $puede_crear ? 'true' : 'false' ?>,
     canEdit: <?= $puede_editar ? 'true' : 'false' ?>,
     canEditBasic: <?= $puede_editar ? 'true' : 'false' ?>,
+    canEditFull: <?= $es_admin_sistemas ? 'true' : 'false' ?>,
     canDelete: <?= $puede_eliminar ? 'true' : 'false' ?>
   };
 </script>

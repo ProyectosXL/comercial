@@ -94,8 +94,18 @@ try {
             if ($nro <= 0) {
                 throw new Exception('Número de sucursal inválido.');
             }
-            $direccionario->eliminarSucursal($nro);
+            $direccionario->eliminarSucursal($nro, $user);
             echo json_encode(['success' => true, 'message' => "Sucursal #$nro eliminada con éxito."], JSON_UNESCAPED_UNICODE);
+            break;
+
+        case 'historial':
+            if (!$puede_editar && !$es_admin_sistemas) {
+                throw new Exception('No posee permisos para consultar el historial.');
+            }
+            $nro = isset($_GET['nro_sucursal']) ? (int)$_GET['nro_sucursal'] : (isset($_POST['nro_sucursal']) ? (int)$_POST['nro_sucursal'] : 0);
+            $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+            $historial = $direccionario->getHistorialSucursal($nro > 0 ? $nro : null, $limit, $es_admin_sistemas);
+            echo json_encode(['success' => true, 'historial' => $historial], JSON_UNESCAPED_UNICODE);
             break;
 
         default:

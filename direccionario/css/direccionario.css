@@ -958,6 +958,15 @@ html, body {
   font-size: .75rem;
 }
 .dir-btn-maps-sm:hover { background: var(--dir-primary); color: #fff !important; }
+.dir-btn-del-sm {
+  color: #e53e3e !important;
+  background: #fef2f2;
+  border: none;
+  border-radius: 6px;
+  padding: .3rem .55rem;
+  font-size: .75rem;
+}
+.dir-btn-del-sm:hover { background: #e53e3e; color: #fff !important; }
 
 /* -------- OVERLAY MOBILE -------- */
 .dir-overlay {

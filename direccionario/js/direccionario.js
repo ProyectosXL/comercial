@@ -351,13 +351,14 @@
         /* ── Botones de edición según permisos ── */
         var editBtns = '';
         if (cfg.canEdit || cfg.canEditBasic) {
+          var editTitle = cfg.canEditFull ? 'Editar completo' : 'Editar sucursal';
           editBtns = '<a href="AltaSucursal.php?id=' + d.nro_sucursal + '"'
-            + ' class="sc-btn-icon" title="Editar sucursal"><i class="fas fa-pencil-alt"></i></a>';
+            + ' class="sc-btn-icon" title="' + editTitle + '"><i class="fas fa-pencil-alt"></i></a>';
         }
 
         /* ── Botón clonar ── */
         var cloneBtn = '';
-        if (cfg.canEdit) {
+        if (cfg.canCreate) {
           cloneBtn = '<a href="AltaSucursal.php?clonar=' + d.nro_sucursal + '"'
             + ' class="sc-btn-icon" title="Clonar sucursal"><i class="fas fa-clone"></i></a>';
         }
@@ -424,6 +425,13 @@
     _renderList: function (data) {
       var self   = this;
       var $tbody = $('#dir-list-tbody').empty();
+      var cfg    = window.DIRECCIONARIO_CONFIG || {};
+
+      var boolIcon = function(val) {
+        return (val === 'SI' || val === 'True' || val === '1' || val === 'true' || val === true)
+          ? '<i class="fas fa-check-circle text-success"></i>'
+          : '<i class="fas fa-times-circle text-danger"></i>';
+      };
 
       $.each(data, function (_, d) {
         var mailCell = d.mail
@@ -431,8 +439,52 @@
           : '-';
         var mapsHref = self._mapsUrl(d);
 
+        var editCell = '';
+        if (cfg.canEdit || cfg.canEditBasic) {
+          var editTitle = cfg.canEditFull ? 'Editar completo' : 'Editar sucursal';
+          editCell = ' <a href="AltaSucursal.php?id=' + d.nro_sucursal + '"'
+            + ' class="dir-btn-maps-sm btn btn-sm" title="' + editTitle + '"><i class="fas fa-pencil-alt"></i></a>';
+        }
+
+        var cloneCell = '';
+        if (cfg.canCreate) {
+          cloneCell = ' <a href="AltaSucursal.php?clonar=' + d.nro_sucursal + '"'
+            + ' class="dir-btn-maps-sm btn btn-sm" title="Clonar sucursal"><i class="fas fa-clone"></i></a>';
+        }
+
+        var deleteCell = '';
+        if (cfg.canDelete) {
+          deleteCell = ' <button type="button" class="dir-btn-del-sm btn btn-sm dir-delete-btn"'
+            + ' data-id="' + d.nro_sucursal + '"'
+            + ' data-nombre="' + self._esc(d.desc_sucursal) + '"'
+            + ' title="Eliminar sucursal"><i class="fas fa-trash-alt"></i></button>';
+        }
+
+        var trCollapseId = 'dir-tr-extra-' + d.nro_sucursal;
+        var pills = '';
+        if (d.tipo_local)       pills += '<span class="dir-pill"><i class="fas fa-store me-1"></i>' + self._esc(d.tipo_local) + '</span>';
+        if (d.grupo_empresario) pills += '<span class="dir-pill"><i class="fas fa-users me-1"></i>' + self._esc(d.grupo_empresario) + '</span>';
+        if (d.supervisora)      pills += '<span class="dir-pill"><i class="fas fa-user-tie me-1"></i>' + self._esc(d.supervisora) + '</span>';
+        pills += '<span class="dir-pill"><i class="fas fa-calendar-week me-1"></i>' + self._esc(d.dias_abiertos || 'Cerrado') + '</span>';
+        pills += '<span class="dir-pill">Tango ' + boolIcon(d.tango) + '</span>';
+        pills += '<span class="dir-pill">Tienda ' + boolIcon(d.tienda) + '</span>';
+        pills += '<span class="dir-pill">Vtex ' + boolIcon(d.integra_vtex) + '</span>';
+        if (d.deposito)         pills += '<span class="dir-pill">Dep. ' + self._esc(d.deposito) + '</span>';
+        if (d.retiro_expres)    pills += '<span class="dir-pill">Ret.Exp. ' + boolIcon(d.retiro_expres) + '</span>';
+        if (d.nro_sucursal_madre)    pills += '<span class="dir-pill">Suc. Madre #' + self._esc(d.nro_sucursal_madre) + '</span>';
+        if (d.nro_sucursal_anterior) pills += '<span class="dir-pill">Suc. Ant. #' + self._esc(d.nro_sucursal_anterior) + '</span>';
+        if (cfg.canVerTecnico) {
+          if (d.base_nombre)   pills += '<span class="dir-pill dir-pill-tec"><i class="fas fa-database me-1"></i>' + self._esc(d.base_nombre) + '</span>';
+          if (d.conexion_dns)  pills += '<span class="dir-pill dir-pill-tec"><i class="fas fa-network-wired me-1"></i>' + self._esc(d.conexion_dns)
+            + ' <button type="button" class="dir-copy-btn" data-mail="' + self._esc(d.conexion_dns) + '" title="Copiar"><i class="fas fa-copy"></i></button></span>';
+          if (d.n_llave_tango) pills += '<span class="dir-pill dir-pill-tec"><i class="fas fa-key me-1"></i>' + self._esc(d.n_llave_tango)
+            + ' <button type="button" class="dir-copy-btn" data-mail="' + self._esc(d.n_llave_tango) + '" title="Copiar"><i class="fas fa-copy"></i></button></span>';
+        }
+
         var tr = '<tr>'
-          + '<td><strong>#' + d.nro_sucursal + '</strong></td>'
+          + '<td><strong>#' + d.nro_sucursal + '</strong>'
+          + (d.cod_client ? '<br><small class="text-muted">' + self._esc(d.cod_client) + '</small>' : '')
+          + '</td>'
           + '<td><span class="fw-semibold">' + self._esc(d.desc_sucursal) + '</span></td>'
           + '<td><span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">' + self._esc(d.canal || '—') + '</span></td>'
           + '<td>' + self._esc(d.localidad || '—') + '</td>'
@@ -441,11 +493,25 @@
           + '<td>' + self._esc(d.telefono || '—') + '</td>'
           + '<td>' + mailCell + '</td>'
           + '<td><small>' + self._esc(d.horario || '—') + '</small></td>'
-          + '<td class="text-center">'
+          + '<td class="text-center" style="white-space:nowrap;">'
           +   '<a href="' + mapsHref + '" target="_blank" rel="noopener noreferrer" class="dir-btn-maps-sm btn btn-sm" title="Ver en Maps">'
           +     '<i class="fas fa-map-marker-alt"></i>'
           +   '</a>'
+          +   ' <button type="button" class="dir-btn-maps-sm btn btn-sm dir-tr-toggle" data-bs-toggle="collapse"'
+          +     ' data-bs-target="#' + trCollapseId + '" aria-expanded="false" title="Ver más datos">'
+          +     '<i class="fas fa-chevron-down dir-chevron"></i>'
+          +   '</button>'
+          +   editCell
+          +   cloneCell
+          +   deleteCell
           + '</td>'
+          + '</tr>'
+          + '<tr class="dir-tr-extra-row">'
+          +   '<td colspan="10" class="p-0">'
+          +     '<div id="' + trCollapseId + '" class="collapse dir-tr-extra-body">'
+          +       '<div class="dir-pills-wrap">' + pills + '</div>'
+          +     '</div>'
+          +   '</td>'
           + '</tr>';
 
         $tbody.append(tr);

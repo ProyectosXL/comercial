@@ -5735,6 +5735,26 @@ if (!function_exists('es_modo_desarrollo')) {
             }
         }
 
+        // Normaliza la fecha de una celda Excel a DD/MM/YYYY.
+        // Acepta número de serie de Excel (ej. 46343), objeto Date o texto DD/MM/YYYY.
+        function normalizarFechaMesActual(valor) {
+            const dosDigitos = n => String(n).padStart(2, '0');
+            if (valor instanceof Date && !isNaN(valor)) {
+                return `${dosDigitos(valor.getDate())}/${dosDigitos(valor.getMonth() + 1)}/${valor.getFullYear()}`;
+            }
+            const texto = String(valor).trim();
+            if (/^\d+(\.\d+)?$/.test(texto)) {
+                // Serial Excel: días desde 30/12/1899 (en UTC para evitar corrimientos por horario de verano)
+                const serial = Math.floor(parseFloat(texto));
+                const fecha = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+                return `${dosDigitos(fecha.getUTCDate())}/${dosDigitos(fecha.getUTCMonth() + 1)}/${fecha.getUTCFullYear()}`;
+            }
+            // Texto D/M/YYYY o DD-MM-YYYY: normalizar a DD/MM/YYYY
+            const m = texto.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+            if (m) return `${dosDigitos(m[1])}/${dosDigitos(m[2])}/${m[3]}`;
+            return texto;
+        }
+
         function leerArchivoExcelMesActual(archivo) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -5756,7 +5776,7 @@ if (!function_exists('es_modo_desarrollo')) {
                                 datos.push({
                                     articulo: String(row[0]).trim().toUpperCase(),
                                     cantidad: parseInt(row[1]) || 0,
-                                    fecha: String(row[2]).trim()
+                                    fecha: normalizarFechaMesActual(row[2])
                                 });
                             }
                         }
