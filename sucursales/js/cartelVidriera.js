@@ -9,7 +9,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const priceTagContainer = document.getElementById('priceTagContainer');
     const loadingOverlay = document.getElementById('loadingOverlay');
     const priceForm = document.getElementById('priceForm');
-    
+    const cartelVacio = document.getElementById('cvCartelVacio');
+
+    /**
+     * Muestra el aviso de "sin cartel" cuando la vista previa está vacía
+     */
+    function actualizarVacio() {
+        if (cartelVacio) {
+            cartelVacio.hidden = priceTagContainer.children.length > 0;
+        }
+    }
+
     /**
      * Muestra el indicador de carga
      */
@@ -186,11 +196,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     productoDiv.className = 'price-item';
                     productoDiv.innerHTML = `
                         <div class="product-name">
-                            <input type="text" value="${nombreProducto}" class="product-name-input">
+                            <input type="text" class="product-name-input" aria-label="Nombre del artículo">
                         </div>
                         ${precioSinIvaHtml}
                         <div class="final-price">$${precioFinal}</div>
                     `;
+                    // Por propiedad y no en el HTML: un nombre con comillas
+                    // (p. ej. 15") cortaba el atributo value.
+                    productoDiv.querySelector('.product-name-input').value = nombreProducto;
                     productsContainer.appendChild(productoDiv);
                 }
             });
@@ -203,6 +216,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Añadir al contenedor
             priceTagContainer.appendChild(priceTag);
+            actualizarVacio();
             
             // Habilitar el botón de imprimir
             imprimirBtn.disabled = false;
@@ -235,6 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Desactivar el botón de imprimir al inicio
     imprimirBtn.disabled = true;
+    actualizarVacio();
     
     // Enviar formulario con Enter
     priceForm.addEventListener('keypress', function(e) {
@@ -249,7 +264,8 @@ document.addEventListener('DOMContentLoaded', function() {
     limpiarBtn.addEventListener('click', function() {
         // Limpiar el contenedor de etiquetas
         priceTagContainer.innerHTML = '';
-        
+        actualizarVacio();
+
         // Desactivar el botón de imprimir
         imprimirBtn.disabled = true;
         

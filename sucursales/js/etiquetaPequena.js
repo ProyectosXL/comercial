@@ -279,7 +279,15 @@ document.addEventListener('DOMContentLoaded', function() {
      * Actualiza el estado del botón de imprimir
      */
     function updatePrintButtonState() {
-        printSmallTagsBtn.disabled = smallTagsContainer.children.length === 0;
+        const total = smallTagsContainer.children.length;
+        printSmallTagsBtn.disabled = total === 0;
+        clearSmallTagsBtn.disabled = total === 0;
+
+        // Contador y aviso de hoja vacía (si la pantalla los tiene)
+        const contador = document.getElementById('smallTagsCount');
+        const vacio = document.getElementById('smallTagsVacio');
+        if (contador) { contador.textContent = total; }
+        if (vacio) { vacio.hidden = total > 0; }
     }
     
     // Evento para el formulario de etiquetas pequeñas

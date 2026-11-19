@@ -1,0 +1,712 @@
+/* ==========================================================================
+   Carteles de precios — sobre el layout de XL Gestión.
+   Usa los tokens de xlgestion.css (--xlg-*), que viven en .xlg-shell.
+
+   Las clases que usan los JS (.tab-btn, .tab-content, .price-tag,
+   .small-tag, .message, .small-tag-alert, .loading-overlay…) se conservan;
+   los controles nuevos llevan prefijo cv- para no chocar con Bootstrap
+   (.card, .btn, .form-control).
+   ========================================================================== */
+
+.xlg-shell .cv-bajada {
+    margin: 8px 0 0;
+    max-width: 60ch;
+    color: var(--xlg-ink-2);
+}
+
+/* Pestañas (control segmentado) ------------------------------------------ */
+
+.xlg-shell .cv-tabs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 24px;
+    padding: 4px;
+    border: 1px solid var(--xlg-hairline);
+    border-radius: 12px;
+    background: var(--xlg-surface);
+}
+
+.xlg-shell .cv-tabs .tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--xlg-ink-2);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.xlg-shell .cv-tabs .tab-btn:hover { background: var(--xlg-canvas); color: var(--xlg-ink); }
+
+.xlg-shell .cv-tabs .tab-btn.active {
+    background: var(--xlg-accent-soft);
+    color: var(--xlg-accent);
+}
+
+.xlg-shell .cv-tabs .tab-btn:focus-visible {
+    outline: 2px solid var(--xlg-accent);
+    outline-offset: 2px;
+}
+
+.xlg-shell .tab-content { display: none; }
+.xlg-shell .tab-content.active { display: block; }
+
+/* Dos columnas en el cartel: carga a la izquierda, vista previa a la derecha */
+
+.xlg-shell .cv-layout {
+    display: grid;
+    gap: 24px;
+    align-items: start;
+}
+
+.xlg-shell .cv-layout > .xlg-card { min-width: 0; }
+
+@media (min-width: 1100px) {
+    .xlg-shell .cv-layout { grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); }
+    .xlg-shell .cv-form-card { position: sticky; top: 80px; }
+}
+
+.xlg-shell .cv-ayuda {
+    margin: 16px 0 0;
+    color: var(--xlg-ink-2);
+}
+
+.xlg-shell .cv-ayuda strong { color: var(--xlg-ink); }
+
+/* Formularios -------------------------------------------------------------- */
+
+.xlg-shell .cv-form { margin-top: 16px; }
+
+.xlg-shell .cv-codigos {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.xlg-shell .cv-codigo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.xlg-shell .cv-codigo-nro {
+    flex: 0 0 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    margin: 0;
+    border-radius: 999px;
+    background: var(--xlg-accent-soft);
+    color: var(--xlg-accent);
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 16px: con menos, Safari de iOS hace zoom al enfocar el campo. */
+.xlg-shell .cv-input {
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid #D9D1C7;
+    border-radius: 10px;
+    background: var(--xlg-surface);
+    color: var(--xlg-ink);
+    font: inherit;
+    font-size: 16px;
+    letter-spacing: .02em;
+    transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
+}
+
+.xlg-shell .cv-input::placeholder { color: var(--xlg-ink-3); opacity: 1; letter-spacing: normal; }
+
+.xlg-shell .cv-input:focus {
+    border-color: var(--xlg-accent);
+    box-shadow: 0 0 0 3px var(--xlg-accent-soft);
+    outline: none;
+}
+
+.xlg-shell .cv-input-wrap { position: relative; flex: 1 1 260px; min-width: 0; }
+
+.xlg-shell .cv-input-ico {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    color: var(--xlg-ink-3);
+    font-size: 15px;
+    pointer-events: none;
+}
+
+.xlg-shell .cv-input--ico { padding-left: 40px; min-height: 46px; }
+
+.xlg-shell .cv-form-pie {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.xlg-shell .cv-etq-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+/* Botones ------------------------------------------------------------------ */
+
+.xlg-shell .cv-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid var(--xlg-hairline);
+    border-radius: 10px;
+    background: var(--xlg-surface);
+    color: var(--xlg-ink);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out;
+}
+
+.xlg-shell .cv-btn i { color: var(--xlg-ink-3); }
+
+.xlg-shell .cv-btn:hover:not(:disabled) {
+    background: var(--xlg-canvas);
+    border-color: var(--xlg-ink-3);
+}
+
+.xlg-shell .cv-btn--primario {
+    border-color: var(--xlg-accent);
+    background: var(--xlg-accent);
+    color: #FFFFFF;
+}
+
+.xlg-shell .cv-btn--primario i { color: inherit; }
+
+.xlg-shell .cv-btn--primario:hover:not(:disabled) {
+    border-color: #7A3A18;
+    background: #7A3A18;
+    color: #FFFFFF;
+}
+
+.xlg-shell .cv-btn--peligro:hover:not(:disabled),
+.xlg-shell .cv-btn--peligro:hover:not(:disabled) i {
+    border-color: var(--xlg-danger);
+    color: var(--xlg-danger);
+}
+
+.xlg-shell .cv-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.xlg-shell .cv-btn:focus-visible {
+    outline: 2px solid var(--xlg-accent);
+    outline-offset: 2px;
+}
+
+/* Cabecera de vista previa / hoja ----------------------------------------- */
+
+.xlg-shell .cv-preview-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.xlg-shell .cv-preview-head .xlg-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.xlg-shell .cv-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.xlg-shell .cv-contador {
+    margin: 0;
+    padding: 1px 10px;
+    color: var(--xlg-ink);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.xlg-shell .cv-vacio {
+    margin-top: 20px;
+    padding: 40px 16px;
+    border: 1px dashed var(--xlg-hairline);
+    border-radius: var(--xlg-radius);
+    color: var(--xlg-ink-3);
+    text-align: center;
+}
+
+.xlg-shell .cv-vacio[hidden] { display: none; }
+.xlg-shell .cv-vacio i { font-size: 28px; opacity: .6; }
+.xlg-shell .cv-vacio p { margin: 8px 0 0; }
+
+.xlg-shell .cv-cartel-wrap {
+    overflow-x: auto;
+}
+
+.xlg-shell .cv-cartel-wrap:empty { display: none; }
+
+/* Mensajes del cartel (cartelVidriera.js) --------------------------------- */
+
+.xlg-shell .message-container { margin-top: 14px; }
+.xlg-shell .message-container:empty { display: none; }
+
+.xlg-shell .message {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-size: 13px;
+    animation: cv-entra 180ms ease-out;
+}
+
+.xlg-shell .message > i { margin-top: 3px; }
+
+.xlg-shell .message-success { border-color: #BFE3CB; background: var(--xlg-ok-soft); color: var(--xlg-ok); }
+.xlg-shell .message-error   { border-color: #F3C7C3; background: #FDF0EF; color: var(--xlg-danger); }
+.xlg-shell .message-warning { border-color: #F5D7B5; background: #FEF5EC; color: var(--xlg-warn); }
+.xlg-shell .message-info    { border-color: var(--xlg-hairline); background: var(--xlg-canvas); color: var(--xlg-ink-2); }
+
+.xlg-shell .message .close-message {
+    margin-left: auto;
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    color: inherit;
+    opacity: .7;
+    cursor: pointer;
+}
+
+.xlg-shell .message .close-message:hover { opacity: 1; }
+
+/* Avisos flotantes (etiquetaPequena.js; se agregan al body) --------------- */
+
+.small-tag-alert {
+    position: fixed;
+    top: 72px;                       /* debajo de la barra superior */
+    right: 20px;
+    z-index: 1090;
+    width: min(360px, calc(100vw - 40px));
+    overflow: hidden;
+    border: 1px solid #E8E2DB;
+    border-radius: 12px;
+    background: #FFFFFF;
+    box-shadow: 0 12px 32px rgba(28, 25, 22, .14);
+    color: #1C1916;
+    font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    animation: cv-toast-entra 220ms ease-out forwards;
+}
+
+.small-tag-alert .alert-content { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; }
+.small-tag-alert .alert-icon    { margin-top: 1px; font-size: 18px; }
+.small-tag-alert .alert-text    { flex: 1; min-width: 0; }
+.small-tag-alert .alert-title   { margin-bottom: 2px; font-weight: 600; }
+.small-tag-alert .alert-message { color: #5C544D; font-size: 13px; }
+
+.small-tag-alert .alert-close {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #6B625A;
+    cursor: pointer;
+}
+
+.small-tag-alert .alert-close:hover { color: #1C1916; }
+
+.small-tag-alert.success .alert-icon { color: #17663A; }
+.small-tag-alert.error   .alert-icon { color: #B42318; }
+.small-tag-alert.warning .alert-icon { color: #B54708; }
+
+.small-tag-alert .alert-progress { position: relative; height: 3px; background: #F6F3EF; }
+
+.small-tag-alert .alert-progress-bar {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 100%;
+    animation: cv-progreso 5s linear forwards;
+}
+
+.small-tag-alert.success .alert-progress-bar { background: #17663A; }
+.small-tag-alert.error   .alert-progress-bar { background: #B42318; }
+.small-tag-alert.warning .alert-progress-bar { background: #B54708; }
+
+.small-tag-alert.closing { animation: cv-toast-sale 220ms ease-in forwards; }
+
+/* Cargando ------------------------------------------------------------------ */
+
+.xlg-shell .loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1080;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(28, 25, 22, .35);
+}
+
+.xlg-shell .loading-overlay.active { display: flex; }
+
+.xlg-shell .cv-loading-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 22px;
+    border-radius: 14px;
+    background: var(--xlg-surface);
+    box-shadow: 0 12px 32px rgba(28, 25, 22, .18);
+    color: var(--xlg-ink);
+    font-weight: 600;
+}
+
+.xlg-shell .cv-loading-card p { margin: 0; }
+
+.xlg-shell .spinner {
+    width: 26px;
+    height: 26px;
+    border: 3px solid var(--xlg-accent-soft);
+    border-top-color: var(--xlg-accent);
+    border-radius: 50%;
+    animation: cv-giro .8s linear infinite;
+}
+
+@keyframes cv-giro        { to { transform: rotate(360deg); } }
+@keyframes cv-entra       { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes cv-progreso    { from { width: 100%; } to { width: 0; } }
+@keyframes cv-toast-entra { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes cv-toast-sale  { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(24px); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .small-tag-alert,
+    .small-tag-alert.closing { animation-duration: 0ms; }
+}
+
+@media (max-width: 575.98px) {
+    .xlg-shell .cv-tabs { display: flex; }
+    .xlg-shell .cv-tabs .tab-btn { flex: 1 1 auto; justify-content: center; }
+    .xlg-shell .cv-etq-form .cv-btn,
+    .xlg-shell .cv-acciones .cv-btn { flex: 1 1 auto; }
+}
+
+/* ==========================================================================
+   Los carteles: mismas medidas, letras y colores que la pantalla anterior.
+   Llevan su tipografía propia (antes la heredaban del body) para que lo
+   impreso no cambie con el layout nuevo.
+   ========================================================================== */
+
+.xlg-shell .price-tag,
+.xlg-shell .small-tag {
+    color: #333333;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+}
+
+/* Cartel vidriera: 13,8 × 19 cm */
+
+.xlg-shell .price-tag {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: 13.8cm;
+    min-height: 19cm;
+    margin: 20px auto 0;
+    padding: 1.2cm 1.2cm 3cm;
+    border: 1px dashed #999999;
+    background: #FFFFFF;
+    box-shadow: 0 1px 2px rgba(28, 25, 22, .06), 0 8px 24px rgba(28, 25, 22, .08);
+}
+
+.xlg-shell .price-tag-products {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    margin-top: 2.5rem;
+}
+
+.xlg-shell .price-tag .price-item {
+    position: relative;
+    margin-bottom: .2cm;
+    padding-bottom: .4cm;
+}
+
+.xlg-shell .price-tag .price-item::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border-bottom: 1px dotted #CCCCCC;
+}
+
+.xlg-shell .price-tag .product-name {
+    width: 75%;
+    margin-bottom: 4px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.xlg-shell .price-tag .product-name input {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background-color: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: bold;
+    line-height: inherit;
+    cursor: text;
+}
+
+.xlg-shell .price-tag .product-name input:hover { background-color: var(--xlg-accent-soft); }
+
+.xlg-shell .price-tag .product-name input:focus {
+    outline: none;
+    border-bottom: 1px dashed var(--xlg-accent);
+}
+
+.xlg-shell .price-tag .price-without-tax {
+    margin-bottom: 3px;
+    color: #555555;
+    font-size: 12px;
+}
+
+.xlg-shell .price-tag .final-price {
+    position: absolute;
+    top: 0;
+    right: 0;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.xlg-shell .brand-footer {
+    position: absolute;
+    right: 0;
+    bottom: .5cm;
+    left: 0;
+    text-align: center;
+}
+
+.xlg-shell .brand-footer img {
+    max-width: 4.5cm;
+    max-height: 2.2cm;
+}
+
+/* Etiquetas pequeñas: 4 × 5,2 cm */
+
+.xlg-shell .small-tags-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .2cm;
+    margin-top: 20px;
+}
+
+.xlg-shell .small-tags-grid:empty { display: none; }
+
+.xlg-shell .small-tag {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    box-sizing: border-box;
+    width: 4cm;
+    height: 5.2cm;
+    padding: .3cm;
+    border: 1px dashed #999999;
+    background-color: #FFFFFF;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    animation: cv-entra 180ms ease-out;
+}
+
+.xlg-shell .small-tag-header {
+    position: absolute;
+    top: .2cm;
+    right: 0;
+    left: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 .2cm;
+}
+
+.xlg-shell .remove-tag {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--xlg-ink-3);
+    font-size: 14px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 150ms ease-out, color 150ms ease-out;
+}
+
+.xlg-shell .small-tag:hover .remove-tag,
+.xlg-shell .remove-tag:focus-visible { opacity: 1; }
+.xlg-shell .remove-tag:hover { color: var(--xlg-danger); }
+
+@media (hover: none) {
+    .xlg-shell .remove-tag { opacity: 1; }
+}
+
+.xlg-shell .small-tag .final-price {
+    margin-bottom: .3cm;
+    color: #000000;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.xlg-shell .small-tag .price-without-tax {
+    width: 100%;
+    color: #555555;
+    font-size: 16px;
+    text-align: center;
+}
+
+.xlg-shell .small-tag .price-without-tax .amount {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.xlg-shell .small-tag .price-without-tax .text {
+    display: block;
+    font-size: 10px;
+    text-align: center;
+}
+
+.xlg-shell .small-tag .small-tag-articulo {
+    margin-top: .15cm;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.xlg-shell .small-tag .small-tag-descripcion {
+    display: -webkit-box;
+    width: 100%;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.15;
+    text-align: center;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.xlg-shell .small-tag .small-tag-barcode {
+    display: block;
+    flex-shrink: 0;
+    width: 100%;
+    height: .8cm;
+    margin-top: auto;
+}
+
+/* ==========================================================================
+   Impresión: igual que la pantalla anterior.
+   - Hoja del tamaño de la impresora, sin márgenes de página.
+   - Cartel: centrado, a 2cm del borde superior, con 6rem arriba.
+   - Etiquetas: centradas, 0,3cm de margen entre cada una, borde negro.
+   Sólo sale la pestaña activa.
+   ========================================================================== */
+
+@page {
+    size: auto;
+    margin: 0;
+}
+
+@media print {
+    html,
+    body {
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #FFFFFF !important;
+    }
+
+    .xlg-shell .xlg-sidebar,
+    .xlg-shell .xlg-topbar,
+    .xlg-shell .cv-head,
+    .xlg-shell .cv-tabs,
+    .xlg-shell .input-form,
+    .xlg-shell .cv-preview-head,
+    .xlg-shell .cv-vacio,
+    .xlg-shell .message-container,
+    .xlg-shell .loading-overlay,
+    .xlg-shell .small-tag-header,
+    .small-tag-alert,
+    .xlg-shell .tab-content:not(.active) { display: none !important; }
+
+    .xlg-shell,
+    .xlg-shell .xlg-main { min-height: 0 !important; display: block; background: #FFFFFF !important; }
+    .xlg-shell .xlg-main { margin: 0 !important; padding: 0 !important; }
+    .xlg-shell .xlg-content { padding: 0; }
+    .xlg-shell .xlg-col { max-width: none; }
+
+    .xlg-shell .cv-layout { display: block; }
+
+    .xlg-shell .xlg-card {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .xlg-shell .cv-cartel-wrap { overflow: visible; }
+
+    .xlg-shell .price-tag {
+        width: 13.8cm !important;
+        min-height: 19cm !important;
+        margin: 2cm auto 0 !important;
+        padding: 6rem 1.2cm 3cm !important;
+        border: 1px dashed #999999;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    .xlg-shell .price-tag .price-item { page-break-inside: avoid; break-inside: avoid; }
+
+    .xlg-shell .small-tags-grid {
+        justify-content: center;
+        gap: 0;
+        margin: 0;
+        padding: 0;
+    }
+
+    .xlg-shell .small-tag {
+        margin: .3cm;
+        padding: .3cm;
+        border: 1px dashed #000000;
+        animation: none;
+    }
+}
