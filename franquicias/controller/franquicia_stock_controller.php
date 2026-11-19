@@ -227,6 +227,13 @@ if (!class_exists('FranquiciaStockController')) {
                 case 'buscar_articulos':
                     $resultado = $this->buscarArticulos();
                     break;
+
+                case 'ping_sesion':
+                    $resultado = [
+                        'success' => true,
+                        'message' => 'Sesión activa'
+                    ];
+                    break;
                     
                 default:
                     error_log("DEBUG PROC: Error - Acción no válida: $accion");

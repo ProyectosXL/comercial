@@ -13,12 +13,17 @@ if (!$fechaInicio) die("Faltan fechas");
 
 $conn = getConexionSistemas();
 
-// 1. Consulta Base: Contamos horas por día y persona (excluyendo Vacaciones 'V')
+// 1. Consulta Base: Contamos horas por día y persona (solo H, C, P, A y sus variantes)
 $sql = "
     SELECT COD_VENDED, FECHA, COUNT(*) as HORAS_DIA
     FROM FP_GESTION_HORARIOS 
     WHERE FECHA BETWEEN ? AND ?
-      AND LOWER(TIPO_HORA) NOT IN ('vacaciones', 'v')
+      AND REPLACE(LOWER(TIPO_HORA), '_media', '') IN (
+          'h', 'norm', 'normal', 'x',
+          'c', 'caja',
+          'p', 'perm', 'permiso',
+          'a', 'adicional', 'extra', 'e'
+      )
 ";
 if ($nroSucursal) $sql .= " AND NRO_SUCURSAL = $nroSucursal";
 

@@ -26,30 +26,43 @@ class DatabaseSQLServer {
                 
                 error_log("DatabaseSQLServer: Cargando .env desde: " . $envPath);
                 
-                // Cargar el archivo .env directamente sin usar listVars() que tiene ruta hardcodeada
-                $this->loadEnvFile($envPath);
+                // Cargar el archivo .env directamente sin depender de putenv/getenv bajo concurrencia
+                $parsedEnv = $this->loadEnvFile($envPath);
                 
-                // Obtener las variables que necesitamos
-                $this->envVars = [
-                    'HOST_CENTRAL' => getenv('HOST_CENTRAL'),
-                    'HOST_LOCALES' => getenv('HOST_LOCALES'),
-                    'DATABASE_CENTRAL' => getenv('DATABASE_CENTRAL'),
-                    'DATABASE_LOCALES' => getenv('DATABASE_LOCALES'),
-                    'DATABASE_UY' => getenv('DATABASE_UY'),
-                    'DATABASE_TANGOBIS' => getenv('DATABASE_TANGOBIS'),
-                    'DATABASE_SUC_UY' => getenv('DATABASE_SUC_UY'),
-                    'HOST_APPS' => getenv('HOST_APPS'),
-                    'DATABASE_APPS' => getenv('DATABASE_APPS'),
-                    'DATABASE_POWER' => getenv('DATABASE_POWER'),
-                    'USER' => getenv('USER'),
-                    'PASS' => getenv('PASS'),
-                    'PASS_LOCALES' => getenv('PASS_LOCALES'),
-                    'CHARACTER' => getenv('CHARACTER'),
-                    'ENV' => getenv('ENV'),
-                    'HOST_EMAIL' => getenv('HOST_EMAIL'),
-                    'USER_EMAIL' => getenv('USER_EMAIL'),
-                    'PASS_EMAIL' => getenv('PASS_EMAIL'),
+                $keys = [
+                    'HOST_CENTRAL',
+                    'HOST_LOCALES',
+                    'DATABASE_CENTRAL',
+                    'DATABASE_LOCALES',
+                    'DATABASE_UY',
+                    'DATABASE_TANGOBIS',
+                    'DATABASE_SUC_UY',
+                    'HOST_APPS',
+                    'DATABASE_APPS',
+                    'DATABASE_POWER',
+                    'USER',
+                    'PASS',
+                    'PASS_LOCALES',
+                    'CHARACTER',
+                    'ENV',
+                    'HOST_EMAIL',
+                    'USER_EMAIL',
+                    'PASS_EMAIL',
                 ];
+                
+                $this->envVars = [];
+                foreach ($keys as $key) {
+                    if (array_key_exists($key, $parsedEnv)) {
+                        $this->envVars[$key] = $parsedEnv[$key];
+                    } elseif (array_key_exists($key, $_ENV)) {
+                        $this->envVars[$key] = $_ENV[$key];
+                    } elseif (array_key_exists($key, $_SERVER)) {
+                        $this->envVars[$key] = $_SERVER[$key];
+                    } else {
+                        $val = getenv($key);
+                        $this->envVars[$key] = $val !== false ? $val : '';
+                    }
+                }
                 
                 error_log("DatabaseSQLServer: Variables de entorno cargadas exitosamente");
             } catch (Exception $e) {
@@ -68,6 +81,7 @@ class DatabaseSQLServer {
             throw new Exception("El archivo .env no es legible: $path");
         }
 
+        $parsed = [];
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($lines as $line) {
             if (strpos(trim($line), '#') === 0) {
@@ -81,13 +95,16 @@ class DatabaseSQLServer {
             list($name, $value) = explode('=', $line, 2);
             $name = trim($name);
             $value = trim($value);
+            $parsed[$name] = $value;
 
             if (!array_key_exists($name, $_SERVER) && !array_key_exists($name, $_ENV)) {
-                putenv(sprintf('%s=%s', $name, $value));
+                @putenv(sprintf('%s=%s', $name, $value));
                 $_ENV[$name] = $value;
                 $_SERVER[$name] = $value;
             }
         }
+
+        return $parsed;
     }
     
     /**

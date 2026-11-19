@@ -11,6 +11,9 @@ if (headers_sent($file, $line)) {
 
 // Solo configurar si la sesión no está activa
 if (session_status() === PHP_SESSION_NONE) {
+    // Ampliar tiempo de vida de la sesión en servidor (4 horas) para evitar expiración durante conteo físico
+    @ini_set('session.gc_maxlifetime', '14400');
+
     // Configurar parámetros de cookie específicos para localhost
     session_set_cookie_params([
         'lifetime' => 0,

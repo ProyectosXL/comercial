@@ -55,6 +55,38 @@ class FranquiciaStockManager {
         this.configurarEventos();
         this.verificarEstadoCarga();
         this.cargarResumenStock();
+        this.iniciarKeepAliveSesion();
+    }
+
+    /**
+     * Mantener activa la sesión PHP mientras el usuario cuenta/carga stock
+     */
+    iniciarKeepAliveSesion() {
+        if (this.keepAliveInterval) {
+            clearInterval(this.keepAliveInterval);
+        }
+        this.keepAliveInterval = setInterval(async () => {
+            try {
+                const data = await this.fetchWithErrorHandling('controller/franquicia_stock_controller.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'accion=ping_sesion'
+                });
+                if (data && data.error_type === 'unauthorized') {
+                    clearInterval(this.keepAliveInterval);
+                    this.mostrarModalErrorGuardado(
+                        'Sesión Expirada',
+                        'Tu sesión venció por inactividad. Iniciá sesión nuevamente antes de guardar el stock (podés abrir el login en otra pestaña para no perder los datos en pantalla).',
+                        true,
+                        data.redirect || 'login.php'
+                    );
+                }
+            } catch (error) {
+                console.warn('Error en keep-alive de sesión:', error);
+            }
+        }, 10 * 60 * 1000);
     }
     
     /**
@@ -1136,7 +1168,15 @@ class FranquiciaStockManager {
                 
             } else {
                 console.error('DEBUG: Error en respuesta del servidor:', data.message);
-                this.mostrarAlerta(data.message || 'Error al guardar el stock', 'danger');
+                const esSesionExpirada = data.error_type === 'unauthorized';
+                const titulo = esSesionExpirada
+                    ? 'Sesión Expirada - El Stock NO se Guardó'
+                    : 'Error - El Stock NO se Guardó';
+                const mensaje = esSesionExpirada
+                    ? 'Tu sesión venció por inactividad. Los datos NO se guardaron en el sistema. Iniciá sesión nuevamente (podés abrir el login en otra pestaña para conservar los números cargados en pantalla) y volvé a guardar.'
+                    : (data.message || 'Error al guardar el stock. Por favor, intentá nuevamente.');
+                this.mostrarAlerta(mensaje, 'danger');
+                this.mostrarModalErrorGuardado(titulo, mensaje, esSesionExpirada, data.redirect || 'login.php');
             }
         } catch (error) {
             // ASEGURAR que el modal se oculte en caso de error
@@ -1146,8 +1186,84 @@ class FranquiciaStockManager {
             this.forzarOcultacionModal();
             console.log('DEBUG: Modal ocultado por error');
             
-            this.mostrarAlerta('Error de conexión', 'danger');
+            const mensaje = 'Error de conexión al intentar guardar el stock. Los datos NO se guardaron. Verificá tu conexión e intentá nuevamente.';
+            this.mostrarAlerta(mensaje, 'danger');
+            this.mostrarModalErrorGuardado('Error de Conexión - El Stock NO se Guardó', mensaje, false);
         }
+    }
+
+    /**
+     * Mostrar modal visible centrado cuando falla el guardado o vence la sesión
+     */
+    mostrarModalErrorGuardado(titulo, mensaje, esSesionExpirada = false, redirectUrl = 'login.php') {
+        const modalAnterior = document.getElementById('modalErrorGuardadoStock');
+        if (modalAnterior) {
+            modalAnterior.remove();
+        }
+
+        if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+            alert(`${titulo}\n\n${mensaje}`);
+            if (esSesionExpirada) {
+                window.location.href = redirectUrl;
+            }
+            return;
+        }
+
+        const btnLoginHTML = esSesionExpirada
+            ? `<a href="${redirectUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary">
+                   <i class="bi bi-box-arrow-up-right me-1"></i>
+                   Abrir Login en otra pestaña
+               </a>
+               <button type="button" class="btn btn-danger" id="btnIrALoginError">
+                   <i class="bi bi-box-arrow-in-right me-1"></i>
+                   Ir a Iniciar Sesión
+               </button>`
+            : '';
+
+        const modalHTML = `
+            <div class="modal fade" id="modalErrorGuardadoStock" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-danger">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title" id="modalErrorGuardadoTitulo"></h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-exclamation-octagon-fill text-danger fs-3 me-3"></i>
+                                <p class="mb-0" id="modalErrorGuardadoMensaje"></p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            ${btnLoginHTML}
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        const modalElement = document.getElementById('modalErrorGuardadoStock');
+        const tituloEl = document.getElementById('modalErrorGuardadoTitulo');
+        const mensajeEl = document.getElementById('modalErrorGuardadoMensaje');
+        if (tituloEl) tituloEl.textContent = titulo;
+        if (mensajeEl) mensajeEl.textContent = mensaje;
+
+        const btnIrALogin = document.getElementById('btnIrALoginError');
+        if (btnIrALogin) {
+            btnIrALogin.addEventListener('click', () => {
+                window.location.href = redirectUrl;
+            });
+        }
+
+        modalElement.addEventListener('hidden.bs.modal', () => {
+            modalElement.remove();
+        });
+
+        const modal = new bootstrap.Modal(modalElement);
+        modal.show();
     }
     
     /**
