@@ -58,16 +58,36 @@ class StockBIFranquicias {
         return $vars;
     }
 
+    private function sucursalJoinSql(string $biAlias = 'BI'): string {
+        return "LEFT JOIN (
+                    SELECT NRO_SUCURSAL, MAX(LTRIM(RTRIM(DESC_SUCURSAL))) AS DESC_SUCURSAL
+                    FROM [XL-LAKERBIS].[locales_lakers].[dbo].[SUCURSALES_LAKERS] WITH (NOLOCK)
+                    WHERE DESC_SUCURSAL IS NOT NULL AND LTRIM(RTRIM(DESC_SUCURSAL)) != ''
+                    GROUP BY NRO_SUCURSAL
+                ) SL ON SL.NRO_SUCURSAL = {$biAlias}.NRO_SUCURSAL";
+    }
+
+    private function sucursalNombreExpr(string $biAlias = 'BI'): string {
+        return "COALESCE(NULLIF(LTRIM(RTRIM(SL.DESC_SUCURSAL COLLATE database_default)), ''), {$biAlias}.DESC_SUCURSAL)";
+    }
+
+    private function needsSucursalJoin(array $f, string $col = ''): bool {
+        return (!empty($f['sucursal']) && is_array($f['sucursal']))
+            || !empty($f['search'])
+            || $col === 'DESC_SUCURSAL';
+    }
+
     private function buildWhere(array $f): array {
-        $conds  = ["BI.CANT_STOCK > 0", "BI.RUBRO != '_KITS'"];
-        $params = [];
+        $conds   = ["BI.CANT_STOCK > 0", "BI.RUBRO != '_KITS'"];
+        $params  = [];
+        $sucExpr = $this->sucursalNombreExpr('BI');
 
         if (!empty($f['sucursal']) && is_array($f['sucursal'])) {
             $ph = [];
             foreach ($f['sucursal'] as $i => $v) {
                 $k = ":sucursal_{$i}"; $ph[] = $k; $params[$k] = $v;
             }
-            $conds[] = "BI.DESC_SUCURSAL IN (" . implode(',', $ph) . ")";
+            $conds[] = "{$sucExpr} IN (" . implode(',', $ph) . ")";
         }
         if (!empty($f['temporada'])) {
             $conds[]              = "BI.TEMPORADA = :temporada";
@@ -119,7 +139,7 @@ class StockBIFranquicias {
         }
         if (!empty($f['search'])) {
             $s               = '%' . $f['search'] . '%';
-            $conds[]         = "(BI.ARTICULO LIKE :s1 OR BI.DESCRIPCION LIKE :s2 OR BI.MODELO LIKE :s3 OR BI.DESC_SUCURSAL LIKE :s4)";
+            $conds[]         = "(BI.ARTICULO LIKE :s1 OR BI.DESCRIPCION LIKE :s2 OR BI.MODELO LIKE :s3 OR {$sucExpr} LIKE :s4)";
             $params[':s1']   = $s;
             $params[':s2']   = $s;
             $params[':s3']   = $s;
@@ -134,11 +154,15 @@ class StockBIFranquicias {
         $dir    = strtoupper($dir) === 'DESC' ? 'DESC' : 'ASC';
         $length = max(1, min($length, 500));
 
-        $joinMD = (isset($f['liquidacion']) && $f['liquidacion'] !== '') || $col === 'LIQUIDACION';
-        
-        $joinSql = $joinMD 
+        $joinMD       = (isset($f['liquidacion']) && $f['liquidacion'] !== '') || $col === 'LIQUIDACION';
+        $joinSLFilter = $this->needsSucursalJoin($f);
+        $joinSLInside = $this->needsSucursalJoin($f, $col);
+
+        $sucExprBI    = $this->sucursalNombreExpr('BI');
+        $joinMDSql    = $joinMD
             ? "LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default"
             : "";
+        $joinSLSql    = $joinSLFilter ? $this->sucursalJoinSql('BI') : "";
 
         [$where, $params] = $this->buildWhere($f);
 
@@ -150,7 +174,8 @@ class StockBIFranquicias {
         $stmtFiltered = $this->conn->prepare(
             "SELECT COUNT(*) 
              FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
-             $joinSql
+             $joinSLSql
+             $joinMDSql
              $where"
         );
         $stmtFiltered->execute($params);
@@ -158,29 +183,58 @@ class StockBIFranquicias {
 
         // OFFSET/FETCH no acepta parámetros PDO en SQL Server — se inyectan como literales enteros ya validados
         if ($joinMD) {
-            $orderSql = $col === 'LIQUIDACION' ? "MD.LIQUIDACION" : "BI.{$col}";
+            if ($col === 'LIQUIDACION') {
+                $orderSql = "MD.LIQUIDACION";
+            } elseif ($col === 'DESC_SUCURSAL') {
+                $orderSql = $sucExprBI;
+            } else {
+                $orderSql = "BI.{$col}";
+            }
+            $slJoin = $this->sucursalJoinSql('BI');
             $sql = "SELECT
-                        BI.ARTICULO, BI.DESCRIPCION, BI.DESC_SUCURSAL, BI.NRO_SUCURSAL, BI.TEMPORADA, BI.RUBRO,
+                        BI.ARTICULO, BI.DESCRIPCION, {$sucExprBI} AS DESC_SUCURSAL, BI.NRO_SUCURSAL, BI.TEMPORADA, BI.RUBRO,
                         BI.CATEGORIA, BI.DESTINO, BI.GRUPO_EMPRESARIO, BI.MODELO, BI.CANT_STOCK,
                         MD.LIQUIDACION AS LIQUIDACION
                     FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                    $slJoin
                     LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default
                     $where
                     ORDER BY $orderSql $dir
                     OFFSET {$start} ROWS FETCH NEXT {$length} ROWS ONLY";
-        } else {
+        } elseif ($joinSLInside) {
+            $slJoin   = $this->sucursalJoinSql('BI');
+            $orderSql = $col === 'DESC_SUCURSAL' ? $sucExprBI : "BI.{$col}";
             $sql = "SELECT
                         Paged.*,
                         MD.LIQUIDACION AS LIQUIDACION
                     FROM (
                         SELECT
-                            BI.ARTICULO, BI.DESCRIPCION, BI.DESC_SUCURSAL, BI.NRO_SUCURSAL, BI.TEMPORADA, BI.RUBRO,
+                            BI.ARTICULO, BI.DESCRIPCION, {$sucExprBI} AS DESC_SUCURSAL, BI.NRO_SUCURSAL, BI.TEMPORADA, BI.RUBRO,
+                            BI.CATEGORIA, BI.DESTINO, BI.GRUPO_EMPRESARIO, BI.MODELO, BI.CANT_STOCK
+                        FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                        $slJoin
+                        $where
+                        ORDER BY $orderSql $dir
+                        OFFSET {$start} ROWS FETCH NEXT {$length} ROWS ONLY
+                    ) Paged
+                    LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = Paged.ARTICULO COLLATE database_default";
+        } else {
+            $slJoinPaged = $this->sucursalJoinSql('Paged');
+            $sucExprOut  = "COALESCE(NULLIF(LTRIM(RTRIM(SL.DESC_SUCURSAL COLLATE database_default)), ''), Paged.BI_DESC_SUCURSAL)";
+            $sql = "SELECT
+                        Paged.ARTICULO, Paged.DESCRIPCION, {$sucExprOut} AS DESC_SUCURSAL, Paged.NRO_SUCURSAL, Paged.TEMPORADA, Paged.RUBRO,
+                        Paged.CATEGORIA, Paged.DESTINO, Paged.GRUPO_EMPRESARIO, Paged.MODELO, Paged.CANT_STOCK,
+                        MD.LIQUIDACION AS LIQUIDACION
+                    FROM (
+                        SELECT
+                            BI.ARTICULO, BI.DESCRIPCION, BI.DESC_SUCURSAL AS BI_DESC_SUCURSAL, BI.NRO_SUCURSAL, BI.TEMPORADA, BI.RUBRO,
                             BI.CATEGORIA, BI.DESTINO, BI.GRUPO_EMPRESARIO, BI.MODELO, BI.CANT_STOCK
                         FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
                         $where
                         ORDER BY BI.{$col} $dir
                         OFFSET {$start} ROWS FETCH NEXT {$length} ROWS ONLY
                     ) Paged
+                    $slJoinPaged
                     LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = Paged.ARTICULO COLLATE database_default";
         }
 
@@ -197,17 +251,19 @@ class StockBIFranquicias {
     public function getKPIs(array $f): array {
         [$where, $params] = $this->buildWhere($f);
 
-        $joinMD = isset($f['liquidacion']) && $f['liquidacion'] !== '';
-        
-        $joinSql = $joinMD 
+        $joinMD    = isset($f['liquidacion']) && $f['liquidacion'] !== '';
+        $slJoin    = $this->sucursalJoinSql('BI');
+        $sucExprBI = $this->sucursalNombreExpr('BI');
+        $joinSql   = $joinMD
             ? "LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default"
             : "";
 
         $sql = "SELECT
-                    ISNULL(SUM(BI.CANT_STOCK), 0)   AS stock_total,
-                    COUNT(DISTINCT BI.ARTICULO)      AS articulos_unicos,
-                    COUNT(DISTINCT BI.DESC_SUCURSAL) AS franquicias_con_stock
+                    ISNULL(SUM(BI.CANT_STOCK), 0) AS stock_total,
+                    COUNT(DISTINCT BI.ARTICULO)    AS articulos_unicos,
+                    COUNT(DISTINCT {$sucExprBI})   AS franquicias_con_stock
                 FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                $slJoin
                 $joinSql
                 $where";
 
@@ -224,10 +280,17 @@ class StockBIFranquicias {
             if ($cached) return $cached;
         }
 
-        $base = "FROM BI_STOCK_FRANQUICIAS WITH (NOLOCK) WHERE CANT_STOCK > 0 AND RUBRO != '_KITS'";
+        $base      = "FROM BI_STOCK_FRANQUICIAS WITH (NOLOCK) WHERE CANT_STOCK > 0 AND RUBRO != '_KITS'";
+        $slJoin    = $this->sucursalJoinSql('BI');
+        $sucExprBI = $this->sucursalNombreExpr('BI');
 
         $queries = [
-            'sucursales' => "SELECT DISTINCT DESC_SUCURSAL    AS v $base AND DESC_SUCURSAL    IS NOT NULL AND DESC_SUCURSAL    != '' ORDER BY DESC_SUCURSAL",
+            'sucursales' => "SELECT DISTINCT {$sucExprBI} AS v
+                             FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                             $slJoin
+                             WHERE BI.CANT_STOCK > 0 AND BI.RUBRO != '_KITS'
+                               AND {$sucExprBI} IS NOT NULL AND {$sucExprBI} != ''
+                             ORDER BY v",
             'temporadas' => "SELECT DISTINCT TEMPORADA        AS v $base AND TEMPORADA        IS NOT NULL AND TEMPORADA        != '' ORDER BY TEMPORADA DESC",
             'rubros'     => "SELECT DISTINCT RUBRO            AS v $base AND RUBRO            IS NOT NULL AND RUBRO            != '' ORDER BY RUBRO",
             'categorias' => "SELECT DISTINCT CATEGORIA        AS v $base AND CATEGORIA        IS NOT NULL AND CATEGORIA        != '' ORDER BY CATEGORIA",
@@ -252,30 +315,52 @@ class StockBIFranquicias {
     public function getExportData(array $f): array {
         [$where, $params] = $this->buildWhere($f);
 
-        $joinMD = isset($f['liquidacion']) && $f['liquidacion'] !== '';
+        $joinMD    = isset($f['liquidacion']) && $f['liquidacion'] !== '';
+        $sucExprBI = $this->sucursalNombreExpr('BI');
+        $slJoinBI  = $this->sucursalJoinSql('BI');
 
         if ($joinMD) {
             $sql = "SELECT TOP 100000
                         BI.ARTICULO, BI.DESCRIPCION, BI.MODELO, BI.CATEGORIA, BI.RUBRO, BI.TEMPORADA,
-                        BI.DESC_SUCURSAL AS FRANQUICIA, BI.NRO_SUCURSAL, BI.GRUPO_EMPRESARIO, BI.DESTINO,
+                        {$sucExprBI} AS FRANQUICIA, BI.NRO_SUCURSAL, BI.GRUPO_EMPRESARIO, BI.DESTINO,
                         BI.COD_DEPOSI, BI.COD_CLIENT, MD.LIQUIDACION AS LIQUIDACION, BI.CANT_STOCK
                     FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                    $slJoinBI
                     LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = BI.ARTICULO COLLATE database_default
                     $where
-                    ORDER BY BI.DESC_SUCURSAL, BI.ARTICULO";
-        } else {
+                    ORDER BY FRANQUICIA, BI.ARTICULO";
+        } elseif ($this->needsSucursalJoin($f)) {
             $sql = "SELECT
                         Paged.*, MD.LIQUIDACION AS LIQUIDACION
                     FROM (
                         SELECT TOP 100000
                             BI.ARTICULO, BI.DESCRIPCION, BI.MODELO, BI.CATEGORIA, BI.RUBRO, BI.TEMPORADA,
-                            BI.DESC_SUCURSAL AS FRANQUICIA, BI.NRO_SUCURSAL, BI.GRUPO_EMPRESARIO, BI.DESTINO,
+                            {$sucExprBI} AS FRANQUICIA, BI.NRO_SUCURSAL, BI.GRUPO_EMPRESARIO, BI.DESTINO,
                             BI.COD_DEPOSI, BI.COD_CLIENT, BI.CANT_STOCK
                         FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                        $slJoinBI
                         $where
                     ) Paged
                     LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = Paged.ARTICULO COLLATE database_default
                     ORDER BY Paged.FRANQUICIA, Paged.ARTICULO";
+        } else {
+            $slJoinPaged = $this->sucursalJoinSql('Paged');
+            $sucExprOut  = "COALESCE(NULLIF(LTRIM(RTRIM(SL.DESC_SUCURSAL COLLATE database_default)), ''), Paged.BI_DESC_SUCURSAL)";
+            $sql = "SELECT
+                        Paged.ARTICULO, Paged.DESCRIPCION, Paged.MODELO, Paged.CATEGORIA, Paged.RUBRO, Paged.TEMPORADA,
+                        {$sucExprOut} AS FRANQUICIA, Paged.NRO_SUCURSAL, Paged.GRUPO_EMPRESARIO, Paged.DESTINO,
+                        Paged.COD_DEPOSI, Paged.COD_CLIENT, Paged.CANT_STOCK, MD.LIQUIDACION AS LIQUIDACION
+                    FROM (
+                        SELECT TOP 100000
+                            BI.ARTICULO, BI.DESCRIPCION, BI.MODELO, BI.CATEGORIA, BI.RUBRO, BI.TEMPORADA,
+                            BI.DESC_SUCURSAL AS BI_DESC_SUCURSAL, BI.NRO_SUCURSAL, BI.GRUPO_EMPRESARIO, BI.DESTINO,
+                            BI.COD_DEPOSI, BI.COD_CLIENT, BI.CANT_STOCK
+                        FROM BI_STOCK_FRANQUICIAS BI WITH (NOLOCK)
+                        $where
+                    ) Paged
+                    $slJoinPaged
+                    LEFT JOIN [XL-LAKERBIS].[locales_lakers].[dbo].[MAESTRO_DESTINOS] MD ON MD.COD_ARTICU COLLATE database_default = Paged.ARTICULO COLLATE database_default
+                    ORDER BY FRANQUICIA, Paged.ARTICULO";
         }
 
         $stmt = $this->conn->prepare($sql);

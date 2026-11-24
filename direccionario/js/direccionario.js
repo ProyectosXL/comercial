@@ -316,6 +316,10 @@
           extraRows += '<div class="sc-extra-row"><span class="sc-extra-lbl">Retiro express</span>'
             + '<span>' + boolIcon(d.retiro_expres) + '</span></div>';
         }
+        if (d.tiendas_central) {
+          extraRows += '<div class="sc-extra-row"><span class="sc-extra-lbl">Tiendas central</span>'
+            + '<span>' + boolIcon(d.tiendas_central) + '</span></div>';
+        }
         if (d.nro_sucursal_madre) {
           extraRows += '<div class="sc-extra-row"><span class="sc-extra-lbl">Suc. madre</span>'
             + '<span>' + self._esc(d.nro_sucursal_madre) + '</span></div>';
@@ -471,6 +475,7 @@
         pills += '<span class="dir-pill">Vtex ' + boolIcon(d.integra_vtex) + '</span>';
         if (d.deposito)         pills += '<span class="dir-pill">Dep. ' + self._esc(d.deposito) + '</span>';
         if (d.retiro_expres)    pills += '<span class="dir-pill">Ret.Exp. ' + boolIcon(d.retiro_expres) + '</span>';
+        if (d.tiendas_central)  pills += '<span class="dir-pill">Tiendas Central ' + boolIcon(d.tiendas_central) + '</span>';
         if (d.nro_sucursal_madre)    pills += '<span class="dir-pill">Suc. Madre #' + self._esc(d.nro_sucursal_madre) + '</span>';
         if (d.nro_sucursal_anterior) pills += '<span class="dir-pill">Suc. Ant. #' + self._esc(d.nro_sucursal_anterior) + '</span>';
         if (cfg.canVerTecnico) {

@@ -40,20 +40,21 @@ class Direccionario {
     private function getDiasAperturaMap() {
         $map = [];
         try {
-            $query = "SELECT NRO_SUCURSAL, LUNES, MARTES, MIERCOLES, JUEVES, VIERNES, SABADO, DOMINGO 
+            $query = "SELECT NRO_SUCURSAL, LUNES, MARTES, MIERCOLES, JUEVES, VIERNES, SABADO, DOMINGO, TIENDAS_CENTRAL 
                       FROM SUCURSALES_LAKERS";
             $stmt = sqlsrv_query($this->cid_locales, $query);
             if ($stmt !== false) {
                 while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
                     $nro = (int)$row['NRO_SUCURSAL'];
                     $map[$nro] = [
-                        'lunes'     => (bool)$row['LUNES'],
-                        'martes'    => (bool)$row['MARTES'],
-                        'miercoles' => (bool)$row['MIERCOLES'],
-                        'jueves'    => (bool)$row['JUEVES'],
-                        'viernes'   => (bool)$row['VIERNES'],
-                        'sabado'    => (bool)$row['SABADO'],
-                        'domingo'   => (bool)$row['DOMINGO'],
+                        'lunes'           => (bool)$row['LUNES'],
+                        'martes'          => (bool)$row['MARTES'],
+                        'miercoles'       => (bool)$row['MIERCOLES'],
+                        'jueves'          => (bool)$row['JUEVES'],
+                        'viernes'         => (bool)$row['VIERNES'],
+                        'sabado'          => (bool)$row['SABADO'],
+                        'domingo'         => (bool)$row['DOMINGO'],
+                        'tiendas_central' => !empty($row['TIENDAS_CENTRAL']),
                     ];
                 }
             }
@@ -206,6 +207,7 @@ class Direccionario {
                     'viernes'               => $diasFlags['viernes'],
                     'sabado'                => $diasFlags['sabado'],
                     'domingo'               => $diasFlags['domingo'],
+                    'tiendas_central'       => !empty($diasFlags['tiendas_central']),
                     'dias_abiertos'         => $this->formatDiasAbiertosTexto($diasFlags)
                 ];
 
@@ -427,6 +429,7 @@ class Direccionario {
         $boolFields = [
             'HABILITADO', 'DASHBOARD_BI', 'TANGO', 'SUC_MADRE',
             'EMPRESA_FERRETERIA', 'FACTURA_ELECT', 'INTEGRA_VTEX', 'RETIRO_EXPRES',
+            'TIENDAS_CENTRAL',
             'HABILITADO_CONT', 'INTEGRACION_MERCADOPAGO_MADRE', 'INTEGRACION_MERCADOPAGO_HIJA',
             'LAPOS_INTEGRADO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'
         ];
@@ -671,7 +674,7 @@ class Direccionario {
                              s.COD_DEPOSI, s.MAIL, s.HORARIO, s.FECHA_CIERRE,
                              s.HABILITADO, s.DASHBOARD_BI, s.TANGO, s.SUC_MADRE, s.NRO_SUC_MADRE,
                              s.EMPRESA_FERRETERIA, s.FACTURA_ELECT, s.INTEGRA_VTEX, s.RETIRO_EXPRES,
-                             s.HABILITADO_CONT,
+                             s.TIENDAS_CENTRAL, s.HABILITADO_CONT,
                              s.INTEGRACION_MERCADOPAGO_MADRE, s.INTEGRACION_MERCADOPAGO_HIJA,
                              s.LAPOS_INTEGRADO, s.LAPOS_MODELO, s.VERSION_SOFT_LAPOS,
                              s.CABLE_LAPOS_INTEGRADO, s.LINK_PEDIDO, s.LINK_SALES,
@@ -761,6 +764,7 @@ class Direccionario {
             $habilitado     = (!empty($d['habilitado']) || !empty($d['tienda'])) ? 1 : 0;
             $vtex           = !empty($d['integra_vtex']) ? 1 : 0;
             $retiroExp      = !empty($d['retiro_expres']) ? 1 : 0;
+            $tiendasCentral = !empty($d['tiendas_central']) ? 1 : 0;
             $habilitadoCont = !empty($d['habilitado_cont']) ? 1 : 0;
             $dashboardBi    = !empty($d['dashboard_bi']) ? 1 : 0;
             $sucMadre       = !empty($d['suc_madre']) ? 1 : 0;
@@ -813,7 +817,7 @@ class Direccionario {
                             COD_CLIENT = ?, DESC_SUCURSAL = ?, CANAL = ?, TIPO_LOCAL = ?,
                             DIRECCION = ?, LOCALIDAD = ?, PROVINCIA = ?, TELEFONO = ?, MAIL = ?, HORARIO = ?,
                             COD_DEPOSI = ?, MAIL_GRUP_EMP = ?,
-                            HABILITADO = ?, TANGO = ?, INTEGRA_VTEX = ?, RETIRO_EXPRES = ?, HABILITADO_CONT = ?,
+                            HABILITADO = ?, TANGO = ?, INTEGRA_VTEX = ?, RETIRO_EXPRES = ?, TIENDAS_CENTRAL = ?, HABILITADO_CONT = ?,
                             DASHBOARD_BI = ?, SUC_MADRE = ?, EMPRESA_FERRETERIA = ?, FACTURA_ELECT = ?,
                             NRO_SUC_MADRE = ?, FECHA_CIERRE = ?,
                             LUNES = ?, MARTES = ?, MIERCOLES = ?, JUEVES = ?, VIERNES = ?, SABADO = ?, DOMINGO = ?,
@@ -828,7 +832,7 @@ class Direccionario {
                         $codClient, $descSucursal, $canal, $tipoLocal,
                         $direccion, $localidad, $provincia, $telefono, $mail, $horario,
                         $codDeposi, $mailGrupEmp,
-                        $habilitado, $tango, $vtex, $retiroExp, $habilitadoCont,
+                        $habilitado, $tango, $vtex, $retiroExp, $tiendasCentral, $habilitadoCont,
                         $dashboardBi, $sucMadre, $empFerreteria, $facturaElect,
                         $nroSucMadre, $fechaCierre,
                         $lunes, $martes, $miercoles, $jueves, $viernes, $sabado, $domingo,
@@ -846,7 +850,7 @@ class Direccionario {
                             COD_CLIENT = ?, DESC_SUCURSAL = ?, CANAL = ?, TIPO_LOCAL = ?,
                             DIRECCION = ?, LOCALIDAD = ?, PROVINCIA = ?, TELEFONO = ?, MAIL = ?, HORARIO = ?,
                             COD_DEPOSI = ?, MAIL_GRUP_EMP = ?,
-                            HABILITADO = ?, TANGO = ?, INTEGRA_VTEX = ?, RETIRO_EXPRES = ?, HABILITADO_CONT = ?,
+                            HABILITADO = ?, TANGO = ?, INTEGRA_VTEX = ?, RETIRO_EXPRES = ?, TIENDAS_CENTRAL = ?, HABILITADO_CONT = ?,
                             DASHBOARD_BI = ?, SUC_MADRE = ?, EMPRESA_FERRETERIA = ?,
                             NRO_SUC_MADRE = ?,
                             LUNES = ?, MARTES = ?, MIERCOLES = ?, JUEVES = ?, VIERNES = ?, SABADO = ?, DOMINGO = ?
@@ -855,7 +859,7 @@ class Direccionario {
                         $codClient, $descSucursal, $canal, $tipoLocal,
                         $direccion, $localidad, $provincia, $telefono, $mail, $horario,
                         $codDeposi, $mailGrupEmp,
-                        $habilitado, $tango, $vtex, $retiroExp, $habilitadoCont,
+                        $habilitado, $tango, $vtex, $retiroExp, $tiendasCentral, $habilitadoCont,
                         $dashboardBi, $sucMadre, $empFerreteria,
                         $nroSucMadre,
                         $lunes, $martes, $miercoles, $jueves, $viernes, $sabado, $domingo,
@@ -871,7 +875,7 @@ class Direccionario {
                         NRO_SUCURSAL, COD_CLIENT, DESC_SUCURSAL, CANAL, TIPO_LOCAL,
                         DIRECCION, LOCALIDAD, PROVINCIA, TELEFONO, MAIL, HORARIO,
                         COD_DEPOSI, MAIL_GRUP_EMP,
-                        HABILITADO, TANGO, INTEGRA_VTEX, RETIRO_EXPRES, HABILITADO_CONT,
+                        HABILITADO, TANGO, INTEGRA_VTEX, RETIRO_EXPRES, TIENDAS_CENTRAL, HABILITADO_CONT,
                         DASHBOARD_BI, SUC_MADRE, EMPRESA_FERRETERIA, FACTURA_ELECT,
                         NRO_SUC_MADRE, FECHA_CIERRE,
                         LUNES, MARTES, MIERCOLES, JUEVES, VIERNES, SABADO, DOMINGO,
@@ -885,7 +889,7 @@ class Direccionario {
                         ?, ?, ?, ?, ?,
                         ?, ?, ?, ?, ?, ?,
                         ?, ?,
-                        ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?,
                         ?, ?, ?, ?,
                         ?, ?,
                         ?, ?, ?, ?, ?, ?, ?,
@@ -900,7 +904,7 @@ class Direccionario {
                     $nro, $codClient, $descSucursal, $canal, $tipoLocal,
                     $direccion, $localidad, $provincia, $telefono, $mail, $horario,
                     $codDeposi, $mailGrupEmp,
-                    $habilitado, $tango, $vtex, $retiroExp, $habilitadoCont,
+                    $habilitado, $tango, $vtex, $retiroExp, $tiendasCentral, $habilitadoCont,
                     $dashboardBi, $sucMadre, $empFerreteria, ($esAdminSistemas ? $facturaElect : 0),
                     $nroSucMadre, ($esAdminSistemas ? $fechaCierre : null),
                     $lunes, $martes, $miercoles, $jueves, $viernes, $sabado, $domingo,

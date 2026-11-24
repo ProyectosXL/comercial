@@ -139,6 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'HABILITADO'                    => (!empty($_POST['habilitado']) || !empty($_POST['tienda'])) ? 1 : 0,
             'INTEGRA_VTEX'                  => !empty($_POST['integra_vtex']) ? 1 : 0,
             'RETIRO_EXPRES'                 => !empty($_POST['retiro_expres']) ? 1 : 0,
+            'TIENDAS_CENTRAL'               => !empty($_POST['tiendas_central']) ? 1 : 0,
             'HABILITADO_CONT'               => !empty($_POST['habilitado_cont']) ? 1 : 0,
             'DASHBOARD_BI'                  => !empty($_POST['dashboard_bi']) ? 1 : 0,
             'SUC_MADRE'                     => !empty($_POST['suc_madre']) ? 1 : 0,
@@ -196,6 +197,7 @@ $valTango       = !isset($sucursalData) ? true : (!empty($sucursalData['TANGO'])
 $valTienda      = !isset($sucursalData) ? true : (isset($sucursalData['HABILITADO']) ? !empty($sucursalData['HABILITADO']) : (($sucursalData['TIENDA'] ?? '') === 'SI'));
 $valVtex        = isset($sucursalData) && (!empty($sucursalData['INTEGRA_VTEX']) || ($sucursalData['INTEGRA_VTEX'] ?? '') === 'SI');
 $valRetiroExp   = isset($sucursalData) && (!empty($sucursalData['RETIRO_EXPRES']) || ($sucursalData['RETIRO_EXPRES'] ?? '') === 'SI');
+$valTiendasCentral = isset($sucursalData) && !empty($sucursalData['TIENDAS_CENTRAL']);
 $valSucMadreNro = htmlspecialchars((string)($sucursalData['NRO_SUC_MADRE'] ?? ''));
 // Habilitado Contabilidad: por defecto activo (alta o sin dato)
 $valHabCont     = !isset($sucursalData['HABILITADO_CONT']) || !empty($sucursalData['HABILITADO_CONT']);
@@ -831,6 +833,18 @@ if ($esEdicion) {
                             </div>
                             <div class="form-check form-switch mb-0">
                                 <input class="form-check-input" type="checkbox" id="retiro_expres" name="retiro_expres" value="1" <?= $valRetiroExp ? 'checked' : '' ?>>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="switch-group">
+                            <div class="switch-label-wrap">
+                                <span class="switch-title">Tiendas Central</span>
+                                <span class="switch-desc">Local para retiro en tienda con preparación en Central</span>
+                            </div>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="tiendas_central" name="tiendas_central" value="1" <?= $valTiendasCentral ? 'checked' : '' ?>>
                             </div>
                         </div>
                     </div>
