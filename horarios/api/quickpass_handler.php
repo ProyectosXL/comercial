@@ -61,10 +61,13 @@ function enviarDatosQuickPass() {
         foreach ($dias as $fecha => $horas) {
             if (empty($horas)) continue;
 
-            // Calcular rango: min 10, max 12 -> 10:00 a 13:00
-            sort($horas);
-            $horaEntrada = min($horas);
-            $horaSalida = max($horas) + 1; // Sumamos 1 porque si marca la hora 12, trabaja hasta las 13:00
+            // Calcular rango (normalizando horas de madrugada 0..4 como 24..28)
+            $horasNorm = array_map(function ($x) {
+                $n = intval($x);
+                return ($n < 7) ? $n + 24 : $n;
+            }, $horas);
+            $horaEntrada = min($horasNorm) % 24;
+            $horaSalida = (max($horasNorm) + 1) % 24; // Sumamos 1 porque si marca la hora 12, trabaja hasta las 13:00
 
             // Formatear HH:mm
             $strEntrada = sprintf("%02d:00", $horaEntrada);

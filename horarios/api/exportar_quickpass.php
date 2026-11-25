@@ -114,8 +114,13 @@ function horasAString($h)
 {
     if (empty($h))
         return "00:00-00:00";
-    sort($h);
-    return sprintf("%02d:00-%02d:00", min($h), max($h) + 1);
+    $norm = array_map(function ($x) {
+        $n = intval($x);
+        return ($n < 7) ? $n + 24 : $n;
+    }, $h);
+    $entrada = min($norm) % 24;
+    $salida = (max($norm) + 1) % 24;
+    return sprintf("%02d:00-%02d:00", $entrada, $salida);
 }
 
 $xlsx = new SimpleXLSXGen();

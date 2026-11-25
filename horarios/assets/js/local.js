@@ -181,19 +181,35 @@ $(document).ready(function () {
         });
     });
 
+    function esSemanaExtensionNavidadLocal(fechas) {
+        if (!fechas || !fechas.length) return false;
+        return fechas.some(f => f && f.endsWith('-12-23') && parseInt(f.substring(0, 4), 10) >= 2026);
+    }
+
+    function getMaxHoraLocal(fechas) {
+        return esSemanaExtensionNavidadLocal(fechas) ? 28 : 24;
+    }
+
+    function formatLabelHoraLocal(h) {
+        return (h >= 24) ? String(h - 24).padStart(2, '0') : h;
+    }
+
     // --- FUNCIÓN DE CÁLCULO DE TURNO (RÉPLICA DE GESTIÓN) ---
     function calcularTurnoTexto(horas) {
         if (!horas || horas.length === 0) return '-';
-        horas.sort((a, b) => a - b);
-        const min = horas[0];
-        const max = horas[horas.length - 1];
+        const norm = horas.map(h => {
+            const n = parseInt(h, 10);
+            return (n >= 0 && n <= 4) ? n + 24 : n;
+        }).sort((a, b) => a - b);
+        const min = norm[0];
+        const max = norm[norm.length - 1];
 
         if (min >= 7 && max <= 15) return 'TM';
-        if (min >= 14 && (max <= 23 || max === 24)) return 'TT';
-        if (min >= 10 && (max <= 23 || max === 24)) return 'FULL';
+        if (min >= 14 && max <= 28) return 'TT';
+        if (min >= 10 && max <= 28) return 'FULL';
 
-        const tieneTM = horas.some(h => h >= 7 && h <= 15);
-        const tieneTT = horas.some(h => (h >= 16 && h <= 23) || h === 24);
+        const tieneTM = norm.some(h => h >= 7 && h <= 15);
+        const tieneTT = norm.some(h => h >= 16 && h <= 28);
         if (tieneTM && tieneTT) return 'FULL';
 
         return 'MIXTO';
@@ -316,7 +332,17 @@ $(document).ready(function () {
             return nomA.localeCompare(nomB);
         });
 
-        let sumasHoras = Array.from({ length: nDias }, () => Array(25).fill(0));
+        const fechasPre = [];
+        for (let i = 0; i < nDias; i++) {
+            let fa = new Date(primerDia);
+            fa.setDate(primerDia.getDate() + i);
+            fechasPre.push(fa.toISOString().split('T')[0]);
+        }
+        const maxHora = getMaxHoraLocal(fechasPre);
+        const numHoras = maxHora - 7 + 1;
+        const colspanDiaLocal = numHoras + 3; // horas + F + T + N
+
+        let sumasHoras = Array.from({ length: nDias }, () => Array(maxHora + 1).fill(0));
 
         let html = '<table class="table table-bordered table-sm mb-0 table-horarios">';
         html += '<thead>';
@@ -361,7 +387,7 @@ $(document).ready(function () {
                 }
             }
 
-            html += `<th colspan="21" class="dia-header text-center fw-bold bg-light" style="min-width: 500px;">
+            html += `<th colspan="${colspanDiaLocal}" class="dia-header text-center fw-bold bg-light" style="min-width: 500px;">
                         <div>${diasSemanaNombres[dayIndex]} ${diaNum}/${mesNum}</div>
                         ${sucursalTexto}
                     </th>`;
@@ -372,8 +398,8 @@ $(document).ready(function () {
         html += '<th class="sticky-left-0 bg-white col-vendedor"></th>';
         html += '<th class="sticky-left-1 bg-white col-totales"></th>';
         for (let d = 0; d < nDias; d++) {
-            for (let h = 7; h <= 24; h++) {
-                const label = (h === 24) ? '00' : h;
+            for (let h = 7; h <= maxHora; h++) {
+                const label = formatLabelHoraLocal(h);
                 html += `<th class="sticky-top-1 text-center" style="width: 30px; min-width: 30px;">${label}</th>`;
             }
             html += '<th class="sticky-top-1 text-center" style="width:30px; background-color:#e9ecef;" title="Franco">F</th>';
@@ -395,8 +421,8 @@ $(document).ready(function () {
             fechasSemana.forEach((fecha, diaIndex) => {
                 const esFranco = datos.francos && datos.francos[fecha];
                 if (!esFranco && datos.horarios && datos.horarios[fecha]) {
-                    for (let h = 7; h <= 24; h++) {
-                        const hBusqueda = (h === 24) ? 0 : h;
+                    for (let h = 7; h <= maxHora; h++) {
+                        const hBusqueda = (h >= 24) ? (h - 24) : h;
                         let tipo = datos.horarios[fecha][hBusqueda];
                         let valor = 1;
                         if (tipo && tipo.endsWith('_media')) {
@@ -463,12 +489,12 @@ $(document).ready(function () {
                 const esFranco = datos.francos && datos.francos[fecha];
                 const nota = datos.notas && datos.notas[fecha];
 
-                for (let h = 7; h <= 24; h++) {
+                for (let h = 7; h <= maxHora; h++) {
                     let bgColor = '';
                     let texto = '';
                     let color = '';
 
-                    const hBusqueda = (h === 24) ? 0 : h;
+                    const hBusqueda = (h >= 24) ? (h - 24) : h;
                     let tipo = (!esFranco && datos.horarios && datos.horarios[fecha]) ? (datos.horarios[fecha][hBusqueda] || '') : null;
                     let esMedia = false;
                     
@@ -521,7 +547,10 @@ $(document).ready(function () {
                                  </td>`;
                 } else {
                     if (datos.horarios && datos.horarios[fecha]) {
-                        const horasDia = Object.keys(datos.horarios[fecha]).map(h => parseInt(h) === 0 ? 24 : parseInt(h));
+                        const horasDia = Object.keys(datos.horarios[fecha]).map(h => {
+                            const n = parseInt(h, 10);
+                            return (n >= 0 && n <= 4) ? n + 24 : n;
+                        });
                         turno = calcularTurnoTexto(horasDia);
                         switch (turno) {
                             case 'TM': turnoColor = 'bg-primary text-white'; break;
@@ -553,7 +582,7 @@ $(document).ready(function () {
         html += '<td class="sticky-left-0 bg-light fw-bold text-start p-2 col-vendedor">Total Hs</td>';
         html += '<td class="sticky-left-1 bg-light col-totales"></td>';
         for (let d = 0; d < nDias; d++) {
-            for (let h = 7; h <= 24; h++) {
+            for (let h = 7; h <= maxHora; h++) {
                 const suma = sumasHoras[d][h] || 0;
                 const fmtSuma = (suma % 1 === 0 ? suma : suma.toFixed(1));
                 const colorClass = suma > 0 ? 'text-success' : 'text-muted';
@@ -575,7 +604,7 @@ $(document).ready(function () {
                     ${list.map(p => `<span class="badge bg-primary px-1" style="font-size: 0.7rem; white-space: normal; text-align: left;">${p}</span>`).join('')}
                 </div>`;
             }
-            html += `<td colspan="21" class="footer-dia-fin bg-light text-start p-1 align-top" style="max-width: 300px;">${promoHTML}</td>`;
+            html += `<td colspan="${colspanDiaLocal}" class="footer-dia-fin bg-light text-start p-1 align-top" style="max-width: 300px;">${promoHTML}</td>`;
         });
         html += '</tr>';
 
@@ -591,7 +620,7 @@ $(document).ready(function () {
                     ${listInt.map(p => `<span class="badge bg-info text-dark px-1" style="font-size: 0.7rem; white-space: normal; text-align: left;">${p}</span>`).join('')}
                 </div>`;
             }
-            html += `<td colspan="21" class="footer-dia-fin bg-light text-start p-1 align-top" style="max-width: 300px;">${promoIntHTML}</td>`;
+            html += `<td colspan="${colspanDiaLocal}" class="footer-dia-fin bg-light text-start p-1 align-top" style="max-width: 300px;">${promoIntHTML}</td>`;
         });
         html += '</tr>';
 
@@ -923,6 +952,14 @@ $(document).ready(function () {
                         Grilla Horario — ${sucursalNombre.toUpperCase()} &nbsp;|&nbsp; ${rangoFechas}
                     </div>`;
 
+                    const fechasPdf = [];
+                    for (let df = 0; df < lastNDias; df++) {
+                        const fp = new Date(primerDia);
+                        fp.setDate(primerDia.getDate() + df);
+                        fechasPdf.push(fp.toISOString().split('T')[0]);
+                    }
+                    const maxHoraPdf = getMaxHoraLocal(fechasPdf);
+
                     for (let d = desdeDia; d <= hastaDia && d < lastNDias; d++) {
                         const fAct   = new Date(primerDia);
                         fAct.setDate(primerDia.getDate() + d);
@@ -930,7 +967,7 @@ $(document).ready(function () {
                         const ddStr  = String(fAct.getDate()).padStart(2, '0');
                         const mmStr  = String(fAct.getMonth() + 1).padStart(2, '0');
                         const dayIdx = (fAct.getDay() + 6) % 7;
-                        const NCOLS  = 18; // horas 7..24
+                        const NCOLS  = maxHoraPdf - 7 + 1; // 18 normal, 22 semana 23/12
 
                         // Ancho calculado de las columnas de horas:
                         // total útil = CANVAS_W - 16px padding
@@ -960,7 +997,7 @@ $(document).ready(function () {
                                             font-size:${F_HEADER}; overflow:hidden; white-space:nowrap;">Vendedor</th>
                                         ${Array.from({length: NCOLS}, (_, i) => {
                                             const h  = i + 7;
-                                            const lb = (h === 24) ? '00' : h;
+                                            const lb = formatLabelHoraLocal(h);
                                             return `<th style="border:1px solid #bbb; padding:0; text-align:center;
                                                 font-size:${F_HEADER};">${lb}</th>`;
                                         }).join('')}
@@ -991,8 +1028,8 @@ $(document).ready(function () {
                                 <td style="border:1px solid #ddd; padding:1px 3px; font-weight:600;
                                     overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${nombre}</td>`;
 
-                            for (let h = 7; h <= 24; h++) {
-                                const hb        = (h === 24) ? 0 : h;
+                            for (let h = 7; h <= maxHoraPdf; h++) {
+                                const hb        = (h >= 24) ? (h - 24) : h;
                                 let tx = '', bg = '';
                                 const tipo      = (!franco && dat.horarios && dat.horarios[fISO]) ? (dat.horarios[fISO][hb] || '') : null;
                                 const bloqueo   = (bloqueosExt[vid] && bloqueosExt[vid][fISO]) ? bloqueosExt[vid][fISO][hb] : null;

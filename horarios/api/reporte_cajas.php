@@ -19,8 +19,8 @@ $sql = "
         COD_VENDED, 
         FECHA, 
         NRO_SUCURSAL,
-        MIN(HORA) as ENTRADA, 
-        MAX(HORA) + 1 as SALIDA,
+        MIN(CASE WHEN HORA < 7 THEN HORA + 24 ELSE HORA END) as ENTRADA, 
+        MAX(CASE WHEN HORA < 7 THEN HORA + 24 ELSE HORA END) + 1 as SALIDA,
         SUM(CASE WHEN LOWER(TIPO_HORA) LIKE '%_media' THEN 0.5 ELSE 1.0 END) as TOTAL_HS,
         SUM(CASE 
             WHEN (LOWER(TIPO_HORA) = 'caja' OR LOWER(TIPO_HORA) = 'c') THEN 1.0 
@@ -51,15 +51,15 @@ if ($stmt) {
     while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
         $id = trim($row['COD_VENDED']);
         $sucId = intval($row['NRO_SUCURSAL']);
-        $entrada = intval($row['ENTRADA']);
-        $salida = intval($row['SALIDA']);
+        $entrada = intval($row['ENTRADA']) % 24;
+        $salida = intval($row['SALIDA']) % 24;
         
         $detallesCaja[] = [
             'id' => $id,
             'sucursal_id' => $sucId,
             'fecha' => $row['FECHA']->format('d/m/Y'),
             'entrada' => str_pad($entrada, 2, "0", STR_PAD_LEFT) . ":00",
-            'salida' => ($salida == 24 ? "00:00" : str_pad($salida, 2, "0", STR_PAD_LEFT) . ":00"),
+            'salida' => str_pad($salida, 2, "0", STR_PAD_LEFT) . ":00",
             'total_jornada' => floatval($row['TOTAL_HS']),
             'horas_caja' => floatval($row['HS_CAJA'])
         ];

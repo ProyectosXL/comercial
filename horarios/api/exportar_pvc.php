@@ -26,8 +26,8 @@ $sqlBloques = "
         COD_VENDED, 
         FECHA, 
         NRO_SUCURSAL,
-        MIN(HORA) as ENTRADA, 
-        MAX(HORA) + 1 as SALIDA,
+        MIN(CASE WHEN HORA < 7 THEN HORA + 24 ELSE HORA END) as ENTRADA, 
+        MAX(CASE WHEN HORA < 7 THEN HORA + 24 ELSE HORA END) + 1 as SALIDA,
         SUM(CASE 
             WHEN (LOWER(TIPO_HORA) = 'caja_media' OR LOWER(TIPO_HORA) = 'c_media') THEN 0.5
             ELSE 1.0 END) as TOTAL_HS

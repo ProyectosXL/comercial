@@ -31,8 +31,8 @@ if ($accion === 'listar') {
             COD_VENDED, 
             FECHA, 
             NRO_SUCURSAL,
-            MIN(HORA) as ENTRADA, 
-            MAX(HORA) + 1 as SALIDA,
+            MIN(CASE WHEN HORA < 7 THEN HORA + 24 ELSE HORA END) as ENTRADA, 
+            MAX(CASE WHEN HORA < 7 THEN HORA + 24 ELSE HORA END) + 1 as SALIDA,
             COUNT(*) as TOTAL_HS
         FROM FP_GESTION_HORARIOS 
         WHERE FECHA BETWEEN ? AND ?
@@ -59,8 +59,8 @@ if ($accion === 'listar') {
                 'cod_vended' => $idVend,
                 'sucursal_id' => $idSuc,
                 'fecha' => $row['FECHA']->format('d/m/Y'),
-                'entrada' => str_pad($entrada, 2, "0", STR_PAD_LEFT) . ":00",
-                'salida' => ($salida == 24 ? "00:00" : str_pad($salida, 2, "0", STR_PAD_LEFT) . ":00"),
+                'entrada' => str_pad($entrada % 24, 2, "0", STR_PAD_LEFT) . ":00",
+                'salida' => str_pad($salida % 24, 2, "0", STR_PAD_LEFT) . ":00",
                 'horas' => intval($row['TOTAL_HS'])
             ];
 

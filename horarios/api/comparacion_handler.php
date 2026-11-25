@@ -143,8 +143,12 @@ foreach ($planificado as $codVendedor => $dias) {
     foreach ($dias as $fechaSQL => $horas) {
         if (empty($horas)) continue;
         
-        $hMin = min($horas);
-        $hMax = max($horas) + 1;
+        $horasNorm = array_map(function ($x) {
+            $n = intval($x);
+            return ($n < 7) ? $n + 24 : $n;
+        }, $horas);
+        $hMin = min($horasNorm) % 24;
+        $hMax = (max($horasNorm) + 1) % 24;
         $planEntrada = sprintf("%02d:00", $hMin);
         $planSalida = sprintf("%02d:00", $hMax);
         
