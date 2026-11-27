@@ -594,6 +594,44 @@ try {
         }
     }
 
+    // --- PASO F.2: COMENTARIOS BASE POR DÍA (PAR/IMPAR) ---
+    $comentariosBasePorDia = [];
+    if ($nroSucursal) {
+        $connSistCom = getConexionSistemas();
+        if ($connSistCom) {
+            $mapaComBase = [];
+            $sqlComBase = "SELECT TIPO_SEMANA, DIA_SEMANA, COMENTARIO FROM FP_HORARIOS_BASE_COMENTARIOS WHERE NRO_SUCURSAL = ?";
+            $stmtComBase = sqlsrv_query($connSistCom, $sqlComBase, [$nroSucursal]);
+            if ($stmtComBase) {
+                while ($rCom = sqlsrv_fetch_array($stmtComBase, SQLSRV_FETCH_ASSOC)) {
+                    $tSem = strtoupper(trim($rCom['TIPO_SEMANA']));
+                    $dSem = intval($rCom['DIA_SEMANA']);
+                    $txt = trim((string)($rCom['COMENTARIO'] ?? ''));
+                    if ($txt !== '') {
+                        $mapaComBase[$tSem][$dSem] = $txt;
+                    }
+                }
+                sqlsrv_free_stmt($stmtComBase);
+            }
+            sqlsrv_close($connSistCom);
+
+            if (!empty($mapaComBase)) {
+                $dtAct = new DateTime($fechaInicio);
+                $dtFin = new DateTime($fechaFin);
+                while ($dtAct <= $dtFin) {
+                    $fIso = $dtAct->format('Y-m-d');
+                    $nSem = intval($dtAct->format('W'));
+                    $tSem = ($nSem % 2 != 0) ? 'A' : 'B';
+                    $dSem = intval($dtAct->format('N')); // 1 (Lunes) .. 7 (Domingo)
+                    if (isset($mapaComBase[$tSem][$dSem])) {
+                        $comentariosBasePorDia[$fIso] = $mapaComBase[$tSem][$dSem];
+                    }
+                    $dtAct->modify('+1 day');
+                }
+            }
+        }
+    }
+
     // RESPUESTA JSON FINAL
     echo json_encode([
         'status' => 'ok',
@@ -601,6 +639,7 @@ try {
         'nombres' => $nombresMap,
         'promociones' => $promocionesPorDia,
         'promociones_internas' => $promocionesInternasPorDia,
+        'comentariosBase' => $comentariosBasePorDia,
         'nombresSucursales' => $nombresSucursales,
         'bloqueosExternos' => $bloqueosExternos,
         'saldosAnteriores' => $saldosAnteriores,

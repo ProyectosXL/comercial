@@ -624,6 +624,20 @@ $(document).ready(function () {
         });
         html += '</tr>';
 
+        // FILA 5: COMENTARIOS BASE (DESDE ABM PLANTILLAS BASE PAR/IMPAR)
+        const escapeHtmlLocal = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        html += '<tr>';
+        html += '<td class="sticky-left-0 bg-light text-end fw-bold p-2 align-middle col-vendedor" style="font-size: 0.8rem;">COMENTARIOS BASE</td>';
+        html += '<td class="sticky-left-1 bg-light col-totales"></td>';
+        fechasSemana.forEach(fecha => {
+            const comBase = (data.comentariosBase && data.comentariosBase[fecha]) ? String(data.comentariosBase[fecha]).trim() : '';
+            const comHTML = comBase !== ''
+                ? `<span class="text-dark" style="font-size: 0.78rem; white-space: pre-wrap;">${escapeHtmlLocal(comBase)}</span>`
+                : '<span class="text-muted">-</span>';
+            html += `<td colspan="${colspanDiaLocal}" class="footer-dia-fin text-start p-1 align-top" style="max-width: 300px; background-color: #fffdf5;">${comHTML}</td>`;
+        });
+        html += '</tr>';
+
         html += '</tbody>';
         html += '<tfoot></tfoot></table>';
         return html;
@@ -927,6 +941,7 @@ $(document).ready(function () {
                     const nombres        = resultado.data.nombres || {};
                     const promos         = resultado.data.promociones || {};
                     const promosInt      = resultado.data.promociones_internas || {};
+                    const comentariosBase = resultado.data.comentariosBase || {};
                     const bloqueosExt    = resultado.data.bloqueosExternos || {};
 
                     const prioridad = (id) => {
@@ -1069,6 +1084,18 @@ $(document).ready(function () {
                                     font-weight:bold; color:#1a237e; white-space:nowrap;">Promos:</td>
                                 <td colspan="${NCOLS + 2}" style="border:1px solid #ddd; padding:1px 4px;
                                     font-size:${F_PROMO}; color:#333;">${allPromos.join(' | ')}</td>
+                            </tr>`;
+                        }
+
+                        // Fila de comentario base (solo si el día tiene comentario cargado en base)
+                        const comBaseDia = comentariosBase[fISO] ? String(comentariosBase[fISO]).trim() : '';
+                        if (comBaseDia !== '') {
+                            const safeCom = comBaseDia.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            html += `<tr style="background:#fffdf5;">
+                                <td style="border:1px solid #ddd; padding:1px 4px; font-size:${F_PROMO};
+                                    font-weight:bold; color:#7c5a00; white-space:nowrap;">Obs. Base:</td>
+                                <td colspan="${NCOLS + 2}" style="border:1px solid #ddd; padding:1px 4px;
+                                    font-size:${F_PROMO}; color:#333; white-space:pre-wrap;">${safeCom}</td>
                             </tr>`;
                         }
 

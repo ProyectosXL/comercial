@@ -10,6 +10,7 @@ if ($metodo === 'POST') {
     $suc = $input['sucursal'];
     $tipo = $input['tipo']; // 'A' o 'B'
     $datos = $input['datos']; // Array de {cod, dia, hora, franco}
+    $comentariosDia = $input['comentariosDia'] ?? []; // Mapa { 1 => "texto", ..., 7 => "texto" }
 
     // Validaciones iniciales
     if (!$suc || !$tipo) {
@@ -70,6 +71,29 @@ if ($metodo === 'POST') {
             }
         }
         
+        // 3. Guardar Comentarios Base por Día (FP_HORARIOS_BASE_COMENTARIOS)
+        $sqlDelCom = "DELETE FROM FP_HORARIOS_BASE_COMENTARIOS WHERE NRO_SUCURSAL = ? AND TIPO_SEMANA = ?";
+        $stmtDelCom = sqlsrv_query($conn, $sqlDelCom, [$suc, $tipo]);
+        if ($stmtDelCom === false) {
+            sqlsrv_rollback($conn);
+            die(json_encode(['status' => 'error', 'message' => 'Error al borrar comentarios base anteriores: ' . print_r(sqlsrv_errors(), true)]));
+        }
+
+        if (is_array($comentariosDia) && !empty($comentariosDia)) {
+            $sqlInsCom = "INSERT INTO FP_HORARIOS_BASE_COMENTARIOS (NRO_SUCURSAL, TIPO_SEMANA, DIA_SEMANA, COMENTARIO) VALUES (?, ?, ?, ?)";
+            foreach ($comentariosDia as $diaKey => $textoCom) {
+                $diaNum = intval($diaKey);
+                $textoLimpio = trim((string)$textoCom);
+                if ($diaNum >= 1 && $diaNum <= 7 && $textoLimpio !== '') {
+                    $stmtInsCom = sqlsrv_query($conn, $sqlInsCom, [$suc, $tipo, $diaNum, $textoLimpio]);
+                    if ($stmtInsCom === false) {
+                        sqlsrv_rollback($conn);
+                        die(json_encode(['status' => 'error', 'message' => 'Error al guardar comentario base del día ' . $diaNum . ': ' . print_r(sqlsrv_errors(), true)]));
+                    }
+                }
+            }
+        }
+
         // =========================================================
         // CONFIRMAR TRANSACCIÓN si todo fue exitoso
         // =========================================================
@@ -118,7 +142,22 @@ if ($metodo === 'POST') {
         }
         sqlsrv_free_stmt($stmt);
     }
+
+    // Cargar comentarios base por día
+    $comentariosDia = [];
+    $sqlCom = "SELECT DIA_SEMANA, COMENTARIO FROM FP_HORARIOS_BASE_COMENTARIOS WHERE NRO_SUCURSAL = ? AND TIPO_SEMANA = ?";
+    $stmtCom = sqlsrv_query($conn, $sqlCom, [$suc, $tipo]);
+    if ($stmtCom) {
+        while ($rowCom = sqlsrv_fetch_array($stmtCom, SQLSRV_FETCH_ASSOC)) {
+            $comentariosDia[intval($rowCom['DIA_SEMANA'])] = $rowCom['COMENTARIO'] ?? '';
+        }
+        sqlsrv_free_stmt($stmtCom);
+    }
+
     sqlsrv_close($conn);
-    echo json_encode($agenda);
+    echo json_encode([
+        'agenda' => $agenda,
+        'comentariosDia' => $comentariosDia
+    ]);
 }
 ?>

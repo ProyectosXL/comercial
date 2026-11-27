@@ -43,7 +43,10 @@ $(document).ready(function () {
 
                 // B. Traer la Plantilla Guardada (si existe)
                 $.getJSON(`${apiPlantillasURL}?sucursal=${sucursal}&tipo=${tipoSemana}`)
-                    .done(function (datosGuardados) {
+                    .done(function (respuestaPlantilla) {
+                        const datosGuardados = (respuestaPlantilla && respuestaPlantilla.agenda !== undefined) ? respuestaPlantilla.agenda : (respuestaPlantilla || {});
+                        const comentariosDia = (respuestaPlantilla && respuestaPlantilla.comentariosDia) ? respuestaPlantilla.comentariosDia : {};
+
                         // Detectar refuerzos: vendedores en datosGuardados que NO están en la lista de vendedores
                         const idsVendedores = vendedores.map(v => String(v.COD_VENDED));
                         const idsEnPlantilla = Object.keys(datosGuardados);
@@ -63,20 +66,20 @@ $(document).ready(function () {
                                         vendedores.push(ref);
                                     });
                                     vendedoresCargados = vendedores; // Actualizar global
-                                    renderGrillaBase(vendedores, datosGuardados);
+                                    renderGrillaBase(vendedores, datosGuardados, comentariosDia);
                                     $('#base_btnGuardar').prop('disabled', false);
                                     $('#base_agregarRefuerzoBtn').prop('disabled', false);
                                 },
                                 error: function () {
                                     // Si falla, renderizar sin los refuerzos
-                                    renderGrillaBase(vendedores, datosGuardados);
+                                    renderGrillaBase(vendedores, datosGuardados, comentariosDia);
                                     $('#base_btnGuardar').prop('disabled', false);
                                     $('#base_agregarRefuerzoBtn').prop('disabled', false);
                                 }
                             });
                         } else {
                             // No hay refuerzos, renderizar normalmente
-                            renderGrillaBase(vendedores, datosGuardados);
+                            renderGrillaBase(vendedores, datosGuardados, comentariosDia);
                             $('#base_btnGuardar').prop('disabled', false);
                             $('#base_agregarRefuerzoBtn').prop('disabled', false);
                         }
@@ -91,8 +94,16 @@ $(document).ready(function () {
             });
     });
 
+    function escapeHtmlBase(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
     // 3. FUNCIÓN DE RENDERIZADO (Con Total Hs y hasta 23hs)
-    function renderGrillaBase(vendedores, guardado) {
+    function renderGrillaBase(vendedores, guardado, comentariosDia = {}) {
         vendedoresCargados = vendedores; // Actualizamos la global
         const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
@@ -181,8 +192,22 @@ $(document).ready(function () {
             htmlBody += '</tr>';
         });
 
-        htmlBody += '</tbody></table>';
-        $('#base_tablaContainer').html(htmlHeader + htmlBody);
+        htmlBody += '</tbody>';
+
+        // Footer: Comentario Base por día (Lunes a Domingo)
+        let htmlFooter = '<tfoot><tr class="table-light">';
+        htmlFooter += '<td class="fw-bold text-start ps-3 align-middle" style="font-size:0.85rem;"><i class="bi bi-chat-left-text text-primary me-1"></i> Comentario Base</td>';
+        htmlFooter += '<td></td>';
+        for (let dia = 1; dia <= 7; dia++) {
+            const textoCom = comentariosDia[dia] || comentariosDia[String(dia)] || '';
+            htmlFooter += `<td colspan="20" class="p-1 align-top celda-dia-fin" style="background-color:#fffdf5;">
+                <textarea class="form-control form-control-sm comentario-base-dia" data-dia="${dia}" rows="2" maxlength="500"
+                    placeholder="Comentario base para ${diasSemana[dia - 1]}..." style="font-size:0.78rem; resize:vertical; min-width:220px; user-select:text; -webkit-user-select:text;">${escapeHtmlBase(textoCom)}</textarea>
+            </td>`;
+        }
+        htmlFooter += '</tr></tfoot></table>';
+
+        $('#base_tablaContainer').html(htmlHeader + htmlBody + htmlFooter);
         calcularTotalesBase();
     }
 
@@ -448,7 +473,14 @@ $(document).ready(function () {
                 });
             });
 
-            renderGrillaBase(vendedoresCargados, estadoActual);
+            // Preservar comentarios base escritos antes de re-renderizar
+            let comentariosActuales = {};
+            $('#base_tablaContainer .comentario-base-dia').each(function () {
+                const d = $(this).data('dia');
+                comentariosActuales[d] = $(this).val();
+            });
+
+            renderGrillaBase(vendedoresCargados, estadoActual, comentariosActuales);
         }
 
         bootstrap.Modal.getInstance(document.getElementById('modalRefuerzos')).hide();
@@ -536,6 +568,16 @@ $(document).ready(function () {
             }
         });
 
+        // Recolectar comentarios base por día
+        let comentariosDia = {};
+        $('#base_tablaContainer .comentario-base-dia').each(function () {
+            const dia = $(this).data('dia');
+            const texto = ($(this).val() || '').trim();
+            if (texto !== '') {
+                comentariosDia[dia] = texto;
+            }
+        });
+
         // Enviar
         boton.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Guardando...');
 
@@ -546,7 +588,8 @@ $(document).ready(function () {
             data: JSON.stringify({
                 sucursal: sucursal,
                 tipo: tipo,
-                datos: datosParaGuardar
+                datos: datosParaGuardar,
+                comentariosDia: comentariosDia
             }),
             success: function (res) {
                 if (res.status === 'ok') {

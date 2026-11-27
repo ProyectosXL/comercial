@@ -62,6 +62,36 @@ if ($connCorp) {
     sqlsrv_close($connCorp);
 }
 
+// Ordenar sucursales con el mismo orden personalizado oficial
+$ordenPersonalizado = [
+    'ALTO PALERMO', 'ABASTO', 'UNICENTER', 'SOLEIL', 'DISTRITO ARCOS',
+    'AVELLANEDA', 'CABALLITO', 'GURRUCHAGA', 'DOT', 'TORTUGAS',
+    'TERRAZAS DE MAYO', 'SOLAR DE LA ABADIA', 'AL OESTE SHOPPING',
+    'PARQUE BROWN', 'SAN JUSTO', 'ALTO ROSARIO', 'PASEO DEL SIGLO',
+    'PORTAL', 'PASEO ALDREY', 'MAR DEL PLATA'
+];
+$normSuc = function ($texto) {
+    $t = strtoupper(trim($texto));
+    $t = strtr($t, ['Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ñ' => 'N', 'á' => 'A', 'é' => 'E', 'í' => 'I', 'ó' => 'O', 'ú' => 'U', 'ñ' => 'N']);
+    return preg_replace('/\s+/', ' ', $t);
+};
+$prioSuc = function ($nombre) use ($ordenPersonalizado, $normSuc) {
+    $n = $normSuc($nombre);
+    foreach ($ordenPersonalizado as $i => $c) {
+        if ($n === $c) return $i;
+    }
+    foreach ($ordenPersonalizado as $i => $c) {
+        if (strpos($n, $c) === 0) return $i;
+    }
+    return 999;
+};
+uasort($sucursales, function ($a, $b) use ($prioSuc, $normSuc) {
+    $pa = $prioSuc($a['nombre']);
+    $pb = $prioSuc($b['nombre']);
+    if ($pa !== $pb) return $pa <=> $pb;
+    return strcmp($normSuc($a['nombre']), $normSuc($b['nombre']));
+});
+
 // 2. CONSULTAR HORARIOS BASE DESDE LA BASE DE DATOS DE SISTEMAS
 $connSistemas = getConexionSistemas();
 $horariosBase = [];

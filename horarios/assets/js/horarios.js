@@ -471,6 +471,13 @@ $(document).ready(function () {
         });
         footerHTML += '</tr>';
 
+        // Fila Comentarios Base (desde ABM Plantillas Base - Par/Impar)
+        footerHTML += '<tr><td class="text-start ps-2"><strong>Comentarios Base</strong></td><td></td>';
+        fechasSemana.forEach(function (fechaISO, diaIndex) {
+            footerHTML += `<td colspan="${colspanDia}" class="comentario-base-cell small text-start align-top p-1 footer-dia-fin" data-fecha="${fechaISO}" style="white-space: pre-wrap; min-height: 36px; background-color: #fffdf5;">-</td>`;
+        });
+        footerHTML += '</tr>';
+
         footerHTML += '</tfoot></table></div>';
 
         tablaHTML += headerHTML + bodyHTML + footerHTML;
@@ -622,6 +629,18 @@ $(document).ready(function () {
                 }
             }
         }
+
+        // Carga de Comentarios Base (desde ABM Plantillas Base Par/Impar)
+        fechasSemana.forEach(function (fecha) {
+            const cellCom = $(`.comentario-base-cell[data-fecha="${fecha}"]`);
+            const textoCom = (data.comentariosBase && data.comentariosBase[fecha]) ? String(data.comentariosBase[fecha]).trim() : '';
+            if (textoCom !== '') {
+                const safeTxt = $('<div>').text(textoCom).html();
+                cellCom.html(`<span class="text-dark" style="font-size: 0.78rem;">${safeTxt}</span>`);
+            } else {
+                cellCom.html('<span class="text-muted small">-</span>');
+            }
+        });
 
         // Carga de Bloqueos Externos
         if (data.bloqueosExternos) {

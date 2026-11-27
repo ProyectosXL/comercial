@@ -81,6 +81,61 @@ function getSucursales()
         sqlsrv_free_stmt($stmt);
     }
 
+    // Orden personalizado oficial de locales
+    $ordenPersonalizado = [
+        'ALTO PALERMO',
+        'ABASTO',
+        'UNICENTER',
+        'SOLEIL',
+        'DISTRITO ARCOS',
+        'AVELLANEDA',
+        'CABALLITO',
+        'GURRUCHAGA',
+        'DOT',
+        'TORTUGAS',
+        'TERRAZAS DE MAYO',
+        'SOLAR DE LA ABADIA',
+        'AL OESTE SHOPPING',
+        'PARQUE BROWN',
+        'SAN JUSTO',
+        'ALTO ROSARIO',
+        'PASEO DEL SIGLO',
+        'PORTAL',
+        'PASEO ALDREY',
+        'MAR DEL PLATA'
+    ];
+
+    $normalizarNombre = function ($texto) {
+        $t = strtoupper(trim($texto));
+        $t = strtr($t, ['Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ñ' => 'N', 'á' => 'A', 'é' => 'E', 'í' => 'I', 'ó' => 'O', 'ú' => 'U', 'ñ' => 'N']);
+        $t = preg_replace('/\s+/', ' ', $t);
+        return $t;
+    };
+
+    $obtenerPrioridad = function ($nombre) use ($ordenPersonalizado, $normalizarNombre) {
+        $norm = $normalizarNombre($nombre);
+        foreach ($ordenPersonalizado as $idx => $clave) {
+            if ($norm === $clave) {
+                return $idx;
+            }
+        }
+        foreach ($ordenPersonalizado as $idx => $clave) {
+            if (strpos($norm, $clave) === 0) {
+                return $idx;
+            }
+        }
+        return 999;
+    };
+
+    usort($sucursales, function ($a, $b) use ($obtenerPrioridad, $normalizarNombre) {
+        $pa = $obtenerPrioridad($a['DESC_SUCURSAL']);
+        $pb = $obtenerPrioridad($b['DESC_SUCURSAL']);
+        if ($pa !== $pb) {
+            return $pa <=> $pb;
+        }
+        return strcmp($normalizarNombre($a['DESC_SUCURSAL']), $normalizarNombre($b['DESC_SUCURSAL']));
+    });
+
     echo json_encode($sucursales);
     sqlsrv_close($connCorp);
 }

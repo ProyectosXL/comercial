@@ -855,6 +855,23 @@ function cargarDatos()
     }
     $respuesta['agendaBase'] = $agendaBase;
 
+    // F.2. Cargar Comentarios Base por Día (FP_HORARIOS_BASE_COMENTARIOS) según Semana Par/Impar
+    $comentariosBasePorDia = [];
+    $sqlBaseCom = "SELECT DIA_SEMANA, COMENTARIO FROM FP_HORARIOS_BASE_COMENTARIOS WHERE NRO_SUCURSAL = ? AND TIPO_SEMANA = ?";
+    $stmtBaseCom = sqlsrv_query($connSistemas, $sqlBaseCom, [$nroSucursal, $tipoPlantilla]);
+    if ($stmtBaseCom) {
+        while ($rowCom = sqlsrv_fetch_array($stmtBaseCom, SQLSRV_FETCH_ASSOC)) {
+            $diaSem = intval($rowCom['DIA_SEMANA']);
+            $txtCom = trim((string)($rowCom['COMENTARIO'] ?? ''));
+            if ($diaSem >= 1 && $diaSem <= 7 && $txtCom !== '') {
+                $fechaRealCom = date('Y-m-d', strtotime($fechaInicio . ' + ' . ($diaSem - 1) . ' days'));
+                $comentariosBasePorDia[$fechaRealCom] = $txtCom;
+            }
+        }
+        sqlsrv_free_stmt($stmtBaseCom);
+    }
+    $respuesta['comentariosBase'] = $comentariosBasePorDia;
+
     // =================================================================================
     // PASO 3: LÓGICA AUTOMÁTICA DE PLANTILLAS BASE SI NO HAY REGISTROS GUARDADOS
     // =================================================================================
